@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+veritabani/*.db
+tutanaklar/*.xlsx
+yedekler/*.db
