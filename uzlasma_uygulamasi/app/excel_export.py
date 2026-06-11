@@ -357,3 +357,131 @@ def tutanak_olustur_excel(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, da
     return uzlasma_tutanagi_olustur(
         dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, mukellef, kalemler, imzalayanlar, sonuc
     )
+
+
+# ---------------------------------------------------------------------------
+# Aylik huzur hakki puantaj cetveli
+# ---------------------------------------------------------------------------
+
+import calendar
+
+AY_ADLARI = ["", "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
+             "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"]
+
+MEDIUM = Side(style="medium")
+BORDER_MEDIUM = Border(left=MEDIUM, right=MEDIUM, top=MEDIUM, bottom=MEDIUM)
+
+P_FONT_BASLIK = Font(name="Times New Roman", size=16, bold=True)
+P_FONT_BOLD12 = Font(name="Times New Roman", size=12, bold=True)
+P_FONT_NORMAL = Font(name="Times New Roman", size=11)
+P_FONT_BOLD11 = Font(name="Times New Roman", size=11, bold=True)
+
+SOL_ORTA = Alignment(horizontal="left", vertical="center")
+
+
+def _p_hucre(ws, row, col, deger, font, hiza=CENTER, kenarlik=BORDER_MEDIUM):
+    c = ws.cell(row=row, column=col, value=deger)
+    c.font = font
+    c.alignment = hiza
+    if kenarlik is not None:
+        c.border = kenarlik
+    return c
+
+
+def _p_blok_kenarlik(ws, r1, c1, r2, c2):
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            ws.cell(row=r, column=c).border = BORDER_MEDIUM
+
+
+def puantaj_cetveli_olustur(dosya_yolu, kurum, yil, ay, uyeler):
+    """Aylik huzur hakki puantaj cetveli.
+
+    uyeler: [{"ad_soyad", "unvan", "gunler": iterable[int], "oturum_sayisi": int}]
+    Gun sutunu sayisi ayin gercek gun sayisina gore belirlenir (28-31).
+    """
+    gun_sayisi = calendar.monthrange(yil, ay)[1]
+    son_gun_kolonu = 3 + gun_sayisi          # D'den itibaren gun kolonlari
+    toplam_kolonu = son_gun_kolonu + 1
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Puantaj Cetveli"
+
+    ws.column_dimensions["A"].width = 4.29
+    ws.column_dimensions["B"].width = 30.7
+    ws.column_dimensions["C"].width = 15.71
+    for c in range(4, son_gun_kolonu + 1):
+        ws.column_dimensions[get_column_letter(c)].width = 4.29
+    ws.column_dimensions[get_column_letter(toplam_kolonu)].width = 18.71
+
+    # 1. satir: baslik
+    ws.row_dimensions[1].height = 60
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=toplam_kolonu)
+    _p_hucre(ws, 1, 1, "TARHİYAT SONRASI UZLAŞMA ÜYELERİ HUZUR HAKKI PUANTAJ CETVELİ",
+             P_FONT_BASLIK, kenarlik=None)
+
+    # 2. satir: daire ve donem
+    ws.row_dimensions[2].height = 30
+    donem_baslik_kolonu = son_gun_kolonu - 7           # ornekte Z2:AD2 (5 kolon)
+    ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=donem_baslik_kolonu - 1)
+    ws.merge_cells(start_row=2, start_column=donem_baslik_kolonu, end_row=2,
+                   end_column=donem_baslik_kolonu + 4)
+    ws.merge_cells(start_row=2, start_column=donem_baslik_kolonu + 5, end_row=2,
+                   end_column=toplam_kolonu)
+    _p_hucre(ws, 2, 2, f"Dairesi : {kurum.get('vergi_dairesi', '')}", P_FONT_BOLD12, SOL_ORTA)
+    _p_hucre(ws, 2, donem_baslik_kolonu, "Dönemi", P_FONT_BOLD12)
+    _p_hucre(ws, 2, donem_baslik_kolonu + 5, f"{AY_ADLARI[ay]} / {yil}", P_FONT_BOLD12)
+    _p_blok_kenarlik(ws, 2, 2, 2, toplam_kolonu)
+
+    # 3-4. satirlar: tablo basligi
+    ws.row_dimensions[3].height = 30
+    ws.row_dimensions[4].height = 30
+    ws.merge_cells("A3:A4")
+    ws.merge_cells("B3:C3")
+    ws.merge_cells(start_row=3, start_column=4, end_row=3, end_column=son_gun_kolonu)
+    ws.merge_cells(start_row=3, start_column=toplam_kolonu, end_row=4, end_column=toplam_kolonu)
+    _p_hucre(ws, 3, 2, "KOMİSYON ÜYELERİ", P_FONT_BOLD12)
+    _p_hucre(ws, 3, 4, "OTURUM GÜNLERİ", P_FONT_BOLD12)
+    _p_hucre(ws, 3, toplam_kolonu, "TOPLAM OTURUM SAYISI", P_FONT_BOLD12)
+    _p_hucre(ws, 4, 2, "ADI - SOYADI", P_FONT_BOLD12)
+    _p_hucre(ws, 4, 3, "UNVANI", P_FONT_BOLD12)
+    for gun in range(1, gun_sayisi + 1):
+        _p_hucre(ws, 4, 3 + gun, gun, P_FONT_BOLD11)
+    _p_blok_kenarlik(ws, 3, 1, 4, toplam_kolonu)
+
+    # 5+ satirlar: uyeler
+    row = 5
+    for sira, uye in enumerate(uyeler, start=1):
+        ws.row_dimensions[row].height = 30
+        _p_hucre(ws, row, 1, sira, P_FONT_NORMAL)
+        _p_hucre(ws, row, 2, uye.get("ad_soyad", ""), P_FONT_NORMAL)
+        _p_hucre(ws, row, 3, uye.get("unvan", ""), P_FONT_NORMAL)
+        gunler = set(uye.get("gunler") or [])
+        for gun in range(1, gun_sayisi + 1):
+            if gun in gunler:
+                _p_hucre(ws, row, 3 + gun, "X", P_FONT_BOLD11)
+        _p_hucre(ws, row, toplam_kolonu, uye.get("oturum_sayisi", len(gunler)), P_FONT_NORMAL)
+        _p_blok_kenarlik(ws, row, 1, row, toplam_kolonu)
+        row += 1
+
+    # alt blok: onay metni ve imzalar
+    onay_kolonu = toplam_kolonu - 6                    # ornekte AB (34-6=28)
+    row += 1
+    _p_hucre(ws, row, onay_kolonu, "Kayıtlarımıza Uygundur", P_FONT_BOLD12, kenarlik=None)
+    row += 1
+    from datetime import date
+    bugun = date.today()
+    _p_hucre(ws, row, onay_kolonu, f"{bugun.day}.{bugun.month}.{bugun.year}", P_FONT_BOLD12,
+             kenarlik=None)
+
+    row += 4
+    imza_kolonlari = [(3, "Memur", "Düzenleyen"), (14, "Şef", "Kontrol Eden"),
+                      (onay_kolonu, "Vergi Dairesi Müdürü", "Onay")]
+    for kolon, unvan, gorev in imza_kolonlari:
+        _p_hucre(ws, row, kolon, "...........................", P_FONT_BOLD12, kenarlik=None)
+        _p_hucre(ws, row + 1, kolon, unvan, P_FONT_BOLD12, kenarlik=None)
+        _p_hucre(ws, row + 2, kolon, gorev, P_FONT_BOLD12, kenarlik=None)
+
+    wb.save(dosya_yolu)
+    return dosya_yolu

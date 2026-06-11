@@ -3,3 +3,4 @@ __pycache__/
 veritabani/*.db
 tutanaklar/*.xlsx
 yedekler/*.db
+puantajlar/*.xlsx

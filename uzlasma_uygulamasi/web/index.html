@@ -169,6 +169,16 @@
     </table>
   </div>
   <div class="kart">
+    <h2>Aylık Huzur Hakkı Puantaj Cetveli</h2>
+    <div class="satir" style="align-items:flex-end">
+      <div class="dar" style="flex:0 0 150px"><label>Ay</label>
+        <select id="puantaj-ay"></select>
+      </div>
+      <div class="dar" style="flex:0 0 110px"><label>Yıl</label><input type="text" id="puantaj-yil"></div>
+      <div class="dar"><button class="btn" onclick="puantajIndir()">Cetveli İndir (Excel)</button></div>
+    </div>
+  </div>
+  <div class="kart">
     <h2>Komisyon Üyesi İmza Geçmişi</h2>
     <div class="satir"><div class="dar" style="flex:0 0 320px"><select id="imza-uye" onchange="imzaGecmisiYukle()"></select></div></div>
     <table id="imza-tablo">
@@ -560,6 +570,30 @@ async function gecmisYukle() {
   sec.innerHTML = '<option value="">— Üye seçin —</option>' +
     uyeler.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}</option>`).join("");
   document.querySelector("#imza-tablo tbody").innerHTML = "";
+}
+
+const AY_ADLARI = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+(function puantajAlanlariniKur() {
+  const sec = document.getElementById("puantaj-ay");
+  AY_ADLARI.forEach((ad, i) => {
+    const o = document.createElement("option");
+    o.value = i + 1; o.textContent = ad;
+    sec.appendChild(o);
+  });
+  const simdi = new Date();
+  // varsayilan: bir onceki ay (donem kapanmis ay icin dokum alinir)
+  let ay = simdi.getMonth(); // 0-11 -> onceki ayin 1-12 karsiligi
+  let yil = simdi.getFullYear();
+  if (ay === 0) { ay = 12; yil -= 1; }
+  sec.value = ay;
+  document.getElementById("puantaj-yil").value = yil;
+})();
+
+function puantajIndir() {
+  const ay = document.getElementById("puantaj-ay").value;
+  const yil = document.getElementById("puantaj-yil").value.trim();
+  if (!/^\d{4}$/.test(yil)) { mesajGoster("Geçerli bir yıl girin (örn. 2026).", true); return; }
+  window.location.href = "/puantaj?yil=" + yil + "&ay=" + ay;
 }
 
 function isoToTr(iso) {

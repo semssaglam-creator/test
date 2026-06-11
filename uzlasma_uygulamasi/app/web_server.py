@@ -9,13 +9,14 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db
-from .excel_export import tutanak_olustur_excel
+from .excel_export import puantaj_cetveli_olustur, tutanak_olustur_excel
 from .paste_parser import dilekce_ayristir
 from .tarih_util import simdi_tr, tr_to_iso, tr_tarih_to_iso_gun
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
 TUTANAK_DIR = os.path.join(BASE_DIR, "tutanaklar")
+PUANTAJ_DIR = os.path.join(BASE_DIR, "puantajlar")
 
 
 class ApiHata(Exception):
@@ -207,6 +208,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit({"simdi": simdi_tr()})
             elif yol == "/tutanak":
                 self._tutanak_indir(params.get("dosya", [""])[0])
+            elif yol == "/puantaj":
+                self._puantaj_indir(params)
             else:
                 self._hata("Bulunamadi", 404)
         except ApiHata as exc:
@@ -282,6 +285,34 @@ class Istekci(BaseHTTPRequestHandler):
             govde = f.read()
         self.send_response(200)
         self.send_header("Content-Type", icerik_turu)
+        self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _puantaj_indir(self, params):
+        try:
+            yil = int(params.get("yil", [""])[0])
+            ay = int(params.get("ay", [""])[0])
+            if not (1 <= ay <= 12 and 2000 <= yil <= 2100):
+                raise ValueError
+        except (ValueError, IndexError):
+            self._hata("Gecersiz yil/ay.")
+            return
+        uyeler = db.puantaj_verisi(yil, ay)
+        if not uyeler:
+            self._hata("Kayitli aktif komisyon uyesi yok.")
+            return
+        os.makedirs(PUANTAJ_DIR, exist_ok=True)
+        dosya_adi = f"puantaj_{yil}_{ay:02d}.xlsx"
+        dosya_yolu = os.path.join(PUANTAJ_DIR, dosya_adi)
+        puantaj_cetveli_olustur(dosya_yolu, db.get_kurum_bilgileri(), yil, ay, uyeler)
+        with open(dosya_yolu, "rb") as f:
+            govde = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition",
+                         f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
         self.send_header("Content-Length", str(len(govde)))
         self.end_headers()
         self.wfile.write(govde)

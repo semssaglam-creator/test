@@ -515,6 +515,46 @@ def komisyon_uyesi_imza_gecmisi(uye_id):
         conn.close()
 
 
+def puantaj_verisi(yil, ay):
+    """Verilen ay icin uye basina oturum gunleri.
+
+    Bir uye, o gun en az bir tutanak imzaladiysa o gunde oturuma katilmis
+    sayilir. Donus: [{ad_soyad, unvan, gunler: [int], oturum_sayisi}]
+    (tum aktif uyeler, hic oturumu olmayanlar dahil).
+    """
+    ay_oneki = f"{yil:04d}-{ay:02d}-"
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT ti.komisyon_uye_id AS uye_id,
+                   CAST(substr(t.toplanti_tarih_saat, 9, 2) AS INTEGER) AS gun
+            FROM tutanak_imzalari ti
+            JOIN uzlasma_tutanaklari t ON t.id = ti.tutanak_id
+            WHERE t.toplanti_tarih_saat LIKE ? || '%'
+            GROUP BY ti.komisyon_uye_id, gun
+            """,
+            (ay_oneki,),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    gunler = {}
+    for r in rows:
+        gunler.setdefault(r["uye_id"], set()).add(r["gun"])
+
+    sonuc = []
+    for u in komisyon_uyeleri_listele():
+        uye_gunleri = sorted(gunler.get(u["id"], set()))
+        sonuc.append({
+            "ad_soyad": u["ad_soyad"],
+            "unvan": u["unvan"],
+            "gunler": uye_gunleri,
+            "oturum_sayisi": len(uye_gunleri),
+        })
+    return sonuc
+
+
 def tutanak_imzalayanlari_getir(tutanak_id):
     conn = get_connection()
     try:
