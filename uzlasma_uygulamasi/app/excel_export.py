@@ -125,14 +125,6 @@ def _hucre(ws, row, col, deger, font=None, align=None, border=True, num_format=N
     return c
 
 
-def _vergi_ceza_turu(kalem):
-    vt = (kalem.get("vergi_turu_kod") or "").strip()
-    ck = (kalem.get("ceza_kodu") or "").strip()
-    if vt and ck:
-        return f"{vt}/{ck}"
-    return vt or ck
-
-
 def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
     """Baskan | Uye | Uye | Mukellef seklinde 4 imza blogu."""
     aralik = [(1, 1), (2, 3), (4, 5), (6, 6)]
@@ -244,7 +236,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
 
     # Tablo basligi (2 satir, birlesik)
     baslik_satiri = row
-    basliklar = ["İhbarname Numarası", "Vergi ve Cezanın Türü", "Dönemi", "Vergi ve Cezanın Miktarı"]
+    basliklar = ["İhbarname Numarası", "Vergi Türü", "Cezanın Türü", "Vergi ve Cezanın Miktarı"]
     for col, metin in enumerate(basliklar, start=1):
         ws.merge_cells(start_row=baslik_satiri, start_column=col, end_row=baslik_satiri + 1, end_column=col)
         _hucre(ws, baslik_satiri, col, metin, font=FONT_BOLD)
@@ -262,8 +254,8 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         toplam_miktar += miktar
         toplam_uzlasilan += uzlasilan
         _hucre(ws, row, 1, kalem["fis_no"])
-        _hucre(ws, row, 2, _vergi_ceza_turu(kalem))
-        _hucre(ws, row, 3, kalem.get("donem", ""))
+        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip())
+        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip())
         _hucre(ws, row, 4, miktar, num_format="#,##0.00")
         _hucre(ws, row, 5, uzlasilan, num_format="#,##0.00")
         _hucre(ws, row, 6, tutar_yaziya(uzlasilan), align=WRAP_LEFT)
@@ -317,7 +309,7 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     row += 1
 
     baslik_satiri = row
-    basliklar = ["İhbarname Numarası", "Vergi ve Cezanın Türü", "Dönemi", "Vergi ve Cezanın Miktarı"]
+    basliklar = ["İhbarname Numarası", "Vergi Türü", "Cezanın Türü", "Vergi ve Cezanın Miktarı"]
     for col, metin in enumerate(basliklar, start=1):
         if col == 4:
             ws.merge_cells(start_row=baslik_satiri, start_column=4, end_row=baslik_satiri, end_column=6)
@@ -329,8 +321,8 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         miktar = float(kalem["miktar"])
         toplam_miktar += miktar
         _hucre(ws, row, 1, kalem["fis_no"])
-        _hucre(ws, row, 2, _vergi_ceza_turu(kalem))
-        _hucre(ws, row, 3, kalem.get("donem", ""))
+        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip())
+        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip())
         ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
         _hucre(ws, row, 4, miktar, num_format="#,##0.00")
         row += 1

@@ -549,6 +549,19 @@ async function tutanakOlustur() {
     ceza_satiri_id: k.ceza_satiri_id, ihbarname_id: k.ihbarname_id, fis_no: k.fis_no,
     indirim_orani: k.tr.querySelector(".oran-girdi").value,
   }));
+
+  // Gecmis tarihli tutanak yapilabilir, ancak once uyari verilir
+  const toplantiTs = document.getElementById("toplanti-ts").value.trim();
+  const e = toplantiTs.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (e) {
+    const toplantiGun = new Date(parseInt(e[3]), parseInt(e[2]) - 1, parseInt(e[1]));
+    const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
+    if (toplantiGun < bugun) {
+      if (!confirm("DİKKAT: Toplantı tarihi (" + e[0] + ") geçmiş bir tarih.\n" +
+                   "Geçmiş tarihli tutanak oluşturulacak. Devam edilsin mi?")) return;
+    }
+  }
+
   if (!confirm(kalemler.length + " ihbarname kalemi için '" + SONUC_AD[sonuc] + "' tutanağı oluşturulacak. Onaylıyor musunuz?")) return;
 
   try {
