@@ -169,8 +169,30 @@ class Istekci(BaseHTTPRequestHandler):
             return {}
         return json.loads(self.rfile.read(uzunluk).decode("utf-8"))
 
+    def _istek_guvenli_mi(self, yazma=False):
+        """Tarayicidaki baska sitelerden gelen istekleri reddeder.
+
+        Host kontrolu DNS rebinding'i, Origin kontrolu siteler arasi
+        POST'lari (CSRF) engeller. Sunucu yalnizca 127.0.0.1'i dinler;
+        bu kontroller tarayici uzerinden dolayli erisime karsidir.
+        """
+        host = (self.headers.get("Host") or "").split(":")[0].strip("[]").lower()
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            self._hata("Gecersiz Host basligi.", 403)
+            return False
+        if yazma:
+            origin = self.headers.get("Origin")
+            if origin:
+                o = urllib.parse.urlparse(origin)
+                if (o.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
+                    self._hata("Istek reddedildi (siteler arasi).", 403)
+                    return False
+        return True
+
     # ------------------------------------------------------------------
     def do_GET(self):
+        if not self._istek_guvenli_mi():
+            return
         parsed = urllib.parse.urlparse(self.path)
         yol = parsed.path
         params = urllib.parse.parse_qs(parsed.query)
@@ -218,6 +240,8 @@ class Istekci(BaseHTTPRequestHandler):
             self._hata(f"Sunucu hatasi: {exc}", 500)
 
     def do_POST(self):
+        if not self._istek_guvenli_mi(yazma=True):
+            return
         parsed = urllib.parse.urlparse(self.path)
         yol = parsed.path
         try:
@@ -263,7 +287,11 @@ class Istekci(BaseHTTPRequestHandler):
                 hedef = db.yedek_al()
                 self._json_yanit({"dosya": os.path.basename(hedef)})
             elif yol == "/api/geri_yukle":
-                db.yedekten_geri_yukle(veri.get("dosya", ""))
+                # Dizin atlamaya karsi yalnizca yedek klasorundeki .db dosya adlari
+                dosya = posixpath.basename(veri.get("dosya", ""))
+                if not dosya.endswith(".db"):
+                    raise ApiHata("Gecersiz yedek dosyasi.")
+                db.yedekten_geri_yukle(dosya)
                 self._json_yanit({"tamam": True})
             else:
                 self._hata("Bulunamadi", 404)

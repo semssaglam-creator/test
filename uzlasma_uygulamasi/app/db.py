@@ -672,6 +672,8 @@ def yedekleri_listele():
 
 
 def yedekten_geri_yukle(dosya_adi):
+    # Yalnizca yedek klasorunun icindeki dosya adlari kabul edilir
+    dosya_adi = os.path.basename(dosya_adi)
     kaynak = os.path.join(YEDEK_DIR, dosya_adi)
     if not os.path.isfile(kaynak):
         raise FileNotFoundError(dosya_adi)
