@@ -421,18 +421,18 @@ def puantaj_cetveli_olustur(dosya_yolu, kurum, yil, ay, uyeler):
     _p_hucre(ws, 1, 1, "TARHİYAT SONRASI UZLAŞMA ÜYELERİ HUZUR HAKKI PUANTAJ CETVELİ",
              P_FONT_BASLIK, kenarlik=None)
 
-    # 2. satir: daire ve donem
+    # 2. satir: daire ve donem (A kolonundan baslar ki sol ust kose cerceveli olsun)
     ws.row_dimensions[2].height = 30
     donem_baslik_kolonu = son_gun_kolonu - 7           # ornekte Z2:AD2 (5 kolon)
-    ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=donem_baslik_kolonu - 1)
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=donem_baslik_kolonu - 1)
     ws.merge_cells(start_row=2, start_column=donem_baslik_kolonu, end_row=2,
                    end_column=donem_baslik_kolonu + 4)
     ws.merge_cells(start_row=2, start_column=donem_baslik_kolonu + 5, end_row=2,
                    end_column=toplam_kolonu)
-    _p_hucre(ws, 2, 2, f"Dairesi : {kurum.get('vergi_dairesi', '')}", P_FONT_BOLD12, SOL_ORTA)
+    _p_hucre(ws, 2, 1, f"Dairesi : {kurum.get('vergi_dairesi', '')}", P_FONT_BOLD12, SOL_ORTA)
     _p_hucre(ws, 2, donem_baslik_kolonu, "Dönemi", P_FONT_BOLD12)
     _p_hucre(ws, 2, donem_baslik_kolonu + 5, f"{AY_ADLARI[ay]} / {yil}", P_FONT_BOLD12)
-    _p_blok_kenarlik(ws, 2, 2, 2, toplam_kolonu)
+    _p_blok_kenarlik(ws, 2, 1, 2, toplam_kolonu)
 
     # 3-4. satirlar: tablo basligi
     ws.row_dimensions[3].height = 30
@@ -465,23 +465,42 @@ def puantaj_cetveli_olustur(dosya_yolu, kurum, yil, ay, uyeler):
         _p_blok_kenarlik(ws, row, 1, row, toplam_kolonu)
         row += 1
 
-    # alt blok: onay metni ve imzalar
+    # alt blok: onay metni ve imzalar (metinler dar gun kolonlarinda kesilmesin
+    # diye her biri birkac kolonu kapsayan birlesik hucrelere yazilir)
+    def _genis_hucre(r, c1, c2, deger):
+        c2 = min(c2, toplam_kolonu)
+        if c2 > c1:
+            ws.merge_cells(start_row=r, start_column=c1, end_row=r, end_column=c2)
+        _p_hucre(ws, r, c1, deger, P_FONT_BOLD12, CENTER_TITLE, kenarlik=None)
+
     onay_kolonu = toplam_kolonu - 6                    # ornekte AB (34-6=28)
     row += 1
-    _p_hucre(ws, row, onay_kolonu, "Kayıtlarımıza Uygundur", P_FONT_BOLD12, kenarlik=None)
+    _genis_hucre(row, onay_kolonu - 2, onay_kolonu + 6, "Kayıtlarımıza Uygundur")
     row += 1
     from datetime import date
     bugun = date.today()
-    _p_hucre(ws, row, onay_kolonu, f"{bugun.day}.{bugun.month}.{bugun.year}", P_FONT_BOLD12,
-             kenarlik=None)
+    _genis_hucre(row, onay_kolonu - 2, onay_kolonu + 6, f"{bugun.day}.{bugun.month}.{bugun.year}")
 
     row += 4
     imza_kolonlari = [(3, "Memur", "Düzenleyen"), (14, "Şef", "Kontrol Eden"),
                       (onay_kolonu, "Vergi Dairesi Müdürü", "Onay")]
     for kolon, unvan, gorev in imza_kolonlari:
-        _p_hucre(ws, row, kolon, "...........................", P_FONT_BOLD12, kenarlik=None)
-        _p_hucre(ws, row + 1, kolon, unvan, P_FONT_BOLD12, kenarlik=None)
-        _p_hucre(ws, row + 2, kolon, gorev, P_FONT_BOLD12, kenarlik=None)
+        c1, c2 = (kolon, kolon + 1) if kolon == 3 else (kolon - 2, kolon + 6)
+        _genis_hucre(row, c1, c2, "...........................")
+        _genis_hucre(row + 1, c1, c2, unvan)
+        _genis_hucre(row + 2, c1, c2, gorev)
+
+    # yazdirma ayarlari: A4 yatay, tek sayfaya sigdir
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 1
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_margins.left = 0.4
+    ws.page_margins.right = 0.4
+    ws.page_margins.top = 0.4
+    ws.page_margins.bottom = 0.4
+    ws.print_area = f"A1:{get_column_letter(toplam_kolonu)}{row + 2}"
 
     wb.save(dosya_yolu)
     return dosya_yolu
