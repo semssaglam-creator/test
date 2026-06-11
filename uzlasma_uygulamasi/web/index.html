@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uzlaşma Takip Uygulaması</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; margin: 0; background: #f0f2f5; color: #1c2733; }
+  header { background: #1f3a5f; color: #fff; padding: 12px 20px; }
+  header h1 { margin: 0; font-size: 20px; }
+  nav { display: flex; gap: 4px; background: #2b4a73; padding: 0 12px; flex-wrap: wrap; }
+  nav button { background: none; border: none; color: #cfd9e6; padding: 11px 16px; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; }
+  nav button.aktif { color: #fff; border-bottom-color: #ffb347; font-weight: 600; }
+  main { padding: 18px; max-width: 1280px; margin: 0 auto; }
+  .sekme { display: none; }
+  .sekme.aktif { display: block; }
+  .kart { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .kart h2 { margin: 0 0 12px; font-size: 16px; color: #1f3a5f; }
+  label { display: block; font-size: 12px; color: #5a6b7d; margin-bottom: 2px; }
+  input[type=text], textarea, select { width: 100%; padding: 7px 9px; border: 1px solid #c3ccd6; border-radius: 5px; font-size: 14px; font-family: inherit; }
+  textarea { resize: vertical; }
+  .satir { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .satir > div { flex: 1; min-width: 160px; }
+  .satir > div.dar { flex: 0 0 150px; min-width: 130px; }
+  button.btn { background: #1f3a5f; color: #fff; border: none; border-radius: 5px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+  button.btn:hover { background: #2b4a73; }
+  button.btn.ikincil { background: #e4e9ef; color: #1c2733; }
+  button.btn.ikincil:hover { background: #d4dce5; }
+  button.btn.tehlike { background: #a33; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid #dde3ea; padding: 6px 8px; text-align: left; }
+  th { background: #eef2f6; font-weight: 600; }
+  td input, td select { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px; font-size: 13px; }
+  td input:focus, td select:focus { border-color: #1f3a5f; background: #fff; outline: none; }
+  tr.secili { background: #fff6e3; }
+  .sag { text-align: right; }
+  .oneri-kutu { position: relative; }
+  .oneriler { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #c3ccd6; border-top: none; max-height: 240px; overflow-y: auto; z-index: 20; display: none; }
+  .oneriler div { padding: 7px 10px; cursor: pointer; font-size: 14px; }
+  .oneriler div:hover { background: #eef2f6; }
+  .bilgi-cubugu { font-weight: 600; color: #1f3a5f; margin-top: 6px; }
+  .mesaj { position: fixed; bottom: 18px; right: 18px; padding: 12px 18px; border-radius: 6px; color: #fff; font-size: 14px; display: none; z-index: 50; max-width: 420px; box-shadow: 0 3px 10px rgba(0,0,0,.25); white-space: pre-wrap; }
+  .mesaj.hata { background: #a33; }
+  .mesaj.basari { background: #2c7a3f; }
+  .ozet { font-size: 14px; line-height: 1.8; }
+  .checkbox-grup label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1c2733; margin-bottom: 4px; cursor: pointer; }
+  .radio-grup { display: flex; gap: 18px; }
+  .radio-grup label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1c2733; cursor: pointer; }
+  a.indir { color: #1f3a5f; }
+  .iki-kolon { display: flex; gap: 16px; flex-wrap: wrap; }
+  .iki-kolon > .kart { flex: 1; min-width: 340px; }
+</style>
+</head>
+<body>
+<header><h1>Uzlaşma Takip Uygulaması</h1></header>
+<nav id="nav">
+  <button data-sekme="kayit" class="aktif">Dilekçe Kaydı</button>
+  <button data-sekme="uzlasma">Uzlaşma İşlemi</button>
+  <button data-sekme="gecmis">Tutanak Geçmişi</button>
+  <button data-sekme="turler">Vergi/Ceza Türleri</button>
+  <button data-sekme="istatistik">İstatistikler</button>
+  <button data-sekme="ayarlar">Ayarlar</button>
+</nav>
+<main>
+
+<!-- ================= DILEKCE KAYDI ================= -->
+<section class="sekme aktif" id="sekme-kayit">
+  <div class="kart">
+    <h2>Mükellef Bilgileri</h2>
+    <div class="satir">
+      <div class="oneri-kutu" style="flex:2">
+        <label>Kayıtlı mükellef ara (ad/ünvan, VKN/TCKN veya ihbarname fiş no — en az 3 karakter)</label>
+        <input type="text" id="kayit-ara" autocomplete="off">
+        <div class="oneriler" id="kayit-ara-oneriler"></div>
+      </div>
+    </div>
+    <div class="satir">
+      <div style="flex:2"><label>Ad Soyad / Ünvan *</label><input type="text" id="kayit-ad"></div>
+      <div class="dar"><label>VKN / TCKN</label><input type="text" id="kayit-vkn"></div>
+      <div class="dar"><label>Telefon</label><input type="text" id="kayit-tel"></div>
+    </div>
+    <div class="satir"><div><label>Adres</label><input type="text" id="kayit-adres"></div></div>
+  </div>
+
+  <div class="kart">
+    <h2>Dilekçeden Kopyala-Yapıştır (Dijital Vergi Dairesi PDF metni)</h2>
+    <textarea id="yapistir-metni" rows="6" placeholder="Dilekçe PDF'inden metni kopyalayıp buraya yapıştırın..."></textarea>
+    <div class="sag" style="margin-top:8px"><button class="btn" onclick="yapistirAyristir()">Metni Ayrıştır ve Forma Aktar</button></div>
+  </div>
+
+  <div class="kart">
+    <h2>İhbarname / Ceza Satırları</h2>
+    <table id="kayit-tablo">
+      <thead><tr>
+        <th>İhbarname Fiş No</th><th style="width:90px">Vergi Türü</th><th style="width:90px">Ceza Kodu</th>
+        <th>Ceza Nedeni</th><th style="width:110px">Dönem</th><th style="width:110px">Miktar (TL)</th>
+        <th style="width:110px">Düzenleme T.</th><th style="width:110px">Tebliğ T.</th><th style="width:40px"></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <div style="margin-top:10px; display:flex; justify-content:space-between">
+      <button class="btn ikincil" onclick="kayitSatirEkle()">Satır Ekle</button>
+      <button class="btn" onclick="kaydet()">Kaydet</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= UZLASMA ================= -->
+<section class="sekme" id="sekme-uzlasma">
+  <div class="kart">
+    <h2>Mükellef Ara</h2>
+    <div class="oneri-kutu">
+      <label>Ad/Ünvan, VKN/TCKN veya İhbarname Fiş No (en az 3 karakter)</label>
+      <input type="text" id="uzlasma-ara" autocomplete="off">
+      <div class="oneriler" id="uzlasma-ara-oneriler"></div>
+    </div>
+    <div class="bilgi-cubugu" id="uzlasma-secili">Seçili mükellef: -</div>
+  </div>
+
+  <div class="kart">
+    <h2>Uzlaşılmamış İhbarnameler / Ceza Satırları</h2>
+    <table id="uzlasma-tablo">
+      <thead><tr>
+        <th style="width:40px">Seç</th><th>İhbarname Fiş No</th><th style="width:85px">Vergi Türü</th>
+        <th style="width:85px">Ceza Kodu</th><th>Ceza Nedeni</th><th style="width:95px">Dönem</th>
+        <th style="width:110px" class="sag">Miktar (TL)</th><th style="width:85px">İndirim %</th>
+        <th style="width:120px" class="sag">Kalan Tutar (TL)</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="satir" style="margin-top:10px; align-items:flex-end">
+      <div class="dar"><label>Varsayılan İndirim Oranı %</label><input type="text" id="varsayilan-oran" value="80"></div>
+      <div class="dar"><button class="btn ikincil" onclick="oraniUygula()">Seçililere Uygula</button></div>
+    </div>
+  </div>
+
+  <div class="kart">
+    <h2>Tutanak Bilgileri</h2>
+    <div class="satir">
+      <div>
+        <label>Sonuç</label>
+        <div class="radio-grup">
+          <label><input type="radio" name="sonuc" value="uzlasildi" checked onchange="sonucDegisti()"> Uzlaşıldı</label>
+          <label><input type="radio" name="sonuc" value="uzlasilamadi" onchange="sonucDegisti()"> Uzlaşılamadı</label>
+          <label><input type="radio" name="sonuc" value="gelmedi" onchange="sonucDegisti()"> Gelmedi</label>
+        </div>
+      </div>
+    </div>
+    <div class="satir">
+      <div class="dar"><label>Toplantı Tarih/Saat (GG.AA.YYYY SS:DD)</label><input type="text" id="toplanti-ts"></div>
+      <div class="dar"><label>Davet Edilen Tarih/Saat (Gelmedi için)</label><input type="text" id="davet-ts" disabled></div>
+      <div>
+        <label>İmzalayacak Komisyon Üyeleri</label>
+        <div class="checkbox-grup" id="komisyon-secim"></div>
+      </div>
+    </div>
+    <div class="sag"><button class="btn" onclick="tutanakOlustur()">Tutanak Oluştur</button></div>
+  </div>
+</section>
+
+<!-- ================= GECMIS ================= -->
+<section class="sekme" id="sekme-gecmis">
+  <div class="kart">
+    <h2>Tüm Tutanaklar</h2>
+    <table id="gecmis-tablo">
+      <thead><tr><th>Toplantı Tarih/Saat</th><th>Tutanak No</th><th>Mükellef</th><th>VKN/TCKN</th><th>Sonuç</th><th>Dosya</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="kart">
+    <h2>Komisyon Üyesi İmza Geçmişi</h2>
+    <div class="satir"><div class="dar" style="flex:0 0 320px"><select id="imza-uye" onchange="imzaGecmisiYukle()"></select></div></div>
+    <table id="imza-tablo">
+      <thead><tr><th>Toplantı Tarih/Saat</th><th>Tutanak No</th><th>Mükellef</th><th>Sonuç</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= TURLER ================= -->
+<section class="sekme" id="sekme-turler">
+  <div class="iki-kolon">
+    <div class="kart">
+      <h2>Vergi Türleri</h2>
+      <table id="vergi-tablo"><thead><tr><th style="width:80px">Kod</th><th>Açıklama</th><th style="width:60px"></th></tr></thead><tbody></tbody></table>
+      <div class="satir" style="margin-top:10px">
+        <div class="dar" style="flex:0 0 90px"><input type="text" id="vergi-kod" placeholder="Kod"></div>
+        <div><input type="text" id="vergi-ad" placeholder="Açıklama"></div>
+        <div class="dar" style="flex:0 0 90px"><button class="btn" onclick="vergiEkle()">Ekle</button></div>
+      </div>
+    </div>
+    <div class="kart">
+      <h2>Ceza Kodları</h2>
+      <table id="ceza-tablo"><thead><tr><th style="width:80px">Kod</th><th>Açıklama (Ceza Nedeni)</th><th style="width:60px"></th></tr></thead><tbody></tbody></table>
+      <div class="satir" style="margin-top:10px">
+        <div class="dar" style="flex:0 0 90px"><input type="text" id="ceza-kod" placeholder="Kod"></div>
+        <div><input type="text" id="ceza-aciklama" placeholder="Açıklama"></div>
+        <div class="dar" style="flex:0 0 90px"><button class="btn" onclick="cezaEkle()">Ekle</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ISTATISTIK ================= -->
+<section class="sekme" id="sekme-istatistik">
+  <div class="kart">
+    <h2>Tarih Aralığı (GG.AA.YYYY, boş bırakılabilir)</h2>
+    <div class="satir" style="align-items:flex-end">
+      <div class="dar"><label>Başlangıç</label><input type="text" id="ist-baslangic"></div>
+      <div class="dar"><label>Bitiş</label><input type="text" id="ist-bitis"></div>
+      <div class="dar"><button class="btn" onclick="istatistikYukle()">Hesapla</button></div>
+    </div>
+  </div>
+  <div class="kart"><h2>Genel Özet</h2><div class="ozet" id="ist-ozet">-</div></div>
+  <div class="kart">
+    <h2>Ceza Kodu Bazında İstatistikler</h2>
+    <table id="ist-tablo">
+      <thead><tr><th>Ceza Kodu</th><th>Açıklama</th><th class="sag">Başvuru Sayısı</th><th class="sag">Uzlaşılan Sayısı</th>
+        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= AYARLAR ================= -->
+<section class="sekme" id="sekme-ayarlar">
+  <div class="kart">
+    <h2>Kurum Bilgileri</h2>
+    <div class="satir"><div><label>Defterdarlık</label><input type="text" id="kurum-defterdarlik"></div></div>
+    <div class="satir"><div><label>Vergi Dairesi Müdürlüğü</label><input type="text" id="kurum-vd"></div></div>
+    <button class="btn" onclick="kurumKaydet()">Kaydet</button>
+  </div>
+  <div class="kart">
+    <h2>Komisyon Üyeleri</h2>
+    <table id="uye-tablo"><thead><tr><th>Ad Soyad</th><th style="width:110px">Ünvan</th><th style="width:90px">Durum</th><th style="width:100px"></th></tr></thead><tbody></tbody></table>
+    <div class="satir" style="margin-top:10px">
+      <div><input type="text" id="uye-ad" placeholder="Ad Soyad"></div>
+      <div class="dar" style="flex:0 0 130px"><select id="uye-unvan"><option>Baskan</option><option selected>Uye</option></select></div>
+      <div class="dar" style="flex:0 0 90px"><button class="btn" onclick="uyeEkle()">Ekle</button></div>
+    </div>
+  </div>
+  <div class="kart">
+    <h2>Veritabanı Yedekleme</h2>
+    <table id="yedek-tablo"><thead><tr><th>Yedek Dosyası</th><th style="width:110px"></th></tr></thead><tbody></tbody></table>
+    <div style="margin-top:10px"><button class="btn" onclick="yedekAl()">Yedek Al</button></div>
+  </div>
+</section>
+
+</main>
+<div class="mesaj" id="mesaj"></div>
+
+<script>
+"use strict";
+
+// ---------- yardimcilar ----------
+async function api(yol, veri) {
+  const secenek = veri === undefined ? {} :
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(veri) };
+  const r = await fetch(yol, secenek);
+  const j = await r.json();
+  if (!r.ok || (j && j.hata)) throw new Error(j.hata || "Sunucu hatası");
+  return j;
+}
+function mesajGoster(metin, hata) {
+  const m = document.getElementById("mesaj");
+  m.textContent = metin;
+  m.className = "mesaj " + (hata ? "hata" : "basari");
+  m.style.display = "block";
+  clearTimeout(m._zaman);
+  m._zaman = setTimeout(() => { m.style.display = "none"; }, hata ? 6000 : 3500);
+}
+function hata(e) { mesajGoster(e.message || String(e), true); }
+function tlFormat(t) {
+  return (t || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function miktarCoz(s) {
+  s = String(s == null ? "" : s).trim();
+  if (s.includes(",")) s = s.replace(/\./g, "").replace(",", ".");
+  const f = parseFloat(s || "0");
+  if (isNaN(f)) throw new Error("Geçersiz miktar: " + s);
+  return f;
+}
+function kacis(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+const SONUC_AD = { uzlasildi: "Uzlaşıldı", uzlasilamadi: "Uzlaşılamadı", gelmedi: "Gelmedi" };
+
+// canli arama kutusu kur: girise yazildikca /api/mukellef/ara cagrilir
+function aramaKur(girisId, onerilerId, secimCb) {
+  const giris = document.getElementById(girisId);
+  const kutu = document.getElementById(onerilerId);
+  let zaman = null;
+  giris.addEventListener("input", () => {
+    clearTimeout(zaman);
+    const q = giris.value.trim();
+    if (q.length < 3) { kutu.style.display = "none"; return; }
+    zaman = setTimeout(async () => {
+      try {
+        const sonuc = await api("/api/mukellef/ara?q=" + encodeURIComponent(q));
+        kutu.innerHTML = "";
+        sonuc.forEach(m => {
+          const d = document.createElement("div");
+          d.textContent = m.ad_unvan + (m.vkn_tckn ? " - " + m.vkn_tckn : "");
+          d.onclick = () => { kutu.style.display = "none"; giris.value = d.textContent; secimCb(m); };
+          kutu.appendChild(d);
+        });
+        kutu.style.display = sonuc.length ? "block" : "none";
+      } catch (e) { /* arama hatasi sessiz gecilir */ }
+    }, 250);
+  });
+  document.addEventListener("click", ev => {
+    if (!kutu.contains(ev.target) && ev.target !== giris) kutu.style.display = "none";
+  });
+}
+
+// ---------- sekme gecisi ----------
+const yenileyiciler = {
+  kayit: kayitSekmeYenile, uzlasma: uzlasmaSekmeYenile, gecmis: gecmisYukle,
+  turler: turlerYukle, istatistik: istatistikYukle, ayarlar: ayarlarYukle,
+};
+document.getElementById("nav").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.remove("aktif"));
+  document.querySelectorAll(".sekme").forEach(x => x.classList.remove("aktif"));
+  b.classList.add("aktif");
+  document.getElementById("sekme-" + b.dataset.sekme).classList.add("aktif");
+  (yenileyiciler[b.dataset.sekme] || (() => {}))();
+});
+
+// ---------- DILEKCE KAYDI ----------
+let vergiTurleri = [], cezaKodlari = [], dilekceOnayZamani = "";
+
+async function kayitSekmeYenile() {
+  vergiTurleri = await api("/api/vergi_turleri");
+  cezaKodlari = await api("/api/ceza_kodlari");
+}
+
+function kodSecenekleri(liste, secili) {
+  let h = '<option value=""></option>';
+  let bulundu = false;
+  liste.forEach(x => {
+    const s = x.kod === secili ? " selected" : "";
+    if (s) bulundu = true;
+    h += `<option value="${kacis(x.kod)}"${s}>${kacis(x.kod)}</option>`;
+  });
+  if (secili && !bulundu) h += `<option value="${kacis(secili)}" selected>${kacis(secili)}</option>`;
+  return h;
+}
+
+function kayitSatirEkle(s) {
+  s = s || {};
+  const tb = document.querySelector("#kayit-tablo tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML =
+    `<td><input data-alan="fis_no" value="${kacis(s.fis_no)}"></td>` +
+    `<td><select data-alan="vergi_turu_kod">${kodSecenekleri(vergiTurleri, s.vergi_turu_kod || "")}</select></td>` +
+    `<td><select data-alan="ceza_kodu">${kodSecenekleri(cezaKodlari, s.ceza_kodu || "")}</select></td>` +
+    `<td><input data-alan="ceza_nedeni" value="${kacis(s.ceza_nedeni)}"></td>` +
+    `<td><input data-alan="donem" value="${kacis(s.donem)}" placeholder="2025/01-12"></td>` +
+    `<td><input data-alan="miktar" value="${kacis(s.miktar)}"></td>` +
+    `<td><input data-alan="duzenleme_tarihi" value="${kacis(s.duzenleme_tarihi)}"></td>` +
+    `<td><input data-alan="teblig_tarihi" value="${kacis(s.teblig_tarihi)}"></td>` +
+    `<td class="sag"><button class="btn ikincil" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+
+async function yapistirAyristir() {
+  const metin = document.getElementById("yapistir-metni").value;
+  if (!metin.trim()) { mesajGoster("Önce dilekçe metnini yapıştırın.", true); return; }
+  try {
+    const v = await api("/api/dilekce/ayristir", { metin });
+    const m = v.mukellef || {};
+    if (m.ad_unvan) {
+      document.getElementById("kayit-ad").value = m.ad_unvan;
+      document.getElementById("kayit-vkn").value = m.vkn_tckn || "";
+      document.getElementById("kayit-adres").value = m.adres || "";
+      document.getElementById("kayit-tel").value = m.telefon || "";
+    }
+    dilekceOnayZamani = m.onay_zamani || "";
+    let eklenen = 0;
+    (v.ihbarnameler || []).forEach(ih => {
+      const satirlar = (ih.ceza_satirlari && ih.ceza_satirlari.length) ? ih.ceza_satirlari : [{}];
+      satirlar.forEach(cs => {
+        kayitSatirEkle({
+          fis_no: ih.fis_no, vergi_turu_kod: cs.vergi_turu_kod, ceza_kodu: cs.ceza_kodu,
+          ceza_nedeni: cs.ceza_nedeni, miktar: cs.miktar,
+          duzenleme_tarihi: ih.duzenleme_tarihi, teblig_tarihi: ih.teblig_tarihi,
+        });
+        eklenen++;
+      });
+    });
+    if (eklenen === 0) mesajGoster("Yapıştırılan metinden ihbarname/ceza satırı bulunamadı. Satırları elle ekleyebilirsiniz.", true);
+    else mesajGoster(eklenen + " satır tabloya eklendi. 'Dönem' alanlarını doldurmayı unutmayın.");
+  } catch (e) { hata(e); }
+}
+
+async function kaydet() {
+  const satirlar = [];
+  document.querySelectorAll("#kayit-tablo tbody tr").forEach(tr => {
+    const s = {};
+    tr.querySelectorAll("[data-alan]").forEach(el => { s[el.dataset.alan] = el.value; });
+    satirlar.push(s);
+  });
+  if (!satirlar.length) { mesajGoster("Kaydedilecek ihbarname/ceza satırı yok.", true); return; }
+  try { satirlar.forEach(s => miktarCoz(s.miktar)); } catch (e) { hata(e); return; }
+  if (!confirm(satirlar.length + " satır kaydedilecek. Onaylıyor musunuz?")) return;
+  try {
+    const sonuc = await api("/api/kayit", {
+      mukellef: {
+        ad_unvan: document.getElementById("kayit-ad").value,
+        vkn_tckn: document.getElementById("kayit-vkn").value,
+        adres: document.getElementById("kayit-adres").value,
+        telefon: document.getElementById("kayit-tel").value,
+      },
+      dilekce_onay_zamani: dilekceOnayZamani,
+      satirlar,
+    });
+    mesajGoster("Kayıt tamamlandı. " + sonuc.ihbarname_sayisi + " ihbarname, " + sonuc.satir_sayisi + " ceza satırı eklendi.");
+    ["kayit-ad","kayit-vkn","kayit-adres","kayit-tel","kayit-ara","yapistir-metni"].forEach(id => document.getElementById(id).value = "");
+    document.querySelector("#kayit-tablo tbody").innerHTML = "";
+    dilekceOnayZamani = "";
+  } catch (e) { hata(e); }
+}
+
+aramaKur("kayit-ara", "kayit-ara-oneriler", m => {
+  document.getElementById("kayit-ad").value = m.ad_unvan || "";
+  document.getElementById("kayit-vkn").value = m.vkn_tckn || "";
+  document.getElementById("kayit-adres").value = m.adres || "";
+  document.getElementById("kayit-tel").value = m.telefon || "";
+});
+
+// ---------- UZLASMA ----------
+let uzlasmaMukellefId = null;
+let uzlasmaSatirlar = []; // {ceza_satiri_id, ihbarname_id, fis_no, miktar, secili, tr}
+
+async function uzlasmaSekmeYenile() {
+  const uyeler = await api("/api/komisyon");
+  const kutu = document.getElementById("komisyon-secim");
+  kutu.innerHTML = "";
+  uyeler.forEach(u => {
+    const l = document.createElement("label");
+    l.innerHTML = `<input type="checkbox" value="${u.id}"> ${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}`;
+    kutu.appendChild(l);
+  });
+  if (!document.getElementById("toplanti-ts").value) {
+    const s = await api("/api/simdi");
+    document.getElementById("toplanti-ts").value = s.simdi;
+  }
+}
+
+function sonucDegisti() {
+  const sonuc = document.querySelector('input[name=sonuc]:checked').value;
+  document.getElementById("davet-ts").disabled = sonuc !== "gelmedi";
+}
+
+aramaKur("uzlasma-ara", "uzlasma-ara-oneriler", async m => {
+  uzlasmaMukellefId = m.id;
+  document.getElementById("uzlasma-secili").textContent =
+    "Seçili mükellef: " + m.ad_unvan + (m.vkn_tckn ? " - " + m.vkn_tckn : "");
+  await uzlasmaTabloDoldur();
+});
+
+async function uzlasmaTabloDoldur() {
+  const tb = document.querySelector("#uzlasma-tablo tbody");
+  tb.innerHTML = "";
+  uzlasmaSatirlar = [];
+  if (!uzlasmaMukellefId) return;
+  const oran = parseFloat(document.getElementById("varsayilan-oran").value) || 80;
+  const veri = await api("/api/bekleyen?mukellef_id=" + uzlasmaMukellefId);
+  veri.forEach(grup => {
+    const ih = grup.ihbarname;
+    grup.satirlar.forEach(s => {
+      const kalan = Math.round(s.miktar * (1 - oran / 100) * 100) / 100;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td style="text-align:center;cursor:pointer" class="sec-hucre">☐</td>` +
+        `<td>${kacis(ih.fis_no)}</td><td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
+        `<td>${kacis(s.ceza_nedeni)}</td><td>${kacis(s.donem)}</td>` +
+        `<td class="sag">${tlFormat(s.miktar)}</td>` +
+        `<td><input class="oran-girdi" value="${oran}"></td>` +
+        `<td class="sag kalan-hucre">${tlFormat(kalan)}</td>`;
+      tb.appendChild(tr);
+      const kayit = { ceza_satiri_id: s.id, ihbarname_id: ih.id, fis_no: ih.fis_no, miktar: s.miktar, secili: false, tr };
+      uzlasmaSatirlar.push(kayit);
+      tr.querySelector(".sec-hucre").onclick = () => fisSec(kayit.fis_no);
+      tr.querySelector(".oran-girdi").addEventListener("input", ev => {
+        const o = parseFloat(String(ev.target.value).replace(",", "."));
+        const k = isNaN(o) ? null : Math.round(kayit.miktar * (1 - o / 100) * 100) / 100;
+        tr.querySelector(".kalan-hucre").textContent = k === null ? "-" : tlFormat(k);
+      });
+    });
+  });
+}
+
+// ayni fis_no'ya sahip tum satirlar birlikte secilir/birakilir
+function fisSec(fisNo) {
+  const hedefler = uzlasmaSatirlar.filter(k => k.fis_no === fisNo);
+  const yeni = !hedefler[0].secili;
+  hedefler.forEach(k => {
+    k.secili = yeni;
+    k.tr.classList.toggle("secili", yeni);
+    k.tr.querySelector(".sec-hucre").textContent = yeni ? "☑" : "☐";
+  });
+}
+
+function oraniUygula() {
+  const o = parseFloat(String(document.getElementById("varsayilan-oran").value).replace(",", "."));
+  if (isNaN(o)) { mesajGoster("Geçerli bir oran girin.", true); return; }
+  uzlasmaSatirlar.filter(k => k.secili).forEach(k => {
+    k.tr.querySelector(".oran-girdi").value = o;
+    k.tr.querySelector(".kalan-hucre").textContent = tlFormat(Math.round(k.miktar * (1 - o / 100) * 100) / 100);
+  });
+}
+
+async function tutanakOlustur() {
+  const seciliKayitlar = uzlasmaSatirlar.filter(k => k.secili);
+  if (!uzlasmaMukellefId) { mesajGoster("Önce bir mükellef seçin.", true); return; }
+  if (!seciliKayitlar.length) { mesajGoster("Uzlaşmaya konu en az bir ihbarname seçmelisiniz.", true); return; }
+  const uyeIdleri = Array.from(document.querySelectorAll("#komisyon-secim input:checked")).map(x => parseInt(x.value));
+  if (!uyeIdleri.length) { mesajGoster("En az bir komisyon üyesi seçmelisiniz.", true); return; }
+  const sonuc = document.querySelector('input[name=sonuc]:checked').value;
+  const davet = document.getElementById("davet-ts").value.trim();
+  if (sonuc === "gelmedi" && !davet) { mesajGoster("Gelmedi sonucunda 'Davet Edilen Tarih/Saat' boş olamaz.", true); return; }
+
+  const kalemler = seciliKayitlar.map(k => ({
+    ceza_satiri_id: k.ceza_satiri_id, ihbarname_id: k.ihbarname_id, fis_no: k.fis_no,
+    indirim_orani: k.tr.querySelector(".oran-girdi").value,
+  }));
+  if (!confirm(kalemler.length + " ihbarname kalemi için '" + SONUC_AD[sonuc] + "' tutanağı oluşturulacak. Onaylıyor musunuz?")) return;
+
+  try {
+    const r = await api("/api/tutanak", {
+      mukellef_id: uzlasmaMukellefId, sonuc, kalemler, komisyon_uye_idleri: uyeIdleri,
+      toplanti_tarih_saat: document.getElementById("toplanti-ts").value.trim(),
+      davet_tarih_saat: davet,
+    });
+    mesajGoster("Tutanak oluşturuldu: " + r.tutanak_no + "\nDosya indiriliyor...");
+    window.location.href = "/tutanak?dosya=" + encodeURIComponent(r.dosya_adi);
+    await uzlasmaTabloDoldur();
+  } catch (e) { hata(e); }
+}
+
+// ---------- GECMIS ----------
+async function gecmisYukle() {
+  const tb = document.querySelector("#gecmis-tablo tbody");
+  tb.innerHTML = "";
+  (await api("/api/tutanaklar")).forEach(t => {
+    const dosyaAdi = (t.dosya_yolu || "").split("/").pop();
+    const baglanti = dosyaAdi ? `<a class="indir" href="/tutanak?dosya=${encodeURIComponent(dosyaAdi)}">${kacis(dosyaAdi)}</a>` : "";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(isoToTr(t.toplanti_tarih_saat))}</td><td>${kacis(t.tutanak_no)}</td>` +
+      `<td>${kacis(t.ad_unvan)}</td><td>${kacis(t.vkn_tckn)}</td><td>${SONUC_AD[t.sonuc] || kacis(t.sonuc)}</td><td>${baglanti}</td>`;
+    tb.appendChild(tr);
+  });
+
+  const sec = document.getElementById("imza-uye");
+  const uyeler = await api("/api/komisyon");
+  sec.innerHTML = '<option value="">— Üye seçin —</option>' +
+    uyeler.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}</option>`).join("");
+  document.querySelector("#imza-tablo tbody").innerHTML = "";
+}
+
+function isoToTr(iso) {
+  const e = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/.exec(iso || "");
+  return e ? `${e[3]}.${e[2]}.${e[1]} ${e[4]}` : (iso || "");
+}
+
+async function imzaGecmisiYukle() {
+  const id = document.getElementById("imza-uye").value;
+  const tb = document.querySelector("#imza-tablo tbody");
+  tb.innerHTML = "";
+  if (!id) return;
+  (await api("/api/imza_gecmisi?uye_id=" + id)).forEach(t => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(isoToTr(t.toplanti_tarih_saat))}</td><td>${kacis(t.tutanak_no)}</td>` +
+      `<td>${kacis(t.ad_unvan)}</td><td>${SONUC_AD[t.sonuc] || kacis(t.sonuc)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// ---------- TURLER ----------
+async function turlerYukle() {
+  const vt = document.querySelector("#vergi-tablo tbody");
+  vt.innerHTML = "";
+  (await api("/api/vergi_turleri")).forEach(v => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(v.kod)}</td><td>${kacis(v.ad)}</td>` +
+      `<td class="sag"><button class="btn ikincil" onclick="vergiSil(${v.id})">Sil</button></td>`;
+    vt.appendChild(tr);
+  });
+  const ct = document.querySelector("#ceza-tablo tbody");
+  ct.innerHTML = "";
+  (await api("/api/ceza_kodlari")).forEach(c => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(c.kod)}</td><td>${kacis(c.aciklama)}</td>` +
+      `<td class="sag"><button class="btn ikincil" onclick="cezaSil(${c.id})">Sil</button></td>`;
+    ct.appendChild(tr);
+  });
+}
+async function vergiEkle() {
+  try {
+    await api("/api/vergi_turleri", { kod: document.getElementById("vergi-kod").value, ad: document.getElementById("vergi-ad").value });
+    document.getElementById("vergi-kod").value = ""; document.getElementById("vergi-ad").value = "";
+    turlerYukle();
+  } catch (e) { hata(e); }
+}
+async function vergiSil(id) {
+  if (!confirm("Seçili vergi türü pasif yapılacak. Onaylıyor musunuz?")) return;
+  try { await api("/api/vergi_turleri/sil", { id }); turlerYukle(); } catch (e) { hata(e); }
+}
+async function cezaEkle() {
+  try {
+    await api("/api/ceza_kodlari", { kod: document.getElementById("ceza-kod").value, aciklama: document.getElementById("ceza-aciklama").value });
+    document.getElementById("ceza-kod").value = ""; document.getElementById("ceza-aciklama").value = "";
+    turlerYukle();
+  } catch (e) { hata(e); }
+}
+async function cezaSil(id) {
+  if (!confirm("Seçili ceza kodu pasif yapılacak. Onaylıyor musunuz?")) return;
+  try { await api("/api/ceza_kodlari/sil", { id }); turlerYukle(); } catch (e) { hata(e); }
+}
+
+// ---------- ISTATISTIK ----------
+async function istatistikYukle() {
+  try {
+    const b = document.getElementById("ist-baslangic").value.trim();
+    const s = document.getElementById("ist-bitis").value.trim();
+    const v = await api("/api/istatistik?baslangic=" + encodeURIComponent(b) + "&bitis=" + encodeURIComponent(s));
+    const d = v.sonuc_dagilimi || {};
+    document.getElementById("ist-ozet").innerHTML =
+      `Başvuran mükellef sayısı: <b>${v.basvuran_sayisi}</b><br>` +
+      `Uzlaşıldı: <b>${d.uzlasildi || 0}</b> &nbsp; Uzlaşılamadı: <b>${d.uzlasilamadi || 0}</b> &nbsp; Gelmedi: <b>${d.gelmedi || 0}</b>`;
+    const tb = document.querySelector("#ist-tablo tbody");
+    tb.innerHTML = "";
+    (v.ceza_turu_bazinda || []).forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${kacis(r.ceza_kodu)}</td><td>${kacis(r.aciklama)}</td>` +
+        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
+        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
+      tb.appendChild(tr);
+    });
+  } catch (e) { hata(e); }
+}
+
+// ---------- AYARLAR ----------
+async function ayarlarYukle() {
+  const k = await api("/api/kurum");
+  document.getElementById("kurum-defterdarlik").value = k.defterdarlik || "";
+  document.getElementById("kurum-vd").value = k.vergi_dairesi || "";
+
+  const ut = document.querySelector("#uye-tablo tbody");
+  ut.innerHTML = "";
+  (await api("/api/komisyon?tum=1")).forEach(u => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(u.ad_soyad)}</td><td>${kacis(u.unvan)}</td>` +
+      `<td>${u.aktif ? "Aktif" : "Pasif"}</td>` +
+      `<td class="sag">${u.aktif ? `<button class="btn ikincil" onclick="uyeSil(${u.id})">Pasif Yap</button>` : ""}</td>`;
+    ut.appendChild(tr);
+  });
+
+  const yt = document.querySelector("#yedek-tablo tbody");
+  yt.innerHTML = "";
+  (await api("/api/yedekler")).forEach(d => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${kacis(d)}</td>` +
+      `<td class="sag"><button class="btn ikincil" onclick="geriYukle('${kacis(d)}')">Geri Yükle</button></td>`;
+    yt.appendChild(tr);
+  });
+}
+async function kurumKaydet() {
+  try {
+    await api("/api/kurum", {
+      defterdarlik: document.getElementById("kurum-defterdarlik").value,
+      vergi_dairesi: document.getElementById("kurum-vd").value,
+    });
+    mesajGoster("Kurum bilgileri kaydedildi.");
+  } catch (e) { hata(e); }
+}
+async function uyeEkle() {
+  try {
+    await api("/api/komisyon", { ad_soyad: document.getElementById("uye-ad").value, unvan: document.getElementById("uye-unvan").value });
+    document.getElementById("uye-ad").value = "";
+    ayarlarYukle();
+  } catch (e) { hata(e); }
+}
+async function uyeSil(id) {
+  if (!confirm("Seçili komisyon üyesi pasif yapılacak. Onaylıyor musunuz?")) return;
+  try { await api("/api/komisyon/sil", { id }); ayarlarYukle(); } catch (e) { hata(e); }
+}
+async function yedekAl() {
+  try {
+    const r = await api("/api/yedek_al", {});
+    mesajGoster("Yedek alındı: " + r.dosya);
+    ayarlarYukle();
+  } catch (e) { hata(e); }
+}
+async function geriYukle(dosya) {
+  if (!confirm("'" + dosya + "' yedeği geri yüklenecek ve mevcut veritabanının yerini alacak. Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/geri_yukle", { dosya });
+    mesajGoster("Veritabanı geri yüklendi.");
+    ayarlarYukle();
+  } catch (e) { hata(e); }
+}
+
+// ---------- baslangic ----------
+kayitSekmeYenile().catch(hata);
+</script>
+</body>
+</html>
