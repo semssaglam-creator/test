@@ -190,6 +190,26 @@ def sonraki_tutanak_no():
         conn.close()
 
 
+def tutanak_sayaci_ayarla(sonraki_sayi):
+    """Bir sonraki tutanagin alacagi sira numarasini belirler (yil icinde).
+
+    Yil ortasinda uygulamaya gecildiginde kaldigi yerden devam edebilmek
+    icindir; ornegin 45 verilirse siradaki tutanak 'YIL/45' olur.
+    """
+    sonraki_sayi = int(sonraki_sayi)
+    if sonraki_sayi < 1:
+        raise ValueError("Tutanak sayisi 1'den kucuk olamaz.")
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE kurum_bilgileri SET tutanak_yili = ?, tutanak_sayac = ? WHERE id = 1",
+            (datetime.now().year, sonraki_sayi - 1),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Mukellefler
 # ---------------------------------------------------------------------------
@@ -264,6 +284,22 @@ def mukellef_guncelle(mukellef_id, ad_unvan, vkn_tckn, adres, telefon):
 # ---------------------------------------------------------------------------
 # Ihbarnameler ve ceza satirlari
 # ---------------------------------------------------------------------------
+
+def mevcut_fis_nolar(fis_listesi):
+    """Verilen fis numaralarindan veritabaninda zaten kayitli olanlari dondurur."""
+    fisler = [str(f).strip() for f in fis_listesi if str(f).strip()]
+    if not fisler:
+        return []
+    conn = get_connection()
+    try:
+        soru = ",".join("?" * len(fisler))
+        rows = conn.execute(
+            f"SELECT DISTINCT fis_no FROM ihbarnameler WHERE fis_no IN ({soru})", fisler
+        ).fetchall()
+        return [r["fis_no"] for r in rows]
+    finally:
+        conn.close()
+
 
 def ihbarname_ekle(mukellef_id, fis_no, duzenleme_tarihi="", teblig_tarihi="", dilekce_onay_zamani=""):
     conn = get_connection()

@@ -121,6 +121,15 @@ def _dilekce_kaydet(veri):
         except ValueError:
             raise ApiHata(f"Gecersiz miktar: {s.get('miktar')}")
 
+    # Mukerrer kayit kontrolu: ayni fis no daha once kaydedildiyse kaydetme
+    fisler = {str(s["fis_no"]).strip() for s in satirlar}
+    mevcutlar = db.mevcut_fis_nolar(fisler)
+    if mevcutlar:
+        raise ApiHata(
+            "Bu ihbarname(ler) daha önce kaydedilmiş, kayıt yapılmadı: "
+            + ", ".join(sorted(mevcutlar))
+        )
+
     mukellef_id = db.mukellef_bul_veya_olustur(
         m.get("ad_unvan", "").strip(), m.get("vkn_tckn", "").strip(),
         m.get("adres", "").strip(), m.get("telefon", "").strip(),
@@ -315,6 +324,12 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit({"tamam": True})
             elif yol == "/api/komisyon/sil":
                 db.komisyon_uyesi_sil(int(veri["id"]))
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/tutanak_sayaci":
+                try:
+                    db.tutanak_sayaci_ayarla(veri.get("sonraki", 0))
+                except (ValueError, TypeError) as exc:
+                    raise ApiHata(f"Gecersiz tutanak sayisi: {exc}")
                 self._json_yanit({"tamam": True})
             elif yol == "/api/yedek_al":
                 hedef = db.yedek_al()

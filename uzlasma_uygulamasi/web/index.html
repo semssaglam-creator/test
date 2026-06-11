@@ -263,6 +263,16 @@
     <button class="btn" onclick="kurumKaydet()">Kaydet</button>
   </div>
   <div class="kart">
+    <h2>Tutanak Numarası</h2>
+    <div class="ozet" id="sayac-bilgi">-</div>
+    <div class="satir" style="align-items:flex-end; margin-top:8px">
+      <div class="dar"><label>Sonraki tutanak sıra numarası</label><input type="text" id="sayac-sonraki"></div>
+      <div class="dar"><button class="btn" onclick="sayacKaydet()">Kaydet</button></div>
+    </div>
+    <label style="margin-top:6px">Yıl ortasında uygulamaya geçerken kaldığınız numaradan devam etmek için kullanın.
+    Numara her tutanakta bir artar, yıl değişince 1'den başlar.</label>
+  </div>
+  <div class="kart">
     <h2>Komisyon Üyeleri</h2>
     <table id="uye-tablo"><thead><tr><th>Ad Soyad</th><th style="width:110px">Ünvan</th><th style="width:90px">Durum</th><th style="width:100px"></th></tr></thead><tbody></tbody></table>
     <div class="satir" style="margin-top:10px">
@@ -814,6 +824,11 @@ async function ayarlarYukle() {
   const k = await api("/api/kurum");
   document.getElementById("kurum-defterdarlik").value = k.defterdarlik || "";
   document.getElementById("kurum-vd").value = k.vergi_dairesi || "";
+  const yil = new Date().getFullYear();
+  const sonraki = (k.tutanak_yili === yil ? k.tutanak_sayac : 0) + 1;
+  document.getElementById("sayac-bilgi").innerHTML =
+    "Sıradaki tutanak numarası: <b>" + yil + "/" + sonraki + "</b>";
+  document.getElementById("sayac-sonraki").value = sonraki;
 
   const ut = document.querySelector("#uye-tablo tbody");
   ut.innerHTML = "";
@@ -833,6 +848,17 @@ async function ayarlarYukle() {
       `<td class="sag"><button class="btn ikincil" onclick="geriYukle('${kacis(d)}')">Geri Yükle</button></td>`;
     yt.appendChild(tr);
   });
+}
+async function sayacKaydet() {
+  const deger = parseInt(document.getElementById("sayac-sonraki").value, 10);
+  if (!deger || deger < 1) { mesajGoster("Geçerli bir sayı girin (1 veya üzeri).", true); return; }
+  const yil = new Date().getFullYear();
+  if (!confirm("Sıradaki tutanak numarası " + yil + "/" + deger + " olarak ayarlanacak. Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/tutanak_sayaci", { sonraki: deger });
+    mesajGoster("Tutanak sayacı ayarlandı: " + yil + "/" + deger);
+    ayarlarYukle();
+  } catch (e) { hata(e); }
 }
 async function kurumKaydet() {
   try {
