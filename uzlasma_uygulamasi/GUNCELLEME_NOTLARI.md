@@ -16,3 +16,13 @@
   kayıt ekranında Dönem/Ceza Nedeni alanları sadeleştirilebilir.
 - "Kopyaladığımda gereksiz bilgiler geliyor" → ayrıştırıcı yalnızca
   fiş no + vergi türü + ceza kodu + tutar alacak şekilde sadeleşecek.
+
+## 3. Dilekçe Kaydı ekranı — tablo sadeleştirme
+- "İhbarname / Ceza Satırları" giriş tablosundan **Vergi Türü**,
+  **Ceza Nedeni** ve **Dönem** kolonları kaldırılacak.
+- Kalacak kolonlar: İhbarname Fiş No, Ceza Kodu, Miktar (TL),
+  Düzenleme T., Tebliğ T.
+- Soru (toplu güncellemede netleştir): tutanaktaki "Vergi ve Cezanın
+  Türü" kolonu şimdiye dek "vergiTürü/cezaKodu" (örn. 0015/3080)
+  biçimindeydi; vergi türü girilmeyecekse tutanakta yalnızca ceza
+  kodu mu yazılsın?
