@@ -642,9 +642,31 @@ def istatistikler(baslangic=None, bitis=None):
             params,
         ).fetchone()[0]
 
+        mukellef_bazinda = conn.execute(
+            f"""
+            SELECT m.ad_unvan, m.vkn_tckn,
+                   COUNT(DISTINCT t.id) AS tutanak_sayisi,
+                   COUNT(DISTINCT cs.ihbarname_id) AS ihbarname_sayisi,
+                   COUNT(tk.id) AS kalem_sayisi,
+                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN 1 ELSE 0 END) > 0 AS uzlasti,
+                   SUM(cs.miktar) AS toplam_basvuru_tutari,
+                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END)
+                       AS toplam_uzlasilan_tutar
+            FROM uzlasma_tutanaklari t
+            JOIN mukellefler m ON m.id = t.mukellef_id
+            JOIN tutanak_kalemleri tk ON tk.tutanak_id = t.id
+            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+            WHERE {kosul}
+            GROUP BY t.mukellef_id
+            ORDER BY m.ad_unvan COLLATE NOCASE
+            """,
+            params,
+        ).fetchall()
+
         return {
             "sonuc_dagilimi": {r["sonuc"]: r["adet"] for r in sonuc_dagilimi},
             "ceza_turu_bazinda": [dict(r) for r in ceza_turu_bazinda],
+            "mukellef_bazinda": [dict(r) for r in mukellef_bazinda],
             "basvuran_sayisi": basvuran_sayisi,
         }
     finally:

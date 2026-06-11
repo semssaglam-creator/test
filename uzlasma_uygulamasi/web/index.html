@@ -44,7 +44,10 @@
   .mesaj.hata { background: #a33; }
   .mesaj.basari { background: #2c7a3f; }
   .ozet { font-size: 14px; line-height: 1.8; }
-  .checkbox-grup label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1c2733; margin-bottom: 4px; cursor: pointer; }
+  .checkbox-grup { border: 1px solid #c6d0db; border-radius: 6px; padding: 8px 10px; background: #fff; max-height: 160px; overflow-y: auto; min-width: 260px; }
+  .checkbox-grup label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #1c2733; padding: 4px 2px; cursor: pointer; border-bottom: 1px solid #eef2f6; }
+  .checkbox-grup label:last-child { border-bottom: none; }
+  .checkbox-grup input[type=checkbox] { width: 16px; height: 16px; }
   .radio-grup { display: flex; gap: 18px; }
   .radio-grup label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1c2733; cursor: pointer; }
   a.indir { color: #1f3a5f; }
@@ -149,7 +152,7 @@
     </div>
     <div class="satir">
       <div class="dar"><label>Toplantı Tarih/Saat (GG.AA.YYYY SS:DD)</label><input type="text" id="toplanti-ts"></div>
-      <div class="dar"><label>Davet Edilen Tarih/Saat (Gelmedi için)</label><input type="text" id="davet-ts" disabled></div>
+      <div class="dar"><label>Davetiye Tebliğ Tarih/Saat (Gelmedi için zorunlu)</label><input type="text" id="davet-ts"></div>
       <div>
         <label>İmzalayacak Komisyon Üyeleri</label>
         <div class="checkbox-grup" id="komisyon-secim"></div>
@@ -227,6 +230,15 @@
     <h2>Ceza Kodu Bazında İstatistikler</h2>
     <table id="ist-tablo">
       <thead><tr><th>Ceza Kodu</th><th>Açıklama</th><th class="sag">Başvuru Sayısı</th><th class="sag">Uzlaşılan Sayısı</th>
+        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="kart">
+    <h2>Mükellef Bazında İstatistikler</h2>
+    <table id="ist-mukellef-tablo">
+      <thead><tr><th>Mükellef</th><th style="width:120px">VKN/TCKN</th><th class="sag">Tutanak Sayısı</th>
+        <th class="sag">İhbarname Sayısı</th><th style="width:90px">Uzlaştı mı?</th>
         <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
       <tbody></tbody>
     </table>
@@ -461,8 +473,7 @@ async function uzlasmaSekmeYenile() {
 }
 
 function sonucDegisti() {
-  const sonuc = document.querySelector('input[name=sonuc]:checked').value;
-  document.getElementById("davet-ts").disabled = sonuc !== "gelmedi";
+  // Davetiye tarihi tum sonuclarda girilebilir; yalnizca Gelmedi'de zorunludur.
 }
 
 aramaKur("uzlasma-ara", "uzlasma-ara-oneriler", async m => {
@@ -674,6 +685,16 @@ async function istatistikYukle() {
         `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
         `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
       tb.appendChild(tr);
+    });
+    const mtb = document.querySelector("#ist-mukellef-tablo tbody");
+    mtb.innerHTML = "";
+    (v.mukellef_bazinda || []).forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${kacis(r.ad_unvan)}</td><td>${kacis(r.vkn_tckn)}</td>` +
+        `<td class="sag">${r.tutanak_sayisi}</td><td class="sag">${r.ihbarname_sayisi}</td>` +
+        `<td>${r.uzlasti ? "Evet" : "Hayır"}</td>` +
+        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
+      mtb.appendChild(tr);
     });
   } catch (e) { hata(e); }
 }

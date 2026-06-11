@@ -37,6 +37,27 @@ def _kur_kolon_genislikleri(ws):
         ws.column_dimensions[get_column_letter(i)].width = genislik
 
 
+def _sayfa_ayari(ws):
+    """A4 dikey, genislige sigdir (orijinal GIB dosyasindaki ayarlar)."""
+    ws.page_setup.orientation = "portrait"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_margins.left = 0.7
+    ws.page_margins.right = 0.7
+    ws.page_margins.top = 0.75
+    ws.page_margins.bottom = 0.75
+
+
+def _metin_satir_sayisi(metin, satir_genisligi=110):
+    """Kac gorunur satira boluneceginin kaba tahmini (A:F birlesik hucre)."""
+    toplam = 0
+    for parca in str(metin).split("\n"):
+        toplam += max(1, -(-len(parca) // satir_genisligi))
+    return toplam
+
+
 def _baslik_blogu(ws, kurum, tutanak_basligi):
     """1-7. satirlar: kurum bilgileri ve tutanak basligi (A1:F7 birlesik)."""
     satirlar = [
@@ -65,6 +86,9 @@ def _bilgi_satiri(ws, row, etiket, deger):
     c2 = ws.cell(row=row, column=3, value=deger)
     c2.font = FONT_NORMAL
     c2.alignment = WRAP_LEFT
+    # Uzun degerler (ornegin adres) sarildiginda satir yuksekligi yetsin
+    satir_sayisi = _metin_satir_sayisi(deger, satir_genisligi=70)
+    ws.row_dimensions[row].height = max(21, satir_sayisi * 15 + 6)
     return row + 1
 
 
@@ -79,11 +103,13 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
     return row
 
 
-def _paragraf(ws, row, metin, yukseklik=110):
+def _paragraf(ws, row, metin, yukseklik=None):
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
     c = ws.cell(row=row, column=1, value=metin)
     c.alignment = WRAP_LEFT
     c.font = FONT_NORMAL
+    if yukseklik is None:
+        yukseklik = _metin_satir_sayisi(metin) * 15 + 10
     ws.row_dimensions[row].height = yukseklik
     return row + 1
 
@@ -177,7 +203,7 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
 # ---------------------------------------------------------------------------
 
 def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, mukellef,
-                              kalemler, imzalayanlar, sonuc):
+                              kalemler, imzalayanlar, sonuc, davet_tarih_saat=""):
     """sonuc: 'uzlasildi' veya 'uzlasilamadi'."""
     wb = Workbook()
     ws = wb.active
@@ -185,7 +211,10 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     _kur_kolon_genislikleri(ws)
 
     row = _baslik_blogu(ws, kurum, "UZLAŞMA TUTANAĞI")
-    row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, toplanti_tarih_saat, mukellef)
+    tarih_metni = toplanti_tarih_saat
+    if (davet_tarih_saat or "").strip():
+        tarih_metni = f"{toplanti_tarih_saat} / {davet_tarih_saat.strip()}"
+    row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, tarih_metni, mukellef)
 
     tarih_str, saat_str = _tarih_saat_ayir(toplanti_tarih_saat)
     if sonuc == "uzlasildi":
@@ -211,7 +240,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         )
         tutar_basligi = "ÖNERİLEN TUTAR"
 
-    row = _paragraf(ws, row, aciklama, yukseklik=120)
+    row = _paragraf(ws, row, aciklama)
 
     # Tablo basligi (2 satir, birlesik)
     baslik_satiri = row
@@ -254,12 +283,12 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112. maddesi 3. fıkrası gereğince "
         "normal vade tarihinden itibaren uzlaşma tutanağının imzalandığı tarihe kadar geçen "
         "zaman için ayrıca Vergi Dairesince gecikme faizi hesaplanacaktır.",
-        yukseklik=50,
     )
     row += 1
 
     _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef.get("ad_unvan", ""))
 
+    _sayfa_ayari(ws)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
     wb.save(dosya_yolu)
     return dosya_yolu
@@ -326,11 +355,12 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         f"Komisyonuna gelmediğinden uzlaşma temin edilememiştir. Durumu tespit eden bu tutanak "
         f"komisyon üyelerince okunduktan sonra müştereken imza altına alındı."
     )
-    row = _paragraf(ws, row, aciklama, yukseklik=140)
+    row = _paragraf(ws, row, aciklama)
     row += 1
 
     _imza_bloklari_3lu(ws, row, imzalayanlar)
 
+    _sayfa_ayari(ws)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
     wb.save(dosya_yolu)
     return dosya_yolu
@@ -355,7 +385,8 @@ def tutanak_olustur_excel(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, da
             mukellef, kalemler, imzalayanlar,
         )
     return uzlasma_tutanagi_olustur(
-        dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, mukellef, kalemler, imzalayanlar, sonuc
+        dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, mukellef, kalemler, imzalayanlar,
+        sonuc, davet_tarih_saat,
     )
 
 

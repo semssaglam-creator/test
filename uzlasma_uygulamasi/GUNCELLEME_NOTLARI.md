@@ -26,3 +26,15 @@
   Türü" kolonu şimdiye dek "vergiTürü/cezaKodu" (örn. 0015/3080)
   biçimindeydi; vergi türü girilmeyecekse tutanakta yalnızca ceza
   kodu mu yazılsın?
+
+## Uygulananlar (11.06.2026)
+- [x] Tutanak Excel'leri A4 dikey, "genişliğe sığdır" yazdırma ayarlı;
+      satır yükseklikleri metne göre otomatik (adres/paragraf kesilmez)
+- [x] Davetiye tarihi alanı her sonuçta aktif (yalnızca Gelmedi'de
+      zorunlu); uzlaşıldı/uzlaşılamadı tutanak başlığına da yazılıyor
+- [x] Komisyon üyeleri seçimi belirgin onay kutulu liste (çoktan seçmeli)
+- [x] İstatistiklere mükellef bazında tablo eklendi
+
+## Bekleyenler (toplu güncelleme)
+- [ ] Not 1: PDF sürükle-bırak / toplu dilekçe yükleme
+- [ ] Not 2-3: Vergi türü / ceza nedeni / dönem kolonlarının kaldırılması
