@@ -35,6 +35,16 @@
 - [x] Komisyon üyeleri seçimi belirgin onay kutulu liste (çoktan seçmeli)
 - [x] İstatistiklere mükellef bazında tablo eklendi
 
-## Bekleyenler (toplu güncelleme)
-- [ ] Not 1: PDF sürükle-bırak / toplu dilekçe yükleme
-- [ ] Not 2-3: Vergi türü / ceza nedeni / dönem kolonlarının kaldırılması
+## Bekleyenler
+(şu an yok)
+
+## Uygulananlar (devam)
+- [x] Not 1: PDF sürükle-bırak / dosya seçici ile tek veya toplu dilekçe
+      yükleme (pypdf gömüldü; tek dosya formu doldurur, toplu yükleme
+      otomatik kaydeder ve özet gösterir)
+- [x] Not 2-3: Kayıt tablosundan Ceza Nedeni ve Dönem kaldırıldı;
+      Vergi Türü/Ceza Kodu düz metin (PDF'ten otomatik dolar). Vergi
+      türü PDF'te varsa alınır, tutanaktaki ayrı "Vergi Türü" kolonuna
+      yazılır
+- [x] Ayrıştırıcı gerçek PDF biçimine göre yeniden yazıldı (pypdf +
+      pdftotext düzen varyantlarıyla 3 örnek PDF'te doğrulandı)

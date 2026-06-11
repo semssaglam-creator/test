@@ -145,6 +145,37 @@ def _dilekce_kaydet(veri):
             "mukellef_id": mukellef_id}
 
 
+def _pdf_dilekceleri_ayristir(veri):
+    """Yuklenen PDF dosyalarini (base64) metne cevirip ayristirir."""
+    import base64
+
+    from .paste_parser import pdf_metni_cikar
+
+    dosyalar = veri.get("dosyalar") or []
+    if not dosyalar:
+        raise ApiHata("PDF dosyasi gonderilmedi.")
+    if len(dosyalar) > 50:
+        raise ApiHata("Tek seferde en fazla 50 dosya yuklenebilir.")
+
+    sonuclar = []
+    for d in dosyalar:
+        ad = d.get("ad", "dosya.pdf")
+        try:
+            icerik = base64.b64decode(d.get("icerik", ""), validate=True)
+            if not icerik.startswith(b"%PDF"):
+                raise ApiHata("Dosya bir PDF degil.")
+            metin = pdf_metni_cikar(icerik)
+            ayrisan = dilekce_ayristir(metin)
+            if not ayrisan["mukellef"]["ad_unvan"] and not ayrisan["ihbarnameler"]:
+                raise ApiHata("Dilekce alanlari bulunamadi (beklenen Dijital VD bicimi degil).")
+            sonuclar.append({"ad": ad, "tamam": True, "veri": ayrisan})
+        except ApiHata as exc:
+            sonuclar.append({"ad": ad, "tamam": False, "hata": str(exc)})
+        except Exception as exc:  # noqa: BLE001 - tek dosya hatasi digerlerini durdurmasin
+            sonuclar.append({"ad": ad, "tamam": False, "hata": f"PDF okunamadi: {exc}"})
+    return {"sonuclar": sonuclar}
+
+
 class Istekci(BaseHTTPRequestHandler):
     server_version = "UzlasmaApp/1.0"
 
@@ -252,6 +283,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit({"tamam": True})
             elif yol == "/api/dilekce/ayristir":
                 self._json_yanit(dilekce_ayristir(veri.get("metin", "")))
+            elif yol == "/api/dilekce/pdf":
+                self._json_yanit(_pdf_dilekceleri_ayristir(veri))
             elif yol == "/api/kayit":
                 self._json_yanit(_dilekce_kaydet(veri))
             elif yol == "/api/tutanak":

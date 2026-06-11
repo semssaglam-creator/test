@@ -87,6 +87,15 @@
   </div>
 
   <div class="kart">
+    <h2>Dilekçe PDF Yükle (tek tek veya toplu)</h2>
+    <div id="pdf-birakma" style="border:2px dashed #9fb2c5; border-radius:8px; padding:26px; text-align:center; color:#5a6b7d; cursor:pointer">
+      PDF dosyalarını buraya sürükleyip bırakın veya <u>tıklayıp seçin</u>
+      <input type="file" id="pdf-girdi" accept=".pdf,application/pdf" multiple style="display:none">
+    </div>
+    <div id="pdf-sonuclar" style="margin-top:10px; font-size:14px"></div>
+  </div>
+
+  <div class="kart">
     <h2>Dilekçeden Kopyala-Yapıştır (Dijital Vergi Dairesi PDF metni)</h2>
     <textarea id="yapistir-metni" rows="6" placeholder="Dilekçe PDF'inden metni kopyalayıp buraya yapıştırın..."></textarea>
     <div class="sag" style="margin-top:8px"><button class="btn" onclick="yapistirAyristir()">Metni Ayrıştır ve Forma Aktar</button></div>
@@ -96,9 +105,9 @@
     <h2>İhbarname / Ceza Satırları</h2>
     <table id="kayit-tablo">
       <thead><tr>
-        <th>İhbarname Fiş No</th><th style="width:90px">Vergi Türü</th><th style="width:90px">Ceza Kodu</th>
-        <th>Ceza Nedeni</th><th style="width:110px">Dönem</th><th style="width:110px">Miktar (TL)</th>
-        <th style="width:110px">Düzenleme T.</th><th style="width:110px">Tebliğ T.</th><th style="width:40px"></th>
+        <th>İhbarname Fiş No</th><th style="width:100px">Vergi Türü</th><th style="width:100px">Ceza Kodu</th>
+        <th style="width:130px">Miktar (TL)</th>
+        <th style="width:120px">Düzenleme T.</th><th style="width:120px">Tebliğ T.</th><th style="width:40px"></th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -377,16 +386,104 @@ function kayitSatirEkle(s) {
   const tr = document.createElement("tr");
   tr.innerHTML =
     `<td><input data-alan="fis_no" value="${kacis(s.fis_no)}"></td>` +
-    `<td><select data-alan="vergi_turu_kod">${kodSecenekleri(vergiTurleri, s.vergi_turu_kod || "")}</select></td>` +
-    `<td><select data-alan="ceza_kodu">${kodSecenekleri(cezaKodlari, s.ceza_kodu || "")}</select></td>` +
-    `<td><input data-alan="ceza_nedeni" value="${kacis(s.ceza_nedeni)}"></td>` +
-    `<td><input data-alan="donem" value="${kacis(s.donem)}" placeholder="2025/01-12"></td>` +
+    `<td><input data-alan="vergi_turu_kod" value="${kacis(s.vergi_turu_kod)}"></td>` +
+    `<td><input data-alan="ceza_kodu" value="${kacis(s.ceza_kodu)}"></td>` +
     `<td><input data-alan="miktar" value="${kacis(s.miktar)}"></td>` +
     `<td><input data-alan="duzenleme_tarihi" value="${kacis(s.duzenleme_tarihi)}"></td>` +
     `<td><input data-alan="teblig_tarihi" value="${kacis(s.teblig_tarihi)}"></td>` +
     `<td class="sag"><button class="btn ikincil" onclick="this.closest('tr').remove()">✕</button></td>`;
   tb.appendChild(tr);
 }
+
+// ---------- PDF YUKLEME ----------
+function dosyaBase64(dosya) {
+  return new Promise((coz, reddet) => {
+    const o = new FileReader();
+    o.onload = () => coz(o.result.split(",")[1]);
+    o.onerror = () => reddet(new Error(dosya.name + " okunamadı"));
+    o.readAsDataURL(dosya);
+  });
+}
+
+function formaAktar(veri) {
+  const m = veri.mukellef || {};
+  if (m.ad_unvan) {
+    document.getElementById("kayit-ad").value = m.ad_unvan;
+    document.getElementById("kayit-vkn").value = m.vkn_tckn || "";
+    document.getElementById("kayit-adres").value = m.adres || "";
+    document.getElementById("kayit-tel").value = m.telefon || "";
+  }
+  dilekceOnayZamani = m.onay_zamani || "";
+  let eklenen = 0;
+  (veri.ihbarnameler || []).forEach(ih => {
+    const satirlar = (ih.ceza_satirlari && ih.ceza_satirlari.length) ? ih.ceza_satirlari : [{}];
+    satirlar.forEach(cs => {
+      kayitSatirEkle({
+        fis_no: ih.fis_no, vergi_turu_kod: cs.vergi_turu_kod, ceza_kodu: cs.ceza_kodu,
+        miktar: cs.miktar, duzenleme_tarihi: ih.duzenleme_tarihi, teblig_tarihi: ih.teblig_tarihi,
+      });
+      eklenen++;
+    });
+  });
+  return eklenen;
+}
+
+async function pdfleriYukle(dosyaListesi) {
+  const dosyalar = Array.from(dosyaListesi).filter(d => d.name.toLowerCase().endsWith(".pdf"));
+  if (!dosyalar.length) { mesajGoster("PDF dosyası seçilmedi.", true); return; }
+  const kutu = document.getElementById("pdf-sonuclar");
+  kutu.textContent = "PDF dosyaları okunuyor...";
+  try {
+    const yukler = [];
+    for (const d of dosyalar) yukler.push({ ad: d.name, icerik: await dosyaBase64(d) });
+    const yanit = await api("/api/dilekce/pdf", { dosyalar: yukler });
+    const sonuclar = yanit.sonuclar || [];
+
+    if (sonuclar.length === 1) {
+      // Tek dosya: form doldurulur, kullanici kontrol edip Kaydet'e basar
+      const r = sonuclar[0];
+      kutu.textContent = "";
+      if (!r.tamam) { mesajGoster(r.ad + ": " + r.hata, true); return; }
+      const eklenen = formaAktar(r.veri);
+      mesajGoster(r.ad + " ayrıştırıldı: " + eklenen + " satır forma eklendi. Kontrol edip Kaydet'e basın.");
+      return;
+    }
+
+    // Toplu yukleme: her dilekce dogrudan kaydedilir, ozet listelenir
+    let basari = 0;
+    const ozet = [];
+    for (const r of sonuclar) {
+      if (!r.tamam) { ozet.push("✗ " + r.ad + " — " + r.hata); continue; }
+      const m = r.veri.mukellef, satirlar = [];
+      (r.veri.ihbarnameler || []).forEach(ih => (ih.ceza_satirlari || []).forEach(cs => satirlar.push({
+        fis_no: ih.fis_no, vergi_turu_kod: cs.vergi_turu_kod || "", ceza_kodu: cs.ceza_kodu || "",
+        ceza_nedeni: cs.ceza_nedeni || "", donem: "", miktar: cs.miktar || 0,
+        duzenleme_tarihi: ih.duzenleme_tarihi || "", teblig_tarihi: ih.teblig_tarihi || "",
+      })));
+      if (!satirlar.length) { ozet.push("✗ " + r.ad + " — ceza satırı bulunamadı"); continue; }
+      try {
+        const k = await api("/api/kayit", { mukellef: m, dilekce_onay_zamani: m.onay_zamani || "", satirlar });
+        ozet.push("✓ " + r.ad + " — " + kacis(m.ad_unvan) + ": " + k.ihbarname_sayisi + " ihbarname, " + k.satir_sayisi + " satır kaydedildi");
+        basari++;
+      } catch (e) { ozet.push("✗ " + r.ad + " — kayıt hatası: " + e.message); }
+    }
+    kutu.innerHTML = ozet.map(x => "<div>" + x + "</div>").join("");
+    mesajGoster(basari + "/" + sonuclar.length + " dilekçe kaydedildi.", basari !== sonuclar.length);
+  } catch (e) { kutu.textContent = ""; hata(e); }
+}
+
+(function pdfYuklemeKur() {
+  const alan = document.getElementById("pdf-birakma");
+  const girdi = document.getElementById("pdf-girdi");
+  alan.addEventListener("click", () => girdi.click());
+  girdi.addEventListener("change", () => { pdfleriYukle(girdi.files); girdi.value = ""; });
+  alan.addEventListener("dragover", e => { e.preventDefault(); alan.style.background = "#eef4fb"; });
+  alan.addEventListener("dragleave", () => { alan.style.background = ""; });
+  alan.addEventListener("drop", e => {
+    e.preventDefault(); alan.style.background = "";
+    pdfleriYukle(e.dataTransfer.files);
+  });
+})();
 
 async function yapistirAyristir() {
   const metin = document.getElementById("yapistir-metni").value;
@@ -414,7 +511,7 @@ async function yapistirAyristir() {
       });
     });
     if (eklenen === 0) mesajGoster("Yapıştırılan metinden ihbarname/ceza satırı bulunamadı. Satırları elle ekleyebilirsiniz.", true);
-    else mesajGoster(eklenen + " satır tabloya eklendi. 'Dönem' alanlarını doldurmayı unutmayın.");
+    else mesajGoster(eklenen + " satır tabloya eklendi.");
   } catch (e) { hata(e); }
 }
 
