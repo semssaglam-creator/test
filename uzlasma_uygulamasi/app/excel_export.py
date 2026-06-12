@@ -237,6 +237,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         tutar_basligi = "ÖNERİLEN TUTAR"
 
     row = _paragraf(ws, row, aciklama)
+    row += 1  # paragraf ile tablo arasinda bos satir
 
     # Tablo basligi (2 satir, birlesik)
     baslik_satiri = row
@@ -280,6 +281,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         "anlaşılarak mükellefle birlikte müştereken imzalandı. Düzenlenen tutanağın bir "
         "örneği mükellefe komisyonda verildi.",
     )
+    row += 1  # paragraflar arasinda bos satir
     row = _paragraf(
         ws, row,
         "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112.maddesi 3.fıkrası gereğince "
