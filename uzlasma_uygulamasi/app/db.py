@@ -772,7 +772,76 @@ def istatistikler(baslangic=None, bitis=None):
                 })
             return sonuc
 
-        ceza_turu_bazinda = _tur_bazinda("ceza_kodu", "ceza_kodlari", "aciklama", "ceza_kodu")
+        # Ceza istatistigi gruplamasi (tutanaktaki gosterime uygun):
+        # - 3080 (vergi ziyai) vergi turu koduyla birlikte: "0015/3080" gibi
+        # - 3073 ve 3074 (usulsuzluk / ozel usulsuzluk) tek grupta
+        # - diger kodlar kendi basina
+        CEZA_GRUP = """
+            CASE
+                WHEN cs.ceza_kodu = '3080'
+                    THEN COALESCE(NULLIF(cs.vergi_turu_kod, ''), '????') || '/3080'
+                WHEN cs.ceza_kodu IN ('3073', '3074') THEN '3073/3074'
+                ELSE COALESCE(cs.ceza_kodu, '')
+            END
+        """
+
+        def _ceza_bazinda():
+            basvurular = conn.execute(
+                f"""
+                SELECT {CEZA_GRUP} AS kod,
+                       COUNT(DISTINCT {dilekce_anahtari}) AS basvuru_sayisi,
+                       SUM(cs.miktar) AS toplam_basvuru_tutari
+                FROM ceza_satirlari cs
+                JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
+                WHERE {kosul_b}
+                GROUP BY {CEZA_GRUP}
+                """,
+                params_b,
+            ).fetchall()
+            uzlasilanlar = conn.execute(
+                f"""
+                SELECT {CEZA_GRUP} AS kod,
+                       COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasildi' THEN t.id END) AS uzlasilan_sayisi,
+                       SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar
+                FROM tutanak_kalemleri tk
+                JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+                JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
+                WHERE {kosul_t}
+                GROUP BY {CEZA_GRUP}
+                """,
+                params_t,
+            ).fetchall()
+
+            vergi_adlari = {v["kod"]: (v["ad"] or "") for v in vergi_turleri_listele(sadece_aktif=False)}
+            ceza_aciklamalari = {c["kod"]: (c["aciklama"] or "")
+                                  for c in ceza_kodlari_listele(sadece_aktif=False)}
+
+            def _aciklama(kod):
+                if kod == "3073/3074":
+                    return "Usulsüzlük / Özel Usulsüzlük Cezaları"
+                if kod.endswith("/3080"):
+                    vt = kod.split("/")[0]
+                    vt_ad = vergi_adlari.get(vt, "")
+                    return (vt_ad + " - " if vt_ad else "") + "Vergi Ziyaı Cezası"
+                return ceza_aciklamalari.get(kod, "")
+
+            uz = {r["kod"]: r for r in uzlasilanlar}
+            basv = {r["kod"]: r for r in basvurular}
+            sonuc = []
+            for kod in sorted(set(basv) | set(uz), key=str):
+                b = basv.get(kod)
+                u = uz.get(kod)
+                sonuc.append({
+                    "ceza_kodu": kod,
+                    "aciklama": _aciklama(kod),
+                    "basvuru_sayisi": b["basvuru_sayisi"] if b else 0,
+                    "toplam_basvuru_tutari": (b["toplam_basvuru_tutari"] if b else 0) or 0,
+                    "uzlasilan_sayisi": (u["uzlasilan_sayisi"] if u else 0) or 0,
+                    "toplam_uzlasilan_tutar": (u["toplam_uzlasilan_tutar"] if u else 0) or 0,
+                })
+            return sonuc
+
+        ceza_turu_bazinda = _ceza_bazinda()
         vergi_turu_bazinda = _tur_bazinda("vergi_turu_kod", "vergi_turleri", "ad", "vergi_turu_kod")
 
         basvuran_sayisi = conn.execute(
