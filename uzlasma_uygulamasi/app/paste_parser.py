@@ -82,6 +82,44 @@ def _tutar_cevir(ham):
     return float(ham)
 
 
+def _kodlari_ayikla(govde):
+    """Govdenin basindaki vergi turu / ceza kodu rakamlarini ayiklar.
+
+    PDF metin cikaricilarina gore kodlar ' 0003 3080 ', '00033080' veya
+    '00033080213 Sayili...' (ceza nedeninin ilk rakamlari bitisik) gibi
+    gelebilir. Donus: (vergi_turu, ceza_kodu, kalan_govde).
+    """
+    pos = 0
+    rakamlar = ""
+    n = len(govde)
+    while True:
+        while pos < n and govde[pos] in " \t\r\n":
+            pos += 1
+        bas = pos
+        while pos < n and govde[pos].isdigit():
+            pos += 1
+        run = govde[bas:pos]
+        if not run or (pos < n and govde[pos] in ".,"):
+            pos = bas  # ondalikli sayi (tutar) veya rakam yok: tuketme
+            break
+        rakamlar += run
+        if len(run) > 4 or len(rakamlar) >= 8:
+            break
+
+    if len(rakamlar) >= 8:
+        vergi_turu, ceza_kodu, kalan = rakamlar[:4], rakamlar[4:8], rakamlar[8:]
+    elif len(rakamlar) >= 4:
+        kod, kalan = rakamlar[:4], rakamlar[4:]
+        if kod.startswith("3"):
+            vergi_turu, ceza_kodu = "", kod
+        else:
+            vergi_turu, ceza_kodu = kod, ""
+    else:
+        return "", "", govde
+
+    return vergi_turu, ceza_kodu, kalan + govde[pos:]
+
+
 def ceza_satirlari_ayikla(metin):
     """Ceza satirlari: fisno [vergi turu] ceza kodu ... tutar.
 
@@ -95,18 +133,14 @@ def ceza_satirlari_ayikla(metin):
 
     satirlar = []
     kalip = re.compile(
-        rf"({FIS_NO_RE})\s+(\d{{4}})(?![\d.,])(?:\s+(\d{{4}})(?![\d.,]))?(.*?)"
-        rf"(?=(?:{FIS_NO_RE})\s*\d{{4}}|Bu belge|\Z)",
+        rf"({FIS_NO_RE})(.*?)(?=(?:{FIS_NO_RE})|Bu belge|\Z)",
         re.DOTALL,
     )
     for e in kalip.finditer(temiz):
-        fis_no, kod1, kod2, govde = e.group(1), e.group(2), e.group(3), e.group(4) or ""
-        if kod2:
-            vergi_turu, ceza_kodu = kod1, kod2
-        elif kod1.startswith("3"):
-            vergi_turu, ceza_kodu = "", kod1     # tek kod ceza kodudur (3xxx)
-        else:
-            vergi_turu, ceza_kodu = kod1, ""
+        fis_no, govde = e.group(1), e.group(2) or ""
+        vergi_turu, ceza_kodu, govde = _kodlari_ayikla(govde)
+        if not vergi_turu and not ceza_kodu:
+            continue  # fis nolu ama kodsuz blok (paragraf ici gecis vb.)
 
         # Tutar: govdedeki ondalikli son sayi ("341. Madde" gibi yasal metin
         # sayilariyla karismamasi icin ondalik kismi zorunlu tutulur)
