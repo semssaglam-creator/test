@@ -274,6 +274,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._tutanak_indir(params.get("dosya", [""])[0])
             elif yol == "/puantaj":
                 self._puantaj_indir(params)
+            elif yol == "/dokum":
+                self._dokum_indir()
             else:
                 self._hata("Bulunamadi", 404)
         except ApiHata as exc:
@@ -322,7 +324,10 @@ class Istekci(BaseHTTPRequestHandler):
                 ad_soyad = (veri.get("ad_soyad") or "").strip()
                 if not ad_soyad:
                     raise ApiHata("Ad Soyad bos olamaz.")
-                db.komisyon_uyesi_ekle(ad_soyad, (veri.get("unvan") or "Uye").strip())
+                gorev = (veri.get("gorev") or "Üye").strip()
+                if gorev not in ("Başkan", "Üye"):
+                    raise ApiHata("Gorev 'Başkan' veya 'Üye' olmalidir.")
+                db.komisyon_uyesi_ekle(ad_soyad, (veri.get("unvan") or "").strip(), gorev)
                 self._json_yanit({"tamam": True})
             elif yol == "/api/komisyon/sil":
                 db.komisyon_uyesi_sil(int(veri["id"]))
@@ -389,6 +394,35 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type",
                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition",
+                         f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
+        self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _dokum_indir(self):
+        from datetime import datetime
+
+        from .ods_export import ods_olustur
+
+        basliklar = ["VKN/TCKN", "Mükellef Adı/Ünvanı", "İhbarname Numarası", "Vergi Kodu",
+                     "Ceza Kodu", "Vergi/Ceza Tutarı (TL)", "Uzlaşılan Tutar (TL)",
+                     "Uzlaşma Durumu"]
+        durum_adlari = {"beklemede": "Bekliyor", "uzlasildi": "Uzlaşıldı",
+                        "uzlasilamadi": "Uzlaşılamadı", "gelmedi": "Gelmedi"}
+        satirlar = []
+        for r in db.tum_kayitlar_dokum():
+            satirlar.append([
+                r["vkn_tckn"] or "", r["ad_unvan"], r["fis_no"],
+                r["vergi_turu_kod"] or "", r["ceza_kodu"] or "",
+                round(r["miktar"] or 0, 2),
+                round(r["uzlasilan_tutar"], 2) if r["uzlasilan_tutar"] is not None else "",
+                durum_adlari.get(r["durum"], r["durum"]),
+            ])
+        govde = ods_olustur(basliklar, satirlar, sayfa_adi="Uzlasma Kayitlari")
+        dosya_adi = f"uzlasma_dokum_{datetime.now().strftime('%Y%m%d_%H%M')}.ods"
+        self.send_response(200)
+        self.send_header("Content-Type", "application/vnd.oasis.opendocument.spreadsheet")
         self.send_header("Content-Disposition",
                          f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
         self.send_header("Content-Length", str(len(govde)))

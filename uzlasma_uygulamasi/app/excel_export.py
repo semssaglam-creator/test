@@ -13,7 +13,7 @@ if LIB_DIR not in sys.path:
     sys.path.insert(0, LIB_DIR)
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 from .sayi_yaziya import tutar_yaziya
@@ -32,7 +32,9 @@ CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 CENTER_TITLE = Alignment(horizontal="center", vertical="center")
 # Veri hucreleri: hucreye sigdir (tasma olmaz); paragraflar: iki yana yasli
 SIGDIR = Alignment(horizontal="center", vertical="center", shrink_to_fit=True)
+SIGDIR_SOL = Alignment(horizontal="left", vertical="center", shrink_to_fit=True)
 JUSTIFY = Alignment(horizontal="justify", vertical="center", wrap_text=True)
+DOLGU_GRI = PatternFill("solid", fgColor="DDDDDD")
 
 
 def _kur_kolon_genislikleri(ws):
@@ -80,7 +82,7 @@ def _baslik_blogu(ws, kurum, tutanak_basligi):
     return 8  # sonraki bos satir
 
 
-def _bilgi_satiri(ws, row, etiket, deger):
+def _bilgi_satiri(ws, row, etiket, deger, sigdir=False):
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
     ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=6)
     c1 = ws.cell(row=row, column=1, value=etiket)
@@ -88,10 +90,14 @@ def _bilgi_satiri(ws, row, etiket, deger):
     c1.alignment = WRAP_LEFT
     c2 = ws.cell(row=row, column=3, value=deger)
     c2.font = FONT_NORMAL
-    c2.alignment = WRAP_LEFT
-    # Uzun degerler (ornegin adres) sarildiginda satir yuksekligi yetsin
-    satir_sayisi = _metin_satir_sayisi(deger, satir_genisligi=70)
-    ws.row_dimensions[row].height = max(21, satir_sayisi * 15 + 6)
+    if sigdir:
+        c2.alignment = SIGDIR_SOL
+        ws.row_dimensions[row].height = 21
+    else:
+        c2.alignment = WRAP_LEFT
+        # Uzun degerler (ornegin adres) sarildiginda satir yuksekligi yetsin
+        satir_sayisi = _metin_satir_sayisi(deger, satir_genisligi=70)
+        ws.row_dimensions[row].height = max(21, satir_sayisi * 15 + 6)
     return row + 1
 
 
@@ -101,12 +107,16 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
     row = _bilgi_satiri(ws, row, "Tutanağın Tarihi / Davetiye T.Tarihi", tutanak_tarihi_metni)
     row = _bilgi_satiri(ws, row, "Tutanağın Sayısı", tutanak_no)
     if ara_baslik:
+        row += 1  # buyuk harfli baslik ile ustteki satir arasinda bosluk
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
         c = ws.cell(row=row, column=1, value=ara_baslik)
         c.font = FONT_BOLD
         c.alignment = CENTER_TITLE
+        for col in range(1, 7):
+            ws.cell(row=row, column=col).fill = DOLGU_GRI
         row += 1
-    row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""))
+    row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""),
+                         sigdir=True)
     row = _bilgi_satiri(ws, row, "Mükellefin Adresi", mukellef.get("adres", ""))
     row = _bilgi_satiri(ws, row, "Bağlı Bulunduğu Vergi Dairesi", kurum.get("vergi_dairesi", ""))
     row = _bilgi_satiri(ws, row, "Vergi Kimlik Numarası", mukellef.get("vkn_tckn", ""))
@@ -114,6 +124,13 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
 
 
 def _paragraf(ws, row, metin, yukseklik=None):
+    # Paragraf basi girintisi: her paragrafin ilk satiri hafif sagdan baslar
+    satirlar = []
+    for parca in str(metin).split("\n"):
+        if parca.strip() and not parca.startswith(" "):
+            parca = "     " + parca
+        satirlar.append(parca)
+    metin = "\n".join(satirlar)
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
     c = ws.cell(row=row, column=1, value=metin)
     c.alignment = JUSTIFY
@@ -129,6 +146,13 @@ def _tablo_kenarligi_tamamla(ws, r1, r2, c1=1, c2=6):
     for r in range(r1, r2 + 1):
         for c in range(c1, c2 + 1):
             ws.cell(row=r, column=c).border = BORDER_ALL
+
+
+def _baslik_satiri_boya(ws, r1, r2, c1=1, c2=6):
+    """Tablo baslik hucrelerini hafif gri dolgu ile koyulastirir."""
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            ws.cell(row=r, column=c).fill = DOLGU_GRI
 
 
 def _hucre(ws, row, col, deger, font=None, align=None, border=True, num_format=None):
@@ -158,7 +182,8 @@ def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
     isimler = []
     for u in unvanlar[:3]:
         hedef = _unvan_normal(u)
-        uygun = next((k["ad_soyad"] for k in imzalayanlar if _unvan_normal(k.get("unvan")) == hedef
+        uygun = next((k["ad_soyad"] for k in imzalayanlar
+                       if _unvan_normal(k.get("gorev") or k.get("unvan")) == hedef
                        and k["ad_soyad"] not in isimler), None)
         if uygun is None:
             uygun = next((k["ad_soyad"] for k in imzalayanlar if k["ad_soyad"] not in isimler), "")
@@ -169,7 +194,7 @@ def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
         if c1 != c2:
             ws.merge_cells(start_row=row, start_column=c1, end_row=row, end_column=c2)
         cell = ws.cell(row=row, column=c1, value=isim)
-        cell.alignment = CENTER
+        cell.alignment = SIGDIR
         cell.font = FONT_NORMAL
 
     for (c1, c2), unvan in zip(aralik, unvanlar):
@@ -189,7 +214,8 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     isimler = []
     for u in unvanlar:
         hedef = _unvan_normal(u)
-        uygun = next((k["ad_soyad"] for k in imzalayanlar if _unvan_normal(k.get("unvan")) == hedef
+        uygun = next((k["ad_soyad"] for k in imzalayanlar
+                       if _unvan_normal(k.get("gorev") or k.get("unvan")) == hedef
                        and k["ad_soyad"] not in isimler), None)
         if uygun is None:
             uygun = next((k["ad_soyad"] for k in imzalayanlar if k["ad_soyad"] not in isimler), "")
@@ -198,7 +224,7 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     for (c1, c2), isim in zip(aralik, isimler):
         ws.merge_cells(start_row=row, start_column=c1, end_row=row, end_column=c2)
         cell = ws.cell(row=row, column=c1, value=isim)
-        cell.alignment = CENTER
+        cell.alignment = SIGDIR
         cell.font = FONT_NORMAL
 
     for (c1, c2), unvan in zip(aralik, unvanlar):
@@ -290,6 +316,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     _hucre(ws, row, 6, toplam_yazi, font=FONT_BOLD, align=JUSTIFY)
     ws.row_dimensions[row].height = max(21, _metin_satir_sayisi(toplam_yazi, 22) * 15 + 6)
     _tablo_kenarligi_tamamla(ws, baslik_satiri, row)
+    _baslik_satiri_boya(ws, baslik_satiri, baslik_satiri + 1)
     row += 1
 
     row = _paragraf(
@@ -304,7 +331,10 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         "normal vade tarihinden itibaren uzlaşma tutanağının imzalandığı tarihe kadar geçen "
         "zaman için ayrıca Vergi Dairesince gecikme faizi hesaplanacaktır.",
     )
-    row += 1
+    # Islak imza icin isimlerin ustunde bos alan birakilir
+    ws.row_dimensions[row].height = 30
+    ws.row_dimensions[row + 1].height = 30
+    row += 2
 
     _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef.get("ad_unvan", ""))
 
@@ -331,10 +361,13 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, tarih_metni, mukellef,
                             ara_baslik="UZLAŞMA TALEP EDENİN")
 
+    row += 1  # buyuk harfli baslik ile ustteki satir arasinda bosluk
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
     c = ws.cell(row=row, column=1, value="UZLAŞMA TALEP EDİLEN")
     c.font = FONT_BOLD
     c.alignment = CENTER_TITLE
+    for col in range(1, 7):
+        ws.cell(row=row, column=col).fill = DOLGU_GRI
     row += 1
 
     baslik_satiri = row
@@ -359,6 +392,8 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
     _hucre(ws, row, 6, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
+    _tablo_kenarligi_tamamla(ws, baslik_satiri, row)
+    _baslik_satiri_boya(ws, baslik_satiri, baslik_satiri)
     row += 1
 
     toplanti_tarih, toplanti_saat = _tarih_saat_ayir(toplanti_tarih_saat)
@@ -377,7 +412,10 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         f"komisyon üyelerince okunduktan sonra müştereken imza altına alındı."
     )
     row = _paragraf(ws, row, aciklama)
-    row += 1
+    # Islak imza icin isimlerin ustunde bos alan birakilir
+    ws.row_dimensions[row].height = 30
+    ws.row_dimensions[row + 1].height = 30
+    row += 2
 
     _imza_bloklari_3lu(ws, row, imzalayanlar)
 

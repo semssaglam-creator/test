@@ -125,6 +125,21 @@ def init_db():
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
+        # Eski surumden gecis: komisyon uyelerine 'gorev' kolonu (Baskan/Uye).
+        # 'unvan' artik gercek unvani tutar (Mudur, Mudur Yrd., Gelir Uzmani...).
+        kolonlar = [r[1] for r in conn.execute("PRAGMA table_info(komisyon_uyeleri)")]
+        if "gorev" not in kolonlar:
+            conn.execute("ALTER TABLE komisyon_uyeleri ADD COLUMN gorev TEXT")
+            for row in conn.execute("SELECT id, unvan FROM komisyon_uyeleri").fetchall():
+                eski = (row["unvan"] or "").strip()
+                duz = eski.lower().replace("ş", "s").replace("ü", "u")
+                if duz.startswith("ba"):
+                    conn.execute("UPDATE komisyon_uyeleri SET gorev = 'Başkan', unvan = '' WHERE id = ?",
+                                 (row["id"],))
+                else:
+                    conn.execute("UPDATE komisyon_uyeleri SET gorev = 'Üye', "
+                                 "unvan = CASE WHEN unvan IN ('Uye', 'Üye') THEN '' ELSE unvan END "
+                                 "WHERE id = ?", (row["id"],))
         cur = conn.execute("SELECT COUNT(*) FROM kurum_bilgileri")
         if cur.fetchone()[0] == 0:
             conn.execute(
@@ -474,11 +489,12 @@ def komisyon_uyeleri_listele(sadece_aktif=True):
         conn.close()
 
 
-def komisyon_uyesi_ekle(ad_soyad, unvan):
+def komisyon_uyesi_ekle(ad_soyad, unvan, gorev="Üye"):
     conn = get_connection()
     try:
         cur = conn.execute(
-            "INSERT INTO komisyon_uyeleri (ad_soyad, unvan) VALUES (?, ?)", (ad_soyad, unvan)
+            "INSERT INTO komisyon_uyeleri (ad_soyad, unvan, gorev) VALUES (?, ?, ?)",
+            (ad_soyad, unvan, gorev),
         )
         conn.commit()
         return cur.lastrowid
@@ -607,10 +623,13 @@ def puantaj_verisi(yil, ay):
     sonuc = []
     for u in komisyon_uyeleri_listele():
         uye_gunleri = sorted(gunler.get(u["id"], set()))
-        unvan = (u["unvan"] or "").strip()
-        # Puantaj cetvelinde komisyon baskani "Mudur" olarak unvanlandirilir
-        if unvan.lower().replace("ş", "s").startswith("ba"):
+        gorev = (u["gorev"] or u["unvan"] or "").strip()
+        # Puantajda komisyon baskani, gercek unvani ne olursa olsun (ornegin
+        # Mudur Yardimcisi) "Mudur" olarak yazilir; uyeler gercek unvaniyla.
+        if gorev.lower().replace("ş", "s").startswith("ba"):
             unvan = "Müdür"
+        else:
+            unvan = (u["unvan"] or "").strip() or "Üye"
         sonuc.append({
             "ad_soyad": u["ad_soyad"],
             "unvan": unvan,
@@ -801,6 +820,28 @@ def istatistikler(baslangic=None, bitis=None):
             "basvuran_sayisi": basvuran_sayisi,
             "dilekce_sayisi": dilekce_sayisi,
         }
+    finally:
+        conn.close()
+
+
+def tum_kayitlar_dokum():
+    """ODS dokumu icin tum ceza satirlarini duz liste olarak getirir."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT m.vkn_tckn, m.ad_unvan, ih.fis_no, cs.vergi_turu_kod, cs.ceza_kodu,
+                   cs.miktar, tk.uzlasilan_tutar, ih.durum
+            FROM ceza_satirlari cs
+            JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
+            JOIN mukellefler m ON m.id = ih.mukellef_id
+            LEFT JOIN tutanak_kalemleri tk ON tk.id = (
+                SELECT MAX(tk2.id) FROM tutanak_kalemleri tk2 WHERE tk2.ceza_satiri_id = cs.id
+            )
+            ORDER BY m.ad_unvan COLLATE NOCASE, ih.fis_no, cs.id
+            """
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()
 
