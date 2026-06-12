@@ -53,6 +53,12 @@
   a.indir { color: #1f3a5f; }
   .iki-kolon { display: flex; gap: 16px; flex-wrap: wrap; }
   .iki-kolon > .kart { flex: 1; min-width: 340px; }
+  .rozet { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .rozet.beklemede { background: #2c7a3f; }
+  .rozet.uzlasildi { background: #1f5fae; }
+  .rozet.gelmedi { background: #b3261e; }
+  .rozet.uzlasilamadi { background: #d97706; }
+  tr.gecmis-satir td { color: #7a8794; background: #fafbfc; }
 </style>
 </head>
 <body>
@@ -131,11 +137,15 @@
   </div>
 
   <div class="kart">
-    <h2>Uzlaşılmamış İhbarnameler / Ceza Satırları</h2>
+    <h2>Mükellefin Tüm İhbarnameleri</h2>
+    <div style="font-size:13px; color:#5a6b7d; margin-bottom:8px">
+      <span class="rozet beklemede">BEKLEYEN</span> durumdaki tüm ihbarnameler tutanağa otomatik dahil edilir;
+      geçmiş sonuçlar bilgi amaçlı listelenir.
+    </div>
     <table id="uzlasma-tablo">
       <thead><tr>
-        <th style="width:40px">Seç</th><th>İhbarname Fiş No</th><th style="width:85px">Vergi Türü</th>
-        <th style="width:85px">Ceza Kodu</th><th>Ceza Nedeni</th><th style="width:95px">Dönem</th>
+        <th style="width:120px">Durum</th><th>İhbarname Fiş No</th><th style="width:85px">Vergi Türü</th>
+        <th style="width:85px">Ceza Kodu</th>
         <th style="width:110px" class="sag">Miktar (TL)</th><th style="width:85px">İndirim %</th>
         <th style="width:120px" class="sag">Kalan Tutar (TL)</th>
       </tr></thead>
@@ -143,7 +153,7 @@
     </table>
     <div class="satir" style="margin-top:10px; align-items:flex-end">
       <div class="dar"><label>Varsayılan İndirim Oranı %</label><input type="text" id="varsayilan-oran" value="80"></div>
-      <div class="dar"><button class="btn ikincil" onclick="oraniUygula()">Seçililere Uygula</button></div>
+      <div class="dar"><button class="btn ikincil" onclick="oraniUygula()">Tümüne Uygula</button></div>
     </div>
   </div>
 
@@ -590,29 +600,40 @@ aramaKur("uzlasma-ara", "uzlasma-ara-oneriler", async m => {
   await uzlasmaTabloDoldur();
 });
 
+const DURUM_ROZET = {
+  beklemede: ["BEKLEYEN", "beklemede"],
+  uzlasildi: ["UZLAŞILDI", "uzlasildi"],
+  gelmedi: ["GELMEDİ", "gelmedi"],
+  uzlasilamadi: ["UZLAŞILMADI", "uzlasilamadi"],
+};
+
 async function uzlasmaTabloDoldur() {
   const tb = document.querySelector("#uzlasma-tablo tbody");
   tb.innerHTML = "";
   uzlasmaSatirlar = [];
   if (!uzlasmaMukellefId) return;
   const oran = parseFloat(document.getElementById("varsayilan-oran").value) || 80;
-  const veri = await api("/api/bekleyen?mukellef_id=" + uzlasmaMukellefId);
+  const veri = await api("/api/ihbarnameler?mukellef_id=" + uzlasmaMukellefId);
   veri.forEach(grup => {
     const ih = grup.ihbarname;
+    const bekleyen = ih.durum === "beklemede";
+    const [rozetYazi, rozetSinif] = DURUM_ROZET[ih.durum] || [ih.durum, ""];
     grup.satirlar.forEach(s => {
       const kalan = Math.round(s.miktar * (1 - oran / 100) * 100) / 100;
       const tr = document.createElement("tr");
       tr.innerHTML =
-        `<td style="text-align:center;cursor:pointer" class="sec-hucre">☐</td>` +
+        `<td><span class="rozet ${rozetSinif}">${rozetYazi}</span></td>` +
         `<td>${kacis(ih.fis_no)}</td><td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
-        `<td>${kacis(s.ceza_nedeni)}</td><td>${kacis(s.donem)}</td>` +
         `<td class="sag">${tlFormat(s.miktar)}</td>` +
-        `<td><input class="oran-girdi" value="${oran}"></td>` +
-        `<td class="sag kalan-hucre">${tlFormat(kalan)}</td>`;
+        (bekleyen
+          ? `<td><input class="oran-girdi" value="${oran}"></td><td class="sag kalan-hucre">${tlFormat(kalan)}</td>`
+          : `<td></td><td></td>`);
+      if (!bekleyen) tr.classList.add("gecmis-satir");
       tb.appendChild(tr);
-      const kayit = { ceza_satiri_id: s.id, ihbarname_id: ih.id, fis_no: ih.fis_no, miktar: s.miktar, secili: false, tr };
+      if (!bekleyen) return;
+      // Bekleyen satirlar tutanaga otomatik dahildir
+      const kayit = { ceza_satiri_id: s.id, ihbarname_id: ih.id, fis_no: ih.fis_no, miktar: s.miktar, secili: true, tr };
       uzlasmaSatirlar.push(kayit);
-      tr.querySelector(".sec-hucre").onclick = () => fisSec(kayit.fis_no);
       tr.querySelector(".oran-girdi").addEventListener("input", ev => {
         const o = parseFloat(String(ev.target.value).replace(",", "."));
         const k = isNaN(o) ? null : Math.round(kayit.miktar * (1 - o / 100) * 100) / 100;
@@ -622,30 +643,19 @@ async function uzlasmaTabloDoldur() {
   });
 }
 
-// ayni fis_no'ya sahip tum satirlar birlikte secilir/birakilir
-function fisSec(fisNo) {
-  const hedefler = uzlasmaSatirlar.filter(k => k.fis_no === fisNo);
-  const yeni = !hedefler[0].secili;
-  hedefler.forEach(k => {
-    k.secili = yeni;
-    k.tr.classList.toggle("secili", yeni);
-    k.tr.querySelector(".sec-hucre").textContent = yeni ? "☑" : "☐";
-  });
-}
-
 function oraniUygula() {
   const o = parseFloat(String(document.getElementById("varsayilan-oran").value).replace(",", "."));
   if (isNaN(o)) { mesajGoster("Geçerli bir oran girin.", true); return; }
-  uzlasmaSatirlar.filter(k => k.secili).forEach(k => {
+  uzlasmaSatirlar.forEach(k => {
     k.tr.querySelector(".oran-girdi").value = o;
     k.tr.querySelector(".kalan-hucre").textContent = tlFormat(Math.round(k.miktar * (1 - o / 100) * 100) / 100);
   });
 }
 
 async function tutanakOlustur() {
-  const seciliKayitlar = uzlasmaSatirlar.filter(k => k.secili);
+  const seciliKayitlar = uzlasmaSatirlar;
   if (!uzlasmaMukellefId) { mesajGoster("Önce bir mükellef seçin.", true); return; }
-  if (!seciliKayitlar.length) { mesajGoster("Uzlaşmaya konu en az bir ihbarname seçmelisiniz.", true); return; }
+  if (!seciliKayitlar.length) { mesajGoster("Bu mükellefin uzlaşma bekleyen ihbarnamesi yok.", true); return; }
   const uyeIdleri = Array.from(document.querySelectorAll("#komisyon-secim input:checked")).map(x => parseInt(x.value));
   if (!uyeIdleri.length) { mesajGoster("En az bir komisyon üyesi seçmelisiniz.", true); return; }
   const sonuc = document.querySelector('input[name=sonuc]:checked').value;

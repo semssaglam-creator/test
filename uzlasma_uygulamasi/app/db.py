@@ -349,6 +349,31 @@ def bekleyen_ihbarnameler(mukellef_id):
         conn.close()
 
 
+def tum_ihbarnameler(mukellef_id):
+    """Mukellefe ait tum ihbarnameleri (durumuyla birlikte) ve satirlarini getirir.
+
+    Bekleyenler once gelir; gecmis sonuclar bilgi amacli listelenir.
+    """
+    conn = get_connection()
+    try:
+        ihbarnameler = conn.execute(
+            """
+            SELECT * FROM ihbarnameler WHERE mukellef_id = ?
+            ORDER BY CASE durum WHEN 'beklemede' THEN 0 ELSE 1 END, teblig_tarihi, fis_no
+            """,
+            (mukellef_id,),
+        ).fetchall()
+        sonuc = []
+        for ih in ihbarnameler:
+            satirlar = conn.execute(
+                "SELECT * FROM ceza_satirlari WHERE ihbarname_id = ? ORDER BY id", (ih["id"],)
+            ).fetchall()
+            sonuc.append({"ihbarname": dict(ih), "satirlar": [dict(s) for s in satirlar]})
+        return sonuc
+    finally:
+        conn.close()
+
+
 def ihbarname_durum_guncelle(ihbarname_id, durum):
     conn = get_connection()
     try:

@@ -249,6 +249,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(db.mukellef_getir(int(params["id"][0])))
             elif yol == "/api/bekleyen":
                 self._json_yanit(db.bekleyen_ihbarnameler(int(params["mukellef_id"][0])))
+            elif yol == "/api/ihbarnameler":
+                self._json_yanit(db.tum_ihbarnameler(int(params["mukellef_id"][0])))
             elif yol == "/api/vergi_turleri":
                 self._json_yanit(db.vergi_turleri_listele())
             elif yol == "/api/ceza_kodlari":

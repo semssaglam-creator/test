@@ -92,10 +92,17 @@ def _bilgi_satiri(ws, row, etiket, deger):
     return row + 1
 
 
-def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, mukellef):
+def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, mukellef,
+                      ara_baslik=""):
     row = start_row
     row = _bilgi_satiri(ws, row, "Tutanağın Tarihi / Davetiye T.Tarihi", tutanak_tarihi_metni)
     row = _bilgi_satiri(ws, row, "Tutanağın Sayısı", tutanak_no)
+    if ara_baslik:
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
+        c = ws.cell(row=row, column=1, value=ara_baslik)
+        c.font = FONT_BOLD
+        c.alignment = CENTER_TITLE
+        row += 1
     row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""))
     row = _bilgi_satiri(ws, row, "Mükellefin Adresi", mukellef.get("adres", ""))
     row = _bilgi_satiri(ws, row, "Bağlı Bulunduğu Vergi Dairesi", kurum.get("vergi_dairesi", ""))
@@ -214,10 +221,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
             f"Aşağıda isim ve ünvanları yazılı Başkan ve üyelerinden teşekkül eden Uzlaşma "
             f"Komisyonumuz mükellefin iştirakiyle {tarih_str} tarihinde saat {saat_str}'da "
             f"toplanarak tabloda yazılı vergi ve cezalar ile önerilen tutarlar üzerinde "
-            f"uzlaşma sağlanmıştır.\n"
-            f"     İşbu Uzlaşma Komisyonu Tutanağı (3) nüsha tanzim edilerek okundu. Doğruluğu "
-            f"anlaşılarak mükellefle birlikte müştereken imzalandı. Düzenlenen tutanağın bir "
-            f"örneği mükellefe komisyonda verildi."
+            f"uzlaşma sağlanmıştır."
         )
         tutar_basligi = "UZLAŞILAN TUTAR"
     else:
@@ -272,7 +276,13 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
 
     row = _paragraf(
         ws, row,
-        "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112. maddesi 3. fıkrası gereğince "
+        "     İşbu Uzlaşma Komisyonu Tutanağı (3) nüsha tanzim edilerek okundu. Doğruluğu "
+        "anlaşılarak mükellefle birlikte müştereken imzalandı. Düzenlenen tutanağın bir "
+        "örneği mükellefe komisyonda verildi.",
+    )
+    row = _paragraf(
+        ws, row,
+        "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112.maddesi 3.fıkrası gereğince "
         "normal vade tarihinden itibaren uzlaşma tutanağının imzalandığı tarihe kadar geçen "
         "zaman için ayrıca Vergi Dairesince gecikme faizi hesaplanacaktır.",
     )
@@ -300,7 +310,8 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     row = _baslik_blogu(ws, kurum, "UZLAŞMA KOMİSYON KARAR TUTANAĞI")
 
     tarih_metni = f"{toplanti_tarih_saat} / {davet_tarih_saat}"
-    row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, tarih_metni, mukellef)
+    row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, tarih_metni, mukellef,
+                            ara_baslik="UZLAŞMA TALEP EDENİN")
 
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
     c = ws.cell(row=row, column=1, value="UZLAŞMA TALEP EDİLEN")
