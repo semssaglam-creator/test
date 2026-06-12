@@ -172,9 +172,17 @@
     <div class="satir">
       <div class="dar"><label>Toplantı Tarih/Saat (GG.AA.YYYY SS:DD)</label><input type="text" id="toplanti-ts"></div>
       <div class="dar"><label>Davetiye Tebliğ Tarih/Saat (Gelmedi için zorunlu)</label><input type="text" id="davet-ts"></div>
-      <div>
-        <label>İmzalayacak Komisyon Üyeleri</label>
-        <div class="checkbox-grup" id="komisyon-secim"></div>
+      <div class="dar" style="flex:0 0 200px">
+        <label>Başkan</label>
+        <select id="sec-baskan"></select>
+      </div>
+      <div class="dar" style="flex:0 0 200px">
+        <label>Üye 1</label>
+        <select id="sec-uye1"></select>
+      </div>
+      <div class="dar" style="flex:0 0 200px">
+        <label>Üye 2</label>
+        <select id="sec-uye2"></select>
       </div>
     </div>
     <div class="sag"><button class="btn" onclick="tutanakOlustur()">Tutanak Oluştur</button></div>
@@ -303,7 +311,7 @@
     <table id="uye-tablo"><thead><tr><th>Ad Soyad</th><th style="width:110px">Ünvan</th><th style="width:90px">Durum</th><th style="width:100px"></th></tr></thead><tbody></tbody></table>
     <div class="satir" style="margin-top:10px">
       <div><input type="text" id="uye-ad" placeholder="Ad Soyad"></div>
-      <div class="dar" style="flex:0 0 130px"><select id="uye-unvan"><option>Baskan</option><option selected>Uye</option></select></div>
+      <div class="dar" style="flex:0 0 130px"><select id="uye-unvan"><option>Başkan</option><option selected>Üye</option></select></div>
       <div class="dar" style="flex:0 0 90px"><button class="btn" onclick="uyeEkle()">Ekle</button></div>
     </div>
   </div>
@@ -442,6 +450,11 @@ function dosyaBase64(dosya) {
 }
 
 function formaAktar(veri) {
+  // Her dilekce kendi mukellefiyle eslesmeli: onceki form ve tablo icerigi
+  // temizlenir, aksi halde ust uste yuklemelerde satirlar tek isme karisir.
+  ["kayit-ad", "kayit-vkn", "kayit-adres", "kayit-tel"].forEach(id => document.getElementById(id).value = "");
+  document.querySelector("#kayit-tablo tbody").innerHTML = "";
+  dilekceOnayZamani = "";
   const m = veri.mukellef || {};
   if (m.ad_unvan) {
     document.getElementById("kayit-ad").value = m.ad_unvan;
@@ -526,26 +539,7 @@ async function yapistirAyristir() {
   if (!metin.trim()) { mesajGoster("Önce dilekçe metnini yapıştırın.", true); return; }
   try {
     const v = await api("/api/dilekce/ayristir", { metin });
-    const m = v.mukellef || {};
-    if (m.ad_unvan) {
-      document.getElementById("kayit-ad").value = m.ad_unvan;
-      document.getElementById("kayit-vkn").value = m.vkn_tckn || "";
-      document.getElementById("kayit-adres").value = m.adres || "";
-      document.getElementById("kayit-tel").value = m.telefon || "";
-    }
-    dilekceOnayZamani = m.onay_zamani || "";
-    let eklenen = 0;
-    (v.ihbarnameler || []).forEach(ih => {
-      const satirlar = (ih.ceza_satirlari && ih.ceza_satirlari.length) ? ih.ceza_satirlari : [{}];
-      satirlar.forEach(cs => {
-        kayitSatirEkle({
-          fis_no: ih.fis_no, vergi_turu_kod: cs.vergi_turu_kod, ceza_kodu: cs.ceza_kodu,
-          ceza_nedeni: cs.ceza_nedeni, miktar: cs.miktar,
-          duzenleme_tarihi: ih.duzenleme_tarihi, teblig_tarihi: ih.teblig_tarihi,
-        });
-        eklenen++;
-      });
-    });
+    const eklenen = formaAktar(v);
     if (eklenen === 0) mesajGoster("Yapıştırılan metinden ihbarname/ceza satırı bulunamadı. Satırları elle ekleyebilirsiniz.", true);
     else mesajGoster(eklenen + " satır tabloya eklendi.");
   } catch (e) { hata(e); }
@@ -590,15 +584,27 @@ aramaKur("kayit-ara", "kayit-ara-oneriler", m => {
 let uzlasmaMukellefId = null;
 let uzlasmaSatirlar = []; // {ceza_satiri_id, ihbarname_id, fis_no, miktar, secili, tr}
 
+function unvanNormal(u) {
+  const x = (u || "").toLocaleLowerCase("tr");
+  if (x.startsWith("ba")) return "baskan";
+  if (x.startsWith("ü") || x.startsWith("u")) return "uye";
+  return x;
+}
+
 async function uzlasmaSekmeYenile() {
   const uyeler = await api("/api/komisyon");
-  const kutu = document.getElementById("komisyon-secim");
-  kutu.innerHTML = "";
-  uyeler.forEach(u => {
-    const l = document.createElement("label");
-    l.innerHTML = `<input type="checkbox" value="${u.id}"> ${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}`;
-    kutu.appendChild(l);
-  });
+  const baskanlar = uyeler.filter(u => unvanNormal(u.unvan) === "baskan");
+  const uyeListesi = uyeler.filter(u => unvanNormal(u.unvan) !== "baskan");
+  const doldur = (id, liste) => {
+    const sec = document.getElementById(id);
+    const onceki = sec.value;
+    sec.innerHTML = '<option value="">— Seçin —</option>' +
+      liste.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}</option>`).join("");
+    if (onceki && liste.some(u => String(u.id) === onceki)) sec.value = onceki;
+  };
+  doldur("sec-baskan", baskanlar);
+  doldur("sec-uye1", uyeListesi);
+  doldur("sec-uye2", uyeListesi);
   if (!document.getElementById("toplanti-ts").value) {
     const s = await api("/api/simdi");
     document.getElementById("toplanti-ts").value = s.simdi;
@@ -672,8 +678,13 @@ async function tutanakOlustur() {
   const seciliKayitlar = uzlasmaSatirlar;
   if (!uzlasmaMukellefId) { mesajGoster("Önce bir mükellef seçin.", true); return; }
   if (!seciliKayitlar.length) { mesajGoster("Bu mükellefin uzlaşma bekleyen ihbarnamesi yok.", true); return; }
-  const uyeIdleri = Array.from(document.querySelectorAll("#komisyon-secim input:checked")).map(x => parseInt(x.value));
-  if (!uyeIdleri.length) { mesajGoster("En az bir komisyon üyesi seçmelisiniz.", true); return; }
+  const baskanId = parseInt(document.getElementById("sec-baskan").value, 10);
+  const uye1Id = parseInt(document.getElementById("sec-uye1").value, 10);
+  const uye2Id = parseInt(document.getElementById("sec-uye2").value, 10);
+  if (!baskanId) { mesajGoster("Bir Başkan seçmelisiniz.", true); return; }
+  if (!uye1Id || !uye2Id) { mesajGoster("İki Üye seçmelisiniz.", true); return; }
+  if (uye1Id === uye2Id) { mesajGoster("Üye 1 ve Üye 2 farklı kişiler olmalıdır.", true); return; }
+  const uyeIdleri = [baskanId, uye1Id, uye2Id];
   const sonuc = document.querySelector('input[name=sonuc]:checked').value;
   const davet = document.getElementById("davet-ts").value.trim();
   if (sonuc === "gelmedi" && !davet) { mesajGoster("Gelmedi sonucunda 'Davet Edilen Tarih/Saat' boş olamaz.", true); return; }

@@ -607,9 +607,13 @@ def puantaj_verisi(yil, ay):
     sonuc = []
     for u in komisyon_uyeleri_listele():
         uye_gunleri = sorted(gunler.get(u["id"], set()))
+        unvan = (u["unvan"] or "").strip()
+        # Puantaj cetvelinde komisyon baskani "Mudur" olarak unvanlandirilir
+        if unvan.lower().replace("ş", "s").startswith("ba"):
+            unvan = "Müdür"
         sonuc.append({
             "ad_soyad": u["ad_soyad"],
-            "unvan": u["unvan"],
+            "unvan": unvan,
             "gunler": uye_gunleri,
             "oturum_sayisi": len(uye_gunleri),
         })

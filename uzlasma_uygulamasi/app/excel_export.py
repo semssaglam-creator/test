@@ -121,6 +121,13 @@ def _paragraf(ws, row, metin, yukseklik=None):
     return row + 1
 
 
+def _tablo_kenarligi_tamamla(ws, r1, r2, c1=1, c2=6):
+    """Birlesik hucrelerin ic hucrelerinde eksik kalan kenarliklari tamamlar."""
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            ws.cell(row=r, column=c).border = BORDER_ALL
+
+
 def _hucre(ws, row, col, deger, font=None, align=None, border=True, num_format=None):
     c = ws.cell(row=row, column=col, value=deger)
     c.font = font or FONT_NORMAL
@@ -132,13 +139,23 @@ def _hucre(ws, row, col, deger, font=None, align=None, border=True, num_format=N
     return c
 
 
+def _unvan_normal(unvan):
+    u = (unvan or "").strip().lower().replace("ş", "s").replace("ü", "u").replace("İ", "i")
+    if u.startswith("ba"):
+        return "baskan"
+    if u.startswith("u"):
+        return "uye"
+    return u
+
+
 def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
     """Baskan | Uye | Uye | Mukellef seklinde 4 imza blogu."""
     aralik = [(1, 1), (2, 3), (4, 5), (6, 6)]
     unvanlar = ["Başkan", "Üye", "Üye", "Mükellef"]
     isimler = []
     for u in unvanlar[:3]:
-        uygun = next((k["ad_soyad"] for k in imzalayanlar if (k.get("unvan") or "").strip() == u
+        hedef = _unvan_normal(u)
+        uygun = next((k["ad_soyad"] for k in imzalayanlar if _unvan_normal(k.get("unvan")) == hedef
                        and k["ad_soyad"] not in isimler), None)
         if uygun is None:
             uygun = next((k["ad_soyad"] for k in imzalayanlar if k["ad_soyad"] not in isimler), "")
@@ -172,7 +189,8 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     unvanlar = ["Başkan", "Üye", "Üye"]
     isimler = []
     for u in unvanlar:
-        uygun = next((k["ad_soyad"] for k in imzalayanlar if (k.get("unvan") or "").strip() == u
+        hedef = _unvan_normal(u)
+        uygun = next((k["ad_soyad"] for k in imzalayanlar if _unvan_normal(k.get("unvan")) == hedef
                        and k["ad_soyad"] not in isimler), None)
         if uygun is None:
             uygun = next((k["ad_soyad"] for k in imzalayanlar if k["ad_soyad"] not in isimler), "")
@@ -229,7 +247,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
             f"Aşağıda isim ve ünvanları yazılı Başkan ve üyelerinden teşekkül eden Uzlaşma "
             f"Komisyonumuz mükellefin iştirakiyle {tarih_str} tarihinde saat {saat_str}'da "
             f"toplanarak tabloda yazılı vergi ve cezalar ile önerilen tutarlar üzerinde "
-            f"uzlaşma sağlanamamıştır.\n"
+            f"uzlaşma sağlanamamıştır.\n\n"
             f"     Uzlaşma yönetmeliğinin 10. maddesine göre mükellefin önerilen bu miktarları "
             f"dava açma süresinin son günü akşamına kadar kabul ettiğini bildiren bir dilekçe "
             f"ile başvurması halinde uzlaşma vaki olmuş sayılacaktır."
@@ -237,7 +255,6 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         tutar_basligi = "ÖNERİLEN TUTAR"
 
     row = _paragraf(ws, row, aciklama)
-    row += 1  # paragraf ile tablo arasinda bos satir
 
     # Tablo basligi (2 satir, birlesik)
     baslik_satiri = row
@@ -263,7 +280,9 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip())
         _hucre(ws, row, 4, miktar, num_format="#,##0.00")
         _hucre(ws, row, 5, uzlasilan, num_format="#,##0.00")
-        _hucre(ws, row, 6, tutar_yaziya(uzlasilan), align=WRAP_LEFT)
+        yazi = tutar_yaziya(uzlasilan)
+        _hucre(ws, row, 6, yazi, align=WRAP_LEFT)
+        ws.row_dimensions[row].height = max(21, _metin_satir_sayisi(yazi, 22) * 15 + 6)
         row += 1
 
     toplam_miktar = round(toplam_miktar, 2)
@@ -272,8 +291,11 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
     _hucre(ws, row, 4, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00")
     _hucre(ws, row, 5, toplam_uzlasilan, font=FONT_BOLD, num_format="#,##0.00")
-    _hucre(ws, row, 6, tutar_yaziya(toplam_uzlasilan), font=FONT_BOLD, align=WRAP_LEFT)
-    row += 2
+    toplam_yazi = tutar_yaziya(toplam_uzlasilan)
+    _hucre(ws, row, 6, toplam_yazi, font=FONT_BOLD, align=WRAP_LEFT)
+    ws.row_dimensions[row].height = max(21, _metin_satir_sayisi(toplam_yazi, 22) * 15 + 6)
+    _tablo_kenarligi_tamamla(ws, baslik_satiri, row)
+    row += 1
 
     row = _paragraf(
         ws, row,
@@ -281,7 +303,6 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         "anlaşılarak mükellefle birlikte müştereken imzalandı. Düzenlenen tutanağın bir "
         "örneği mükellefe komisyonda verildi.",
     )
-    row += 1  # paragraflar arasinda bos satir
     row = _paragraf(
         ws, row,
         "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112.maddesi 3.fıkrası gereğince "
@@ -343,7 +364,7 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
     _hucre(ws, row, 6, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00")
-    row += 2
+    row += 1
 
     toplanti_tarih, toplanti_saat = _tarih_saat_ayir(toplanti_tarih_saat)
     davet_tarih, davet_saat = _tarih_saat_ayir(davet_tarih_saat)
