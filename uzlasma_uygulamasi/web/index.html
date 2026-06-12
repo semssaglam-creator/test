@@ -243,12 +243,28 @@
       <div class="dar"><label>Bitiş</label><input type="text" id="ist-bitis"></div>
       <div class="dar"><button class="btn" onclick="istatistikYukle()">Hesapla</button></div>
     </div>
+    <div class="satir" style="margin-bottom:0">
+      <div style="flex:0 0 auto; display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn ikincil" onclick="donemSec(1)">Aylık</button>
+        <button class="btn ikincil" onclick="donemSec(3)">3 Aylık</button>
+        <button class="btn ikincil" onclick="donemSec(6)">6 Aylık</button>
+        <button class="btn ikincil" onclick="donemSec(12)">Yıllık</button>
+      </div>
+    </div>
   </div>
   <div class="kart"><h2>Genel Özet</h2><div class="ozet" id="ist-ozet">-</div></div>
   <div class="kart">
     <h2>Ceza Kodu Bazında İstatistikler</h2>
     <table id="ist-tablo">
-      <thead><tr><th>Ceza Kodu</th><th>Açıklama</th><th class="sag">Başvuru Sayısı</th><th class="sag">Uzlaşılan Sayısı</th>
+      <thead><tr><th>Ceza Kodu</th><th>Açıklama</th><th class="sag">Başvuru Sayısı (dilekçe)</th><th class="sag">Uzlaşılan Sayısı (tutanak)</th>
+        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="kart">
+    <h2>Vergi Türü Bazında İstatistikler</h2>
+    <table id="ist-vergi-tablo">
+      <thead><tr><th>Vergi Türü</th><th>Açıklama</th><th class="sag">Başvuru Sayısı (dilekçe)</th><th class="sag">Uzlaşılan Sayısı (tutanak)</th>
         <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
       <tbody></tbody>
     </table>
@@ -798,6 +814,18 @@ async function cezaSil(id) {
 }
 
 // ---------- ISTATISTIK ----------
+function donemSec(ay) {
+  const bugun = new Date();
+  let bas;
+  if (ay === 1) bas = new Date(bugun.getFullYear(), bugun.getMonth(), 1);          // bu ay
+  else if (ay === 12) bas = new Date(bugun.getFullYear(), 0, 1);                    // bu yil
+  else { bas = new Date(bugun); bas.setMonth(bas.getMonth() - ay); bas.setDate(bas.getDate() + 1); }
+  const tr = d => String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
+  document.getElementById("ist-baslangic").value = tr(bas);
+  document.getElementById("ist-bitis").value = tr(bugun);
+  istatistikYukle();
+}
+
 async function istatistikYukle() {
   try {
     const b = document.getElementById("ist-baslangic").value.trim();
@@ -805,6 +833,7 @@ async function istatistikYukle() {
     const v = await api("/api/istatistik?baslangic=" + encodeURIComponent(b) + "&bitis=" + encodeURIComponent(s));
     const d = v.sonuc_dagilimi || {};
     document.getElementById("ist-ozet").innerHTML =
+      `Başvuru (dilekçe) sayısı: <b>${v.dilekce_sayisi}</b><br>` +
       `Başvuran mükellef sayısı: <b>${v.basvuran_sayisi}</b><br>` +
       `Uzlaşıldı: <b>${d.uzlasildi || 0}</b> &nbsp; Uzlaşılamadı: <b>${d.uzlasilamadi || 0}</b> &nbsp; Gelmedi: <b>${d.gelmedi || 0}</b>`;
     const tb = document.querySelector("#ist-tablo tbody");
@@ -815,6 +844,15 @@ async function istatistikYukle() {
         `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
         `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
       tb.appendChild(tr);
+    });
+    const vtb = document.querySelector("#ist-vergi-tablo tbody");
+    vtb.innerHTML = "";
+    (v.vergi_turu_bazinda || []).forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${kacis(r.vergi_turu_kod) || "(belirtilmemiş)"}</td><td>${kacis(r.ad)}</td>` +
+        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
+        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
+      vtb.appendChild(tr);
     });
     const mtb = document.querySelector("#ist-mukellef-tablo tbody");
     mtb.innerHTML = "";

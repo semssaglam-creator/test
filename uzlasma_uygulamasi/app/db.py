@@ -657,50 +657,115 @@ def tutanak_kalemlerini_getir(tutanak_id):
 # ---------------------------------------------------------------------------
 
 def istatistikler(baslangic=None, bitis=None):
-    """baslangic/bitis: 'YYYY-MM-DD' formatinda tarih (toplanti_tarih_saat uzerinde filtre)."""
+    """baslangic/bitis: 'YYYY-MM-DD' bicimli tarih.
+
+    - Basvuru sayilari DILEKCE bazindadir: ayni dilekceyle (ayni onay
+      zamani) kaydedilen ihbarnameler tek basvuru sayilir. Tarih filtresi
+      basvurular icin kayit tarihine (ihbarnameler.olusturma_tarihi) uygulanir.
+    - Uzlasilan sayilari TUTANAK bazindadir; tarih filtresi toplanti
+      tarihine uygulanir.
+    """
     conn = get_connection()
     try:
-        kosul = "1=1"
-        params = []
+        # Tutanak tarafi filtresi (toplanti tarihi)
+        kosul_t = "1=1"
+        params_t = []
         if baslangic:
-            kosul += " AND t.toplanti_tarih_saat >= ?"
-            params.append(baslangic)
+            kosul_t += " AND t.toplanti_tarih_saat >= ?"
+            params_t.append(baslangic)
         if bitis:
-            kosul += " AND t.toplanti_tarih_saat <= ?"
-            params.append(bitis + " 23:59:59")
+            kosul_t += " AND t.toplanti_tarih_saat <= ?"
+            params_t.append(bitis + " 23:59:59")
+
+        # Basvuru (dilekce) tarafi filtresi (kayit tarihi)
+        kosul_b = "1=1"
+        params_b = []
+        if baslangic:
+            kosul_b += " AND ih.olusturma_tarihi >= ?"
+            params_b.append(baslangic)
+        if bitis:
+            kosul_b += " AND ih.olusturma_tarihi <= ?"
+            params_b.append(bitis + " 23:59:59")
+
+        # Ayni dilekceyi tanimlayan anahtar: mukellef + dilekce onay zamani
+        # (onay zamani bos olan elle girisler ihbarname basina sayilir)
+        dilekce_anahtari = ("ih.mukellef_id || '|' || "
+                            "COALESCE(NULLIF(ih.dilekce_onay_zamani, ''), 'IH' || ih.id)")
 
         sonuc_dagilimi = conn.execute(
             f"""
             SELECT t.sonuc, COUNT(DISTINCT t.id) AS adet
             FROM uzlasma_tutanaklari t
-            WHERE {kosul}
+            WHERE {kosul_t}
             GROUP BY t.sonuc
             """,
-            params,
+            params_t,
         ).fetchall()
 
-        ceza_turu_bazinda = conn.execute(
-            f"""
-            SELECT cs.ceza_kodu, ck.aciklama, COUNT(*) AS basvuru_sayisi,
-                   SUM(cs.miktar) AS toplam_basvuru_tutari,
-                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar,
-                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN 1 ELSE 0 END) AS uzlasilan_sayisi
-            FROM tutanak_kalemleri tk
-            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
-            LEFT JOIN ceza_kodlari ck ON ck.kod = cs.ceza_kodu
-            JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
-            WHERE {kosul}
-            GROUP BY cs.ceza_kodu, ck.aciklama
-            ORDER BY cs.ceza_kodu
-            """,
-            params,
-        ).fetchall()
+        def _tur_bazinda(kod_kolonu, ad_tablosu, ad_kolonu, ad_eslesme):
+            # Basvurular: tum kayitli ceza satirlari (dilekce bazinda sayim)
+            basvurular = conn.execute(
+                f"""
+                SELECT cs.{kod_kolonu} AS kod, MAX(ad.{ad_kolonu}) AS aciklama,
+                       COUNT(DISTINCT {dilekce_anahtari}) AS basvuru_sayisi,
+                       SUM(cs.miktar) AS toplam_basvuru_tutari
+                FROM ceza_satirlari cs
+                JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
+                LEFT JOIN {ad_tablosu} ad ON ad.kod = cs.{kod_kolonu}
+                WHERE {kosul_b}
+                GROUP BY cs.{kod_kolonu}
+                """,
+                params_b,
+            ).fetchall()
+            # Uzlasilanlar: tutanak bazinda sayim ve tutar
+            uzlasilanlar = conn.execute(
+                f"""
+                SELECT cs.{kod_kolonu} AS kod,
+                       COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasildi' THEN t.id END) AS uzlasilan_sayisi,
+                       SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar
+                FROM tutanak_kalemleri tk
+                JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+                JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
+                WHERE {kosul_t}
+                GROUP BY cs.{kod_kolonu}
+                """,
+                params_t,
+            ).fetchall()
+            uz = {r["kod"]: r for r in uzlasilanlar}
+            sonuc = []
+            kodlar = {r["kod"] for r in basvurular} | set(uz)
+            basv = {r["kod"]: r for r in basvurular}
+            for kod in sorted(kodlar, key=lambda k: str(k or "")):
+                b = basv.get(kod)
+                u = uz.get(kod)
+                sonuc.append({
+                    ad_eslesme: kod or "",
+                    "aciklama" if ad_tablosu == "ceza_kodlari" else "ad":
+                        (b["aciklama"] if b else "") or "",
+                    "basvuru_sayisi": b["basvuru_sayisi"] if b else 0,
+                    "toplam_basvuru_tutari": (b["toplam_basvuru_tutari"] if b else 0) or 0,
+                    "uzlasilan_sayisi": (u["uzlasilan_sayisi"] if u else 0) or 0,
+                    "toplam_uzlasilan_tutar": (u["toplam_uzlasilan_tutar"] if u else 0) or 0,
+                })
+            return sonuc
+
+        ceza_turu_bazinda = _tur_bazinda("ceza_kodu", "ceza_kodlari", "aciklama", "ceza_kodu")
+        vergi_turu_bazinda = _tur_bazinda("vergi_turu_kod", "vergi_turleri", "ad", "vergi_turu_kod")
 
         basvuran_sayisi = conn.execute(
             f"""
-            SELECT COUNT(DISTINCT t.mukellef_id) FROM uzlasma_tutanaklari t WHERE {kosul}
+            SELECT COUNT(DISTINCT t.mukellef_id) FROM uzlasma_tutanaklari t WHERE {kosul_t}
             """,
-            params,
+            params_t,
+        ).fetchone()[0]
+
+        dilekce_sayisi = conn.execute(
+            f"""
+            SELECT COUNT(DISTINCT {dilekce_anahtari})
+            FROM ihbarnameler ih
+            WHERE {kosul_b}
+            """,
+            params_b,
         ).fetchone()[0]
 
         mukellef_bazinda = conn.execute(
@@ -717,18 +782,20 @@ def istatistikler(baslangic=None, bitis=None):
             JOIN mukellefler m ON m.id = t.mukellef_id
             JOIN tutanak_kalemleri tk ON tk.tutanak_id = t.id
             JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
-            WHERE {kosul}
+            WHERE {kosul_t}
             GROUP BY t.mukellef_id
             ORDER BY m.ad_unvan COLLATE NOCASE
             """,
-            params,
+            params_t,
         ).fetchall()
 
         return {
             "sonuc_dagilimi": {r["sonuc"]: r["adet"] for r in sonuc_dagilimi},
-            "ceza_turu_bazinda": [dict(r) for r in ceza_turu_bazinda],
+            "ceza_turu_bazinda": ceza_turu_bazinda,
+            "vergi_turu_bazinda": vergi_turu_bazinda,
             "mukellef_bazinda": [dict(r) for r in mukellef_bazinda],
             "basvuran_sayisi": basvuran_sayisi,
+            "dilekce_sayisi": dilekce_sayisi,
         }
     finally:
         conn.close()
