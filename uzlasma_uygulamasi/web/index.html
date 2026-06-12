@@ -158,7 +158,7 @@
         <th style="width:120px">Durum</th><th>İhbarname Fiş No</th><th style="width:85px">Vergi Türü</th>
         <th style="width:85px">Ceza Kodu</th>
         <th style="width:110px" class="sag">Miktar (TL)</th><th style="width:85px">İndirim %</th>
-        <th style="width:120px" class="sag">Kalan Tutar (TL)</th>
+        <th style="width:120px" class="sag">Kalan Tutar (TL)</th><th style="width:60px"></th>
       </tr></thead>
       <tbody></tbody>
     </table>
@@ -205,7 +205,7 @@
   <div class="kart">
     <h2>Tüm Tutanaklar</h2>
     <table id="gecmis-tablo">
-      <thead><tr><th>Toplantı Tarih/Saat</th><th>Tutanak No</th><th>Mükellef</th><th>VKN/TCKN</th><th>Sonuç</th><th>Dosya</th></tr></thead>
+      <thead><tr><th>Toplantı Tarih/Saat</th><th>Tutanak No</th><th>Mükellef</th><th>VKN/TCKN</th><th>Sonuç</th><th>Dosya</th><th style="width:250px">İşlem</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -652,24 +652,56 @@ async function uzlasmaTabloDoldur() {
       const tr = document.createElement("tr");
       tr.innerHTML =
         `<td><span class="rozet ${rozetSinif}">${rozetYazi}</span></td>` +
-        `<td>${kacis(ih.fis_no)}</td><td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
-        `<td class="sag">${tlFormat(s.miktar)}</td>` +
+        `<td>${kacis(ih.fis_no)}</td>` +
         (bekleyen
-          ? `<td><input class="oran-girdi" value="${oran}"></td><td class="sag kalan-hucre">${tlFormat(kalan)}</td>`
-          : `<td></td><td></td>`);
+          ? `<td><input class="vt-girdi" value="${kacis(s.vergi_turu_kod)}"></td>` +
+            `<td><input class="ck-girdi" value="${kacis(s.ceza_kodu)}"></td>` +
+            `<td class="sag"><input class="miktar-girdi sag" value="${kacis(s.miktar)}"></td>` +
+            `<td><input class="oran-girdi" value="${oran}"></td><td class="sag kalan-hucre">${tlFormat(kalan)}</td>` +
+            `<td class="sag"><button class="btn ikincil" title="İhbarnameyi sil" onclick="ihbarnameSil(${ih.id}, '${kacis(ih.fis_no)}')">🗑</button></td>`
+          : `<td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
+            `<td class="sag">${tlFormat(s.miktar)}</td><td></td><td></td><td></td>`);
       if (!bekleyen) tr.classList.add("gecmis-satir");
       tb.appendChild(tr);
       if (!bekleyen) return;
       // Bekleyen satirlar tutanaga otomatik dahildir
       const kayit = { ceza_satiri_id: s.id, ihbarname_id: ih.id, fis_no: ih.fis_no, miktar: s.miktar, secili: true, tr };
       uzlasmaSatirlar.push(kayit);
-      tr.querySelector(".oran-girdi").addEventListener("input", ev => {
-        const o = parseFloat(String(ev.target.value).replace(",", "."));
+      const kalanGuncelle = () => {
+        const o = parseFloat(String(tr.querySelector(".oran-girdi").value).replace(",", "."));
         const k = isNaN(o) ? null : Math.round(kayit.miktar * (1 - o / 100) * 100) / 100;
         tr.querySelector(".kalan-hucre").textContent = k === null ? "-" : tlFormat(k);
-      });
+      };
+      tr.querySelector(".oran-girdi").addEventListener("input", kalanGuncelle);
+      // Bekleyen satirda vergi/ceza kodu ve miktar duzenlenebilir; cikinca kaydedilir
+      const alanKaydet = async () => {
+        const m = parseFloat(String(tr.querySelector(".miktar-girdi").value).replace(/\./g, "").replace(",", "."))
+                  || parseFloat(tr.querySelector(".miktar-girdi").value) || 0;
+        kayit.miktar = m;
+        try {
+          await api("/api/ceza_satiri/guncelle", {
+            id: s.id,
+            vergi_turu_kod: tr.querySelector(".vt-girdi").value,
+            ceza_kodu: tr.querySelector(".ck-girdi").value,
+            miktar: m,
+          });
+          kalanGuncelle();
+          mesajGoster("Satır güncellendi.");
+        } catch (e) { hata(e); }
+      };
+      ["vt-girdi", "ck-girdi", "miktar-girdi"].forEach(cls =>
+        tr.querySelector("." + cls).addEventListener("change", alanKaydet));
     });
   });
+}
+
+async function ihbarnameSil(id, fisNo) {
+  if (!confirm(fisNo + " numaralı ihbarname ve tüm ceza satırları silinecek (uzlaşmadan vazgeçme). Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/ihbarname/sil", { id });
+    mesajGoster("İhbarname silindi.");
+    await uzlasmaTabloDoldur();
+  } catch (e) { hata(e); }
 }
 
 function oraniUygula() {
@@ -735,8 +767,15 @@ async function gecmisYukle() {
     const dosyaAdi = (t.dosya_yolu || "").split("/").pop();
     const baglanti = dosyaAdi ? `<a class="indir" href="/tutanak?dosya=${encodeURIComponent(dosyaAdi)}">${kacis(dosyaAdi)}</a>` : "";
     const tr = document.createElement("tr");
+    const secenekler = Object.entries(SONUC_AD)
+      .map(([d, ad]) => `<option value="${d}"${d === t.sonuc ? " selected" : ""}>${ad}</option>`).join("");
     tr.innerHTML = `<td>${kacis(isoToTr(t.toplanti_tarih_saat))}</td><td>${kacis(t.tutanak_no)}</td>` +
-      `<td>${kacis(t.ad_unvan)}</td><td>${kacis(t.vkn_tckn)}</td><td>${SONUC_AD[t.sonuc] || kacis(t.sonuc)}</td><td>${baglanti}</td>`;
+      `<td>${kacis(t.ad_unvan)}</td><td>${kacis(t.vkn_tckn)}</td><td>${SONUC_AD[t.sonuc] || kacis(t.sonuc)}</td><td>${baglanti}</td>` +
+      `<td><div style="display:flex; gap:6px; align-items:center">` +
+      `<select class="sonuc-sec" style="width:130px">${secenekler}</select>` +
+      `<button class="btn ikincil" onclick="tutanakSonucDegistir(${t.id}, this)">Uygula</button>` +
+      `<button class="btn tehlike" onclick="tutanakSil(${t.id}, '${kacis(t.tutanak_no)}')">Sil</button>` +
+      `</div></td>`;
     tb.appendChild(tr);
   });
 
@@ -745,6 +784,30 @@ async function gecmisYukle() {
   sec.innerHTML = '<option value="">— Üye seçin —</option>' +
     uyeler.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}</option>`).join("");
   document.querySelector("#imza-tablo tbody").innerHTML = "";
+}
+
+async function tutanakSonucDegistir(id, dugme) {
+  const sec = dugme.parentElement.querySelector(".sonuc-sec");
+  const yeni = sec.value;
+  let davet = "";
+  if (yeni === "gelmedi") {
+    davet = prompt("Davetiye tebliğ tarih/saati (GG.AA.YYYY SS:DD) — kayıtlıysa boş bırakın:", "") || "";
+  }
+  if (!confirm("Tutanağın sonucu '" + SONUC_AD[yeni] + "' olarak güncellenecek ve Excel dosyası yeniden üretilecek. Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/tutanak/sonuc", { id, sonuc: yeni, davet_tarih_saat: davet });
+    mesajGoster("Tutanak güncellendi.");
+    gecmisYukle();
+  } catch (e) { hata(e); }
+}
+
+async function tutanakSil(id, no) {
+  if (!confirm(no + " numaralı tutanak silinecek; bağlı ihbarnameler yeniden 'Bekleyen' durumuna dönecek ve Excel dosyası silinecek. Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/tutanak/sil", { id });
+    mesajGoster("Tutanak silindi.");
+    gecmisYukle();
+  } catch (e) { hata(e); }
 }
 
 const AY_ADLARI = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];

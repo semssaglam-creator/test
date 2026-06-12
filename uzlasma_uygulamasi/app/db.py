@@ -389,6 +389,54 @@ def tum_ihbarnameler(mukellef_id):
         conn.close()
 
 
+def ceza_satiri_guncelle(ceza_satiri_id, vergi_turu_kod, ceza_kodu, miktar):
+    """Yalniz bekleyen (tutanaga girmemis) ihbarnamelerin satirlari duzenlenebilir."""
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT ih.durum FROM ceza_satirlari cs
+            JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id WHERE cs.id = ?
+            """,
+            (ceza_satiri_id,),
+        ).fetchone()
+        if row is None:
+            raise ValueError("Ceza satiri bulunamadi.")
+        if row["durum"] != "beklemede":
+            raise ValueError("Yalniz bekleyen ihbarnameler duzenlenebilir.")
+        conn.execute(
+            "UPDATE ceza_satirlari SET vergi_turu_kod = ?, ceza_kodu = ?, miktar = ? WHERE id = ?",
+            (vergi_turu_kod, ceza_kodu, float(miktar), ceza_satiri_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ihbarname_sil(ihbarname_id):
+    """Ihbarnameyi ve ceza satirlarini siler (uzlasmadan vazgecme durumu).
+
+    Bir tutanaga girmis ihbarnameler silinemez; once tutanak silinmelidir.
+    """
+    conn = get_connection()
+    try:
+        kullanim = conn.execute(
+            """
+            SELECT COUNT(*) FROM tutanak_kalemleri tk
+            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+            WHERE cs.ihbarname_id = ?
+            """,
+            (ihbarname_id,),
+        ).fetchone()[0]
+        if kullanim:
+            raise ValueError("Bu ihbarname bir tutanaga bagli; once tutanagi silin.")
+        conn.execute("DELETE FROM ceza_satirlari WHERE ihbarname_id = ?", (ihbarname_id,))
+        conn.execute("DELETE FROM ihbarnameler WHERE id = ?", (ihbarname_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def ihbarname_durum_guncelle(ihbarname_id, durum):
     conn = get_connection()
     try:
@@ -861,6 +909,71 @@ def istatistikler(baslangic=None, bitis=None):
             "basvuran_sayisi": basvuran_sayisi,
             "dilekce_sayisi": dilekce_sayisi,
         }
+    finally:
+        conn.close()
+
+
+def tutanak_sil(tutanak_id):
+    """Tutanagi siler; bagli ihbarnameler yeniden 'beklemede' olur.
+
+    Donus: silinen tutanagin dosya yolu (Excel dosyasini silmek icin).
+    """
+    conn = get_connection()
+    try:
+        t = conn.execute("SELECT * FROM uzlasma_tutanaklari WHERE id = ?", (tutanak_id,)).fetchone()
+        if t is None:
+            raise ValueError("Tutanak bulunamadi.")
+        ihbarnameler = [r[0] for r in conn.execute(
+            """
+            SELECT DISTINCT cs.ihbarname_id FROM tutanak_kalemleri tk
+            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+            WHERE tk.tutanak_id = ?
+            """,
+            (tutanak_id,),
+        ).fetchall()]
+        conn.execute("DELETE FROM tutanak_imzalari WHERE tutanak_id = ?", (tutanak_id,))
+        conn.execute("DELETE FROM tutanak_kalemleri WHERE tutanak_id = ?", (tutanak_id,))
+        conn.execute("DELETE FROM uzlasma_tutanaklari WHERE id = ?", (tutanak_id,))
+        for ih_id in ihbarnameler:
+            conn.execute("UPDATE ihbarnameler SET durum = 'beklemede' WHERE id = ?", (ih_id,))
+        conn.commit()
+        return t["dosya_yolu"]
+    finally:
+        conn.close()
+
+
+def tutanak_sonuc_guncelle(tutanak_id, yeni_sonuc, davet_tarih_saat=None):
+    """Tutanagin sonucunu degistirir; kalem tutarlarini ve ihbarname
+    durumlarini yeni sonuca gore gunceller. Excel'i yeniden uretmek
+    cagiranin sorumlulugundadir."""
+    if yeni_sonuc not in ("uzlasildi", "uzlasilamadi", "gelmedi"):
+        raise ValueError("Gecersiz sonuc.")
+    conn = get_connection()
+    try:
+        t = conn.execute("SELECT * FROM uzlasma_tutanaklari WHERE id = ?", (tutanak_id,)).fetchone()
+        if t is None:
+            raise ValueError("Tutanak bulunamadi.")
+        if davet_tarih_saat is not None:
+            conn.execute("UPDATE uzlasma_tutanaklari SET davet_tarih_saat = ? WHERE id = ?",
+                         (davet_tarih_saat, tutanak_id))
+        conn.execute("UPDATE uzlasma_tutanaklari SET sonuc = ? WHERE id = ?",
+                     (yeni_sonuc, tutanak_id))
+        # Kalem tutarlari: gelmedi -> 0; digerleri kayitli orana gore yeniden hesap
+        for k in conn.execute(
+            """
+            SELECT tk.id, tk.indirim_orani, cs.miktar, cs.ihbarname_id
+            FROM tutanak_kalemleri tk JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+            WHERE tk.tutanak_id = ?
+            """,
+            (tutanak_id,),
+        ).fetchall():
+            yeni_tutar = 0.0 if yeni_sonuc == "gelmedi" else round(
+                k["miktar"] * (1 - k["indirim_orani"] / 100), 2)
+            conn.execute("UPDATE tutanak_kalemleri SET uzlasilan_tutar = ? WHERE id = ?",
+                         (yeni_tutar, k["id"]))
+            conn.execute("UPDATE ihbarnameler SET durum = ? WHERE id = ?",
+                         (yeni_sonuc, k["ihbarname_id"]))
+        conn.commit()
     finally:
         conn.close()
 

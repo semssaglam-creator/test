@@ -185,6 +185,67 @@ def _pdf_dilekceleri_ayristir(veri):
     return {"sonuclar": sonuclar}
 
 
+def _tutanak_sonuc_degistir(veri):
+    from .tarih_util import iso_to_tr
+
+    tutanak_id = int(veri.get("id", 0))
+    yeni_sonuc = veri.get("sonuc")
+    if yeni_sonuc not in ("uzlasildi", "uzlasilamadi", "gelmedi"):
+        raise ApiHata("Gecersiz sonuc.")
+
+    t = next((x for x in db.tutanak_gecmisi() if x["id"] == tutanak_id), None)
+    if t is None:
+        raise ApiHata("Tutanak bulunamadi.")
+
+    davet_tr = (veri.get("davet_tarih_saat") or "").strip()
+    davet_iso = tr_to_iso(davet_tr) if davet_tr else None
+    mevcut_davet_tr = iso_to_tr(t["davet_tarih_saat"] or "")
+    if yeni_sonuc == "gelmedi" and not davet_tr and not mevcut_davet_tr:
+        raise ApiHata("Gelmedi sonucu icin davetiye teblig tarih/saati gerekli.")
+
+    try:
+        db.tutanak_sonuc_guncelle(tutanak_id, yeni_sonuc, davet_iso)
+    except ValueError as exc:
+        raise ApiHata(str(exc))
+
+    # Excel'i yeni sonuca gore yeniden uret
+    kurum = db.get_kurum_bilgileri()
+    mukellef = db.mukellef_getir(t["mukellef_id"])
+    imzalayanlar = db.tutanak_imzalayanlari_getir(tutanak_id)
+    kalemler_excel = []
+    for k in db.tutanak_kalemlerini_getir(tutanak_id):
+        kalemler_excel.append({
+            "fis_no": k["fis_no"],
+            "vergi_turu_kod": k["vergi_turu_kod"],
+            "ceza_kodu": k["ceza_kodu"],
+            "donem": k.get("donem", ""),
+            "miktar": k["miktar"],
+            "uzlasilan_tutar": k["uzlasilan_tutar"],
+        })
+
+    toplanti_tr = iso_to_tr(t["toplanti_tarih_saat"] or "")
+    yeni_davet_tr = davet_tr or mevcut_davet_tr
+
+    os.makedirs(TUTANAK_DIR, exist_ok=True)
+    guvenli_isim = "".join(c if c.isalnum() else "_" for c in mukellef["ad_unvan"])[:40]
+    guvenli_no = (t["tutanak_no"] or "").replace("/", "_")
+    dosya_adi = f"{guvenli_no}_{guvenli_isim}_{yeni_sonuc}.xlsx"
+    dosya_yolu = os.path.join(TUTANAK_DIR, dosya_adi)
+
+    tutanak_olustur_excel(dosya_yolu, kurum, t["tutanak_no"], toplanti_tr, yeni_davet_tr,
+                          mukellef, kalemler_excel, imzalayanlar, yeni_sonuc)
+
+    eski_dosya = t["dosya_yolu"]
+    if eski_dosya and os.path.abspath(eski_dosya) != os.path.abspath(dosya_yolu) \
+            and os.path.isfile(eski_dosya):
+        try:
+            os.remove(eski_dosya)
+        except OSError:
+            pass
+    db.tutanak_dosya_yolu_guncelle(tutanak_id, dosya_yolu)
+    return {"tamam": True, "dosya_adi": dosya_adi}
+
+
 class Istekci(BaseHTTPRequestHandler):
     server_version = "UzlasmaApp/1.0"
 
@@ -332,6 +393,34 @@ class Istekci(BaseHTTPRequestHandler):
             elif yol == "/api/komisyon/sil":
                 db.komisyon_uyesi_sil(int(veri["id"]))
                 self._json_yanit({"tamam": True})
+            elif yol == "/api/ceza_satiri/guncelle":
+                try:
+                    db.ceza_satiri_guncelle(
+                        int(veri["id"]), (veri.get("vergi_turu_kod") or "").strip(),
+                        (veri.get("ceza_kodu") or "").strip(), _miktar_coz(veri.get("miktar")),
+                    )
+                except ValueError as exc:
+                    raise ApiHata(str(exc))
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/ihbarname/sil":
+                try:
+                    db.ihbarname_sil(int(veri["id"]))
+                except ValueError as exc:
+                    raise ApiHata(str(exc))
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/tutanak/sil":
+                try:
+                    dosya = db.tutanak_sil(int(veri["id"]))
+                except ValueError as exc:
+                    raise ApiHata(str(exc))
+                if dosya and os.path.isfile(dosya):
+                    try:
+                        os.remove(dosya)
+                    except OSError:
+                        pass
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/tutanak/sonuc":
+                self._json_yanit(_tutanak_sonuc_degistir(veri))
             elif yol == "/api/tutanak_sayaci":
                 try:
                     db.tutanak_sayaci_ayarla(veri.get("sonraki", 0))
