@@ -772,77 +772,71 @@ def istatistikler(baslangic=None, bitis=None):
                 })
             return sonuc
 
-        # Ceza istatistigi gruplamasi (tutanaktaki gosterime uygun):
-        # - 3080 (vergi ziyai) vergi turu koduyla birlikte: "0015/3080" gibi
-        # - 3073 ve 3074 (usulsuzluk / ozel usulsuzluk) tek grupta
-        # - diger kodlar kendi basina
-        CEZA_GRUP = """
-            CASE
-                WHEN cs.ceza_kodu = '3080'
-                    THEN COALESCE(NULLIF(cs.vergi_turu_kod, ''), '????') || '/3080'
-                WHEN cs.ceza_kodu IN ('3073', '3074') THEN '3073/3074'
-                ELSE COALESCE(cs.ceza_kodu, '')
-            END
-        """
-
-        def _ceza_bazinda():
+        # Iki tablo:
+        # - Ceza turu bazinda: 3080 DISINDAKI cezalar (3073, 3074... ayri satirlar)
+        # - Vergi turu bazinda: 3080 (vergi ziyai) satirlari vergi turuyle birlikte
+        def _grup_istatistik(grup_sql, kosul_ek):
             basvurular = conn.execute(
                 f"""
-                SELECT {CEZA_GRUP} AS kod,
+                SELECT {grup_sql} AS kod,
                        COUNT(DISTINCT {dilekce_anahtari}) AS basvuru_sayisi,
                        SUM(cs.miktar) AS toplam_basvuru_tutari
                 FROM ceza_satirlari cs
                 JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
-                WHERE {kosul_b}
-                GROUP BY {CEZA_GRUP}
+                WHERE {kosul_b} AND {kosul_ek}
+                GROUP BY {grup_sql}
                 """,
                 params_b,
             ).fetchall()
             uzlasilanlar = conn.execute(
                 f"""
-                SELECT {CEZA_GRUP} AS kod,
+                SELECT {grup_sql} AS kod,
                        COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasildi' THEN t.id END) AS uzlasilan_sayisi,
                        SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar
                 FROM tutanak_kalemleri tk
                 JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
                 JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
-                WHERE {kosul_t}
-                GROUP BY {CEZA_GRUP}
+                WHERE {kosul_t} AND {kosul_ek}
+                GROUP BY {grup_sql}
                 """,
                 params_t,
             ).fetchall()
-
-            vergi_adlari = {v["kod"]: (v["ad"] or "") for v in vergi_turleri_listele(sadece_aktif=False)}
-            ceza_aciklamalari = {c["kod"]: (c["aciklama"] or "")
-                                  for c in ceza_kodlari_listele(sadece_aktif=False)}
-
-            def _aciklama(kod):
-                if kod == "3073/3074":
-                    return "Usulsüzlük / Özel Usulsüzlük Cezaları"
-                if kod.endswith("/3080"):
-                    vt = kod.split("/")[0]
-                    vt_ad = vergi_adlari.get(vt, "")
-                    return (vt_ad + " - " if vt_ad else "") + "Vergi Ziyaı Cezası"
-                return ceza_aciklamalari.get(kod, "")
-
             uz = {r["kod"]: r for r in uzlasilanlar}
             basv = {r["kod"]: r for r in basvurular}
-            sonuc = []
+            birlesik = []
             for kod in sorted(set(basv) | set(uz), key=str):
                 b = basv.get(kod)
                 u = uz.get(kod)
-                sonuc.append({
-                    "ceza_kodu": kod,
-                    "aciklama": _aciklama(kod),
+                birlesik.append({
+                    "kod": kod or "",
                     "basvuru_sayisi": b["basvuru_sayisi"] if b else 0,
                     "toplam_basvuru_tutari": (b["toplam_basvuru_tutari"] if b else 0) or 0,
                     "uzlasilan_sayisi": (u["uzlasilan_sayisi"] if u else 0) or 0,
                     "toplam_uzlasilan_tutar": (u["toplam_uzlasilan_tutar"] if u else 0) or 0,
                 })
-            return sonuc
+            return birlesik
 
-        ceza_turu_bazinda = _ceza_bazinda()
-        vergi_turu_bazinda = _tur_bazinda("vergi_turu_kod", "vergi_turleri", "ad", "vergi_turu_kod")
+        vergi_adlari = {v["kod"]: (v["ad"] or "") for v in vergi_turleri_listele(sadece_aktif=False)}
+        ceza_aciklamalari = {c["kod"]: (c["aciklama"] or "")
+                              for c in ceza_kodlari_listele(sadece_aktif=False)}
+
+        # Ceza tablosu: 3080 haric, her ceza kodu ayri satir (3073, 3074...)
+        ceza_turu_bazinda = []
+        for r in _grup_istatistik("COALESCE(cs.ceza_kodu, '')",
+                                   "COALESCE(cs.ceza_kodu, '') != '3080'"):
+            r["ceza_kodu"] = r.pop("kod")
+            r["aciklama"] = ceza_aciklamalari.get(r["ceza_kodu"], "")
+            ceza_turu_bazinda.append(r)
+
+        # Vergi tablosu: 3080 satirlari vergi turuyle birlikte ("0015/3080")
+        vergi_turu_bazinda = []
+        for r in _grup_istatistik("COALESCE(NULLIF(cs.vergi_turu_kod, ''), '????')",
+                                   "cs.ceza_kodu = '3080'"):
+            vt = r.pop("kod")
+            r["vergi_turu_kod"] = f"{vt}/3080"
+            vt_ad = vergi_adlari.get(vt, "")
+            r["ad"] = (vt_ad + " - " if vt_ad else "") + "Vergi Ziyaı Cezası"
+            vergi_turu_bazinda.append(r)
 
         basvuran_sayisi = conn.execute(
             f"""
@@ -860,32 +854,10 @@ def istatistikler(baslangic=None, bitis=None):
             params_b,
         ).fetchone()[0]
 
-        mukellef_bazinda = conn.execute(
-            f"""
-            SELECT m.ad_unvan, m.vkn_tckn,
-                   COUNT(DISTINCT t.id) AS tutanak_sayisi,
-                   COUNT(DISTINCT cs.ihbarname_id) AS ihbarname_sayisi,
-                   COUNT(tk.id) AS kalem_sayisi,
-                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN 1 ELSE 0 END) > 0 AS uzlasti,
-                   SUM(cs.miktar) AS toplam_basvuru_tutari,
-                   SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END)
-                       AS toplam_uzlasilan_tutar
-            FROM uzlasma_tutanaklari t
-            JOIN mukellefler m ON m.id = t.mukellef_id
-            JOIN tutanak_kalemleri tk ON tk.tutanak_id = t.id
-            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
-            WHERE {kosul_t}
-            GROUP BY t.mukellef_id
-            ORDER BY m.ad_unvan COLLATE NOCASE
-            """,
-            params_t,
-        ).fetchall()
-
         return {
             "sonuc_dagilimi": {r["sonuc"]: r["adet"] for r in sonuc_dagilimi},
             "ceza_turu_bazinda": ceza_turu_bazinda,
             "vergi_turu_bazinda": vergi_turu_bazinda,
-            "mukellef_bazinda": [dict(r) for r in mukellef_bazinda],
             "basvuran_sayisi": basvuran_sayisi,
             "dilekce_sayisi": dilekce_sayisi,
         }

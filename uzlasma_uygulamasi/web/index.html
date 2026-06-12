@@ -289,15 +289,6 @@
       <tbody></tbody>
     </table>
   </div>
-  <div class="kart">
-    <h2>Mükellef Bazında İstatistikler</h2>
-    <table id="ist-mukellef-tablo">
-      <thead><tr><th>Mükellef</th><th style="width:120px">VKN/TCKN</th><th class="sag">Tutanak Sayısı</th>
-        <th class="sag">İhbarname Sayısı</th><th style="width:90px">Uzlaştı mı?</th>
-        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
 </section>
 
 <!-- ================= AYARLAR ================= -->
@@ -331,7 +322,10 @@
   <div class="kart">
     <h2>Veritabanı Yedekleme</h2>
     <table id="yedek-tablo"><thead><tr><th>Yedek Dosyası</th><th style="width:110px"></th></tr></thead><tbody></tbody></table>
-    <div style="margin-top:10px"><button class="btn" onclick="yedekAl()">Yedek Al</button></div>
+    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap">
+      <button class="btn" onclick="yedekAl()">Yedek Al</button>
+      <button class="btn ikincil" onclick="window.location.href='/dokum'">Tüm Kayıtları İndir (ODS)</button>
+    </div>
   </div>
 </section>
 
@@ -893,29 +887,6 @@ async function istatistikYukle() {
       vtb.appendChild(tr);
     });
     toplamSatiriEkle(vtb, v.vergi_turu_bazinda || [], 2);
-    const mtb = document.querySelector("#ist-mukellef-tablo tbody");
-    mtb.innerHTML = "";
-    (v.mukellef_bazinda || []).forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${kacis(r.ad_unvan)}</td><td>${kacis(r.vkn_tckn)}</td>` +
-        `<td class="sag">${r.tutanak_sayisi}</td><td class="sag">${r.ihbarname_sayisi}</td>` +
-        `<td>${r.uzlasti ? "Evet" : "Hayır"}</td>` +
-        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
-      mtb.appendChild(tr);
-    });
-    // mukellef tablosu: tutanak/ihbarname sayilari + tutar toplamlari
-    if ((v.mukellef_bazinda || []).length) {
-      const m = v.mukellef_bazinda;
-      const tr = document.createElement("tr");
-      tr.style.fontWeight = "700";
-      tr.style.background = "#eef2f6";
-      tr.innerHTML = `<td>GENEL TOPLAM</td><td></td>` +
-        `<td class="sag">${m.reduce((a, r) => a + (r.tutanak_sayisi || 0), 0)}</td>` +
-        `<td class="sag">${m.reduce((a, r) => a + (r.ihbarname_sayisi || 0), 0)}</td><td></td>` +
-        `<td class="sag">${tlFormat(m.reduce((a, r) => a + (r.toplam_basvuru_tutari || 0), 0))}</td>` +
-        `<td class="sag">${tlFormat(m.reduce((a, r) => a + (r.toplam_uzlasilan_tutar || 0), 0))}</td>`;
-      mtb.appendChild(tr);
-    }
   } catch (e) { hata(e); }
 }
 
