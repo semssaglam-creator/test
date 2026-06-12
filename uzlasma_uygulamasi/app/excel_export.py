@@ -30,6 +30,9 @@ BORDER_ALL = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 WRAP_LEFT = Alignment(horizontal="left", vertical="center", wrap_text=True)
 CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 CENTER_TITLE = Alignment(horizontal="center", vertical="center")
+# Veri hucreleri: hucreye sigdir (tasma olmaz); paragraflar: iki yana yasli
+SIGDIR = Alignment(horizontal="center", vertical="center", shrink_to_fit=True)
+JUSTIFY = Alignment(horizontal="justify", vertical="center", wrap_text=True)
 
 
 def _kur_kolon_genislikleri(ws):
@@ -113,7 +116,7 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
 def _paragraf(ws, row, metin, yukseklik=None):
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
     c = ws.cell(row=row, column=1, value=metin)
-    c.alignment = WRAP_LEFT
+    c.alignment = JUSTIFY
     c.font = FONT_NORMAL
     if yukseklik is None:
         yukseklik = _metin_satir_sayisi(metin) * 15 + 10
@@ -176,11 +179,7 @@ def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
         cell.alignment = CENTER
         cell.font = FONT_BOLD
 
-    ws.merge_cells(start_row=row + 2, start_column=1, end_row=row + 2, end_column=2)
-    cell = ws.cell(row=row + 2, column=1, value="Uzlaşma Komisyonu")
-    cell.alignment = CENTER
-    cell.font = FONT_NORMAL
-    return row + 3
+    return row + 2
 
 
 def _imza_bloklari_3lu(ws, row, imzalayanlar):
@@ -208,11 +207,7 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
         cell.alignment = CENTER
         cell.font = FONT_BOLD
 
-    ws.merge_cells(start_row=row + 2, start_column=1, end_row=row + 2, end_column=2)
-    cell = ws.cell(row=row + 2, column=1, value="Uzlaşma Komisyonu")
-    cell.alignment = CENTER
-    cell.font = FONT_NORMAL
-    return row + 3
+    return row + 2
 
 
 # ---------------------------------------------------------------------------
@@ -275,13 +270,13 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         uzlasilan = float(kalem["uzlasilan_tutar"])
         toplam_miktar += miktar
         toplam_uzlasilan += uzlasilan
-        _hucre(ws, row, 1, kalem["fis_no"])
-        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip())
-        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip())
-        _hucre(ws, row, 4, miktar, num_format="#,##0.00")
-        _hucre(ws, row, 5, uzlasilan, num_format="#,##0.00")
+        _hucre(ws, row, 1, kalem["fis_no"], align=SIGDIR)
+        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip(), align=SIGDIR)
+        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip(), align=SIGDIR)
+        _hucre(ws, row, 4, miktar, num_format="#,##0.00", align=SIGDIR)
+        _hucre(ws, row, 5, uzlasilan, num_format="#,##0.00", align=SIGDIR)
         yazi = tutar_yaziya(uzlasilan)
-        _hucre(ws, row, 6, yazi, align=WRAP_LEFT)
+        _hucre(ws, row, 6, yazi, align=JUSTIFY)
         ws.row_dimensions[row].height = max(21, _metin_satir_sayisi(yazi, 22) * 15 + 6)
         row += 1
 
@@ -289,10 +284,10 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     toplam_uzlasilan = round(toplam_uzlasilan, 2)
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=3)
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
-    _hucre(ws, row, 4, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00")
-    _hucre(ws, row, 5, toplam_uzlasilan, font=FONT_BOLD, num_format="#,##0.00")
+    _hucre(ws, row, 4, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
+    _hucre(ws, row, 5, toplam_uzlasilan, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
     toplam_yazi = tutar_yaziya(toplam_uzlasilan)
-    _hucre(ws, row, 6, toplam_yazi, font=FONT_BOLD, align=WRAP_LEFT)
+    _hucre(ws, row, 6, toplam_yazi, font=FONT_BOLD, align=JUSTIFY)
     ws.row_dimensions[row].height = max(21, _metin_satir_sayisi(toplam_yazi, 22) * 15 + 6)
     _tablo_kenarligi_tamamla(ws, baslik_satiri, row)
     row += 1
@@ -354,16 +349,16 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     for kalem in kalemler:
         miktar = float(kalem["miktar"])
         toplam_miktar += miktar
-        _hucre(ws, row, 1, kalem["fis_no"])
-        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip())
-        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip())
+        _hucre(ws, row, 1, kalem["fis_no"], align=SIGDIR)
+        _hucre(ws, row, 2, (kalem.get("vergi_turu_kod") or "").strip(), align=SIGDIR)
+        _hucre(ws, row, 3, (kalem.get("ceza_kodu") or "").strip(), align=SIGDIR)
         ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
-        _hucre(ws, row, 4, miktar, num_format="#,##0.00")
+        _hucre(ws, row, 4, miktar, num_format="#,##0.00", align=SIGDIR)
         row += 1
 
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
-    _hucre(ws, row, 6, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00")
+    _hucre(ws, row, 6, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
     row += 1
 
     toplanti_tarih, toplanti_saat = _tarih_saat_ayir(toplanti_tarih_saat)
