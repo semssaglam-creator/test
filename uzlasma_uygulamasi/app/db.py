@@ -843,11 +843,7 @@ def istatistikler(baslangic=None, bitis=None):
                        COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasilamadi' THEN t.id END) AS uzlasilamayan_sayisi,
                        COUNT(DISTINCT CASE WHEN t.sonuc = 'gelmedi' THEN t.id END) AS gelmeyen_sayisi,
                        SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar,
-                       SUM(CASE
-                               WHEN t.sonuc = 'uzlasilamadi' THEN tk.uzlasilan_tutar
-                               WHEN t.sonuc = 'gelmedi' THEN ROUND(cs.miktar * (1 - tk.indirim_orani / 100.0), 2)
-                               ELSE 0
-                           END) AS toplam_uzlasilamayan_tutar
+                       SUM(CASE WHEN t.sonuc IN ('uzlasilamadi', 'gelmedi') THEN cs.miktar ELSE 0 END) AS toplam_uzlasilamayan_tutar
                 FROM tutanak_kalemleri tk
                 JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
                 JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
