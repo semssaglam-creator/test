@@ -132,6 +132,7 @@ def ceza_satirlari_ayikla(metin):
     temiz = re.sub(rf"({FIS_NO_RE})\s*,", "", temiz)
 
     satirlar = []
+    bekleyen = []
     kalip = re.compile(
         rf"({FIS_NO_RE})(.*?)(?=(?:{FIS_NO_RE})|Bu belge|\Z)",
         re.DOTALL,
@@ -145,28 +146,46 @@ def ceza_satirlari_ayikla(metin):
         # Tutar: govdedeki ondalikli son sayi ("341. Madde" gibi yasal metin
         # sayilariyla karismamasi icin ondalik kismi zorunlu tutulur)
         sayilar = re.findall(r"\d[\d.]*[.,]\d+", govde)
-        miktar = 0.0
         ceza_nedeni = govde
+        coklu_dagitim = bool(sayilar) and bekleyen and len(sayilar) == len(bekleyen) + 1
         if sayilar:
-            ham = sayilar[-1]
-            son = govde.rfind(ham)
-            ceza_nedeni = govde[:son]
-            miktar = _tutar_cevir(ham)
+            # Coklu dagitimda govdedeki TUM tutarlar (ve "Ceza Miktari"
+            # etiketi gibi onlerindeki metin) ceza nedenine dahil degildir;
+            # tek tutarda ise sadece son tutar govdeden cikarilir.
+            kesim = govde.find(sayilar[0]) if coklu_dagitim else govde.rfind(sayilar[-1])
+            ceza_nedeni = govde[:kesim]
         else:
             # Ondalikli sayi yoksa govdenin son belirteci tam sayi tutar olabilir
             son_kelime = govde.strip().split()[-1] if govde.strip() else ""
             if re.fullmatch(r"\d{3,}", son_kelime):
-                miktar = float(son_kelime)
+                sayilar = [son_kelime]
                 ceza_nedeni = govde[:govde.rfind(son_kelime)]
 
         ceza_nedeni = re.sub(r"\s+", " ", ceza_nedeni).strip(" -:")
-        satirlar.append({
+        ceza_nedeni = re.sub(r"(?i)\bceza\s+miktar[ıi]\s*$", "", ceza_nedeni).strip(" -:")
+        satir = {
             "fis_no": fis_no,
             "vergi_turu_kod": vergi_turu,
             "ceza_kodu": ceza_kodu,
             "ceza_nedeni": ceza_nedeni,
-            "miktar": miktar,
-        })
+            "miktar": 0.0,
+        }
+        satirlar.append(satir)
+
+        if not sayilar:
+            # Tutari bu blokta bulunamadi; bazi kopyala-yapistirlarda
+            # ardisik ozdes satirlarin tutarlari ayrilip sonraki bloga
+            # toplu yazilir. Sirayla doldurulmayi bekleyen satirlara ekle.
+            bekleyen.append(satir)
+            continue
+
+        if coklu_dagitim:
+            # Bu blok, kendisi dahil tum bekleyen satirlarin tutarlarini
+            # tasiyor: sirayla dagit (son tutar bu satira ait).
+            for bekleyen_satir, ham in zip(bekleyen, sayilar[:-1]):
+                bekleyen_satir["miktar"] = _tutar_cevir(ham)
+        bekleyen = []
+        satir["miktar"] = _tutar_cevir(sayilar[-1])
     return satirlar
 
 

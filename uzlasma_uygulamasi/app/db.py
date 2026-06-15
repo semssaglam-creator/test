@@ -840,7 +840,14 @@ def istatistikler(baslangic=None, bitis=None):
                 f"""
                 SELECT {grup_sql} AS kod,
                        COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasildi' THEN t.id END) AS uzlasilan_sayisi,
-                       SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar
+                       COUNT(DISTINCT CASE WHEN t.sonuc = 'uzlasilamadi' THEN t.id END) AS uzlasilamayan_sayisi,
+                       COUNT(DISTINCT CASE WHEN t.sonuc = 'gelmedi' THEN t.id END) AS gelmeyen_sayisi,
+                       SUM(CASE WHEN t.sonuc = 'uzlasildi' THEN tk.uzlasilan_tutar ELSE 0 END) AS toplam_uzlasilan_tutar,
+                       SUM(CASE
+                               WHEN t.sonuc = 'uzlasilamadi' THEN tk.uzlasilan_tutar
+                               WHEN t.sonuc = 'gelmedi' THEN ROUND(cs.miktar * (1 - tk.indirim_orani / 100.0), 2)
+                               ELSE 0
+                           END) AS toplam_uzlasilamayan_tutar
                 FROM tutanak_kalemleri tk
                 JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
                 JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
@@ -860,7 +867,10 @@ def istatistikler(baslangic=None, bitis=None):
                     "basvuru_sayisi": b["basvuru_sayisi"] if b else 0,
                     "toplam_basvuru_tutari": (b["toplam_basvuru_tutari"] if b else 0) or 0,
                     "uzlasilan_sayisi": (u["uzlasilan_sayisi"] if u else 0) or 0,
+                    "uzlasilamayan_sayisi": (u["uzlasilamayan_sayisi"] if u else 0) or 0,
+                    "gelmeyen_sayisi": (u["gelmeyen_sayisi"] if u else 0) or 0,
                     "toplam_uzlasilan_tutar": (u["toplam_uzlasilan_tutar"] if u else 0) or 0,
+                    "toplam_uzlasilamayan_tutar": (u["toplam_uzlasilamayan_tutar"] if u else 0) or 0,
                 })
             return birlesik
 

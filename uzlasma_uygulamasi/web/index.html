@@ -276,16 +276,30 @@
   <div class="kart">
     <h2>Ceza Türü Bazında İstatistikler</h2>
     <table id="ist-tablo">
-      <thead><tr><th>Vergi/Ceza Kodu</th><th>Açıklama</th><th class="sag">Başvuru Sayısı (dilekçe)</th><th class="sag">Uzlaşılan Sayısı (tutanak)</th>
-        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
+      <thead>
+        <tr><th rowspan="2">Vergi/Ceza Kodu</th><th rowspan="2">Açıklama</th>
+          <th rowspan="2" class="sag">Başvuru Sayısı (dilekçe)</th>
+          <th rowspan="2" class="sag">Toplam Başvuru Tutarı (TL)</th>
+          <th colspan="3">Düzenlenen Tutanak Sayısı</th>
+          <th rowspan="2" class="sag">Toplam Uzlaşılan Tutar (TL)</th>
+          <th rowspan="2" class="sag">Toplam Uzlaşılamayan Tutar (TL)</th></tr>
+        <tr><th class="sag">Uzlaşılan</th><th class="sag">Uzlaşılamayan</th><th class="sag">Gelmeyen</th></tr>
+      </thead>
       <tbody></tbody>
     </table>
   </div>
   <div class="kart">
     <h2>Vergi Türü Bazında İstatistikler</h2>
     <table id="ist-vergi-tablo">
-      <thead><tr><th>Vergi Türü</th><th>Açıklama</th><th class="sag">Başvuru Sayısı (dilekçe)</th><th class="sag">Uzlaşılan Sayısı (tutanak)</th>
-        <th class="sag">Toplam Başvuru Tutarı (TL)</th><th class="sag">Toplam Uzlaşılan Tutar (TL)</th></tr></thead>
+      <thead>
+        <tr><th rowspan="2">Vergi Türü</th><th rowspan="2">Açıklama</th>
+          <th rowspan="2" class="sag">Başvuru Sayısı (dilekçe)</th>
+          <th rowspan="2" class="sag">Toplam Başvuru Tutarı (TL)</th>
+          <th colspan="3">Düzenlenen Tutanak Sayısı</th>
+          <th rowspan="2" class="sag">Toplam Uzlaşılan Tutar (TL)</th>
+          <th rowspan="2" class="sag">Toplam Uzlaşılamayan Tutar (TL)</th></tr>
+        <tr><th class="sag">Uzlaşılan</th><th class="sag">Uzlaşılamayan</th><th class="sag">Gelmeyen</th></tr>
+      </thead>
       <tbody></tbody>
     </table>
   </div>
@@ -658,7 +672,7 @@ async function uzlasmaTabloDoldur() {
             `<td><input class="ck-girdi" value="${kacis(s.ceza_kodu)}"></td>` +
             `<td class="sag"><input class="miktar-girdi sag" value="${kacis(s.miktar)}"></td>` +
             `<td><input class="oran-girdi" value="${oran}"></td><td class="sag kalan-hucre">${tlFormat(kalan)}</td>` +
-            `<td class="sag"><button class="btn ikincil" title="İhbarnameyi sil" onclick="ihbarnameSil(${ih.id}, '${kacis(ih.fis_no)}')">🗑</button></td>`
+            `<td class="sag"><button class="btn tehlike" title="İhbarnameyi sil" onclick="ihbarnameSil(${ih.id}, '${kacis(ih.fis_no)}')">Sil</button></td>`
           : `<td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
             `<td class="sag">${tlFormat(s.miktar)}</td><td></td><td></td><td></td>`);
       if (!bekleyen) tr.classList.add("gecmis-satir");
@@ -902,9 +916,12 @@ function toplamSatiriEkle(tbody, liste, etiketKolonSayisi) {
   tr.style.background = "#eef2f6";
   tr.innerHTML = `<td>GENEL TOPLAM</td>` + "<td></td>".repeat(etiketKolonSayisi - 1) +
     `<td class="sag">${liste.reduce((a, r) => a + (r.basvuru_sayisi || 0), 0)}</td>` +
-    `<td class="sag">${liste.reduce((a, r) => a + (r.uzlasilan_sayisi || 0), 0)}</td>` +
     `<td class="sag">${tlFormat(liste.reduce((a, r) => a + (r.toplam_basvuru_tutari || 0), 0))}</td>` +
-    `<td class="sag">${tlFormat(liste.reduce((a, r) => a + (r.toplam_uzlasilan_tutar || 0), 0))}</td>`;
+    `<td class="sag">${liste.reduce((a, r) => a + (r.uzlasilan_sayisi || 0), 0)}</td>` +
+    `<td class="sag">${liste.reduce((a, r) => a + (r.uzlasilamayan_sayisi || 0), 0)}</td>` +
+    `<td class="sag">${liste.reduce((a, r) => a + (r.gelmeyen_sayisi || 0), 0)}</td>` +
+    `<td class="sag">${tlFormat(liste.reduce((a, r) => a + (r.toplam_uzlasilan_tutar || 0), 0))}</td>` +
+    `<td class="sag">${tlFormat(liste.reduce((a, r) => a + (r.toplam_uzlasilamayan_tutar || 0), 0))}</td>`;
   tbody.appendChild(tr);
 }
 
@@ -935,8 +952,9 @@ async function istatistikYukle() {
     (v.ceza_turu_bazinda || []).forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${kacis(r.ceza_kodu)}</td><td>${kacis(r.aciklama)}</td>` +
-        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
-        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
+        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
+        `<td class="sag">${r.uzlasilan_sayisi}</td><td class="sag">${r.uzlasilamayan_sayisi}</td><td class="sag">${r.gelmeyen_sayisi}</td>` +
+        `<td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td><td class="sag">${tlFormat(r.toplam_uzlasilamayan_tutar)}</td>`;
       tb.appendChild(tr);
     });
     toplamSatiriEkle(tb, v.ceza_turu_bazinda || [], 2);
@@ -945,8 +963,9 @@ async function istatistikYukle() {
     (v.vergi_turu_bazinda || []).forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${kacis(r.vergi_turu_kod) || "(belirtilmemiş)"}</td><td>${kacis(r.ad)}</td>` +
-        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${r.uzlasilan_sayisi}</td>` +
-        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td><td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td>`;
+        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
+        `<td class="sag">${r.uzlasilan_sayisi}</td><td class="sag">${r.uzlasilamayan_sayisi}</td><td class="sag">${r.gelmeyen_sayisi}</td>` +
+        `<td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td><td class="sag">${tlFormat(r.toplam_uzlasilamayan_tutar)}</td>`;
       vtb.appendChild(tr);
     });
     toplamSatiriEkle(vtb, v.vergi_turu_bazinda || [], 2);
