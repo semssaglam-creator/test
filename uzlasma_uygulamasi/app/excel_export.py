@@ -268,7 +268,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
             f"Aşağıda isim ve ünvanları yazılı Başkan ve üyelerinden teşekkül eden Uzlaşma "
             f"Komisyonumuz mükellefin iştirakiyle {tarih_str} tarihinde saat {saat_str}'da "
             f"toplanarak tabloda yazılı vergi ve cezalar ile önerilen tutarlar üzerinde "
-            f"uzlaşma sağlanamamıştır.\n\n"
+            f"uzlaşma vaki olmamıştır.\n\n"
             f"     Uzlaşma yönetmeliğinin 10. maddesine göre mükellefin önerilen bu miktarları "
             f"dava açma süresinin son günü akşamına kadar kabul ettiğini bildiren bir dilekçe "
             f"ile başvurması halinde uzlaşma vaki olmuş sayılacaktır."

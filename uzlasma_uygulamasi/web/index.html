@@ -175,14 +175,14 @@
         <label>Sonuç</label>
         <div class="radio-grup">
           <label><input type="radio" name="sonuc" value="uzlasildi" checked onchange="sonucDegisti()"> Uzlaşıldı</label>
-          <label><input type="radio" name="sonuc" value="uzlasilamadi" onchange="sonucDegisti()"> Uzlaşılamadı</label>
-          <label><input type="radio" name="sonuc" value="gelmedi" onchange="sonucDegisti()"> Gelmedi</label>
+          <label><input type="radio" name="sonuc" value="uzlasilamadi" onchange="sonucDegisti()"> Uzlaşma Vaki Olmadı</label>
+          <label><input type="radio" name="sonuc" value="gelmedi" onchange="sonucDegisti()"> Uzlaşma Temin Edilemedi</label>
         </div>
       </div>
     </div>
     <div class="satir">
       <div class="dar"><label>Toplantı Tarih/Saat (GG.AA.YYYY SS:DD)</label><input type="text" id="toplanti-ts"></div>
-      <div class="dar"><label>Davetiye Tebliğ Tarih/Saat (Gelmedi için zorunlu)</label><input type="text" id="davet-ts"></div>
+      <div class="dar"><label>Davetiye Tebliğ Tarih/Saat (Temin edilemedi için zorunlu)</label><input type="text" id="davet-ts"></div>
       <div class="dar" style="flex:0 0 200px">
         <label>Başkan</label>
         <select id="sec-baskan"></select>
@@ -381,7 +381,7 @@ function kacis(s) {
   return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-const SONUC_AD = { uzlasildi: "Uzlaşıldı", uzlasilamadi: "Uzlaşılamadı", gelmedi: "Gelmedi" };
+const SONUC_AD = { uzlasildi: "Uzlaşıldı", uzlasilamadi: "Uzlaşma Vaki Olmadı", gelmedi: "Uzlaşma Temin Edilemedi" };
 
 // canli arama kutusu kur: girise yazildikca /api/mukellef/ara cagrilir
 function aramaKur(girisId, onerilerId, secimCb) {
@@ -646,8 +646,15 @@ aramaKur("uzlasma-ara", "uzlasma-ara-oneriler", async m => {
 const DURUM_ROZET = {
   beklemede: ["BEKLEYEN", "beklemede"],
   uzlasildi: ["UZLAŞILDI", "uzlasildi"],
-  gelmedi: ["GELMEDİ", "gelmedi"],
-  uzlasilamadi: ["UZLAŞILMADI", "uzlasilamadi"],
+  gelmedi: ["TEMİN EDİLEMEDİ", "gelmedi"],
+  uzlasilamadi: ["VAKİ OLMADI", "uzlasilamadi"],
+};
+// Ihbarname durumu degistirme acilir-listesi icin (DB ic degerleri korunur)
+const IHBARNAME_DURUM_AD = {
+  beklemede: "Beklemede",
+  uzlasildi: "Uzlaşıldı",
+  uzlasilamadi: "Uzlaşma Vaki Olmadı",
+  gelmedi: "Uzlaşma Temin Edilemedi",
 };
 
 async function uzlasmaTabloDoldur() {
@@ -661,9 +668,23 @@ async function uzlasmaTabloDoldur() {
     const ih = grup.ihbarname;
     const bekleyen = ih.durum === "beklemede";
     const [rozetYazi, rozetSinif] = DURUM_ROZET[ih.durum] || [ih.durum, ""];
-    grup.satirlar.forEach(s => {
+    grup.satirlar.forEach((s, satirIndex) => {
       const kalan = Math.round(s.miktar * (1 - oran / 100) * 100) / 100;
       const tr = document.createElement("tr");
+      // Islem hucresi yalnizca ihbarnamenin ilk satirinda; durum degistirme
+      // (tutanak olusturmadan, onayli) ve bekleyen ise silme dugmesi icerir.
+      let islemHucre = "<td></td>";
+      if (satirIndex === 0) {
+        const durumSec = Object.entries(IHBARNAME_DURUM_AD)
+          .map(([d, ad]) => `<option value="${d}"${d === ih.durum ? " selected" : ""}>${kacis(ad)}</option>`).join("");
+        let icerik =
+          `<select class="ih-durum-sec" title="İhbarname durumunu değiştir" style="width:170px"` +
+          ` onchange="ihbarnameDurumDegistir(${ih.id}, this.value, '${ih.durum}', '${kacis(ih.fis_no)}', this)">${durumSec}</select>`;
+        if (bekleyen) {
+          icerik += `<button class="btn tehlike" title="İhbarnameyi sil" onclick="ihbarnameSil(${ih.id}, '${kacis(ih.fis_no)}')">Sil</button>`;
+        }
+        islemHucre = `<td class="sag"><div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap">${icerik}</div></td>`;
+      }
       tr.innerHTML =
         `<td><span class="rozet ${rozetSinif}">${rozetYazi}</span></td>` +
         `<td>${kacis(ih.fis_no)}</td>` +
@@ -672,9 +693,9 @@ async function uzlasmaTabloDoldur() {
             `<td><input class="ck-girdi" value="${kacis(s.ceza_kodu)}"></td>` +
             `<td class="sag"><input class="miktar-girdi sag" value="${kacis(s.miktar)}"></td>` +
             `<td><input class="oran-girdi" value="${oran}"></td><td class="sag kalan-hucre">${tlFormat(kalan)}</td>` +
-            `<td class="sag"><button class="btn tehlike" title="İhbarnameyi sil" onclick="ihbarnameSil(${ih.id}, '${kacis(ih.fis_no)}')">Sil</button></td>`
+            islemHucre
           : `<td>${kacis(s.vergi_turu_kod)}</td><td>${kacis(s.ceza_kodu)}</td>` +
-            `<td class="sag">${tlFormat(s.miktar)}</td><td></td><td></td><td></td>`);
+            `<td class="sag">${tlFormat(s.miktar)}</td><td></td><td></td>` + islemHucre);
       if (!bekleyen) tr.classList.add("gecmis-satir");
       tb.appendChild(tr);
       if (!bekleyen) return;
@@ -718,6 +739,27 @@ async function ihbarnameSil(id, fisNo) {
   } catch (e) { hata(e); }
 }
 
+async function ihbarnameDurumDegistir(id, yeniDurum, eskiDurum, fisNo, secimEl) {
+  if (yeniDurum === eskiDurum) return;
+  const ad = IHBARNAME_DURUM_AD[yeniDurum] || yeniDurum;
+  const onay = confirm(
+    fisNo + " numaralı ihbarnamenin durumu \"" + ad + "\" olarak değiştirilecek.\n\n" +
+    "Bu işlem yalnızca ihbarnamenin durumunu günceller; herhangi bir uzlaşma tutanağı " +
+    "oluşturmaz veya mevcut bir tutanağı değiştirmez.\n\nOnaylıyor musunuz?");
+  if (!onay) {
+    if (secimEl) secimEl.value = eskiDurum;
+    return;
+  }
+  try {
+    await api("/api/ihbarname/durum", { id, durum: yeniDurum });
+    mesajGoster("İhbarname durumu \"" + ad + "\" olarak güncellendi.");
+    await uzlasmaTabloDoldur();
+  } catch (e) {
+    hata(e);
+    if (secimEl) secimEl.value = eskiDurum;
+  }
+}
+
 function oraniUygula() {
   const o = parseFloat(String(document.getElementById("varsayilan-oran").value).replace(",", "."));
   if (isNaN(o)) { mesajGoster("Geçerli bir oran girin.", true); return; }
@@ -740,7 +782,7 @@ async function tutanakOlustur() {
   const uyeIdleri = [baskanId, uye1Id, uye2Id];
   const sonuc = document.querySelector('input[name=sonuc]:checked').value;
   const davet = document.getElementById("davet-ts").value.trim();
-  if (sonuc === "gelmedi" && !davet) { mesajGoster("Gelmedi sonucunda 'Davet Edilen Tarih/Saat' boş olamaz.", true); return; }
+  if (sonuc === "gelmedi" && !davet) { mesajGoster("Uzlaşma temin edilemedi sonucunda 'Davetiye Tebliğ Tarih/Saat' boş olamaz.", true); return; }
 
   const kalemler = seciliKayitlar.map(k => ({
     ceza_satiri_id: k.ceza_satiri_id, ihbarname_id: k.ihbarname_id, fis_no: k.fis_no,
@@ -946,7 +988,7 @@ async function istatistikYukle() {
     document.getElementById("ist-ozet").innerHTML =
       `Başvuru (dilekçe) sayısı: <b>${v.dilekce_sayisi}</b><br>` +
       `Başvuran mükellef sayısı: <b>${v.basvuran_sayisi}</b><br>` +
-      `Uzlaşıldı: <b>${d.uzlasildi || 0}</b> &nbsp; Uzlaşılamadı: <b>${d.uzlasilamadi || 0}</b> &nbsp; Gelmedi: <b>${d.gelmedi || 0}</b>`;
+      `Uzlaşıldı: <b>${d.uzlasildi || 0}</b> &nbsp; Uzlaşma Vaki Olmadı: <b>${d.uzlasilamadi || 0}</b> &nbsp; Uzlaşma Temin Edilemedi: <b>${d.gelmedi || 0}</b>`;
     const tb = document.querySelector("#ist-tablo tbody");
     tb.innerHTML = "";
     (v.ceza_turu_bazinda || []).forEach(r => {

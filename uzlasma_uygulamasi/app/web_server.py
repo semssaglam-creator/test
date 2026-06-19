@@ -408,6 +408,12 @@ class Istekci(BaseHTTPRequestHandler):
                 except ValueError as exc:
                     raise ApiHata(str(exc))
                 self._json_yanit({"tamam": True})
+            elif yol == "/api/ihbarname/durum":
+                durum = (veri.get("durum") or "").strip()
+                if durum not in ("beklemede", "uzlasildi", "uzlasilamadi", "gelmedi"):
+                    raise ApiHata("Gecersiz ihbarname durumu.")
+                db.ihbarname_durum_guncelle(int(veri["id"]), durum)
+                self._json_yanit({"tamam": True})
             elif yol == "/api/tutanak/sil":
                 try:
                     dosya = db.tutanak_sil(int(veri["id"]))
