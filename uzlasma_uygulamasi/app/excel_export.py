@@ -36,6 +36,16 @@ SIGDIR_SOL = Alignment(horizontal="left", vertical="center", shrink_to_fit=True)
 JUSTIFY = Alignment(horizontal="justify", vertical="center", wrap_text=True)
 DOLGU_GRI = PatternFill("solid", fgColor="DDDDDD")
 
+# Uzlasma Yonetmeligi Madde 13: uzlasmanin vaki olmamasi/temin edilememesi
+# halinde dava acma ve surenin 15 gune uzamasi notu.
+DAVA_SURESI_NOTU = (
+    "NOT: Uzlaşma Yönetmeliğinin 13. maddesi uyarınca; mükellef, tarh edilen vergi "
+    "ve kesilen cezaya karşı, tutanağın tebliğ tarihinden itibaren genel hükümler "
+    "dairesinde ve yetkili vergi mahkemesi nezdinde dava açabilir. Dava açma süresi "
+    "bitmiş veya 15 günden az kalmış ise bu süre, tutanağın tebliğ tarihinden "
+    "itibaren 15 gün olarak uzar."
+)
+
 
 def _kur_kolon_genislikleri(ws):
     for i, genislik in enumerate(COL_WIDTHS, start=1):
@@ -236,6 +246,27 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     return row + 2
 
 
+def _teslim_alma_ibaresi(ws, row, mukellef_adi):
+    """Madde 10: mukellefin tutanagin bir nushasini aldigina dair ibare.
+
+    Mukellef imza sutunu hizasinda (D:F) yazilir; ibare, imza boslugu ve
+    teslim alan mukellefin adi alt alta gelir.
+    """
+    ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
+    c = ws.cell(row=row, column=4,
+                value="Bu tutanağın bir nüshasını uzlaşma komisyonunda "
+                      "....../....../.......... tarihinde aldım.")
+    c.font = FONT_NORMAL
+    c.alignment = JUSTIFY
+    ws.row_dimensions[row].height = 36
+    ws.row_dimensions[row + 1].height = 28  # imza boslugu
+    ws.merge_cells(start_row=row + 2, start_column=4, end_row=row + 2, end_column=6)
+    c2 = ws.cell(row=row + 2, column=4, value=mukellef_adi)
+    c2.font = FONT_BOLD
+    c2.alignment = CENTER
+    return row + 3
+
+
 # ---------------------------------------------------------------------------
 # Sablon 1 ve 2: UZLASMA TUTANAGI (uzlasildi / uzlasilamadi)
 # ---------------------------------------------------------------------------
@@ -325,18 +356,24 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         "anlaşılarak mükellefle birlikte müştereken imzalandı. Düzenlenen tutanağın bir "
         "örneği mükellefe komisyonda verildi.",
     )
-    row = _paragraf(
-        ws, row,
-        "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112.maddesi 3.fıkrası gereğince "
-        "normal vade tarihinden itibaren uzlaşma tutanağının imzalandığı tarihe kadar geçen "
-        "zaman için ayrıca Vergi Dairesince gecikme faizi hesaplanacaktır.",
-    )
+    if sonuc == "uzlasildi":
+        row = _paragraf(
+            ws, row,
+            "     NOT: İşbu uzlaşılan vergiler için V.U.K.nun 112.maddesi 3.fıkrası gereğince "
+            "normal vade tarihinden itibaren uzlaşma tutanağının imzalandığı tarihe kadar geçen "
+            "zaman için ayrıca Vergi Dairesince gecikme faizi hesaplanacaktır.",
+        )
+    else:
+        # Uzlasmanin vaki olmamasi: dava acma suresi notu (Madde 13)
+        row = _paragraf(ws, row, "     " + DAVA_SURESI_NOTU)
     # Islak imza icin isimlerin ustunde bos alan birakilir
     ws.row_dimensions[row].height = 30
     ws.row_dimensions[row + 1].height = 30
     row += 2
 
-    _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef.get("ad_unvan", ""))
+    row = _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef.get("ad_unvan", ""))
+    # Madde 10: teslim alma ibaresi, mukellef isminin iki satir altina
+    _teslim_alma_ibaresi(ws, row, mukellef.get("ad_unvan", ""))
 
     _sayfa_ayari(ws)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
@@ -412,6 +449,8 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         f"komisyon üyelerince okunduktan sonra müştereken imza altına alındı."
     )
     row = _paragraf(ws, row, aciklama)
+    # Uzlasmanin temin edilememesi: dava acma suresi notu (Madde 13)
+    row = _paragraf(ws, row, "     " + DAVA_SURESI_NOTU)
     # Islak imza icin isimlerin ustunde bos alan birakilir
     ws.row_dimensions[row].height = 30
     ws.row_dimensions[row + 1].height = 30
