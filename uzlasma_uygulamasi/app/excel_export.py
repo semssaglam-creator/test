@@ -122,8 +122,6 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
         c = ws.cell(row=row, column=1, value=ara_baslik)
         c.font = FONT_BOLD
         c.alignment = CENTER_TITLE
-        for col in range(1, 7):
-            ws.cell(row=row, column=col).fill = DOLGU_GRI
         row += 1
     row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""),
                          sigdir=True)
@@ -254,11 +252,11 @@ def _teslim_alma_ibaresi(ws, row, mukellef_adi):
     """
     ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
     c = ws.cell(row=row, column=4,
-                value="Bu tutanağın bir nüshasını uzlaşma komisyonunda "
+                value="Bu tutanağın bir nüshasını uzlaşma komisyonunda\n"
                       "....../....../.......... tarihinde aldım.")
     c.font = FONT_NORMAL
-    c.alignment = JUSTIFY
-    ws.row_dimensions[row].height = 36
+    c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    ws.row_dimensions[row].height = 44
     ws.row_dimensions[row + 1].height = 28  # imza boslugu
     ws.merge_cells(start_row=row + 2, start_column=4, end_row=row + 2, end_column=6)
     c2 = ws.cell(row=row + 2, column=4, value=mukellef_adi)
@@ -279,7 +277,8 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     ws.title = "Tutanak"
     _kur_kolon_genislikleri(ws)
 
-    row = _baslik_blogu(ws, kurum, "UZLAŞMA TUTANAĞI")
+    baslik = "UZLAŞMA TUTANAĞI" if sonuc == "uzlasildi" else "UZLAŞMA VAKİ OLMADI TUTANAĞI"
+    row = _baslik_blogu(ws, kurum, baslik)
     tarih_metni = toplanti_tarih_saat
     if (davet_tarih_saat or "").strip():
         tarih_metni = f"{toplanti_tarih_saat} / {davet_tarih_saat.strip()}"
@@ -392,7 +391,7 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     ws.title = "Tutanak"
     _kur_kolon_genislikleri(ws)
 
-    row = _baslik_blogu(ws, kurum, "UZLAŞMA KOMİSYON KARAR TUTANAĞI")
+    row = _baslik_blogu(ws, kurum, "UZLAŞMA TEMİN EDİLEMEDİ TUTANAĞI")
 
     tarih_metni = f"{toplanti_tarih_saat} / {davet_tarih_saat}"
     row = _ust_bilgi_blogu(ws, row, kurum, tutanak_no, tarih_metni, mukellef,
@@ -403,8 +402,6 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     c = ws.cell(row=row, column=1, value="UZLAŞMA TALEP EDİLEN")
     c.font = FONT_BOLD
     c.alignment = CENTER_TITLE
-    for col in range(1, 7):
-        ws.cell(row=row, column=col).fill = DOLGU_GRI
     row += 1
 
     baslik_satiri = row
@@ -426,9 +423,10 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         _hucre(ws, row, 4, miktar, num_format="#,##0.00", align=SIGDIR)
         row += 1
 
-    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=5)
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=3)
     _hucre(ws, row, 1, "TOPLAM", font=FONT_BOLD)
-    _hucre(ws, row, 6, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
+    ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
+    _hucre(ws, row, 4, toplam_miktar, font=FONT_BOLD, num_format="#,##0.00", align=SIGDIR)
     _tablo_kenarligi_tamamla(ws, baslik_satiri, row)
     _baslik_satiri_boya(ws, baslik_satiri, baslik_satiri)
     row += 1
