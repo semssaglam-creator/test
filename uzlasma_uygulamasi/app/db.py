@@ -645,7 +645,7 @@ def puantaj_verisi(yil, ay):
 
     Bir uye, o gun en az bir tutanak imzaladiysa o gunde oturuma katilmis
     sayilir. Donus: [{ad_soyad, unvan, gunler: [int], oturum_sayisi}]
-    (tum aktif uyeler, hic oturumu olmayanlar dahil).
+    (yalnizca o ay en az bir oturuma katilan uyeler; katilmayanlar liste disi).
     """
     ay_oneki = f"{yil:04d}-{ay:02d}-"
     conn = get_connection()
@@ -671,6 +671,8 @@ def puantaj_verisi(yil, ay):
     sonuc = []
     for u in komisyon_uyeleri_listele():
         uye_gunleri = sorted(gunler.get(u["id"], set()))
+        if not uye_gunleri:
+            continue  # O ay hic oturuma katilmayan uye cetvelde yer almaz
         gorev = (u["gorev"] or u["unvan"] or "").strip()
         # Puantajda komisyon baskani, gercek unvani ne olursa olsun (ornegin
         # Mudur Yardimcisi) "Mudur" olarak yazilir; uyeler gercek unvaniyla.

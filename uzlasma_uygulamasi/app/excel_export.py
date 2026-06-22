@@ -244,11 +244,12 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     return row + 2
 
 
-def _teslim_alma_ibaresi(ws, row, mukellef_adi):
+def _teslim_alma_ibaresi(ws, row):
     """Madde 10: mukellefin tutanagin bir nushasini aldigina dair ibare.
 
-    Mukellef imza sutunu hizasinda (D:F) yazilir; ibare, imza boslugu ve
-    teslim alan mukellefin adi alt alta gelir.
+    Mukellef imza sutunu hizasinda (D:F), mukellef isminin iki satir altina
+    yazilir. Mukellef adi zaten ust taraftaki imza blogunda yer aldigindan
+    burada tekrarlanmaz.
     """
     ws.merge_cells(start_row=row, start_column=4, end_row=row, end_column=6)
     c = ws.cell(row=row, column=4,
@@ -257,12 +258,7 @@ def _teslim_alma_ibaresi(ws, row, mukellef_adi):
     c.font = FONT_NORMAL
     c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
     ws.row_dimensions[row].height = 44
-    ws.row_dimensions[row + 1].height = 28  # imza boslugu
-    ws.merge_cells(start_row=row + 2, start_column=4, end_row=row + 2, end_column=6)
-    c2 = ws.cell(row=row + 2, column=4, value=mukellef_adi)
-    c2.font = FONT_BOLD
-    c2.alignment = CENTER
-    return row + 3
+    return row + 1
 
 
 # ---------------------------------------------------------------------------
@@ -372,7 +368,7 @@ def uzlasma_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
 
     row = _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef.get("ad_unvan", ""))
     # Madde 10: teslim alma ibaresi, mukellef isminin iki satir altina
-    _teslim_alma_ibaresi(ws, row, mukellef.get("ad_unvan", ""))
+    _teslim_alma_ibaresi(ws, row)
 
     _sayfa_ayari(ws)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
