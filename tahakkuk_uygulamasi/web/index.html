@@ -66,6 +66,14 @@
   td.sag, th.sag { text-align: right; font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #f6f9ff; }
   .fis-bas td { border-top: 2px solid var(--ana); }
+  tr.onceki td { background: #fff3b0; }
+  tr.onceki:hover td { background: #ffec85; }
+  .onceki-ornek {
+    display: inline-block; width: 14px; height: 14px; vertical-align: middle;
+    background: #fff3b0; border: 1px solid #e0c860; border-radius: 3px; margin-right: 4px;
+  }
+  label.onay { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
+  label.onay input { min-width: 0; width: 16px; height: 16px; cursor: pointer; }
   .tablo-sar { max-height: 60vh; overflow: auto; border: 1px solid var(--kenar); border-radius: 8px; }
   .rozet {
     display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px;
@@ -146,12 +154,22 @@
       <button id="btnTemizle" class="btn-ikincil">Temizle</button>
       <button id="btnExcel" class="btn-ikincil">⬇ Excel'e Aktar</button>
     </div>
+    <div class="satir" style="margin-top:10px">
+      <label class="onay">
+        <input type="checkbox" id="fGizle">
+        Daha önceki listelerde olan tahakkuk fişlerini gizle
+      </label>
+    </div>
     <div id="ozet" class="ozet"></div>
   </div>
 
   <!-- SONUC -->
   <div class="kart">
     <h2>Sonuçlar <span id="sonucRozet" class="rozet"></span></h2>
+    <p class="kucuk" style="margin:0 0 8px">
+      <span class="onceki-ornek"></span> Sarı satırlar, daha önceki listelerde de
+      bulunan tahakkuk fişleridir.
+    </p>
     <div class="tablo-sar">
       <table id="tablo">
         <thead>
@@ -346,6 +364,7 @@ function sorguParam() {
   if ($("#fMin").value.trim()) p.set("tutar_min", $("#fMin").value.trim());
   if ($("#fMax").value.trim()) p.set("tutar_max", $("#fMax").value.trim());
   p.set("siralama", $("#fSira").value);
+  if ($("#fGizle").checked) p.set("onceki_gizle", "1");
   return p;
 }
 
@@ -388,8 +407,10 @@ function tabloCiz(kayitlar) {
   for (const k of kayitlar) {
     const yeniFis = k.tahakkuk_fis_no !== oncekiFis;
     if (yeniFis) oncekiFis = k.tahakkuk_fis_no;
+    const sinif = [yeniFis ? "fis-bas" : "", k.onceki_listede ? "onceki" : ""]
+      .filter(Boolean).join(" ");
     parcalar.push(
-      `<tr${yeniFis ? ' class="fis-bas"' : ""}>` +
+      `<tr${sinif ? ` class="${sinif}"` : ""}>` +
       `<td>${kac(k.vergi_kimlik_no)}</td>` +
       `<td>${kac(k.tahakkuk_fis_no)}</td>` +
       `<td>${kac(k.vergi_donemi_metin)}</td>` +
@@ -422,11 +443,13 @@ document.querySelectorAll("#tablo th").forEach((th) => {
 $("#btnSorgula").onclick = sorgula;
 $("#yuklemeSec").onchange = sorgula;
 $("#fSira").onchange = sorgula;
+$("#fGizle").onchange = sorgula;
 [$("#fVkn"), $("#fKod"), $("#fMin"), $("#fMax")].forEach((el) =>
   el.addEventListener("keydown", (e) => { if (e.key === "Enter") sorgula(); }));
 $("#btnTemizle").onclick = () => {
   $("#fVkn").value = $("#fKod").value = $("#fMin").value = $("#fMax").value = "";
   $("#fSira").value = "fis";
+  $("#fGizle").checked = false;
   sorgula();
 };
 $("#btnExcel").onclick = () => {

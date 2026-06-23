@@ -177,7 +177,7 @@ _GRUP_SIRALAMA = {
 
 
 def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
-                      tutar_max=None, siralama="fis"):
+                      tutar_max=None, siralama="fis", onceki_gizle=False):
     """Bir yuklemedeki kayitlari filtreleyip siralar. Satir sayisi sinirsizdir.
 
     siralama:
@@ -190,9 +190,21 @@ def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
     Tutar filtresi satir bazinda uygulanir. Grup siralamalarinda sonuc grup
     butunlugu korunarak gelir: filtreye uyan satiri olan her grubun (fis ya da
     mukellef) TUM satirlari dahil edilir ve gruplar metriklerine gore siralanir.
+
+    Her kayda 'onceki_listede' bayragi eklenir: ayni tahakkuk fis no daha eski
+    bir yuklemede de geciyorsa True. onceki_gizle=True ise bu fisler sonuctan
+    cikarilir (yalnizca yeni fisler kalir).
     """
     conn = get_connection()
     try:
+        # Daha eski yuklemelerde gecen tum fis nolari (id, yukleme sirasini verir).
+        onceki_fisler = {
+            r["tahakkuk_fis_no"] for r in conn.execute(
+                "SELECT DISTINCT tahakkuk_fis_no FROM kayitlar WHERE yukleme_id < ?",
+                (yukleme_id,),
+            )
+        }
+
         kosul = ["yukleme_id = ?"]
         param = [yukleme_id]
         if vkn:
@@ -240,17 +252,25 @@ def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
                                s["tahakkuk_fis_no"] or "",
                                -(s["odenecek_tutar"] or 0)),
             )
-            return [dict(s) for s in satirlar]
+        else:
+            sirala_sql = {
+                "tutar_azalan": "odenecek_tutar DESC, tahakkuk_fis_no",
+                "tutar_artan": "odenecek_tutar ASC, tahakkuk_fis_no",
+                "vkn": "vergi_kimlik_no, tahakkuk_fis_no, odenecek_tutar DESC",
+            }.get(siralama, "tahakkuk_fis_no, odenecek_tutar DESC")
+            satirlar = conn.execute(
+                f"SELECT * FROM kayitlar WHERE {nere} ORDER BY {sirala_sql}", param
+            ).fetchall()
 
-        sirala_sql = {
-            "tutar_azalan": "odenecek_tutar DESC, tahakkuk_fis_no",
-            "tutar_artan": "odenecek_tutar ASC, tahakkuk_fis_no",
-            "vkn": "vergi_kimlik_no, tahakkuk_fis_no, odenecek_tutar DESC",
-        }.get(siralama, "tahakkuk_fis_no, odenecek_tutar DESC")
-        satirlar = conn.execute(
-            f"SELECT * FROM kayitlar WHERE {nere} ORDER BY {sirala_sql}", param
-        ).fetchall()
-        return [dict(s) for s in satirlar]
+        kayitlar = []
+        for s in satirlar:
+            onceki = s["tahakkuk_fis_no"] in onceki_fisler
+            if onceki_gizle and onceki:
+                continue
+            d = dict(s)
+            d["onceki_listede"] = onceki
+            kayitlar.append(d)
+        return kayitlar
     finally:
         conn.close()
 

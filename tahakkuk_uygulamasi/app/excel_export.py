@@ -33,10 +33,12 @@ def sorgu_excel(kayitlar, kod_adlari=None):
         h.alignment = Alignment(horizontal="center", vertical="center")
         ws.column_dimensions[get_column_letter(i)].width = genislik
 
+    onceki_dolgu = PatternFill("solid", fgColor="FFF3B0")  # daha onceki listelerde olan
     toplam = 0.0
     for r, kayit in enumerate(kayitlar, start=2):
         tutar = kayit.get("odenecek_tutar") or 0
         toplam += tutar
+        onceki = bool(kayit.get("onceki_listede"))
         deger = {
             "vergi_kimlik_no": kayit.get("vergi_kimlik_no", ""),
             "tahakkuk_fis_no": kayit.get("tahakkuk_fis_no", ""),
@@ -47,6 +49,8 @@ def sorgu_excel(kayitlar, kod_adlari=None):
         }
         for i, (alan, _, _) in enumerate(BASLIKLAR, start=1):
             h = ws.cell(row=r, column=i, value=deger[alan])
+            if onceki:
+                h.fill = onceki_dolgu
             if alan == "odenecek_tutar":
                 h.number_format = "#,##0.00"
                 h.alignment = Alignment(horizontal="right")

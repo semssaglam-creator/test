@@ -98,6 +98,7 @@ def _sorgu_yap(params):
         tutar_min=_tutar_coz(params.get("tutar_min", [""])[0]),
         tutar_max=_tutar_coz(params.get("tutar_max", [""])[0]),
         siralama=params.get("siralama", ["fis"])[0],
+        onceki_gizle=params.get("onceki_gizle", ["0"])[0] == "1",
     )
     _kayitlari_zenginlestir(kayitlar)
     sonuc_toplam = round(sum(k.get("odenecek_tutar") or 0 for k in kayitlar), 2)
