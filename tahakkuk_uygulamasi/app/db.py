@@ -50,9 +50,17 @@ CREATE TABLE IF NOT EXISTS vergi_kodlari (
 
 def get_connection():
     os.makedirs(DB_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    # timeout: kilitliyse hata vermek yerine bu kadar saniye bekle.
+    conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # WAL: okuyucular yazaru, yazar okuyuculari kilitlemez -> "database is locked"
+    # hatalarini buyuk olcude onler. busy_timeout: kilit varsa bekle (ms).
+    conn.execute("PRAGMA busy_timeout = 30000")
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+    except sqlite3.OperationalError:
+        pass  # WAL desteklenmeyen (ag) dosya sisteminde sessizce gec
     return conn
 
 

@@ -19,21 +19,16 @@ PORT = 8766
 
 
 def main():
-    port = PORT
-    sunucu = None
-    # Port doluysa (uygulama zaten acik olabilir) sonraki portlari dene.
-    for aday in range(PORT, PORT + 10):
-        try:
-            sunucu = sunucu_baslat(aday)
-            port = aday
-            break
-        except OSError:
-            continue
-    if sunucu is None:
-        print("Uygun port bulunamadi (8766-8775 dolu).")
-        sys.exit(1)
+    # Uygulama zaten acik mi? 8766 doluysa ikinci bir sunucu BASLATMA (ayni veri
+    # tabanina iki yazar -> "database is locked"). Var olan ornegi tarayicida ac.
+    adres = f"http://127.0.0.1:{PORT}/"
+    try:
+        sunucu = sunucu_baslat(PORT)
+    except OSError:
+        print("Uygulama zaten calisiyor; tarayicida aciliyor:", adres)
+        webbrowser.open(adres)
+        return
 
-    adres = f"http://127.0.0.1:{port}/"
     print("Toplu Tahakkuk Sorgulama Uygulamasi calisiyor:", adres)
     print("Kapatmak icin bu pencerede Ctrl+C tusuna basin.")
     threading.Timer(0.5, lambda: webbrowser.open(adres)).start()

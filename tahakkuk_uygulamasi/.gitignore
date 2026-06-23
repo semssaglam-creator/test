@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 veritabani/*.db
+veritabani/*.db-wal
+veritabani/*.db-shm
 yuklemeler/*.xls
 yuklemeler/*.xlsx
 ciktilar/*.xlsx
