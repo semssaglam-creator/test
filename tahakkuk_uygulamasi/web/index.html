@@ -78,6 +78,12 @@
   .gecmis-satir { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #eef0f5; }
   .gecmis-satir .ad { flex: 1; }
   .kucuk { font-size: 12px; color: var(--gri); }
+  .d-yeni { color: var(--yesil); font-weight: 600; }
+  .d-cikan { color: var(--kirmizi); font-weight: 600; }
+  .d-degisti { color: #b26a00; font-weight: 600; }
+  .d-ayni { color: var(--gri); }
+  .fark-arti { color: var(--yesil); }
+  .fark-eksi { color: var(--kirmizi); }
 </style>
 </head>
 <body>
@@ -95,9 +101,9 @@
   <div class="kart">
     <h2>1 · Excel Yükle</h2>
     <div id="yukleKutu" class="yukle-kutu">
-      <p><strong>Excel dosyasını buraya sürükleyin</strong> ya da tıklayıp seçin</p>
-      <p class="kucuk">Desteklenen: .xls ve .xlsx · Her yükleme tarihiyle birlikte saklanır</p>
-      <input id="dosyaGiris" type="file" accept=".xls,.xlsx,.xlsm" style="display:none">
+      <p><strong>Excel veya PDF dosyasını buraya sürükleyin</strong> ya da tıklayıp seçin</p>
+      <p class="kucuk">Desteklenen: .xls · .xlsx · .pdf · Her yükleme tarihiyle birlikte saklanır</p>
+      <input id="dosyaGiris" type="file" accept=".xls,.xlsx,.xlsm,.pdf" style="display:none">
     </div>
   </div>
 
@@ -130,6 +136,7 @@
         <label>Sıralama</label>
         <select id="fSira">
           <option value="fis">Fiş bazında — en yüksek tutar üstte</option>
+          <option value="mukellef_toplam">Mükellef toplamı — en yüksek üstte</option>
           <option value="tutar_azalan">Tutar — azalan</option>
           <option value="tutar_artan">Tutar — artan</option>
           <option value="vkn">Vergi Kimlik No</option>
@@ -159,6 +166,44 @@
         </thead>
         <tbody id="govde"></tbody>
         <tfoot id="ayak"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- KARSILASTIRMA -->
+  <div class="kart">
+    <h2>3 · Günleri Karşılaştır</h2>
+    <div class="satir">
+      <div class="alan">
+        <label>A yüklemesi (önceki)</label>
+        <select id="karsA" style="min-width:280px"></select>
+      </div>
+      <div class="alan">
+        <label>B yüklemesi (sonraki)</label>
+        <select id="karsB" style="min-width:280px"></select>
+      </div>
+      <div class="alan">
+        <label>Bazında</label>
+        <select id="karsBazda">
+          <option value="vkn">Vergi Kimlik No (mükellef)</option>
+          <option value="fis">Tahakkuk Fiş No</option>
+        </select>
+      </div>
+      <button id="btnKarsilastir" class="btn-ana">Karşılaştır</button>
+    </div>
+    <div id="karsOzet" class="ozet"></div>
+    <div class="tablo-sar" style="margin-top:10px">
+      <table>
+        <thead>
+          <tr>
+            <th id="karsAnahtarBaslik">Vergi Kimlik No</th>
+            <th class="sag">A Tutar</th>
+            <th class="sag">B Tutar</th>
+            <th class="sag">Fark (B−A)</th>
+            <th>Durum</th>
+          </tr>
+        </thead>
+        <tbody id="karsGovde"></tbody>
       </table>
     </div>
   </div>
@@ -240,6 +285,23 @@ async function yuklemeleriGetir(seciliId) {
     sec.appendChild(o);
   }
   if (seciliId) sec.value = seciliId;
+  // Karsilastirma secicilerini de doldur (A = bir onceki, B = en son).
+  for (const id of ["#karsA", "#karsB"]) {
+    const k = $(id);
+    const eski = k.value;
+    k.innerHTML = "";
+    for (const y of liste) {
+      const o = document.createElement("option");
+      o.value = y.id;
+      o.textContent = `${y.yukleme_zamani_tr} · ${y.dosya_adi}`;
+      k.appendChild(o);
+    }
+    if (eski) k.value = eski;
+  }
+  if (liste.length >= 2 && !$("#karsA").dataset.dokunuldu) {
+    $("#karsB").value = liste[0].id;       // en son
+    $("#karsA").value = liste[1].id;       // bir onceki
+  }
   gecmisCiz(liste);
 }
 
@@ -308,28 +370,35 @@ function ozetCiz(s) {
   $("#sonucRozet").textContent = (s.sonuc_satir ?? 0) + " satır";
 }
 
+function kac(s) {
+  return (s == null ? "" : String(s)).replace(/[&<>]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
 function tabloCiz(kayitlar) {
   const g = $("#govde");
-  g.innerHTML = "";
   if (!kayitlar.length) {
-    g.innerHTML = "<tr><td colspan='6' class='bos'>Kayıt bulunamadı. Önce Excel yükleyin veya filtreleri gevşetin.</td></tr>";
+    g.innerHTML = "<tr><td colspan='6' class='bos'>Kayıt bulunamadı. Önce dosya yükleyin veya filtreleri gevşetin.</td></tr>";
     $("#ayak").innerHTML = "";
     return;
   }
+  // Sinirsiz satir: tek seferde HTML metni kurulup yazilir (DOM'a tek dokunus).
   let oncekiFis = null, toplam = 0;
+  const parcalar = [];
   for (const k of kayitlar) {
-    const tr = document.createElement("tr");
-    if (k.tahakkuk_fis_no !== oncekiFis) { tr.className = "fis-bas"; oncekiFis = k.tahakkuk_fis_no; }
-    tr.innerHTML = `
-      <td>${k.vergi_kimlik_no || ""}</td>
-      <td>${k.tahakkuk_fis_no || ""}</td>
-      <td>${k.vergi_donemi_metin || ""}</td>
-      <td>${k.vergi_kodu || ""}</td>
-      <td>${k.vergi_kodu_adi || ""}</td>
-      <td class="sag">${tutarBicim(k.odenecek_tutar)}</td>`;
-    g.appendChild(tr);
+    const yeniFis = k.tahakkuk_fis_no !== oncekiFis;
+    if (yeniFis) oncekiFis = k.tahakkuk_fis_no;
+    parcalar.push(
+      `<tr${yeniFis ? ' class="fis-bas"' : ""}>` +
+      `<td>${kac(k.vergi_kimlik_no)}</td>` +
+      `<td>${kac(k.tahakkuk_fis_no)}</td>` +
+      `<td>${kac(k.vergi_donemi_metin)}</td>` +
+      `<td>${kac(k.vergi_kodu)}</td>` +
+      `<td>${kac(k.vergi_kodu_adi)}</td>` +
+      `<td class="sag">${tutarBicim(k.odenecek_tutar)}</td></tr>`);
     toplam += k.odenecek_tutar || 0;
   }
+  g.innerHTML = parcalar.join("");
   $("#ayak").innerHTML =
     `<tr><td colspan="5" class="sag"><b>TOPLAM</b></td><td class="sag"><b>${tutarBicim(toplam)}</b></td></tr>`;
 }
@@ -364,6 +433,47 @@ $("#btnExcel").onclick = () => {
   if (!sonKayitlar.length) { mesajGoster("Aktarılacak sonuç yok.", "hata"); return; }
   window.location = "/disa_aktar?" + sorguParam().toString();
 };
+
+// ---- Karsilastirma ----
+const DURUM_AD = { yeni: "Yeni", cikan: "Çıkan", degisti: "Değişti", ayni: "Aynı" };
+
+async function karsilastir() {
+  const a = $("#karsA").value, b = $("#karsB").value, bazda = $("#karsBazda").value;
+  if (!a || !b) { mesajGoster("Karşılaştırmak için iki yükleme seçin.", "hata"); return; }
+  if (a === b) { mesajGoster("Lütfen farklı iki yükleme seçin.", "hata"); return; }
+  try {
+    const p = new URLSearchParams({ a, b, bazda });
+    const s = await api("/api/karsilastir?" + p.toString());
+    $("#karsAnahtarBaslik").textContent =
+      bazda === "fis" ? "Tahakkuk Fiş No" : "Vergi Kimlik No";
+    const o = s.ozet || {};
+    $("#karsOzet").innerHTML = `
+      <div><b>${o.yeni || 0}</b>Yeni (yalnız B)</div>
+      <div><b>${o.cikan || 0}</b>Çıkan (yalnız A)</div>
+      <div><b>${o.degisti || 0}</b>Değişen</div>
+      <div><b>${o.ayni || 0}</b>Aynı</div>`;
+    const g = $("#karsGovde");
+    if (!s.satirlar.length) {
+      g.innerHTML = "<tr><td colspan='5' class='bos'>Karşılaştırılacak veri yok.</td></tr>";
+      return;
+    }
+    const parcalar = [];
+    for (const r of s.satirlar) {
+      const fSinif = r.fark > 0 ? "fark-arti" : (r.fark < 0 ? "fark-eksi" : "");
+      const fIsaret = r.fark > 0 ? "+" : "";
+      parcalar.push(
+        `<tr><td>${kac(r.anahtar)}</td>` +
+        `<td class="sag">${tutarBicim(r.tutar_a)}</td>` +
+        `<td class="sag">${tutarBicim(r.tutar_b)}</td>` +
+        `<td class="sag ${fSinif}">${fIsaret}${tutarBicim(r.fark)}</td>` +
+        `<td class="d-${r.durum}">${DURUM_AD[r.durum] || r.durum}</td></tr>`);
+    }
+    g.innerHTML = parcalar.join("");
+  } catch (e) { mesajGoster("Karşılaştırma hatası: " + e.message, "hata"); }
+}
+$("#btnKarsilastir").onclick = karsilastir;
+$("#karsA").onchange = () => { $("#karsA").dataset.dokunuldu = "1"; };
+$("#karsB").onchange = () => { $("#karsA").dataset.dokunuldu = "1"; };
 
 // ---- Vergi kodu listesi (otomatik tamamlama) ----
 async function kodListesiGetir() {

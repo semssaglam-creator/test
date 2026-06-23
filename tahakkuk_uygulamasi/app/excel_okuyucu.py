@@ -136,39 +136,36 @@ def _kod_normalize(alan, metin):
     return metin
 
 
-def excel_oku(icerik, dosya_adi=""):
-    """Excel icerigini (bytes) okuyup kayit dict listesi dondurur.
+def kayitlardan_uret(ham_satirlar):
+    """Ham alan->deger satirlarindan, bos alanlari forward-fill ederek kayit uretir.
 
-    Bos satirlar bir ustteki mukellef/fis bilgisiyle doldurulur.
+    ham_satirlar: dict listesi; her dict alan adlarini (vergi_kimlik_no,
+    tahakkuk_fis_no, ... odenecek_tutar) icerebilir. Bos/eksik alanlar bir
+    ustteki mukellef/fis degeriyle doldurulur. Excel ve PDF okuyucular bunu
+    ortak kullanir.
     """
-    satirlar = _satirlari_al(icerik, dosya_adi)
-    if not satirlar:
-        raise OkumaHatasi("Dosya bos görünüyor.")
-
-    bas_idx, eslesme = _baslik_satiri_bul(satirlar)
     kayitlar = []
     tasinan = {alan: "" for alan in TASINAN_ALANLAR}
 
-    for satir in satirlar[bas_idx + 1:]:
+    for ham in ham_satirlar:
         deger = {}
-        for alan, kolon in eslesme.items():
-            ham = satir[kolon] if kolon < len(satir) else None
+        for alan, ham_deger in ham.items():
             if alan == "odenecek_tutar":
-                deger[alan] = ham
+                deger[alan] = ham_deger
             else:
-                deger[alan] = _kod_normalize(alan, _hucre_metin(ham))
+                deger[alan] = _kod_normalize(alan, _hucre_metin(ham_deger))
 
         # Tamamen bos satirlari atla.
-        if not any(_hucre_metin(satir[k]) for k in eslesme.values() if k < len(satir)):
+        dolu = any(str(v).strip() for k, v in deger.items() if k != "odenecek_tutar")
+        if not dolu and _tutar_coz(deger.get("odenecek_tutar")) == 0:
             continue
 
         # Devam eden (bos) alanlari ustteki degerle doldur.
         for alan in TASINAN_ALANLAR:
-            if alan in deger:
-                if deger[alan]:
-                    tasinan[alan] = deger[alan]
-                else:
-                    deger[alan] = tasinan[alan]
+            if deger.get(alan):
+                tasinan[alan] = deger[alan]
+            else:
+                deger[alan] = tasinan[alan]
 
         kayit = {
             "vergi_kimlik_no": deger.get("vergi_kimlik_no", ""),
@@ -180,12 +177,33 @@ def excel_oku(icerik, dosya_adi=""):
             "plaka_sasi": deger.get("plaka_sasi", ""),
             "odenecek_tutar": _tutar_coz(deger.get("odenecek_tutar")),
         }
-        # Anlamsiz (ne vergi kodu ne tutar) satirlari atla.
+        # Anlamsiz (ne vergi kodu ne tutar ne fis) satirlari atla.
         if not kayit["vergi_kodu"] and kayit["odenecek_tutar"] == 0 \
                 and not kayit["tahakkuk_fis_no"]:
             continue
         kayitlar.append(kayit)
+    return kayitlar
 
+
+def excel_oku(icerik, dosya_adi=""):
+    """Excel icerigini (bytes) okuyup kayit dict listesi dondurur.
+
+    Bos satirlar bir ustteki mukellef/fis bilgisiyle doldurulur. Satir sayisi
+    sinirsizdir.
+    """
+    satirlar = _satirlari_al(icerik, dosya_adi)
+    if not satirlar:
+        raise OkumaHatasi("Dosya bos görünüyor.")
+
+    bas_idx, eslesme = _baslik_satiri_bul(satirlar)
+    ham_satirlar = []
+    for satir in satirlar[bas_idx + 1:]:
+        ham = {}
+        for alan, kolon in eslesme.items():
+            ham[alan] = satir[kolon] if kolon < len(satir) else None
+        ham_satirlar.append(ham)
+
+    kayitlar = kayitlardan_uret(ham_satirlar)
     if not kayitlar:
         raise OkumaHatasi("Dosyada okunabilir veri satiri bulunamadi.")
     return kayitlar

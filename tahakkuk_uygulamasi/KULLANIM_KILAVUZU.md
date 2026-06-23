@@ -22,9 +22,15 @@ Kısayol kullanmadan da `calistir.sh` dosyasına çift tıklayarak (veya termina
 
 ## Kullanım
 
-### 1. Excel Yükle
-Üstteki kutuya Excel dosyasını sürükleyin ya da tıklayıp seçin. `.xls` ve
-`.xlsx` desteklenir. Her yükleme, **yükleme tarihi** ile saklanır.
+### 1. Dosya Yükle
+Üstteki kutuya dosyayı sürükleyin ya da tıklayıp seçin. **`.xls`, `.xlsx` ve
+`.pdf`** desteklenir. Her yükleme, **yükleme tarihi** ile saklanır. Satır
+sayısında **sınır yoktur** (on binlerce satır sorunsuz çalışır).
+
+> **PDF hakkında:** PDF ayrıştırıcı, Excel'deki sütun düzenine göre ayarlıdır
+> (vergi kimlik no, tahakkuk fiş no, dönem, vergi kodu, tutar). PDF'iniz çok
+> farklı bir düzendeyse Excel yüklemeniz daha güvenlidir; örnek bir tahakkuk
+> PDF'i paylaşırsanız ayrıştırıcı ona göre ince ayarlanabilir.
 
 - **Boş satırlar** otomatik olarak bir üstteki mükellefin/fişin devamı kabul
   edilir; ilgili bilgiler (vergi kimlik no, fiş no, dönem...) aşağı taşınır.
@@ -39,12 +45,25 @@ Kısayol kullanmadan da `calistir.sh` dosyasına çift tıklayarak (veya termina
   - **Fiş bazında — en yüksek tutar üstte:** En yüksek tutarı içeren tahakkuk
     fişi en üstte gelir ve o fişin **bütün** satırları birlikte listelenir
     (fiş bütünlüğü korunur).
+  - **Mükellef toplamı — en yüksek üstte:** Mükellefler, toplam ödenecek
+    tutarlarına göre büyükten küçüğe sıralanır; her mükellefin tüm satırları
+    bir arada gelir.
   - **Tutar — azalan / artan:** Satır bazında tutara göre sıralar.
   - **Vergi Kimlik No:** Mükellef bazında sıralar.
 
 Sütun başlıklarına tıklayarak da hızlıca sıralayabilirsiniz.
 
-### 3. Excel'e Aktar
+### 3. Günleri Karşılaştır
+İki farklı yüklemeyi (örn. dünkü ve bugünkü liste) seçip karşılaştırın.
+**Vergi Kimlik No** (mükellef) veya **Tahakkuk Fiş No** bazında, her anahtarın
+iki gündeki toplam tutarı, farkı ve durumu listelenir:
+
+- **Yeni:** Yalnızca B (sonraki) yüklemede var.
+- **Çıkan:** Yalnızca A (önceki) yüklemede var.
+- **Değişti:** İki günde de var, tutar farklı.
+- **Aynı:** İki günde de aynı tutar.
+
+### Excel'e Aktar
 **⬇ Excel'e Aktar** ile o anki sorgu sonucunu `.xlsx` olarak kaydedebilirsiniz.
 
 ### Geçmiş Yüklemeler

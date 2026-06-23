@@ -159,19 +159,29 @@ def yukleme_sil(yukleme_id):
 
 
 # ---------------------------------------------------------------- sorgu
+# Grup bazli siralamalar: (gruplama_kolonu, grup_metrigi) eslemesi.
+#   'fis'            -> fis bazinda, fisin EN YUKSEK satir tutarina gore azalan
+#   'mukellef_toplam'-> mukellef bazinda, mukellefin TOPLAM tutarina gore azalan
+_GRUP_SIRALAMA = {
+    "fis": ("tahakkuk_fis_no", "max"),
+    "mukellef_toplam": ("vergi_kimlik_no", "sum"),
+}
+
+
 def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
                       tutar_max=None, siralama="fis"):
-    """Bir yuklemedeki kayitlari filtreleyip siralar.
+    """Bir yuklemedeki kayitlari filtreleyip siralar. Satir sayisi sinirsizdir.
 
     siralama:
-      'fis'         -> fis bazinda grupli, fisin en yuksek tutarina gore azalan
-      'tutar_azalan'-> satir tutari azalan
-      'tutar_artan' -> satir tutari artan
-      'vkn'         -> vergi kimlik no'ya gore
+      'fis'            -> fis bazinda grupli, fisin en yuksek tutarina gore azalan
+      'mukellef_toplam'-> mukellef bazinda grupli, toplam tutara gore azalan
+      'tutar_azalan'   -> satir tutari azalan
+      'tutar_artan'    -> satir tutari artan
+      'vkn'            -> vergi kimlik no'ya gore
 
-    Tutar filtresi satir bazinda uygulanir. 'fis' siralamasinda ise sonuc
-    fis butunlugu korunarak gelir: filtreye uyan satiri olan her fisin TUM
-    satirlari dahil edilir ve fisler en yuksek tutara gore siralanir.
+    Tutar filtresi satir bazinda uygulanir. Grup siralamalarinda sonuc grup
+    butunlugu korunarak gelir: filtreye uyan satiri olan her grubun (fis ya da
+    mukellef) TUM satirlari dahil edilir ve gruplar metriklerine gore siralanir.
     """
     conn = get_connection()
     try:
@@ -191,28 +201,34 @@ def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
             param.append(tutar_max)
         nere = " AND ".join(kosul)
 
-        if siralama == "fis":
-            # Filtreye uyan fisleri bul, sonra o fislerin TUM satirlarini getir.
+        if siralama in _GRUP_SIRALAMA:
+            grup_kol, metrik = _GRUP_SIRALAMA[siralama]
+            # Filtreye uyan gruplari bul, sonra o gruplarin TUM satirlarini getir.
             eslesenler = conn.execute(
-                f"SELECT DISTINCT tahakkuk_fis_no FROM kayitlar WHERE {nere}", param
+                f"SELECT DISTINCT {grup_kol} FROM kayitlar WHERE {nere}", param
             ).fetchall()
-            fisler = [r["tahakkuk_fis_no"] for r in eslesenler]
-            if not fisler:
+            anahtarlar = [r[grup_kol] for r in eslesenler]
+            if not anahtarlar:
                 return []
-            isaret = ",".join("?" * len(fisler))
+            isaret = ",".join("?" * len(anahtarlar))
             satirlar = conn.execute(
                 f"SELECT * FROM kayitlar WHERE yukleme_id = ? "
-                f"AND tahakkuk_fis_no IN ({isaret})",
-                [yukleme_id, *fisler],
+                f"AND {grup_kol} IN ({isaret})",
+                [yukleme_id, *anahtarlar],
             ).fetchall()
-            # Her fisin en yuksek tutarini hesapla, fisleri buna gore sirala.
-            fis_max = {}
+            # Her grubun metrigini hesapla (en yuksek tutar veya toplam).
+            grup_deger = {}
             for s in satirlar:
-                f = s["tahakkuk_fis_no"]
-                fis_max[f] = max(fis_max.get(f, float("-inf")), s["odenecek_tutar"] or 0)
+                a = s[grup_kol]
+                t = s["odenecek_tutar"] or 0
+                if metrik == "sum":
+                    grup_deger[a] = grup_deger.get(a, 0) + t
+                else:
+                    grup_deger[a] = max(grup_deger.get(a, float("-inf")), t)
             satirlar = sorted(
                 satirlar,
-                key=lambda s: (-fis_max.get(s["tahakkuk_fis_no"], 0),
+                key=lambda s: (-grup_deger.get(s[grup_kol], 0),
+                               s[grup_kol] or "",
                                s["tahakkuk_fis_no"] or "",
                                -(s["odenecek_tutar"] or 0)),
             )
@@ -227,6 +243,60 @@ def kayitlari_sorgula(yukleme_id, vkn="", vergi_kodu="", tutar_min=None,
             f"SELECT * FROM kayitlar WHERE {nere} ORDER BY {sirala_sql}", param
         ).fetchall()
         return [dict(s) for s in satirlar]
+    finally:
+        conn.close()
+
+
+def karsilastir(a_id, b_id, bazda="vkn"):
+    """Iki yuklemeyi (gun) karsilastirir.
+
+    bazda: 'vkn' -> vergi kimlik no bazinda, 'fis' -> tahakkuk fis no bazinda.
+    Her anahtar icin iki yuklemedeki toplam tutarlari, farki ve durumu dondurur.
+    durum: 'yeni' (yalniz B'de), 'cikan' (yalniz A'da), 'degisti', 'ayni'.
+    """
+    grup_kol = "tahakkuk_fis_no" if bazda == "fis" else "vergi_kimlik_no"
+    conn = get_connection()
+    try:
+        def topla(yid):
+            sonuc = {}
+            for r in conn.execute(
+                f"SELECT {grup_kol} AS anahtar, "
+                f"COALESCE(SUM(odenecek_tutar), 0) AS toplam, "
+                f"MAX(vergi_kimlik_no) AS vkn "
+                f"FROM kayitlar WHERE yukleme_id = ? GROUP BY {grup_kol}",
+                (yid,),
+            ):
+                sonuc[r["anahtar"]] = {"toplam": r["toplam"], "vkn": r["vkn"]}
+            return sonuc
+
+        a = topla(a_id)
+        b = topla(b_id)
+        satirlar = []
+        for anahtar in sorted(set(a) | set(b)):
+            ta = a.get(anahtar, {}).get("toplam")
+            tb = b.get(anahtar, {}).get("toplam")
+            va = ta if ta is not None else 0
+            vb = tb if tb is not None else 0
+            fark = round(vb - va, 2)
+            if ta is None:
+                durum = "yeni"
+            elif tb is None:
+                durum = "cikan"
+            elif abs(fark) > 0.005:
+                durum = "degisti"
+            else:
+                durum = "ayni"
+            satirlar.append({
+                "anahtar": anahtar,
+                "vkn": (b.get(anahtar) or a.get(anahtar) or {}).get("vkn", ""),
+                "tutar_a": round(va, 2),
+                "tutar_b": round(vb, 2),
+                "fark": fark,
+                "durum": durum,
+            })
+        # En buyuk mutlak farktan kucuge sirala.
+        satirlar.sort(key=lambda s: -abs(s["fark"]))
+        return satirlar
     finally:
         conn.close()
 

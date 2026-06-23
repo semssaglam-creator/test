@@ -13,6 +13,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from . import db
 from .excel_export import sorgu_excel
 from .excel_okuyucu import OkumaHatasi, excel_oku
+from .pdf_okuyucu import pdf_oku
 from .tarih_util import donem_metni, iso_to_tr
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,7 +49,7 @@ def _kayitlari_zenginlestir(kayitlar):
     return kayitlar
 
 
-def _excel_yukle(veri):
+def _dosya_yukle(veri):
     ad = (veri.get("dosya_adi") or "yukleme.xls").strip()
     icerik_b64 = veri.get("icerik") or ""
     try:
@@ -57,13 +58,30 @@ def _excel_yukle(veri):
         raise ApiHata("Dosya içeriği çözülemedi.")
     if not icerik:
         raise ApiHata("Boş dosya gönderildi.")
+    # Uzanti veya icerik PDF ise PDF okuyucuya yonlendir.
+    pdf_mi = ad.lower().endswith(".pdf") or icerik[:5] == b"%PDF-"
     try:
-        kayitlar = excel_oku(icerik, ad)
+        kayitlar = pdf_oku(icerik, ad) if pdf_mi else excel_oku(icerik, ad)
     except OkumaHatasi as exc:
         raise ApiHata(str(exc))
     yukleme_id = db.yukleme_ekle(ad, kayitlar)
     ozet = db.yukleme_ozeti(yukleme_id)
     return {"yukleme_id": yukleme_id, "satir_sayisi": len(kayitlar), "ozet": ozet}
+
+
+def _karsilastir(params):
+    a_id = params.get("a", [""])[0]
+    b_id = params.get("b", [""])[0]
+    if not a_id or not b_id:
+        raise ApiHata("Karşılaştırma için iki yükleme seçin.")
+    if a_id == b_id:
+        raise ApiHata("Lütfen farklı iki yükleme seçin.")
+    bazda = params.get("bazda", ["vkn"])[0]
+    satirlar = db.karsilastir(int(a_id), int(b_id), bazda)
+    say = {"yeni": 0, "cikan": 0, "degisti": 0, "ayni": 0}
+    for s in satirlar:
+        say[s["durum"]] = say.get(s["durum"], 0) + 1
+    return {"bazda": bazda, "satirlar": satirlar, "ozet": say}
 
 
 def _sorgu_yap(params):
@@ -172,6 +190,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(yuklemeler)
             elif yol == "/api/sorgu":
                 self._json_yanit(_sorgu_yap(params))
+            elif yol == "/api/karsilastir":
+                self._json_yanit(_karsilastir(params))
             elif yol == "/api/vergi_kodlari":
                 self._json_yanit(db.vergi_kodu_adlari())
             elif yol == "/disa_aktar":
@@ -191,7 +211,7 @@ class Istekci(BaseHTTPRequestHandler):
         try:
             veri = self._govdeyi_oku()
             if yol == "/api/yukle":
-                self._json_yanit(_excel_yukle(veri))
+                self._json_yanit(_dosya_yukle(veri))
             elif yol == "/api/yukleme/sil":
                 db.yukleme_sil(int(veri["id"]))
                 self._json_yanit({"tamam": True})
