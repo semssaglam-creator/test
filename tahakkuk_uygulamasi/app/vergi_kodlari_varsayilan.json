@@ -1,0 +1,2846 @@
+[
+[
+"0001",
+"YILLIK GELİR VERGİSİ"
+],
+[
+"0002",
+"ZIRAİ KAZANÇ GELİR VERGİSİ"
+],
+[
+"0003",
+"GELİR VERGİSİ S. (MUHTASAR)"
+],
+[
+"0004",
+"GELİR GÖTÜRÜ TİCARİ KAZANÇ"
+],
+[
+"0005",
+"GELİR GÖTÜRÜ SERBEST MESLEK KAZANCI"
+],
+[
+"0006",
+"GELİR GÖTÜRÜ ÜCRET"
+],
+[
+"0007",
+"DAĞITILMAYAN KAR STOPAJI"
+],
+[
+"0010",
+"KURUMLAR VERGİSİ"
+],
+[
+"0011",
+"KURUMLAR VERGİSİ STOPAJI"
+],
+[
+"0012",
+"GELİR VERGİSİ (GMSİ-MSİ-ÜCRET-DİĞER KAZANÇ VE İRATLAR)"
+],
+[
+"0014",
+"BASIT USULDE TİCARİ KAZANC"
+],
+[
+"0015",
+"GERÇEK USULDE KATMA DEĞER VERGİSİ"
+],
+[
+"0016",
+"HASILAT ESASLI KDV4"
+],
+[
+"0017",
+"GÖTÜRÜ USULDE KATMA DEĞER VERGİSİ"
+],
+[
+"0020",
+"MEP İŞTİRAKÇİSİ KURUMLAR VERGİSİ"
+],
+[
+"0021",
+"BANKA MUAMELELERİ VERGİSİ"
+],
+[
+"0022",
+"SİGORTA MUAMELELERİ VERGİSİ"
+],
+[
+"0023",
+"5811 YURT DIŞINDA SAHİP OLUNAN VARLIKLAR"
+],
+[
+"0024",
+"5811 TÜRKİYEDE SAHİP OLUNAN VARLIKLAR(GELİR V. MÜK. OLMAYAN)"
+],
+[
+"0025",
+"YURTDIŞINDA SAHİP OLUNAN VARLIKLAR"
+],
+[
+"0027",
+"GELİR VERGİSİ GEÇİCİ VERGİ"
+],
+[
+"0032",
+"GELİR GEÇİCİ VERGİ"
+],
+[
+"0033",
+"KURUM GEÇİCİ VERGİ"
+],
+[
+"0035",
+"TANAP PEŞİN ÖDENEN KURUMLAR VERGİSİ"
+],
+[
+"0040",
+"DAMGA VERGİSİ (BEYANNAMELİ DAMGA VERGİSİ MÜKELLEFİ)"
+],
+[
+"0046",
+"AKARYAKIT TÜKETİM VERGİSİ"
+],
+[
+"0048",
+"GELİR V. M.TALİH OYUNLARI ASGARİ VERGİ"
+],
+[
+"0049",
+"HER TÜRLÜ İSPİRTOLAR  VE FÜZEL YAĞINDAN ALINAN EK  VERGİ"
+],
+[
+"0050",
+"KURUMLAR V. M.TALİH OYUNLARI ASGARİ VERGİ"
+],
+[
+"0051",
+"DİĞER ÜCRETLER"
+],
+[
+"0053",
+"KURUMLAR VERGİSİ KURUM GEÇİCİ VERGİ"
+],
+[
+"0054",
+"DIGITAL SERVICE TAX / DİJİTAL HİZMET VERGİSİ"
+],
+[
+"0055",
+"VALUE ADDED TAX / KATMA DEĞER VERGİSİ 3"
+],
+[
+"0056",
+"OYUN KAĞITLARINDAN ALINAN EK VERGİ"
+],
+[
+"0057",
+"RÖNTGEN FİLMLERİNDEN  ALINAN EK VERGİ"
+],
+[
+"0058",
+"GERİ KAZANIM KATILIM PAYI"
+],
+[
+"0059",
+"KONAKLAMA VERGİSİ"
+],
+[
+"0060",
+"MÜLGA MADEN FONU"
+],
+[
+"0061",
+"KAYNAK KULLANIMI DESTEKLEME FONU KESİNTİSİ"
+],
+[
+"0062",
+"MÜLGA KOOPERATİFÇİLİK TANITMA VE EĞİTİM FONU"
+],
+[
+"0063",
+"YEREL ASGARİ TAMAMLAYICI KURUMLAR VERGİSİ"
+],
+[
+"0067",
+"G.V.K. GEÇİCİ 67/11 MADDESİNE GÖRE YAPILAN İHTİYARİ BEYAN"
+],
+[
+"0068",
+"7183 SY. KANUNUN 6. MADDESİNİN 3. FIKRASINA GÖRE ALINAN TURİZM PAYI (%95)"
+],
+[
+"0071",
+"PETROL VE DOĞALGAZ ÜRÜNLERİNE İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0073",
+"KOLALI GAZOZ, ALKOLLÜ İÇEÇEKLER VE TÜTÜN MAMÜLLERİNE İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0074",
+"DAYANIKLI TÜKETİM VE DİĞER MALLARA İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0075",
+"ALKOLLÜ İÇEÇEKLERE İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0076",
+"TÜTÜN MAMÜLLERİNE İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0077",
+"KOLALI GAZOZLARA İLİŞKİN ÖZEL TÜKETİM VERGİSİ"
+],
+[
+"0091",
+"TÜTÜN MAMÜLLERİNE İLİŞKİN EK VERGİ"
+],
+[
+"0092",
+"HER TÜRLÜ ALKOLLÜ İÇKİLERE İLİŞKİN EK VERGİ"
+],
+[
+"0093",
+"SAİR ŞARAP VE BİRALARA İLİŞKİN EK VERGİ"
+],
+[
+"0094",
+"HER TÜRLÜ ALKOLSÜZ İÇECEKLERDEN  ALINAN EK VERGİ"
+],
+[
+"0095",
+"ÜCRETLERE İLİŞKİN MUHTASAR VE PRİM HİZMET BEYANNAMESİ"
+],
+[
+"0096",
+"DEĞERLİ KONUT VERGİSİ"
+],
+[
+"1013",
+"EĞİTİM,GENÇLİK,SPOR VE SAĞLIK HİZMETLERİ VERGİSİ"
+],
+[
+"1014",
+"7183 SY. KANUNUN 6. MADDESİNİN 3. FIKRASINA GÖRE ALINAN TURİZM PAYI (%5)"
+],
+[
+"1018",
+"MAHSUPLARDAN KESİLEN DAMGA VERGİSİ"
+],
+[
+"1020",
+"FON PAYI"
+],
+[
+"1026",
+"5254 SAYILI KANUNA GÖRE MUHTAÇ ÇİFTÇİLERE VERİLEN ÖDÜNÇ TOHUMLUKLARDAN HAZİNE ALACAĞINA DÖNÜŞENLER AİT FAİZ"
+],
+[
+"1027",
+"2004/5682 SAYILI BKK İLE HAZİNE ALACĞINA DÖNÜŞEN TOHUMLUK KREDİLERİNE DÖNÜŞENLER AİT FAİZ"
+],
+[
+"1028",
+"5335 SAYILI KANUNA GÖRE DESTEKLEME FİYAT İSTİKRAR FONUNA AİT FAİZ"
+],
+[
+"1030",
+"PİŞMANLIK ZAMMI"
+],
+[
+"1034",
+"İKİ İHALE ARASINDAKİ FARK İÇİN ALINAN FAİZ"
+],
+[
+"1037",
+"TRAFİK MUAYENESİ PARA CEZALARI"
+],
+[
+"1040",
+"İZAH ZAMMI"
+],
+[
+"1041",
+"İZAH ZAMMI VUK 370/A"
+],
+[
+"1042",
+"E.KATKI PAYI"
+],
+[
+"1043",
+"ÖZEL İŞLEM VERGİSİ"
+],
+[
+"1045",
+"TARIM DESTEĞİ GERİ ÖDEMESİ FAİZİ"
+],
+[
+"1046",
+"TEVKİFATTAN ALINAN DAMGA VERGİSİ"
+],
+[
+"1047",
+"DAMGA VERGİSİ"
+],
+[
+"1048",
+"5035 SAYILI KANUNA GÖRE DAMGA VERGİSİ"
+],
+[
+"1049",
+"NOTERLER TARAFINDAN TAHSİL EDİLEN DAMGA VERGİSİ"
+],
+[
+"1050",
+"VERGİ BARIŞI TEFE TUTARI"
+],
+[
+"1051",
+"VERGİ BARIŞI GEÇ ÖDEME ZAMMI"
+],
+[
+"1052",
+"5335 SAYILI KANUNA GÖRE HAZİNE ALACAĞINA DÖNÜŞEN TOHUMLUK KREDİLERİNE AİT GEÇ ÖDEME ZAMMI"
+],
+[
+"1053",
+"5736 SAYILI KANUN UYARINCA GEÇ ÖDEME ZAMMI"
+],
+[
+"1055",
+"DÜŞÜK OLAN DEĞERLEME TUTARI"
+],
+[
+"1058",
+"GECİKME ZAMMI ORANINDA FAİZ (6183/51)"
+],
+[
+"1060",
+"6111 YENİDEN YAPILANDIRMA TEFE TUTARI"
+],
+[
+"1061",
+"6111 YENİDEN YAPILANDIRMA GEÇ ÖDEME ZAMMI"
+],
+[
+"1062",
+"7143 Sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1063",
+"7143 Sayılı Kanun Yİ-ÜFE Tutarı (Sadece Fer'i)"
+],
+[
+"1064",
+"7143 Sayılı Kanun Katsayı Tutarı"
+],
+[
+"1065",
+"7143 Sayılı Kanun Geç Ödeme Zammı"
+],
+[
+"1066",
+"7143 Sayılı Kanun Yİ-ÜFE/GF İndirimi"
+],
+[
+"1067",
+"VERGİ YARGI HARÇLARI"
+],
+[
+"1068",
+"7143 Sayılı Kanun İPC Peşin Ödeme indirimi (9 md 3-a/2 ve 9 md 3-b/2)"
+],
+[
+"1069",
+"7143 Sayılı Kanun Madde 10/1 Yİ-ÜFE/GF İndirimi"
+],
+[
+"1070",
+"6552 S.K. Yİ-ÜFE TUTARI"
+],
+[
+"1071",
+"6552 S.K. KATSAYI TUTARI"
+],
+[
+"1072",
+"6552 S.K. GEÇ ÖDEME ZAMMI"
+],
+[
+"1073",
+"6736 sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1074",
+"6736 sayılı Kanun Katsayı Tutarı"
+],
+[
+"1075",
+"6736 sayılı Kanun Geç Ödeme Zammı"
+],
+[
+"1076",
+"6736 Sayılı Kanun Yİ-ÜFE/GF İndirimi"
+],
+[
+"1077",
+"6736 Sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1078",
+"7020 SAYILI KANUN Yİ-ÜFE TUTARI"
+],
+[
+"1079",
+"7020 sayılı Kanun KATSAYI Tutarı"
+],
+[
+"1080",
+"7020 SAYILI KANUN GEÇ ÖDEME ZAMMI"
+],
+[
+"1081",
+"7020 SAYILI KANUN Yİ-ÜFE İNDİRİMİ"
+],
+[
+"1082",
+"VUK 112/6 (TECİL FAİZİ ORANINDA) GECİKME FAİZİ"
+],
+[
+"1083",
+"MADENLERDEN ALINAN DEVLET HİSSESİNİN GEÇ ÖDENMESİNDEN ALINAN FAİZ"
+],
+[
+"1084",
+"GECİKME FAİZİ"
+],
+[
+"1085",
+"PARA CEZASI FAİZİ"
+],
+[
+"1086",
+"GECİKME ZAMMI"
+],
+[
+"1087",
+"ERKEN ÖDEME İNDİRİMİ"
+],
+[
+"1088",
+"PEŞİN ÖDEME İNDİRİMİ"
+],
+[
+"1089",
+"ALINAN DİĞER FAİZLER"
+],
+[
+"1090",
+"KANUNİ FAİZ"
+],
+[
+"1091",
+"5736 SAYILI KANUN UYARINCA ALINAN FAİZ"
+],
+[
+"1092",
+"HESAPLANAN FAİZ"
+],
+[
+"1093",
+"6111 KATSAYI TUTARI"
+],
+[
+"1094",
+"DOĞRUDAN GELİR DESTEĞİ ÖDEMELERİNE İLİŞKİN KANUNİ FAİZ"
+],
+[
+"1095",
+"SAVUNMA SANAYİ DESTEKLEME FONU"
+],
+[
+"1096",
+"KONUT FONU"
+],
+[
+"1097",
+"DEVLET İÇ BORÇLANMA SENEDİ FAİZİ"
+],
+[
+"1098",
+"GECİKME ZAMMI ORANINDA HESAPLANAN GECİKME FAİZİ"
+],
+[
+"1099",
+"6183 48A sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1100",
+"7256 Sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1101",
+"7256 Sayılı Kanun Yİ-ÜFE Tutarı (Sadece Fer’i)"
+],
+[
+"1102",
+"7256 Sayılı Kanun Katsayı Tutarı"
+],
+[
+"1103",
+"7256 Sayılı Kanun Geç Ödeme Zammı"
+],
+[
+"1104",
+"7256 Sayılı Kanun Yİ-ÜFE/GF İndirimi"
+],
+[
+"1105",
+"7256 Sayılı Kanun İPC Peşin Ödeme İndirimi (3 md 3-a/2 ve 3 md 3-b/2)"
+],
+[
+"1106",
+"7326 Sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1107",
+"7326 Sayılı Kanun Yİ-ÜFE Tutarı (Sadece Fer’i)"
+],
+[
+"1108",
+"7326 Sayılı Kanun Katsayı Tutarı"
+],
+[
+"1109",
+"7326 Sayılı Kanun Geç Ödeme Zammı"
+],
+[
+"1110",
+"7326 Sayılı Kanun Yİ-ÜFE/GF İndirimi"
+],
+[
+"1111",
+"7326 Sayılı Kanun Vergi Aslı Peşin Ödeme İndirimi"
+],
+[
+"1112",
+"7440 Sayılı Kanun Yİ-ÜFE Tutarı"
+],
+[
+"1113",
+"7440 Sayılı Kanun Yİ-ÜFE Tutarı (Sadece Fer’i)"
+],
+[
+"1114",
+"7440 Sayılı Kanun Katsayı Tutarı"
+],
+[
+"1115",
+"7440 Sayılı Kanun Geç Ödeme Zammı"
+],
+[
+"1116",
+"7440 Sayılı Kanun Yİ-ÜFE/GF İndirimi"
+],
+[
+"1117",
+"7440 Sayılı Kanun Vergi Aslı Peşin Ödeme İndirimi"
+],
+[
+"3024",
+"KAYNAK KULLANIMI DESTEKLEME PRİMİ CEZAİ FAİZİ"
+],
+[
+"3061",
+"CEZAİ FAİZ(KAYNAK KULLANIMI DESTEKLEME FONU KESİNTİLERİ)"
+],
+[
+"3073",
+"USULSÜZLÜK CEZASI"
+],
+[
+"3074",
+"ÖZEL USULSÜZLÜK CEZASI"
+],
+[
+"3076",
+"KUSUR CEZASI"
+],
+[
+"3077",
+"AĞIR KUSUR CEZASI"
+],
+[
+"3078",
+"KAÇAKÇILIK CEZASI"
+],
+[
+"3080",
+"VERGİ ZİYAI CEZASI"
+],
+[
+"3099",
+"VUK 112/4,5 Maddesi Gereğince Ödenen Faiz"
+],
+[
+"4001",
+"EK GELİR VERGİSİ"
+],
+[
+"4003",
+"EK ÜCRET GELİR VERGİSİ"
+],
+[
+"4004",
+"EK GÖTÜRÜ TİCARİ KAZANÇ VERGİSİ"
+],
+[
+"4005",
+"EK GÖTÜRÜ SERBEST MESLEK KAZANCI VERGİSİ"
+],
+[
+"4006",
+"FAİZ VERGİSİ"
+],
+[
+"4007",
+"EK EMLAK VERGİSİ"
+],
+[
+"4008",
+"GELİR DAHİLİ TEVKİFAT"
+],
+[
+"4009",
+"ELEKTRİK ÜRETİM LİSANS HARCI"
+],
+[
+"4010",
+"EK KURUMLAR VERGİSİ"
+],
+[
+"4011",
+"KURUMLAR VERGİSİ ARGE HARCAMALARI"
+],
+[
+"4012",
+"KURUM DAHİLİ TEVKİFAT"
+],
+[
+"4014",
+"MÜNFERİT GELİR EKONOMİK DENGE V."
+],
+[
+"4015",
+"TÜRK HAVA KUVVETLERİNİN GÜÇLENDİRİLMESİ VE MİLLİ HAVA SANAYİ KURULMASI KATILMA PAYI"
+],
+[
+"4016",
+"ÜCRETLERDEN ALINACAK E.D.V."
+],
+[
+"4017",
+"KATMA DEĞER VERGİSİ TEVKİFATI"
+],
+[
+"4018",
+"KATMA DEĞER VERGİSİ TEVKİFATI (HASILAT ESASLI)"
+],
+[
+"4021",
+"4705 SAYILI KANUNA GÖRE TAHSİL EDİLEN ÖZEL İŞLEM VERGİSİ"
+],
+[
+"4023",
+"5811 YURT DIŞINDA SAHİP OLUNAN VARLIKLAR(BANKA VE ARACI KURUMLAR)"
+],
+[
+"4024",
+"5811 TÜRKİYE DE SAHİP OLUNAN VARLIKLAR"
+],
+[
+"4025",
+"YURTDIŞINDA SAHİP OLUNAN VARLIKLARIN BİLDİRİMİ(BANKA VE ARACI KURUMLAR)"
+],
+[
+"4026",
+"7143 YURT DIŞINDA SAHİP OLUNAN VARLIKLAR(BANKA VE ARACI KURUMLAR)"
+],
+[
+"4027",
+"7143 TÜRKİYE'DE SAHİP OLUNAN VARLIKLAR"
+],
+[
+"4028",
+"193 S.K. Geç.90.Madde Yurtdışında Sahip Olunan Varlıklar(Banka ve Aracı Kurumlar)"
+],
+[
+"4029",
+"193.S.K Geç.90.Madde Türkiye’de Sahip olunan varlıklar"
+],
+[
+"4030",
+"G.V.K. GEÇİCİ 67. MADDESİNE GÖRE YAPILAN TEVKİFAT"
+],
+[
+"4034",
+"MOTORLU TAŞITLAR EK VERGİSİ"
+],
+[
+"4035",
+"4837 S.K EK MOTORLU TAŞITLAR VERGİSİ"
+],
+[
+"4036",
+"4962 S. TAŞIT VERGİSİ"
+],
+[
+"4037",
+"TRAFİK MUAYENE ÜCRETİ HAZİNE PAYI"
+],
+[
+"4040",
+"MÜLGA TRAFİK HİZMETLERİNİ GELİŞTİRME FONU REKLAM GELİRLERİ"
+],
+[
+"4041",
+"GELİR VE KURUM  EKONOMİK DENGE VERGİSİ"
+],
+[
+"4042",
+"5035 RTÜK EĞİTİME KATKI PAYI"
+],
+[
+"4043",
+"GÖTÜRÜ EKONOMİK DENGE VERGİSİ"
+],
+[
+"4044",
+"GELİR VE KURUM STOPAJ EKONOMİK DENGE VERGİSİ"
+],
+[
+"4046",
+"AKARYAKIT FİYAT İSTİKRAR PAYI"
+],
+[
+"4047",
+"TEK BAŞINA ALINABİLEN DAMGA VERGİSİ"
+],
+[
+"4048",
+"ŞANS OYUNLARI VERGİSİ"
+],
+[
+"4049",
+"5035 SAYILI KANUNA GÖRE FİNANSAL FAALİYET HARCI"
+],
+[
+"4050",
+"TEKEL SAFİ HASILAT"
+],
+[
+"4059",
+"TİCARET SİCİL HARCI BİLDİRİMİ"
+],
+[
+"4060",
+"TECİLLİ ALACAKLARDAN TAHSİLAT"
+],
+[
+"4061",
+"İTHALATTA KAYNAK KULLANIMI DESTEKLEME FONU KESİNTİSİ"
+],
+[
+"4063",
+"NOTER HARÇLARI"
+],
+[
+"4070",
+"G.V.K. GEÇİCİ 70. MD KAPSAMINDA MUHTASARV."
+],
+[
+"4071",
+"ELEKTRİK VE HAVAGAZI TÜKETİM VERGİSİ"
+],
+[
+"4072",
+"MOTORLU TAŞIT ARAÇLARINA İLİŞKİN ÖZEL TÜKETİM VERGİSİ (TESCİLE TABİ OLMAYANLAR)"
+],
+[
+"4073",
+"ERTELENEN GELİR STOPAJ (4325 4.MADDE/4369 GEÇİCİ 5.MADDE)"
+],
+[
+"4074",
+"ERTELENEN GELİR STOPAJ (4747 SAYILI KANUNUNUN 2.MADDESİ)"
+],
+[
+"4077",
+"MÜNFERİT KURUM E. D. V."
+],
+[
+"4078",
+"NET AKTİF VERGİSİ"
+],
+[
+"4079",
+"KIYMETLİ MADEN VE ZIYNET EŞYASINDAN ALINAN VERGİ"
+],
+[
+"4080",
+"ÖZEL İLETİŞİM VERGİSİ"
+],
+[
+"4081",
+"5035 SAYILI KANUNA GÖRE ÖZEL İLETİŞİM VERGİSİ"
+],
+[
+"4083",
+"7440 Sayılı Kanunun 10. Maddesinin 27.Fıkrası Uyarınca Tahsil Edilen Ek Vergi"
+],
+[
+"4101",
+"VERGİ BARIŞI MATRAH ARTIRIMI YILLIK GELİR VERGİSİ"
+],
+[
+"4103",
+"VERGİ BARIŞI MATRAH ARTIRIMI GELİR VERGİSİ S. (MUHTASAR)"
+],
+[
+"4107",
+"VERGİ BARIŞI MATRAH ARTIRIMI DAĞITILMAYAN KAR STOPAJI"
+],
+[
+"4110",
+"VERGİ BARIŞI MATRAH ARTIRIMI KURUMLAR VERGİSİ"
+],
+[
+"4112",
+"VERGİ BARIŞI MATRAH ARTIRIMI GELİR VERGİSİ (GMSİ)"
+],
+[
+"4114",
+"VERGİ BARIŞI MATRAH ARTIRIMI BASIT USULDE TİCARİ KAZANC"
+],
+[
+"4115",
+"VERGİ BARIŞI MATRAH ARTIRIMI GERÇEK USULDE KATMA DEĞER VERGİSİ"
+],
+[
+"4121",
+"VERGİ BARIŞI KESİNLEŞEN KAMU ALACAKLARI 2. MADDE 1/AB"
+],
+[
+"4122",
+"VERGİ BARIŞI KESİNLEŞEN KAMU ALACAKLARI 2. MADDE 1/C"
+],
+[
+"4123",
+"VERGİ BARIŞI KESİNLEŞEN KAMU ALACAKLARI 2. MADDE/6 MTV"
+],
+[
+"4124",
+"VERGİ BARIŞI KESİNLEŞMEYEN KAMU ALACAKLARI 3. MADDE"
+],
+[
+"4125",
+"VERGİ BARIŞI İNCELEME VE TARHİYAT 5.MADDE"
+],
+[
+"4126",
+"VERGİ BARIŞI PİŞMANLIK 6.MADDE 1/AB"
+],
+[
+"4127",
+"VERGİ BARIŞI PİŞMANLIK 6.MADDE 1/DİĞER HÜKÜMLER"
+],
+[
+"4128",
+"VERGİ BARIŞI ECRİMİSİL 15.MADDE"
+],
+[
+"4130",
+"VERGİ BARIŞI KIYMETLİ MADEN VE ZİYNET EŞYASI BEYANI"
+],
+[
+"4140",
+"6183 B/4 TAHSİLAT GENEL TEBLİĞİ TAHSİLATI"
+],
+[
+"4150",
+"KURUMLAR VERGİSİ (PETROL GELİRLERİ)"
+],
+[
+"4151",
+"KURUM PETROL GEÇİCİ VERGİ"
+],
+[
+"4163",
+"492 SAYILI HARÇLAR KANUNU KAPSAMINDA ALINAN CİNS TASHİHİ HARCI"
+],
+[
+"4171",
+"PETROL VE DOĞALGAZ ÜRÜNLERİNE İLİŞKİN ÖTV TEVKİFATI"
+],
+[
+"4178",
+"GELİR VERGİSİ KANUNU GEÇİCİ 78. MADDE KAPSAMINDA MUHTASAR VERGİSİ"
+],
+[
+"4201",
+"6111  MADDE 6/1-2 GELİR VERGİSİ MATRAH ARTIRIMI"
+],
+[
+"4203",
+"6111  MADDE 8/1-2 MATRAH ARTIRIMI (Ücret)"
+],
+[
+"4204",
+"6111  MADDE 8/3-a, 8/4-a MATRAH ARTIRIMI (Serbest Meslek)"
+],
+[
+"4205",
+"6111 MADDE 8/3-b ve 8/4-c MATRAH ARTIRIMI (Vergiden Muaf Esnaf)"
+],
+[
+"4206",
+"6111 MADDE 8/3-a, 8/4-b MATRAH ARTIRIMI (Kira Stp.)"
+],
+[
+"4207",
+"6111  MADDE 8/3-b ve 8/4-c MATRAH ARTIRIMI (Çiftçiler)"
+],
+[
+"4208",
+"6111  MADDE 8/3-b ve 8/4-c MATRAH ARTIRIMI (Yıllara Sair İnşaat)"
+],
+[
+"4210",
+"6111  MADDE 6/1-3 KURUMLAR VERGİSİ MATRAH ARTIRIMI"
+],
+[
+"4211",
+"6111  MADDE 6/5-6 KURUMLAR (STOPAJ) VERGİSİ MATRAH ARTIRIMI"
+],
+[
+"4215",
+"6111  MADDE 7/1 MATRAH ARTIRIMI"
+],
+[
+"4216",
+"6111  MADDE 7/2a-3 MATRAH ARTIRIMI"
+],
+[
+"4217",
+"6111  MADDE 7/2b-3 MATRAH ARTIRIMI"
+],
+[
+"4218",
+"6111  MADDE 7/2c  MATRAH ARTIRIMI"
+],
+[
+"4220",
+"6111 SAYILI KANUNUN 10. MADDESİNE GÖRE VERİLECEK KDV BEYANNAMESİ"
+],
+[
+"4222",
+"6111 SAYILI KANUNUN 11/2 MADDESİNE GÖRE BEYAN"
+],
+[
+"4223",
+"6552 SAYILI KANUNUN 74.MADDESİNE GÖRE BEYAN"
+],
+[
+"4301",
+"6736 Madde 5/1-a ve 5/1-b Gelir Vergisi Matrah Artırımı (Tüm Gelir Unsurları İçin)"
+],
+[
+"4303",
+"6736 Madde 5/2-a ve 5/2-b Matrah Artırımı Stp.(Ücret-Muhtasar)"
+],
+[
+"4304",
+"6736 Madde 5/2-c1/ç1 Matrah Artırımı Stopaj (Serbest Meslek – Muhtasar)"
+],
+[
+"4305",
+"6736 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Vergiden Muaf Esnaf – Muhtasar)"
+],
+[
+"4306",
+"6736 Madde 5/2-c-1 ve 5/2-ç-2 Matrah Artırımı Stp.(Kira Stopaj-Muhtasar)"
+],
+[
+"4307",
+"6736 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Çiftçiler-Muhtasar)"
+],
+[
+"4308",
+"6736 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Yıllara Sari İnşaat - Muhtasar)"
+],
+[
+"4310",
+"6736 Madde 5/1-a ve 5/1-c Kurumlar Vergisi Matrah Artırımı"
+],
+[
+"4311",
+"6736 Madde 5/1-d ve 5/1-e Kurumlar (Stopaj) Vergisi  Matrah Artırımı"
+],
+[
+"4315",
+"6736 Madde 5/3-a KDV Matrah Artırımı (Yıl İçindeki Tüm Dönemler İçin Beyanname Verenler)"
+],
+[
+"4316",
+"6736 Madde 5/3-b-1 ve 5/3-c KDV Matrah Artırımı (Yıl İçinde 12 Dönemden az 2 Dönemden Çok Beyanname Verenler)"
+],
+[
+"4317",
+"6736 Madde 5/3-b-2 ve 5/3-c KDV Matrah Artırımı (Yıl İçinde Hiç Beyanname Vermeyenler veya 1 ya da 2 Dönem Beyanname Verenler)"
+],
+[
+"4318",
+"6736 Madde 5/3-b-3 KDV Matrah Artırımı (İstisna veya Tecil-Terkin Kapsamına Giren İşlemleri Bulunanlar)"
+],
+[
+"4320",
+"6736 sayılı Kanunun 6/1-c Maddesine Göre Verilecek KDV Beyannamesi (STOK)"
+],
+[
+"4322",
+"6736 sayılı Kanunun 6/2-a Maddesine göre verilecek KDV Beyannamesi (Stokta Bulunmayan)"
+],
+[
+"4323",
+"6736 sayılı Kanunun 6/2-b Maddesine göre verilecek KDV Beyannamesi (Eczane-Stokta Bulunmayan)"
+],
+[
+"4324",
+"6736 sayılı Kanunun 6/3 Maddesine Göre Verilecek Beyan (Kasa Mevcudu + Ortaklardan Alacaklar)"
+],
+[
+"4401",
+"7143 Madde 5/1-a ve 5/1-b Gelir Vergisi Matrah Artırımı (Tüm Gelir Unsurları İçin)"
+],
+[
+"4403",
+"7143 Madde 5/2-a ve 5/2-b Matrah Artırımı Stp.(Ücret - Muhtasar)"
+],
+[
+"4404",
+"7143 Madde 5/2-c-1 ve 5/2-ç-1 Matrah Artırımı Stp.(Serbest Meslek - Muhtasar)"
+],
+[
+"4405",
+"7143 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Vergiden Muaf Esnaf - Muhtasar)"
+],
+[
+"4406",
+"7143 Madde 5/2-c-1 ve 5/2-ç-2 Matrah Artırımı Stp.(Kira Stp. - Muhtasar)"
+],
+[
+"4407",
+"7143 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Çiftçiler - Muhtasar)"
+],
+[
+"4408",
+"7143 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Yıllara Sari İnşaat - Muhtasar)"
+],
+[
+"4410",
+"7143 Madde 5/1-a ve 5/1-c Kurumlar Vergisi Matrah Artırımı"
+],
+[
+"4411",
+"7143 Madde 5/1-d ve 5/1-e Kurumlar (Stopaj) Vergisi Matrah Artırımı"
+],
+[
+"4415",
+"7143 Madde 5/3-a Matrah Artırımı KDV (Yıl İçindeki Tüm Dönemler İçin Beyanname Verenler)"
+],
+[
+"4416",
+"7143 Madde 5/3-b-1 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde 12 Dönemden Az 2 Dönemden Çok Beyanname Verenler)"
+],
+[
+"4417",
+"7143 Madde 5/3-b-2 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde Hiç Beyanname Vermeyenler veya 1 ya da 2 Dönem Beyanname Verenler)"
+],
+[
+"4418",
+"7143 Madde 5/3-b-3 Matrah Artırımı KDV (İstisna veya Tecil-Terkin Kapsamına Giren İşlemleri Bulunanlar)"
+],
+[
+"4420",
+"7143 sayılı Kanunun 6/1-c maddesine Göre Verilecek KDV Beyannamesi (Stok)"
+],
+[
+"4422",
+"7143 sayılı Kanunun 6/2-a maddesine Göre Verilecek KDV Beyannamesi (Stokta Bulunmayan)"
+],
+[
+"4423",
+"7143 sayılı Kanunun 6/2-b maddesine Göre Verilecek KDV Beyannamesi(Eczane - Stokta Bulunmayan)"
+],
+[
+"4424",
+"7143 sayılı Kanunun 6/3 maddesine Göre Verilecek Beyan (Kasa Mevcudu + Ortaklardan Alacaklar)"
+],
+[
+"4425",
+"YENİDEN DEĞERLEME (TAŞINMAZ) VUK GEÇİCİ 31. MADDE"
+],
+[
+"4501",
+"7326 Madde 5/1-a ve 5/1-b Gelir Vergisi Matrah Artırımı (Tüm Gelir Unsurları İçin)"
+],
+[
+"4503",
+"7326 Madde 5/2-a ve 5/2-b Matrah Artırımı Stp. (Ücret - Muhtasar)"
+],
+[
+"4504",
+"7326 Madde 5/2-c-1 ve 5/2-ç-1 Matrah Artırımı Stp. (Serbest Meslek - Muhtasar)"
+],
+[
+"4505",
+"7326 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp. (Vergiden Muaf Esnaf - Muhtasar)"
+],
+[
+"4506",
+"7326 Madde 5/2-c-1 ve 5/2-ç-2 Matrah Artırımı Stp. (Kira Stp. - Muhtasar)"
+],
+[
+"4507",
+"7326 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp. (Çiftçiler - Muhtasar)"
+],
+[
+"4508",
+"7326 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp. (Yıllara Sari İnşaat - Muhtasar)"
+],
+[
+"4510",
+"7326 Madde 5/1-a ve 5/1-c Kurumlar Vergisi Matrah Artırımı"
+],
+[
+"4511",
+"7326 Madde 5/1-d ve 5/1-e Kurumlar (Stopaj) Vergisi Matrah Artırımı"
+],
+[
+"4515",
+"7326 Madde 5/3-a Matrah Artırımı KDV (Yıl İçindeki Tüm Dönemler İçin Beyanname Verenler)"
+],
+[
+"4516",
+"7326 Madde 5/3-b-1 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde 12 Dönemden Az 2 Dönemden Çok Beyanname Verenler)"
+],
+[
+"4517",
+"7326 Madde 5/3-b-2 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde Hiç Beyanname Vermeyenler veya 1 ya da 2 Dönem Beyanname Verenler)"
+],
+[
+"4518",
+"7326 Madde 5/3-b-3 Matrah Artırımı KDV (İstisna veya Tecil-Terkin Kapsamına Giren İşlemleri Bulunanlar)"
+],
+[
+"4520",
+"7326 sayılı Kanunun 6/1-c ve d Maddelerine Göre Verilecek KDV Beyannamesi (Stok)"
+],
+[
+"4522",
+"7326 sayılı Kanunun 6/2-a Maddesine Göre Verilecek KDV Beyannamesi (Stokta Bulunmayan)"
+],
+[
+"4524",
+"7326 sayılı Kanunun 6/3 maddesine Göre Verilecek Beyan (Kasa Mevcudu + Ortaklardan Alacaklar)"
+],
+[
+"4525",
+"Yeniden Değerleme (Taşınmaz) VUK Geçici 31. Madde"
+],
+[
+"4526",
+"YENİDEN DEĞERLEME (TAŞINMAZ) VUK GEÇİCİ 32.MADDE"
+],
+[
+"4527",
+"5520 SAYILI KANUNUN GEÇİCİ 15. MADDESİ YURTDIŞINDA SAHİP OLUNAN VARLIKLAR(BANKALAR VE ARACI KURUMLAR)"
+],
+[
+"4601",
+"7440 Madde 5/1-a ve 5/1-b Gelir Vergisi Matrah Artırımı (Tüm Gelir Unsurları İçin)"
+],
+[
+"4603",
+"7440 Madde 5/2-a ve 5/2-b Matrah Artırımı Stp.(Ücret - Muhtasar)"
+],
+[
+"4604",
+"7440 Madde 5/2-c-1 ve 5/2-ç-1 Matrah Artırımı Stp.(Serbest Meslek - Muhtasar)"
+],
+[
+"4605",
+"7440 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Vergiden Muaf Esnaf - Muhtasar)"
+],
+[
+"4606",
+"7440 Madde 5/2-c-1 ve 5/2-ç-2 Matrah Artırımı Stp. (Kira Stp. - Muhtasar)"
+],
+[
+"4607",
+"7440 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp. (Çiftçiler - Muhtasar)"
+],
+[
+"4608",
+"7440 Madde 5/2-c-2 ve 5/2-ç-3 Matrah Artırımı Stp.(Yıllara Sari İnşaat - Muhtasar)"
+],
+[
+"4609",
+"7440 Madde 5/2-c-1 ve ç-4 Kar Payı Ödemeleri İçin Matrah Artırımı (Gelir (Stopaj) Ve Kurumlar (Stopaj))"
+],
+[
+"4610",
+"7440 Madde 5/1-a ve 5/1-c Kurumlar Vergisi Matrah Artırımı"
+],
+[
+"4611",
+"7440 Madde 5/1-d ve 5/1-e Kurumlar (Stopaj) Vergisi Matrah Artırımı"
+],
+[
+"4615",
+"7440 Madde 5/3-a Matrah Artırımı KDV (Yıl İçindeki Tüm Dönemler İçin Beyanname Verenler)"
+],
+[
+"4616",
+"7440 Madde 5/3-b-1 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde 12 Dönemden Az 2 Dönemden Çok Beyanname Verenler)"
+],
+[
+"4617",
+"7440 Madde 5/3-b-2 ve 5/3-c Matrah Artırımı KDV (Yıl İçinde Hiç Beyanname Vermeyenler veya 1 ya da 2 Dönem Beyanname Verenler)"
+],
+[
+"4618",
+"7440 Madde 5/3-b-3 Matrah Artırımı KDV (İstisna veya Tecil-Terkin Kapsamına Giren İşlemleri Bulunanlar)"
+],
+[
+"4620",
+"7440 sayılı Kanunun 6/1-c Maddesine Göre Verilecek KDV Beyannamesi (Stok)"
+],
+[
+"4622",
+"7440 sayılı Kanunun 6/2-a maddesine Göre Verilecek KDV Beyannamesi (Stokta Bulunmayan)"
+],
+[
+"4624",
+"7440 sayılı Kanunun 6/3 maddesine Göre Verilecek Beyan (Kasa Mevcudu + Ortaklardan Alacaklar)"
+],
+[
+"4811",
+"4811 VERGİ BARIŞI TECİLLİ TAHSİLAT"
+],
+[
+"9000",
+"4703 SK. İDARİ PARA CEZASI"
+],
+[
+"9001",
+"EMANETEN YAPILAN TAHSİLAT"
+],
+[
+"9002",
+"NÜFUS PARA CEZASI"
+],
+[
+"9003",
+"SEÇİM PARA CEZASI"
+],
+[
+"9004",
+"ASKERLİK PARA CEZASI"
+],
+[
+"9005",
+"ADLİ MAHKEME PARA CEZASI"
+],
+[
+"9006",
+"1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI"
+],
+[
+"9007",
+"3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR  PARA    CEZASI"
+],
+[
+"9008",
+"TRAFİK ZABITASI TESPİTİNE DAYALI ÖZEL USULSÜZLÜK CEZASI"
+],
+[
+"9009",
+"TURİZM PARA CEZASI"
+],
+[
+"9010",
+"TÜKETİCİYİ KORUMA KANUNUNA GÖRE KESİLEN PARA CEZASI"
+],
+[
+"9011",
+"ÇEVRE İDARİ PARA CEZASI"
+],
+[
+"9012",
+"ESNAF S.HARÇ"
+],
+[
+"9013",
+"GÜMRÜK VERGİSİ"
+],
+[
+"9014",
+"YURT DIŞI ÇIKIŞ HARCI"
+],
+[
+"9015",
+"KATMA DEĞER VERGİSİ TEVKİFATI (MÜKELLEFİYETSİZ)"
+],
+[
+"9016",
+"BİLİRKİŞİ ÜCRETİ"
+],
+[
+"9017",
+"GEMİ SİCİL HARCI"
+],
+[
+"9018",
+"YILLIK TONAJ HARCI"
+],
+[
+"9019",
+"ELEKTRİK PİYASASI KANUNU PARA CEZASI"
+],
+[
+"9020",
+"MÜKELLEFLERİN VERGİ BORCUNA MAHSUBEN YAPILAN TEVKİFATLAR"
+],
+[
+"9021",
+"4961 BANKA SİGORTA MUAMELELERİ VERGİSİ"
+],
+[
+"9022",
+"KUR FARKI HESABI"
+],
+[
+"9023",
+"YÜKSEK ÖĞRENİM KREDİSİ BORCU"
+],
+[
+"9024",
+"KAYNAK KULLANIMI DESTEKLEME PRİMİ HESABI"
+],
+[
+"9025",
+"İHRACATTA VERGİ İADESİ HESABI"
+],
+[
+"9026",
+"GELİŞTİRME VE DESTEKLEME FONU HESABI"
+],
+[
+"9027",
+"ÇALIŞMA İZİN ÜCRETİ"
+],
+[
+"9028",
+"DESTEKLEME VE FİYAT İSTİKRAR FONU HESABI"
+],
+[
+"9029",
+"DİPLOMA HARCI"
+],
+[
+"9030",
+"EK MOTORLU TAŞITLAR VERGİSİ"
+],
+[
+"9031",
+"VERASET VE İNTİKAL VERGİSİ"
+],
+[
+"9032",
+"EK TAŞIT ALIM VERGİSİ"
+],
+[
+"9033",
+"4733 SK. İDARİ PARA CEZASI"
+],
+[
+"9034",
+"MOTORLU TAŞITLAR VERGİSİ"
+],
+[
+"9035",
+"TAŞIT ALIM VERGİSİ"
+],
+[
+"9036",
+"YİYECEK BEDELLERİ"
+],
+[
+"9037",
+"VUK 153/A NAKDEN TEMİNAT"
+],
+[
+"9038",
+"İADELERDEN ALACAKLILAR"
+],
+[
+"9039",
+"HESAP KART VE DEFTERLERİNE İŞLENMEYEN TAHSİLATLAR"
+],
+[
+"9040",
+"MERA FONU"
+],
+[
+"9041",
+"MERA FONU PARA CEZASI"
+],
+[
+"9042",
+"MÜLGA TRAFİK HİZMETLERİNİ GELİŞTİRME FONU TİCARİ PLAKA GELİRLERİ"
+],
+[
+"9043",
+"MÜLGA YATIRIM TEŞVİK FONU"
+],
+[
+"9044",
+"4961 S.K. GEÇİCİ 2. MAD. 3.FIKRASINA GÖRE TAHSILAT"
+],
+[
+"9045",
+"TAHSİLATI HIZLANDIRMA TEBLİĞİNE GÖRE VERİLEN TAHAKKUK"
+],
+[
+"9046",
+"ÖZEL HESAP GELİRLERİ"
+],
+[
+"9047",
+"TEK BAŞINA ALINABİLEN DAMGA VERGİSİ"
+],
+[
+"9048",
+"5035 SAYILI KANUNA GÖRE HARÇ"
+],
+[
+"9049",
+"4749 KAMU FINANS BORC YÖN. DÜZEN. HAK. KANUN HAZİNE ALACAKLARI"
+],
+[
+"9050",
+"KARAYOLLARI TAŞIMA KANUNU İDARİ PARA CEZASI"
+],
+[
+"9051",
+"DIŞ SEYAHAT HARCAMALARI VERGİSİ"
+],
+[
+"9052",
+"TAŞINMAZ MALLAR SATIŞ GELİRLERİ"
+],
+[
+"9053",
+"ECRİMİSİL GELİRLERİ"
+],
+[
+"9054",
+"DİĞER TAŞINMAZ MALLAR İDARE GELİRLERİ"
+],
+[
+"9055",
+"TAŞINIR MALLAR SATIŞ GELİRLERİ"
+],
+[
+"9056",
+"DOGALGAZ PİYASASI KANUNU PARA CEZASI"
+],
+[
+"9057",
+"DOĞRUDAN GELİR DESTEĞİ ÖDEMELERİ"
+],
+[
+"9058",
+"PETROLDEN DEVLET HAKKI"
+],
+[
+"9059",
+"TİCARET SİCİL HARCI"
+],
+[
+"9060",
+"MADENLERDEN DEVLET HAKKI (BÜYÜKŞEHİR İLLER İÇİN)"
+],
+[
+"9061",
+"OYUN KAĞIDI GELİRLERİ"
+],
+[
+"9062",
+"TAPU HARÇLARI"
+],
+[
+"9063",
+"YENİDEN İNŞA OLUNACAK BİNA VESAİR TESİSLERİ TESCİL HARCI"
+],
+[
+"9064",
+"PASAPORT HARCI"
+],
+[
+"9065",
+"TRAFİK HARÇLARI"
+],
+[
+"9066",
+"YARGI HARÇLARI"
+],
+[
+"9067",
+"İTHAL VE İMAL RUHSAT VE TEMDİT ÜCRETİ"
+],
+[
+"9068",
+"LİMAN HARCI"
+],
+[
+"9069",
+"DİĞER HARÇLAR"
+],
+[
+"9070",
+"NOTER KAĞITLARI SATIŞ BEDELİ"
+],
+[
+"9071",
+"TAVİZLERDEN GERİ  ALINANLAR"
+],
+[
+"9072",
+"İKRAZLARDAN GERİ ALINANLAR"
+],
+[
+"9073",
+"YEM ANALİZ ÜCRETİ"
+],
+[
+"9074",
+"ŞEKER FİYAT FARKI"
+],
+[
+"9075",
+"AKARYAKIT FİYAT FARKI"
+],
+[
+"9076",
+"BAŞKA MUHASEBE BİRİMİ ADINA YAPILAN TAHSİLAT"
+],
+[
+"9077",
+"MOTORLU TAŞIT ARAÇLARINA İLİŞKİN ÖZEL TÜKETİM VERGİSİ (TESCİLE TABİ OLANLAR)"
+],
+[
+"9078",
+"GÜBRE DENEY VE ANALİZ ÜCRETİ"
+],
+[
+"9079",
+"4961 S.K. GEÇİCİ 1. MAD. GÖRE PARA CEZASI"
+],
+[
+"9080",
+"DİĞER PARA CEZALARI"
+],
+[
+"9081",
+"ZİMMETLERE GEÇİRİLEN PARA VE DEĞERLERDEN BORÇLULAR"
+],
+[
+"9082",
+"FAZLA VE YERSİZ YAPILAN ÖDEMELERDEN BORÇLULAR"
+],
+[
+"9083",
+"SOSYAL DAYANIŞMA VE YARDIMLAŞMAYI TEŞVİK FONU"
+],
+[
+"9084",
+"İSTİHSAL VERGİSİ"
+],
+[
+"9085",
+"TRAFİK CEZALARI"
+],
+[
+"9086",
+"HESAPLANAN GECİKME ZAMMI"
+],
+[
+"9087",
+"TAKİP GİDERLERİ KARŞILIĞI ALINAN"
+],
+[
+"9088",
+"ÇIRAKLIK FONU"
+],
+[
+"9089",
+"2000/266 SAYILI BKK GEREĞİNCE YATIRIMLARI TEŞVİK FONUNA AKTIRILACAK TUTARLAR"
+],
+[
+"9090",
+"ÇEŞİTLİ GELİRLER"
+],
+[
+"9091",
+"PETROLDEN DEVLET HİSSESİ"
+],
+[
+"9092",
+"YÜKSEK ÖĞRENİM KATKI KREDİSİ BORCU"
+],
+[
+"9093",
+"RESMİ ARABULUCULUK ÜCRETİ"
+],
+[
+"9094",
+"EM.SAN. 17 MAD. GELİRLERİN THK EDİLMEMESİ CEZASI"
+],
+[
+"9095",
+"4961 S.K. GEÇİCİ 2. MAD. 1.FIKRAYA GÖRE TAHSİLAT"
+],
+[
+"9096",
+"4369/15 SUÇA İŞTİRAK EDEN KİŞİLER"
+],
+[
+"9097",
+"HAKSIZ ALINAN VERGİ İADESİ"
+],
+[
+"9098",
+"HAKSIZ ALINAN VERGİ İADESİ CEZASI"
+],
+[
+"9099",
+"KALDIRILAN VERGİ ARTIKLARI"
+],
+[
+"9100",
+"DEFTER TASDİK HARÇLARI"
+],
+[
+"9101",
+"ŞEKER KANUNU İDARİ PARA CEZASI"
+],
+[
+"9102",
+"GEÇİŞ ÜCRETİ VE İDARİ PARA CEZASI"
+],
+[
+"9103",
+"5188 SK. GÖRE GÜVENLİK RUHSATI HARCI"
+],
+[
+"9104",
+"TELGRAF VE TELEFON KANUNU 2. MADDE İDARİ PARA CEZASI"
+],
+[
+"9105",
+"SPOR MÜSABAKALRINDA ŞİDDET VE DÜZENSİZLİĞİN ÖNLENMESİ KAN. UYARINCA İPC"
+],
+[
+"9106",
+"4857 S.K. 101. MAD. KAP. İDARİ PARA CEZALARI"
+],
+[
+"9107",
+"ENERJİ DESTEĞİ ÖDEMELERİNDEN GERİ ALINANLAR"
+],
+[
+"9108",
+"4857 SAYILI KANUNA GÖRE GELİR KAYDEDİLECEK PARA CEZALARI"
+],
+[
+"9109",
+"5326 S. KABAHATLER KANUNU İDARİ PARA CEZASI"
+],
+[
+"9110",
+"93/4000 SAYILI YATIRIMLARIN, DÖVİZ. KAZ. HİZ. TEŞVİKİNE İLİŞKİN B.K.K.`NCA HAKSIZ ÖDENEN ENERJİ TEŞVİK GERİ ÖDEMESİ"
+],
+[
+"9111",
+"ORKÖY FONU GELİRLERİ"
+],
+[
+"9112",
+"2762 SAYILI KANUNA GÖRE ALINAN TAVİZ BEDELİ"
+],
+[
+"9113",
+"GELİR VERGİSİ TEVKİFATI"
+],
+[
+"9114",
+"YABANCI ÜLKEDE GÜÇ VE MUHTAÇ DURUMA DÜŞENLERE YURDA DÖNÜŞ İÇİN ÖDÜNÇ VERİLEN PARALAR"
+],
+[
+"9115",
+"DENİZ ARAÇLARINDA YER ALAN VERGİSİZ YAKITIN DEVRİNE İLİŞKİN KDV"
+],
+[
+"9116",
+"HAZİNE ZARARININ GERİ ALINMASI"
+],
+[
+"9117",
+"EVRENSEL HİZMETİN GELİRLERİ KATKI PAYI"
+],
+[
+"9118",
+"TELEKOMİNİKASYON KURUMU TARAFINDAN YATIRILAN TELGRAF VE TELEFON KANUNU İDARİ PARA CEZALARI"
+],
+[
+"9119",
+"SİVİL HAVA ARAÇLARI ÜÇÜNCÜ ŞAHIS MALİ MESULİYET DEVLET GARANTİSİ BEDELİ"
+],
+[
+"9120",
+"TELSİZ, TELEFON VE TELGRAF KANUNU İDARİ PARA CEZASI %20 Sİ"
+],
+[
+"9121",
+"5015 SAYILI PETROL PİYASASI KANUNU İPC"
+],
+[
+"9122",
+"5307 SAYILI SIVILAŞTIRILMIŞ PETROL GAZLARI PİYASASI KANUNU İPC"
+],
+[
+"9123",
+"ENERJİ PİYASASI DÜZENLEME KURULUNCA ÖDENEN ANALİZ ÜCRETİNİN GERİ ALINMASI"
+],
+[
+"9124",
+"KİŞİLERDEN ALACAK FAİZLERİ"
+],
+[
+"9125",
+"AĞAÇLANDIRMA FONU YÖNETMELİĞİNE GÖRE VERİLEN KREDİLERDEN GERİ ALINANLAR"
+],
+[
+"9126",
+"5254 SAYILI KANUNA GÖRE MUHTAÇ ÇİFTÇİLERE VERİLEN ÖDÜNÇ TOHUMLUKLARDAN HAZİNE ALACAĞINA DÖNÜŞENLER"
+],
+[
+"9127",
+"2004/5682 SAYILI BKK İLE HAZİNE ALACĞINA DÖNÜŞEN TOHUMLUK KREDİLERİ"
+],
+[
+"9128",
+"4447 SAYILI İŞSİZLİK SİGORTASI KANUNU UYARINCA KESİLEN İ.P.C"
+],
+[
+"9129",
+"4904 SAYILI İŞ KURUMU KANUNU UYARINCA KESİLEN İ.P.C."
+],
+[
+"9130",
+"YABANCILARA VERİLECEK ÇALIŞMA İZİN BELGESİ HARCI"
+],
+[
+"9131",
+"VERASET VE İNTİKAL VERGİSİ (SAİR İVAZSIZ İNTİKALLER)"
+],
+[
+"9132",
+"KILAVUZLUK VE RÖMORKÖRCÜLÜK HİZMET PAYI"
+],
+[
+"9133",
+"MAHALLİ İDARELERDEN ALINAN PAYLAR"
+],
+[
+"9134",
+"İKİ İHALE ARASINDAKİ FARK (MENKULMALLAR İÇİN)"
+],
+[
+"9135",
+"İKİ İHALE ARASINDAKİ FARK (GAYRİMENKULMALLAR İÇİN)"
+],
+[
+"9136",
+"ENERJİ PİYASASI DÜZENLEME KURUMU PETROL KATILIM PAYI"
+],
+[
+"9137",
+"GELİR VERGİSİ MÜNFERİT BEYAN"
+],
+[
+"9138",
+"KURUMLAR VERGİSİ ÖZEL BEYANI"
+],
+[
+"9139",
+"YABANCI DEVLETLERE AİT VERGİ ALACAĞI"
+],
+[
+"9140",
+"DENİZ ARAÇLARI BAĞLAMA KÜTÜĞÜ RUHSATNAMELERİNDEN VE VİZELERİNDEN ALINACAK HARÇLAR-DENİZCİLİK MÜSTEŞARLIĞI"
+],
+[
+"9141",
+"DENİZ ARAÇLARI BAĞLAMA KÜTÜĞÜ RUHSAT VE VİZE İDARİ PARA CEZASI"
+],
+[
+"9142",
+"BELEDİYELERCE TAHSİL EDİLEN EĞLENCE VERGİSİ %75 LİK KÜLTÜR BAKANLIĞI PAYI"
+],
+[
+"9143",
+"TEDAVİ MASRAFLARININ TAHSİLİ"
+],
+[
+"9144",
+"5809 S.K YETKİLENDİRME ÜCRETİ(KULLANIM HAKKI)"
+],
+[
+"9145",
+"SOSYAL YARDIMLAŞMA DAYANIŞMA VAKFI ALACAKLARI"
+],
+[
+"9146",
+"MOTORLU ARAÇ TRAFİK BELGESİ BEDELİ"
+],
+[
+"9147",
+"MOTORLU ARAÇ TESCİL BELGESİ BEDELİ"
+],
+[
+"9148",
+"4915 ve 5035 SK. GÖRE AVCILIK RUHSATI HARCI"
+],
+[
+"9149",
+"2872 S. ÇEVRE KANUNU KAP. GENEL BÜTÇELİ İD. YAPILAN HARCAMALAR VE ANALİZ ÜCRETLERİNİN TAHSİLATI"
+],
+[
+"9150",
+"TARIM SATIŞ KOOPERATİFLERİ BİRLİKLERİNİN DESTEKLEME FİYAT İSTİKRAR FONU"
+],
+[
+"9151",
+"YOLCU BERABERİNDE GETİRİLEN TELEFON KULLANIM İZİN HARCI"
+],
+[
+"9152",
+"5602 SAYILI ŞANS OYUNLARI HASILATINDAN ALINAN VERGİ,FON VE PAYLAR"
+],
+[
+"9153",
+"5736 SAYILI KANUN UYARINCA TAHSİL EDİLECEK ECRİMİSİL GELİRLERİ"
+],
+[
+"9154",
+"KİMLİK ADRES PAYLAŞIM SİSTEMİNDEN ALINAN KAYIT KATILIM PAYI"
+],
+[
+"9155",
+"KARAYOLLARI GEÇİŞ ÜCRETİ"
+],
+[
+"9156",
+"ÖZEL YÜK TAŞIMA İZİN BELGESİ HARCI"
+],
+[
+"9158",
+"3039 SAYILI ÇELTİK EKİM KANUNU İPC"
+],
+[
+"9159",
+"SPK TARAFINDAN VERİLEN İPC LERİN %50 BÜTÇEYE GELİR KAYDEDİLECEK KISMI"
+],
+[
+"9160",
+"MADENLERDEN ALINAN DEVLET HAKKINDAN İL ÖZEL İDARE PAYI"
+],
+[
+"9161",
+"MADENLERDEN ALINAN DEVLET HAKKININ %30 FAZLALARI(ORMAN GENEL MÜDÜRLÜĞÜ PAYI)"
+],
+[
+"9162",
+"KADASTRO HARÇLARI"
+],
+[
+"9163",
+"SİLAH TAŞIMA, BULUNDURMA VE YİVSİZ TÜFEK RUHSATNAMESİ HARCI"
+],
+[
+"9164",
+"PASAPORT SATIŞ BEDELİ"
+],
+[
+"9165",
+"KONSOLOSLUK HARCI"
+],
+[
+"9166",
+"KARAR VE İLAM HARCI"
+],
+[
+"9167",
+"MADENLERDEN ALINAN DEVLET HAKKINDAN KÖY PAYI"
+],
+[
+"9168",
+"KAMU İHALE KANUNU 53. MADDE"
+],
+[
+"9169",
+"PETROL RUHSAT HARCI"
+],
+[
+"9170",
+"BANKA KURULUŞ FAALİYET HARCI"
+],
+[
+"9171",
+"DENİZ ARAÇLARINDA YER ALAN VERGİSİZ YAKITIN DEVRİNE İLİŞKİN ÖTV"
+],
+[
+"9172",
+"ASKERİ KANTİN VE SOSYAL TESİSLERDE VERİLEN AÇIĞIN GERİ ALINMASI"
+],
+[
+"9173",
+"ECRİMİSİL 6009 S.K 24. MADDESİ BÜTÇE GELİRİ"
+],
+[
+"9174",
+"ECRİMİSİL 6009 S.K 24. MADDESİ KÖY PAYI"
+],
+[
+"9175",
+"SURİYE UYRUKLULARA AİT TAŞINIR VE TAŞINMAZ MAL GELİRLERİ"
+],
+[
+"9176",
+"ANAYASA MAHKEMESİ BAŞVURU HARCI"
+],
+[
+"9177",
+"5070 SK.13.MADDESİNE GÖRE SİĞORTA ŞİRKETLERİNE KESİLEN İPC"
+],
+[
+"9178",
+"5070 SK. GÖRE ELEKTRONİK SERTİFİKA SAĞLAYICILARINA  KESİLEN İPC"
+],
+[
+"9179",
+"6183 SAYILI KANUNUN 79.MADDESİ"
+],
+[
+"9180",
+"TELSİZ, TELEFON VE TELGRAF KANUNU İDARİ PARA CEZASI %80 İ"
+],
+[
+"9181",
+"6111 SAYILI KANUNUN 10. MADDESİNE GÖRE VERİLECEK ÖTV BEYANNAMESİ"
+],
+[
+"9182",
+"5996 S. VETERİNER HİZMETLERİ, BİTKİ SAĞLIĞI, GIDA VE YEM KANUNUNA GÖRE VERİLEN İPC"
+],
+[
+"9183",
+"BİLİRKİŞİ ÜCRETLERİNDEN KESİNTİ SURETİYLE ALINAN GELİR VERGİSİ (İCRA DAİRELERİ)"
+],
+[
+"9184",
+"DAMGA VERGİSİ KESİNTİSİ(İCRA DAİRELERİ)"
+],
+[
+"9185",
+"HESAPLANAN TRAFİK CEZASI FAİZİ"
+],
+[
+"9186",
+"MÜLGA ELEKTRİK ENERJİSİ FONU KATKI PAYI"
+],
+[
+"9187",
+"TİCARİ AMAÇLA TOPLU İNTERNET KULLANIMI SAĞLAYANLARA KESİLEN İPC"
+],
+[
+"9188",
+"ERİŞİM SAĞLAYICILARINA KESİLEN İDARİ PARA CEZASI"
+],
+[
+"9189",
+"5809 S.K. YETKİLENDİRME ÜCRETİ(İDARİ ÜCRET)"
+],
+[
+"9190",
+"ÇEŞİTLİ GELİRLER(GECİKME ZAMMI HESAPLANAN)"
+],
+[
+"9191",
+"MEB TARAFINDAN HAKSIZ ÖDENEN EĞİTİM DESTEĞİNİN GERİ ALINMASI (652 KHK)"
+],
+[
+"9192",
+"YABANCILARA VERİLECEK İKAMET TEZKERESİ HARCI"
+],
+[
+"9193",
+"BES STOPAJ MÜKERRER ÖDEMELERİNİN GERİ ALINMASI"
+],
+[
+"9194",
+"HAK KAZANILMAYAN DEVLET KATKISI(4632 Sayılı Kanun)"
+],
+[
+"9195",
+"HAKSIZ OLARAK YAPILDIĞI TESPİT EDİLEN DEVLET KATKISI(4632 SAYILI KANUN)"
+],
+[
+"9196",
+"EXIMBANK IRAK KREDİ PROGRAMI ANA PARA"
+],
+[
+"9197",
+"6113 SAYILI KANUN KAPSAMINDA DEVİR TAHAKKUKLARI"
+],
+[
+"9198",
+"MUAYENE DENETİM VE KONTROL ÜCRETLERİ"
+],
+[
+"9200",
+"DSİ SULAMA TESİSLERİ İŞLETME VE BAKIM ÜCRETİ"
+],
+[
+"9201",
+"DSİ SULAMA TESİSLERİ YATIRIM BEDELİ"
+],
+[
+"9202",
+"DSİ İÇME-KULLANMA, SANAYİ SUYU ORTAK TESİS İŞLETME VE BAKIM MASRAFI"
+],
+[
+"9203",
+"DSİ HES LERE SU SAĞLAYAN TESİSLERE YAPILAN İŞLETME VE BAKIM MASRAFLARI"
+],
+[
+"9204",
+"JEOTERMAL KAYNAKLAR VE DOĞAL MİNERALLİ SULAR İDARE PAYI"
+],
+[
+"9205",
+"TÜKETİCİ HAKEM HEYETİ BİLİRKİŞİ ÜCRETİ"
+],
+[
+"9206",
+"TÜKETİCİ HAKEM HEYETİ TEBLİGAT MASRAFI"
+],
+[
+"9207",
+"İKAMETGAH TEZKERESİ DEFTER SATIŞ BEDELİ"
+],
+[
+"9208",
+"TAŞINMAZ KÜLTÜR VARLIKLARININ KORUNMASINA KATKI PAYI"
+],
+[
+"9209",
+"ŞİDDET MAĞDURUNA YAPILAN YARDIMIN ŞİDDET UYGULAYANDAN GERİ ALINMASI"
+],
+[
+"9210",
+"ÖZEL BAKIM MERKEZLERİ YÖNETMELİĞİNE GÖRE VERİLEN İPC"
+],
+[
+"9211",
+"ÇEVRE İPC  DÖNÜŞÜM GELİRLERİ"
+],
+[
+"9212",
+"ÇEVRE KATKI PAYI (2872 Sayılı Kn. 18/a Md.)"
+],
+[
+"9213",
+"GENEL BÜTÇEYE DAHİL, BÜTÇE KAPSAMI DIŞINDAKİ FAALİYETLER NEDENİYLE YAPILAN TEVKİFAT."
+],
+[
+"9214",
+"DİSİPLİN PARA CEZALARI"
+],
+[
+"9215",
+"GSM İŞLETMECİLERİ BRÜT SATIŞLARININ % 15 HAZİNE PAYININ % 90'I"
+],
+[
+"9216",
+"SÜT ÜRETİCİSİNDEN KESİLEN HİZMET PAYI"
+],
+[
+"9217",
+"NOTER HİSSESİNİN GERİ ALINMASI"
+],
+[
+"9218",
+"DEVLET DESTEKLERİ KAPSAMINDA EKONOMİ BAKANLIĞI TARAFINDAN YAPILAN ÖDEMELER (KİŞİ NEZDİNDE)"
+],
+[
+"9219",
+"DEVLET DESTEKLERİ KAPSAMINDA DİĞER KURULUŞLAR TARAFINDAN YAPILAN ÖDEMELER (KURUM NEZDİNDE)"
+],
+[
+"9220",
+"6200 SAYILI KANUNA GÖRE ALINAN ZAM"
+],
+[
+"9221",
+"DİĞER HİZMET GELİRLERİ"
+],
+[
+"9222",
+"YERSİZ YAPILAN DOĞUM YARDIMI"
+],
+[
+"9223",
+"DENETİM KURULUŞLARI YETKİLENDİRME BELGELERİ HARCI (KAMU MAKTU)"
+],
+[
+"9224",
+"DENETİM KURULUŞLARI YETKİLENDİRME BELGELERİ HARCI (KAMU NİSBİ)"
+],
+[
+"9225",
+"DENETİM KURULUŞLARI YETKİLENDİRME BELGELERİ HARCI (DİĞER MAKTU)"
+],
+[
+"9226",
+"DENETİM KURULUŞLARI YETKİLENDİRME BELGELERİ HARCI (DİĞER NİSBİ)"
+],
+[
+"9227",
+"YEMİNLİ MALİ MÜŞAVİRLİK RUHSAT HARCI"
+],
+[
+"9228",
+"BAĞIMSIZ DENETÇİ YETKİLENDİRME BELGESİ HARCI"
+],
+[
+"9229",
+"SERBEST MUHASEBECİ MALİ MÜŞAVİRLİK RUHSAT HARCI"
+],
+[
+"9230",
+"YEDİEMİN BORCU"
+],
+[
+"9231",
+"ÇEVRE İPC KARAYOLLARI PAYI"
+],
+[
+"9232",
+"ÇEVRE KATKI PAYI KURUM DÖNÜŞÜM GELİRİ"
+],
+[
+"9233",
+"GÖÇ İDARESİ İKAMET HARCI"
+],
+[
+"9234",
+"TEK GİRİŞ VİZE HARCI [492 sayılı Harçlar K. 6 say. II.1.a]"
+],
+[
+"9235",
+"2015/1 SERİ NOLU KURUMLAR VERGİSİ İÇ GENELGESİNE GÖRE (KIZILAY’DAN) TAHSİL EDİLECEK TUTAR"
+],
+[
+"9236",
+"6183 24 İLA 31 MADDELERİ GEREĞİ ÜÇÜNCÜ KİŞİLERDEN TAHSİL EDİLMESİ GEREKEN AMME ALACAĞI"
+],
+[
+"9237",
+"VUK 153/A KAPSAMINDA TEMİNAT TAHAKKUKU"
+],
+[
+"9238",
+"MADEN İŞLETME RUHSAT BEDELİ"
+],
+[
+"9239",
+"ÇEVRE UYUM MASRAF KARŞILIKLARI"
+],
+[
+"9240",
+"SİNEMA FİLM DESTEĞİNİN GERİ ALINMASI"
+],
+[
+"9241",
+"ŞEHİRİÇİ RAYLI ULAŞIM SİSTEMLERİ PROJE GELİRLERİ"
+],
+[
+"9242",
+"KILAVUZLUK VE RÖMORKÖRCÜLÜK HİZMET PAYI %50 EMANET"
+],
+[
+"9243",
+"KİMLİK KARTI SATIŞ BEDELİ"
+],
+[
+"9244",
+"DİYANET İŞLERİ BAŞKANLIĞI PAYI"
+],
+[
+"9245",
+"SERBEST BÖLGE ÖZEL HESAP GELİRLERİ"
+],
+[
+"9246",
+"ASBIS MOTORLU ARAÇ TRAFİK BELGESİ BEDELİ"
+],
+[
+"9247",
+"ASBIS MOTORLU ARAÇ TESCİL BELGESİ BEDELİ"
+],
+[
+"9248",
+"İŞLETME HAKKI DEVREDİLEN OTOYOL KAÇAK GEÇİŞ ÜCRETİ DEVLET PAYI"
+],
+[
+"9249",
+"5996 S. VETERİNER HİZMETLERİ, BİTKİ SAĞLIĞI, GIDA VE YEM KANUNUNA GÖRE TAAHHÜTLERDEN GERİ ALINACAKLAR (MADDE 42)"
+],
+[
+"9250",
+"YURTDIŞI HÜKÜMLÜ İADE MASRAFI"
+],
+[
+"9251",
+"TURİSTİK MÜESSESE HARCI"
+],
+[
+"9252",
+"YETKİLİ MÜESSESE BAŞVURU ÜCRETİ"
+],
+[
+"9253",
+"ÇEVRE VE ŞEHİRCİLİK BAKANLIĞI ECRİMİSİL BEDELİ"
+],
+[
+"9254",
+"BİREYSEL EMEKLİLİK SİSTEMİ ERKEN ÖDENEN DEVLET KATKISI GECİKME BEDELİ"
+],
+[
+"9255",
+"5746 SAYILI KANUNA GÖRE GERİ ALINACAK TEKNOGİRİŞİM SERMAYE DESTEĞİ"
+],
+[
+"9256",
+"5746 SAYILI KANUNA GÖRE GERİ ALINACAK AR-GE DESTEK ÖDEMESİ"
+],
+[
+"9257",
+"5996 S. VETERİNER HİZM., BİTKİ SAĞLIĞI, GIDA VE YEM KANUNUNA GÖRE ALINAN TOPLATMA MASRAFI"
+],
+[
+"9258",
+"KIYMETLİ MADEN RAFİNERİ BAŞVURU ÜCRETİ"
+],
+[
+"9259",
+"GENÇLİK VE SPOR BAKANLIĞI ECRİMİSİL BEDELİ"
+],
+[
+"9260",
+"TELSİZ ÜCRETLERİ"
+],
+[
+"9261",
+"ŞEKER KATILIM PAYI"
+],
+[
+"9262",
+"TAPU HARCI MEVZUUNA GİREN İŞLEMLERLE İLGİLİ TESCİL VE ŞERHLERİN TERKİNİNDEN ALINAN HARÇ"
+],
+[
+"9263",
+"ELEKTRİK PİYASASI YILLIK LİSANS BEDELİ"
+],
+[
+"9264",
+"SÜRÜCÜ BELGESİ DEĞERLİ KAĞIT BEDELİ"
+],
+[
+"9265",
+"SÜRÜCÜ BELGESİ HARCI"
+],
+[
+"9266",
+"YARGILAMA GİDERLERİ"
+],
+[
+"9267",
+"YABANCI ÇALIŞMA İZNİ BELGESİ DEĞERLİ KAĞIT BEDELİ"
+],
+[
+"9268",
+"ÇALIŞMA İZNİ MUAFİYETİ BELGESİ DEĞERLİ KAĞIT BEDELİ"
+],
+[
+"9269",
+"VUK 160/A KAPSAMINDA TEMİNAT TAHAKKUKU"
+],
+[
+"9270",
+"VUK 160/A KAPSAMINDA NAKDEN TEMİNAT"
+],
+[
+"9271",
+"BELEDİYELER TARAFINDAN TAHSİL EDİLEN ÇEVRE KATKI PAYI (2872 S. Kanun 18/b Md.)"
+],
+[
+"9272",
+"TÜRKİYE ŞOFÖRLER VE OTOMOBİLCİLER FEDERASYONUNCA 2918 S.K. 131.MD. GÖRE ÖDENEN %60 EGM PAYI"
+],
+[
+"9273",
+"DOĞAL GAZ PİYASASI YILLIK LİSANS BEDELİ"
+],
+[
+"9274",
+"5846 S. FİKİR VE SANAT ESERLERİ KANUNU 44. MADDESİ UYARINCA İTHALAT VEYA İMALAT BEDELİ ÜZERİNDEN YAPILAN KESİNTİ"
+],
+[
+"9275",
+"ÖZEL ETİKETİ VEYA İŞARETİ OLMAYAN ALKOLLÜ İÇECEKLERE İLİŞKİN ÖTV"
+],
+[
+"9276",
+"ÖZEL ETİKETİ VEYA İŞARETİ OLMAYAN TÜTÜN MAMULLERİNE İLİŞKİN ÖTV"
+],
+[
+"9277",
+"VERGİ YARGISI HARCI"
+],
+[
+"9278",
+"KİŞİLERDEN ALINAN BAĞIŞ VE YARDIMLAR"
+],
+[
+"9279",
+"2976 SAYILI DIŞ TİCARETİN DÜZENLENMESİ HAKKINDA KANUNA İSTİNADEN TAAHHÜTNAME KAPSAMINDA GERİ ALINACAKLAR"
+],
+[
+"9280",
+"YABANCILARA VERİLECEK ÇALIŞMA İZNİ MUAFİYETİ BELGESİ HARCI"
+],
+[
+"9281",
+"BELEDİYELER TARAFINDAN TAHSİL EDİLEN ÇEVRE KATKI PAYI KURUM DÖNÜŞÜM GELİRİ"
+],
+[
+"9282",
+"KIYMETLİ MADENLER ARACI KURUMLARIN VE KURULUŞLARININ FAALİYET İZNİ BAŞVURU ÜCRETİ"
+],
+[
+"9283",
+"İKMAL HARCI"
+],
+[
+"9284",
+"VEKALET SURET HARCI"
+],
+[
+"9285",
+"SURET HARCI"
+],
+[
+"9286",
+"ECRİMİSİL GECİKME ZAMMI (Turizm Belgesi Olanlar)"
+],
+[
+"9287",
+"5015 İLE 5307 SAYILI KANUNLAR KAPSAMINDA ALINAN TEMİNAT  (AKARYAKIT VE LPG)"
+],
+[
+"9288",
+"213 SAYILI VUK. MÜKERRER 257/8. MADDESİ KAPSAMINDA ALINAN TEMİNAT (TÜTÜN MAMÜLLERİ/ALKOLLÜ ÜRÜNLER)"
+],
+[
+"9289",
+"MAVİ KART DEĞERLİ KÂĞIT BEDELİ"
+],
+[
+"9290",
+"ÖTV II SAYILI LİSTE KAPSAMINDA ARAÇ TİCARETİ TEMİNATI"
+],
+[
+"9291",
+"TERRA 2A KREDİSİ CEZAİ FAİZİ"
+],
+[
+"9292",
+"TERRA 2A KREDİSİ GECİKME ZAMMI"
+],
+[
+"9293",
+"SEYİR İZİN BELGESİ HARCI"
+],
+[
+"9294",
+"MADEN ARAMA RUHSAT BEDELİ"
+],
+[
+"9295",
+"MADEN İŞLETME RUHSAT BEDELİ (%50 GENEL BÜTÇE)"
+],
+[
+"9296",
+"MADEN İŞLETME RUHSAT BEDELİ (ÇEVRE UYUM MASRAF  KARŞILIKLARI %30 TEMİNAT İÇİN ALINAN)"
+],
+[
+"9297",
+"MADEN İŞLETME RUHSAT BEDELİ (ÇEVRE UYUM MASRAF KARŞILIKLARI %20 KURUM GELİRİ)"
+],
+[
+"9298",
+"DOĞAL GAZ PİYASASI KATILMA PAYI"
+],
+[
+"9299",
+"5520 SAYILI KANUNUN GEÇİCİ 15. MADDESİ YURTİÇİNDE SAHİP OLUNAN VARLIKLAR"
+],
+[
+"9301",
+"GENEL BÜTÇE DIŞINDA KALAN KURUMLAR TARAFINDAN YATIRILAN İ.P.C"
+],
+[
+"9302",
+"KARAYOLLARI GEÇİŞ ÜCRETİ/İDARİ PARA CEZASI"
+],
+[
+"9303",
+"6183 S.K. 22/A MADDESİNE GÖRE İ.P.C."
+],
+[
+"9304",
+"TELGRAF VE TELEFON KANUNU 2.MADDE İDARİ PARA CEZASI"
+],
+[
+"9305",
+"SPOR MÜSABAKALARINDA ŞİDDET VE DÜZENSİZLİĞİN ÖNLENMESİ KANUNU UYARINCA İPC"
+],
+[
+"9306",
+"1475 SAYILI İŞ KANUNUNA BAĞLI PARA CEZASI"
+],
+[
+"9307",
+"3516 SAYILI KANUNA GÖRE ÖLÇÜ AYAR PARA CEZASI"
+],
+[
+"9308",
+"SU ÜRÜNLERİ KANUNUNA GÖRE VERİLEN IPC."
+],
+[
+"9309",
+"TURİZM PARA CEZASI"
+],
+[
+"9310",
+"5549 SAYILI SUÇ GELİRLERİNİN AKLANMASININ ÖNLENMESİ İ.P.C"
+],
+[
+"9311",
+"TÜTÜN MAMULLERİNİN ZARARLARININ ÖNLENMESİNE DAİR KANUN UYARINCA AL.İ.P.C(4207 S.K.)"
+],
+[
+"9312",
+"ELEKTRONİK HABERLEŞME KANUNU İDARİ PARA CEZASI"
+],
+[
+"9313",
+"6112 SAYILI KANUN KAPSAMINDA RTÜK TARAFINDAN VERİLEN İDARİ PARA CEZASI"
+],
+[
+"9314",
+"ÇALIŞMA VE İŞ KURUMU İL MÜDÜRLÜKLERİNCE VERİLEN İPC"
+],
+[
+"9315",
+"ŞEKER KANUNU İDARİ PARA CEZASI"
+],
+[
+"9316",
+"4054 SAYILI REKABET KANUNUNUN 55. MADDE KAPSAMINDA İPC"
+],
+[
+"9317",
+"5326 SAYILI KANUN UYARINCA CUMHURİYET SAVCILIKLARINCA VERİLEN İ.P.C."
+],
+[
+"9318",
+"5326 SAYILI KANUN UYARINCA MAHKEMELER TARAFINDAN VERİLEN İ.P.C."
+],
+[
+"9319",
+"SPK TARAFINDAN VERİLEN İPC.LERİN %50 YATIRIMCILARI KORUMA FONU PAYI"
+],
+[
+"9320",
+"SAĞLIK HİZMETLERİ TEMEL KANUNU İPC."
+],
+[
+"9321",
+"TÜKETİCİNİN KORUNMASI HAKKINDA İDARİ PARA CEZASI"
+],
+[
+"9322",
+"5378 SAYILI ENGELLİLER HAKKINDA KANUN UYARINCA İPC"
+],
+[
+"9323",
+"4250 SAYILI İSPİRTO VE İSPİRTOLU İÇKİLER İNHİSAR KANUNUNA GÖRE VERİLEN İDARİ PARA CEZASI"
+],
+[
+"9324",
+"YERALTI SULARI HAKKINDA KANUNA GÖRE VERİLEN İ.P.C."
+],
+[
+"9325",
+"SPORDA ŞİDDET VE DÜZENSİZLİGİN ÖNLENMESİ İPC 6222 SK. MD.23"
+],
+[
+"9326",
+"DERNEKLER KANUNUNA GÖRE VERİLEN İPC (5253 sayılı KANUN)"
+],
+[
+"9327",
+"ÖZEL ÖĞRETİM KURUMLARI KANUNU İPC."
+],
+[
+"9328",
+"KİŞİSEL VERİLERİN KORUNMASI KANUNU İPC"
+],
+[
+"9329",
+"SİVİL HAVACILIK KANUNU İPC"
+],
+[
+"9330",
+"7223 SAYILI ÜRÜN GÜVENLİĞİ VE TEKNİK DÜZENLEMELER KANUNUNA GÖRE VERİLEN İDARİ PARA CEZASI"
+],
+[
+"9332",
+"MADEN KANUNU İDARİ PARA CEZASI"
+],
+[
+"9333",
+"SERMAYE PİYASASI KURULU (SPK) TARAFINDAN 6362 S.KANUN KAPSAMINDA VERİLEN İPC (%50 BÜTÇE PAYI)"
+],
+[
+"9334",
+"SERMAYE PİYASASI KURULU (SPK) TARAFINDAN 6362 S.KANUN KAPSAMINDA VERİLEN İPC (%50 YATIRIMCI TAZMİN MERKEZİ PAYI)"
+],
+[
+"9335",
+"BANKACILIK KANUNUNA GÖRE VERİLEN İPC (5411 SAYILI KANUN)"
+],
+[
+"9336",
+"SERMAYE PİYASASI KANUNUNA GÖRE VERİLEN İPC (6362 SAYILI KANUN)"
+],
+[
+"9337",
+"KAMU GÖZETİMİ, MUHASEBE VE DENETİM STANDARTLARI İPC (660 SAYILI KHK)"
+],
+[
+"9338",
+"DİĞER GENEL İPC"
+],
+[
+"9339",
+"1567 SAYILI TÜRK PARASININ KIYMETİNİ KORUMA KANUNU İPC"
+],
+[
+"9340",
+"FİKİR VE SANAT ESERLERİ İPC"
+],
+[
+"9341",
+"MERA FONU PARA CEZASI(5326 S.KABAHATLER)"
+],
+[
+"9342",
+"6001 SAYILI KANUNUN 30/2.MADDESİ GEREĞİNCE VERİLEN İPC"
+],
+[
+"9343",
+"İŞGÜCÜ KANUNU İPC (6735 / 4817)"
+],
+[
+"9344",
+"TÜRKİYE İNSAN HAKLARI VE EŞİTLİK KURUMU TARAFINDAN VERİLEN İDARİ PARA CEZASI"
+],
+[
+"9345",
+"T. SERMAYE PİYASALARI BİR. ve T.DEĞERLEME UZMANLARI BİR. TARAF. 6362 S.K. KAPS. VERİLEN İPC (%50 BÜTÇE PAYI)"
+],
+[
+"9346",
+"T. SERMAYE PİYASALARI BİR. ve T.DEĞERLEME UZMANLARI BİR. TARAF. 6362 S.K. KAPS. VERİLEN İPC (%50 YATIRIMCI TAZMİN MERKEZİ PAYI)"
+],
+[
+"9347",
+"PERAKENDE TİCARETİN DÜZENLENMESİ HAKKINDA KANUN İPC"
+],
+[
+"9350",
+"NÜKLEER DÜZENLEME KURUMU İDARİ PARA CEZASI"
+],
+[
+"9351",
+"KONUTLARIN TURİZM AMAÇLI KİRALANMASINA İLİŞKİN KANUN UYARINCA ALINAN İPC"
+],
+[
+"9364",
+"PASAPORT KANUNU İPC."
+],
+[
+"9365",
+"YARDIM TOPLAMA KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9366",
+"SES VE GAZ FİŞEĞİ ATABİLEN SİLAHLAR HAKKINDA KANUN UYARINCA ALINAN İPC"
+],
+[
+"9367",
+"AVDA VE SPORDA KULLANILAN TÜFEKLER,NİŞAN TABANCALARI VE AV BIÇAKLARININ YAPIMI,ALIMI,SATIMI VE BULUND. DAİR KANUN UY.ALINAN İPC"
+],
+[
+"9368",
+"TÜTÜN, TÜTÜN MAMULLERİ VE ALKOL PİYASASININ DÜZENLENMESİNE DAİR KANUN UYARINCA ALINAN İPC"
+],
+[
+"9369",
+"İSPİRTO VE İSPİRTOLU İÇKİLER İNHİSARI KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9370",
+"FUTBOL VE DİĞER SPOR MÜSABAKALARINDA BAHİS VE ŞANS OYUNLARI DÜZENLENMESİ HAKKINDA KANUN UYARINCA ALINAN İPC"
+],
+[
+"9371",
+"YABANCILAR VE ULUSLARARASI KORUMA KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9372",
+"1593 SAYILI UMUMİ HIFZISIHHA KANUNUNA GÖRE VERİLEN İPC"
+],
+[
+"9373",
+"HAYVANLARI KORUMA KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9374",
+"KİMLİK BİLDİRME KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9375",
+"5326 S. KABAHATLER KANUNU UYARINCA ALINAN İPC"
+],
+[
+"9376",
+"ENERJİ VERİMLİLİĞİ KANUNU UYARINCA VERİLEN İPC"
+],
+[
+"9399",
+"ANA VERGI YAVRU OLAN THK LARA İŞLEM YAPABİLMEK İÇİN"
+],
+[
+"9400",
+"6736 sayılı Kanunun 6/1-d Maddesine göre verilecek ÖTV Beyannamesi (STOK)"
+],
+[
+"9401",
+"7143 sayılı Kanunun 6/1-d maddesine Göre Verilecek ÖTV Beyannamesi (Stok)"
+],
+[
+"9402",
+"7326 sayılı Kanunun 6/1-e maddesine Göre Verilecek ÖTV Beyannamesi (Stok)"
+],
+[
+"9403",
+"7440 sayılı Kanunun 6/1-d maddesine Göre Verilecek ÖTV Beyannamesi (Stok)"
+],
+[
+"9410",
+"PUL VE KIYMETLİ KAĞIT BAYİİ HARCI"
+],
+[
+"9411",
+"ÖZEL OKUL / ÖZEL DERSANE HARCI"
+],
+[
+"9412",
+"SÜRÜCÜ KURSU HARCI (YILLIK)"
+],
+[
+"9413",
+"KAPALI DEVRE TV SİSTEMLERİ HARCI (YILLIK)"
+],
+[
+"9414",
+"GÜMRÜK KANUNU GENEL ANTREPO RUHSATNAME HARÇLARI"
+],
+[
+"9415",
+"GÜMRÜK KANUNU ÖZEL ANTREPO RUHSATNAME HARÇLARI"
+],
+[
+"9416",
+"GÜMRÜK KANUNU GEÇİCİ DEPOLAMA HARCI"
+],
+[
+"9417",
+"SERMAYE PİYASASINDA ARACILIK YAPAN KURUMLARA VERİLEN YETKİ BELGESİ HARCI"
+],
+[
+"9418",
+"FİNANSAL KİRALAMA ŞİRKETLERİ KURULUŞ İZNİ BELGELERİ HARCI"
+],
+[
+"9419",
+"FAKTÖRİNG ŞİRKETLERİ KURULUŞ İZNİ BELGELERİ HARCI"
+],
+[
+"9420",
+"YETKİLİ MÜESSESELER (DÖVİZ BÜFELERİ) KURULUŞ İZİN BELGELERİ HARCI"
+],
+[
+"9421",
+"SİGORTA / EMEKLİLİK ŞİRKETLERİ KURULUŞ İZİN BELGELERİ HARCI"
+],
+[
+"9422",
+"DİĞER FİNANSAL KURUMLARA İLİŞKİN BELGE HARCI"
+],
+[
+"9423",
+"RUHSAT (İZİN) HARCI (KARAYOLLARI TRAFİK KANUNU 16. MADDESİ)"
+],
+[
+"9424",
+"RUHSAT (İZİN) HARCI (KARAYOLLARI TRAFİK KANUNU 17. MADDESİ)"
+],
+[
+"9425",
+"RUHSAT (İZİN) HARCI (KARAYOLLARI TRAFİK KANUNU 35. MADDESİ)"
+],
+[
+"9426",
+"1593 SAYILI UMUMİ HIFZISSIHHA KANUNUNA GÖRE VERİLEN İDARİ PARA CEZASI"
+],
+[
+"9427",
+"GELİR İDARESİ BAŞKANLIĞI VERİ PAYLAŞIMI KATILIM PAYI"
+],
+[
+"9434",
+"7456 S.K. EK MOTORLU TAŞITLAR VERGİSİ"
+],
+[
+"9435",
+"SORUMLU SIFATIYLA VERİLEN KDV (ÖTV 2 SAYILI LİSTE)"
+],
+[
+"9436",
+"SORUMLU SIFATIYLA VERİLEN KDV (DİĞER)"
+],
+[
+"9437",
+"İCRA DAİRESİ/MAHKEME VE KDV MÜK. OLMAYANLAR TARAFINDAN MÜZAYEDE SATIŞLARINDAN DOĞAN KDV"
+],
+[
+"9459",
+"YATIRIMLARA PROJE BAZLI VERİLEN DEVLET YARDIMININ GERİ ALINMASI"
+],
+[
+"9460",
+"MADENLERDEN DEVLET HAKKI (BÜYÜKŞEHİR OLMAYAN İLLER İÇİN)"
+],
+[
+"9461",
+"SATIŞ RUHSATNAMELERİ HARCI (KUYUM TİCARETİ)"
+],
+[
+"9462",
+"SATIŞ RUHSATNAMELERİ HARCI (2. EL MOTORLU KARA TAŞITI TİCARETİ)"
+],
+[
+"9463",
+"SATIŞ RUHSATNAMELERİ HARCI (TAŞINMAZ TİCARETİ)"
+],
+[
+"9464",
+"HUSUSİ HASTANE AÇMA RUHSATNAMELERİ HARCI"
+],
+[
+"9465",
+"LABORATUVARLARA AİT RUHSATNAME HARCI"
+],
+[
+"9466",
+"ÖZEL SAĞLIK KURULUŞ RUHSATNAME HARCI (AYAKTA TEŞHİS VE TEDAVİ)"
+],
+[
+"9467",
+"ÖZEL SAĞLIK KURULUŞ RUHSATNAME HARCI (AĞIZ VE DİŞ SAĞLIĞI)"
+],
+[
+"9468",
+"VETERİNER HİZMETLERİ RUHSATNAME HARCI (MUAYENEHANE, POLİKLİNİK, HASTANE)"
+],
+[
+"9469",
+"KIYMETLİ MADEN KURULUŞ VE İZİN BELGESİ HARCI"
+],
+[
+"9470",
+"TİCARİ HAVA TAŞIMA İŞLETME RUHSAT HARCI"
+],
+[
+"9471",
+"HAVA TAKSİ İŞLETME RUHSAT HARCI"
+],
+[
+"9472",
+"GENEL HAVACILIK RUHSAT HARCI"
+]
+]

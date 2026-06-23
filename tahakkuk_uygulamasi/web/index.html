@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toplu Tahakkuk Sorgulama</title>
+<style>
+  :root {
+    --ana: #2f5496; --ana-koyu: #1f3864; --kenar: #d0d7e2;
+    --acik: #f4f6fb; --yesil: #2e7d32; --kirmizi: #c62828; --gri: #667;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1c2330; background: #eef1f7; font-size: 14px;
+  }
+  header {
+    background: linear-gradient(135deg, var(--ana), var(--ana-koyu));
+    color: #fff; padding: 14px 22px; display: flex; align-items: center;
+    justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .alt { font-size: 12px; opacity: .85; }
+  main { max-width: 1280px; margin: 0 auto; padding: 18px; }
+  .kart {
+    background: #fff; border: 1px solid var(--kenar); border-radius: 10px;
+    padding: 16px 18px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .kart h2 {
+    font-size: 14px; margin: 0 0 12px; color: var(--ana-koyu);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .satir { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .alan { display: flex; flex-direction: column; gap: 4px; }
+  .alan label { font-size: 12px; color: var(--gri); font-weight: 600; }
+  input, select {
+    padding: 8px 10px; border: 1px solid var(--kenar); border-radius: 7px;
+    font-size: 14px; font-family: inherit; background: #fff; min-width: 150px;
+  }
+  input:focus, select:focus { outline: 2px solid #aac4ff; border-color: var(--ana); }
+  button {
+    padding: 9px 16px; border: 0; border-radius: 7px; font-size: 14px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-ana { background: var(--ana); color: #fff; }
+  .btn-ana:hover { background: var(--ana-koyu); }
+  .btn-ikincil { background: #e7ecf6; color: var(--ana-koyu); }
+  .btn-ikincil:hover { background: #d7e0f2; }
+  .btn-mini { padding: 4px 9px; font-size: 12px; }
+  .btn-tehlike { background: #fdecec; color: var(--kirmizi); }
+  .yukle-kutu {
+    border: 2px dashed var(--ana); border-radius: 10px; padding: 22px;
+    text-align: center; background: var(--acik); cursor: pointer; transition: .15s;
+  }
+  .yukle-kutu:hover, .yukle-kutu.uzerinde { background: #e7eefc; }
+  .yukle-kutu strong { color: var(--ana-koyu); }
+  .ozet { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 10px; }
+  .ozet div { font-size: 13px; }
+  .ozet b { color: var(--ana-koyu); font-size: 16px; display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #eef0f5; text-align: left; }
+  th {
+    background: var(--acik); position: sticky; top: 0; cursor: pointer;
+    user-select: none; color: var(--ana-koyu); white-space: nowrap;
+  }
+  td.sag, th.sag { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #f6f9ff; }
+  .fis-bas td { border-top: 2px solid var(--ana); }
+  .tablo-sar { max-height: 60vh; overflow: auto; border: 1px solid var(--kenar); border-radius: 8px; }
+  .rozet {
+    display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px;
+    background: #e7ecf6; color: var(--ana-koyu); font-weight: 600;
+  }
+  .mesaj { padding: 10px 14px; border-radius: 8px; margin-bottom: 12px; display: none; }
+  .mesaj.basari { background: #e8f5e9; color: var(--yesil); display: block; }
+  .mesaj.hata { background: #fdecec; color: var(--kirmizi); display: block; }
+  .bos { text-align: center; color: var(--gri); padding: 30px; }
+  .gecmis-satir { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #eef0f5; }
+  .gecmis-satir .ad { flex: 1; }
+  .kucuk { font-size: 12px; color: var(--gri); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>📊 Toplu Tahakkuk Sorgulama</h1>
+    <div class="alt">Excel'i yükleyin, vergi kimlik no / vergi kodu / tutara göre sorgulayın. Geçmiş yüklemeler saklanır.</div>
+  </div>
+</header>
+
+<main>
+  <div id="mesaj" class="mesaj"></div>
+
+  <!-- YUKLEME -->
+  <div class="kart">
+    <h2>1 · Excel Yükle</h2>
+    <div id="yukleKutu" class="yukle-kutu">
+      <p><strong>Excel dosyasını buraya sürükleyin</strong> ya da tıklayıp seçin</p>
+      <p class="kucuk">Desteklenen: .xls ve .xlsx · Her yükleme tarihiyle birlikte saklanır</p>
+      <input id="dosyaGiris" type="file" accept=".xls,.xlsx,.xlsm" style="display:none">
+    </div>
+  </div>
+
+  <!-- SORGU -->
+  <div class="kart">
+    <h2>2 · Liste &amp; Sorgu</h2>
+    <div class="satir">
+      <div class="alan">
+        <label>Yükleme (geçmiş)</label>
+        <select id="yuklemeSec" style="min-width:280px"></select>
+      </div>
+      <div class="alan">
+        <label>Vergi Kimlik No</label>
+        <input id="fVkn" placeholder="örn. 1111111111">
+      </div>
+      <div class="alan">
+        <label>Vergi Kodu</label>
+        <input id="fKod" placeholder="örn. 0003" list="kodListe">
+        <datalist id="kodListe"></datalist>
+      </div>
+      <div class="alan">
+        <label>Tutar (min)</label>
+        <input id="fMin" placeholder="0">
+      </div>
+      <div class="alan">
+        <label>Tutar (max)</label>
+        <input id="fMax" placeholder="∞">
+      </div>
+      <div class="alan">
+        <label>Sıralama</label>
+        <select id="fSira">
+          <option value="fis">Fiş bazında — en yüksek tutar üstte</option>
+          <option value="tutar_azalan">Tutar — azalan</option>
+          <option value="tutar_artan">Tutar — artan</option>
+          <option value="vkn">Vergi Kimlik No</option>
+        </select>
+      </div>
+      <button id="btnSorgula" class="btn-ana">Sorgula</button>
+      <button id="btnTemizle" class="btn-ikincil">Temizle</button>
+      <button id="btnExcel" class="btn-ikincil">⬇ Excel'e Aktar</button>
+    </div>
+    <div id="ozet" class="ozet"></div>
+  </div>
+
+  <!-- SONUC -->
+  <div class="kart">
+    <h2>Sonuçlar <span id="sonucRozet" class="rozet"></span></h2>
+    <div class="tablo-sar">
+      <table id="tablo">
+        <thead>
+          <tr>
+            <th data-k="vergi_kimlik_no">Vergi Kimlik No</th>
+            <th data-k="tahakkuk_fis_no">Tahakkuk Fiş No</th>
+            <th data-k="vergi_donemi_metin">Vergi Dönemi</th>
+            <th data-k="vergi_kodu">Vergi Kodu</th>
+            <th data-k="vergi_kodu_adi">Vergi Kodu Adı</th>
+            <th data-k="odenecek_tutar" class="sag">Ödenecek Tutar</th>
+          </tr>
+        </thead>
+        <tbody id="govde"></tbody>
+        <tfoot id="ayak"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- GECMIS YONETIM -->
+  <div class="kart">
+    <h2>Geçmiş Yüklemeler</h2>
+    <div id="gecmis"></div>
+  </div>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let sonKayitlar = [];
+
+function mesajGoster(metin, tur = "basari") {
+  const m = $("#mesaj");
+  m.textContent = metin;
+  m.className = "mesaj " + tur;
+  if (tur === "basari") setTimeout(() => { m.className = "mesaj"; }, 4000);
+}
+
+function tutarBicim(s) {
+  return (s || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function api(yol, secenek) {
+  const y = await fetch(yol, secenek);
+  const veri = await y.json();
+  if (!y.ok || veri.hata) throw new Error(veri.hata || "Sunucu hatası");
+  return veri;
+}
+
+// ---- Yukleme ----
+const yukleKutu = $("#yukleKutu"), dosyaGiris = $("#dosyaGiris");
+yukleKutu.addEventListener("click", () => dosyaGiris.click());
+yukleKutu.addEventListener("dragover", (e) => { e.preventDefault(); yukleKutu.classList.add("uzerinde"); });
+yukleKutu.addEventListener("dragleave", () => yukleKutu.classList.remove("uzerinde"));
+yukleKutu.addEventListener("drop", (e) => {
+  e.preventDefault(); yukleKutu.classList.remove("uzerinde");
+  if (e.dataTransfer.files.length) dosyaYukle(e.dataTransfer.files[0]);
+});
+dosyaGiris.addEventListener("change", () => {
+  if (dosyaGiris.files.length) dosyaYukle(dosyaGiris.files[0]);
+  dosyaGiris.value = "";
+});
+
+function dosyaYukle(dosya) {
+  const okuyucu = new FileReader();
+  okuyucu.onload = async () => {
+    const b64 = okuyucu.result.split(",")[1];
+    try {
+      const s = await api("/api/yukle", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dosya_adi: dosya.name, icerik: b64 }),
+      });
+      mesajGoster(`✓ "${dosya.name}" yüklendi — ${s.satir_sayisi} satır okundu.`);
+      await yuklemeleriGetir(s.yukleme_id);
+      sorgula();
+    } catch (e) { mesajGoster("Yükleme hatası: " + e.message, "hata"); }
+  };
+  okuyucu.readAsDataURL(dosya);
+}
+
+// ---- Yukleme listesi ----
+async function yuklemeleriGetir(seciliId) {
+  const liste = await api("/api/yuklemeler");
+  const sec = $("#yuklemeSec");
+  sec.innerHTML = "";
+  if (!liste.length) {
+    sec.innerHTML = "<option value=''>(henüz yükleme yok)</option>";
+    $("#gecmis").innerHTML = "<div class='bos'>Henüz Excel yüklenmedi.</div>";
+    return;
+  }
+  for (const y of liste) {
+    const o = document.createElement("option");
+    o.value = y.id;
+    o.textContent = `${y.yukleme_zamani_tr} · ${y.dosya_adi} (${y.satir_sayisi} satır)`;
+    sec.appendChild(o);
+  }
+  if (seciliId) sec.value = seciliId;
+  gecmisCiz(liste);
+}
+
+function gecmisCiz(liste) {
+  const g = $("#gecmis");
+  g.innerHTML = "";
+  for (const y of liste) {
+    const d = document.createElement("div");
+    d.className = "gecmis-satir";
+    d.innerHTML = `<span class="ad"><b>${y.yukleme_zamani_tr}</b> — ${y.dosya_adi}</span>
+      <span class="kucuk">${y.satir_sayisi} satır</span>
+      <button class="btn-ikincil btn-mini" data-ac="${y.id}">Aç</button>
+      <button class="btn-tehlike btn-mini" data-sil="${y.id}">Sil</button>`;
+    g.appendChild(d);
+  }
+  g.querySelectorAll("[data-ac]").forEach((b) =>
+    b.onclick = () => { $("#yuklemeSec").value = b.dataset.ac; sorgula(); });
+  g.querySelectorAll("[data-sil]").forEach((b) =>
+    b.onclick = () => yuklemeSil(b.dataset.sil));
+}
+
+async function yuklemeSil(id) {
+  if (!confirm("Bu yükleme ve içindeki tüm satırlar silinsin mi?")) return;
+  try {
+    await api("/api/yukleme/sil", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: Number(id) }),
+    });
+    mesajGoster("Yükleme silindi.");
+    await yuklemeleriGetir();
+    sorgula();
+  } catch (e) { mesajGoster("Silme hatası: " + e.message, "hata"); }
+}
+
+// ---- Sorgu ----
+function sorguParam() {
+  const p = new URLSearchParams();
+  const id = $("#yuklemeSec").value;
+  if (id) p.set("yukleme_id", id);
+  if ($("#fVkn").value.trim()) p.set("vkn", $("#fVkn").value.trim());
+  if ($("#fKod").value.trim()) p.set("vergi_kodu", $("#fKod").value.trim());
+  if ($("#fMin").value.trim()) p.set("tutar_min", $("#fMin").value.trim());
+  if ($("#fMax").value.trim()) p.set("tutar_max", $("#fMax").value.trim());
+  p.set("siralama", $("#fSira").value);
+  return p;
+}
+
+async function sorgula() {
+  try {
+    const s = await api("/api/sorgu?" + sorguParam().toString());
+    sonKayitlar = s.kayitlar || [];
+    tabloCiz(sonKayitlar);
+    ozetCiz(s);
+  } catch (e) { mesajGoster("Sorgu hatası: " + e.message, "hata"); }
+}
+
+function ozetCiz(s) {
+  const o = s.ozet || {};
+  $("#ozet").innerHTML = `
+    <div><b>${s.sonuc_satir ?? 0}</b>Sonuç satırı</div>
+    <div><b>${tutarBicim(s.sonuc_toplam)}</b>Sonuç toplamı (TL)</div>
+    <div><b>${o.satir ?? 0}</b>Toplam satır (yükleme)</div>
+    <div><b>${o.mukellef ?? 0}</b>Mükellef</div>
+    <div><b>${o.fis ?? 0}</b>Tahakkuk fişi</div>
+    <div><b>${tutarBicim(o.toplam)}</b>Yükleme toplamı (TL)</div>`;
+  $("#sonucRozet").textContent = (s.sonuc_satir ?? 0) + " satır";
+}
+
+function tabloCiz(kayitlar) {
+  const g = $("#govde");
+  g.innerHTML = "";
+  if (!kayitlar.length) {
+    g.innerHTML = "<tr><td colspan='6' class='bos'>Kayıt bulunamadı. Önce Excel yükleyin veya filtreleri gevşetin.</td></tr>";
+    $("#ayak").innerHTML = "";
+    return;
+  }
+  let oncekiFis = null, toplam = 0;
+  for (const k of kayitlar) {
+    const tr = document.createElement("tr");
+    if (k.tahakkuk_fis_no !== oncekiFis) { tr.className = "fis-bas"; oncekiFis = k.tahakkuk_fis_no; }
+    tr.innerHTML = `
+      <td>${k.vergi_kimlik_no || ""}</td>
+      <td>${k.tahakkuk_fis_no || ""}</td>
+      <td>${k.vergi_donemi_metin || ""}</td>
+      <td>${k.vergi_kodu || ""}</td>
+      <td>${k.vergi_kodu_adi || ""}</td>
+      <td class="sag">${tutarBicim(k.odenecek_tutar)}</td>`;
+    g.appendChild(tr);
+    toplam += k.odenecek_tutar || 0;
+  }
+  $("#ayak").innerHTML =
+    `<tr><td colspan="5" class="sag"><b>TOPLAM</b></td><td class="sag"><b>${tutarBicim(toplam)}</b></td></tr>`;
+}
+
+// Baslik tiklayinca istemci tarafinda sirala
+document.querySelectorAll("#tablo th").forEach((th) => {
+  let artan = true;
+  th.onclick = () => {
+    const k = th.dataset.k;
+    sonKayitlar.sort((a, b) => {
+      let x = a[k], y = b[k];
+      if (k === "odenecek_tutar") { x = +x || 0; y = +y || 0; return artan ? x - y : y - x; }
+      x = (x || "").toString(); y = (y || "").toString();
+      return artan ? x.localeCompare(y, "tr") : y.localeCompare(x, "tr");
+    });
+    artan = !artan;
+    tabloCiz(sonKayitlar);
+  };
+});
+
+$("#btnSorgula").onclick = sorgula;
+$("#yuklemeSec").onchange = sorgula;
+$("#fSira").onchange = sorgula;
+[$("#fVkn"), $("#fKod"), $("#fMin"), $("#fMax")].forEach((el) =>
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") sorgula(); }));
+$("#btnTemizle").onclick = () => {
+  $("#fVkn").value = $("#fKod").value = $("#fMin").value = $("#fMax").value = "";
+  $("#fSira").value = "fis";
+  sorgula();
+};
+$("#btnExcel").onclick = () => {
+  if (!sonKayitlar.length) { mesajGoster("Aktarılacak sonuç yok.", "hata"); return; }
+  window.location = "/disa_aktar?" + sorguParam().toString();
+};
+
+// ---- Vergi kodu listesi (otomatik tamamlama) ----
+async function kodListesiGetir() {
+  try {
+    const adlar = await api("/api/vergi_kodlari");
+    const dl = $("#kodListe");
+    dl.innerHTML = "";
+    for (const [kod, ad] of Object.entries(adlar)) {
+      const o = document.createElement("option");
+      o.value = kod; o.label = ad;
+      dl.appendChild(o);
+    }
+  } catch (e) { /* kod listesi opsiyonel */ }
+}
+
+// ---- Baslangic ----
+(async function () {
+  await kodListesiGetir();
+  await yuklemeleriGetir();
+  sorgula();
+})();
+</script>
+</body>
+</html>
