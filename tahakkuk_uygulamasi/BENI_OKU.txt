@@ -1,0 +1,19 @@
+TOPLU TAHAKKUK SORGULAMA — HIZLI BAŞLANGIÇ (Linux)
+===================================================
+
+1) Bu klasörü (tahakkuk_uygulamasi) bilgisayarınızda istediğiniz bir yere çıkarın.
+
+2) Bir KEZ "kisayol_olustur.sh" dosyasına çift tıklayın
+   (veya terminalde:  bash kisayol_olustur.sh).
+   -> Masaüstüne ve uygulama menüsüne "Toplu Tahakkuk Sorgulama" kısayolu eklenir.
+
+3) Artık o kısayola çift tıklayın. Uygulama tarayıcıda açılır.
+
+Kısayol istemezseniz: "calistir.sh" dosyasına çift tıklamanız da yeterli.
+
+NOT:
+- Yalnızca Python 3 gerekir (Linux'ta genelde kuruludur). Başka kurulum yok.
+- Tüm veriler kendi bilgisayarınızda kalır; internet gerekmez.
+- Kapatmak için açılan terminal penceresini kapatın.
+
+Ayrıntılı kullanım: KULLANIM_KILAVUZU.md
