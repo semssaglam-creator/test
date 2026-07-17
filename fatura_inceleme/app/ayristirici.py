@@ -204,11 +204,63 @@ def _kalem_satiri_coz(satir):
         "kdv_tutari": None, "tutar": sayilar[-1],
     }
     if len(sayilar) >= 3:
+        # Sutun sirasi sablondan sablona degisir; tutar ve KDV tutarini
+        # aritmetik tutarlilikla sec (tutar ~= miktar x birim fiyat,
+        # KDV ~= tutar x oran). Tutarli aday yoksa son sayi tutar sayilir.
         kalem["birim_fiyat"] = sayilar[1]
-    if len(sayilar) >= 4:
-        # miktar, birim fiyat, (iskonto,) kdv tutari, tutar dizilimi yaygindir
-        kalem["kdv_tutari"] = sayilar[-2]
+        kalanlar = sayilar[2:]
+        beklenen = sayilar[0] * sayilar[1]
+        en_yakin = min(kalanlar, key=lambda v: abs(v - beklenen))
+        if abs(en_yakin - beklenen) <= max(0.05, beklenen * 0.02):
+            kalem["tutar"] = en_yakin
+        kdv_adaylari = list(kalanlar)
+        if kalem["tutar"] in kdv_adaylari:
+            kdv_adaylari.remove(kalem["tutar"])
+        if kdv_orani and kdv_adaylari:
+            beklenen_kdv = kalem["tutar"] * kdv_orani / 100
+            en_yakin = min(kdv_adaylari, key=lambda v: abs(v - beklenen_kdv))
+            if abs(en_yakin - beklenen_kdv) <= max(0.05, beklenen_kdv * 0.05):
+                kalem["kdv_tutari"] = en_yakin
+        elif not kdv_orani and len(sayilar) >= 4:
+            # miktar, birim fiyat, (iskonto,) kdv tutari, tutar dizilimi yaygindir
+            kalem["kdv_tutari"] = sayilar[-2]
     return kalem
+
+
+def _kalem_akisi_coz(bolge):
+    """Satir bazli ayristirma bulamayinca: tum bolgeyi tek akis olarak ele
+    alip 1, 2, 3... sira numaralarindan kalemlere boler.
+
+    PDF metin cikarimi tablo hucrelerini ayri satirlara dagitabildiginden
+    (ornek: '2.232,14' ile 'TL' farkli satirlara duser) satir bazli yontem
+    bu sablonlarda calismaz; akis modu bu durumu kurtarir.
+    """
+    tokenlar = bolge.split()
+    segmentler, aktif = [], None
+    beklenen = 1
+    for i, t in enumerate(tokenlar):
+        sonraki = tokenlar[i + 1] if i + 1 < len(tokenlar) else ""
+        sira_gibi = (
+            t == str(beklenen) and sonraki
+            and not _SAYI_TOKEN.match(sonraki) and not _KDV_TOKEN.match(sonraki)
+            and sonraki.upper() not in ("TL", "TRY", "₺")
+            and sonraki.lower().strip(".") not in _BIRIMLER)
+        if sira_gibi:
+            if aktif is not None:
+                segmentler.append(aktif)
+            aktif = [t]
+            beklenen += 1
+        elif aktif is not None:
+            aktif.append(t)
+    if aktif is not None:
+        segmentler.append(aktif)
+
+    kalemler = []
+    for seg in segmentler:
+        kalem = _kalem_satiri_coz(" ".join(seg))
+        if kalem:
+            kalemler.append(kalem)
+    return kalemler
 
 
 def _kalemleri_ayristir(metin):
@@ -225,6 +277,9 @@ def _kalemleri_ayristir(metin):
         kalem = _kalem_satiri_coz(satir)
         if kalem:
             kalemler.append(kalem)
+    if not kalemler:
+        # Hucreler ayri satirlara dagilmis olabilir; akis modunu dene
+        kalemler = _kalem_akisi_coz(bolge)
     # Sira numarasi hic yoksa otomatik numarala
     if kalemler and all(k["sira"] is None for k in kalemler):
         for i, k in enumerate(kalemler, 1):
@@ -285,6 +340,12 @@ def fatura_ayristir(metin):
 
     tarih = tarih_iso(_etiket_ara(
         metin, [r"Fatura\s*Tarihi", r"Düzenle(?:n)?me\s*Tarihi", r"Belge\s*Tarihi"]))
+    if not tarih:
+        # Bazi sablonlarda etiket yalnizca 'Tarih:' seklindedir. Satir basi
+        # araniyor ki 'Son Ödeme Tarihi' gibi alanlarla karismasin.
+        m = re.search(r"^[ \t]*Tarih[ \t]*:?[ \t]*([^\n]+)", metin, re.MULTILINE)
+        if m:
+            tarih = tarih_iso(m.group(1))
     if not tarih:
         tarih = tarih_iso(metin)  # metindeki ilk tarih
         if tarih:
