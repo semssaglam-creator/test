@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fatura İnceleme Uygulaması</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; margin: 0; background: #f0f2f5; color: #1c2733; }
+  header { background: #1f3a5f; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: baseline; }
+  header h1 { margin: 0; font-size: 20px; }
+  header .mukellef { font-size: 13px; color: #cfd9e6; }
+  nav { display: flex; gap: 4px; background: #2b4a73; padding: 0 12px; flex-wrap: wrap; }
+  nav button { background: none; border: none; color: #cfd9e6; padding: 11px 16px; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; }
+  nav button.aktif { color: #fff; border-bottom-color: #ffb347; font-weight: 600; }
+  main { padding: 18px; max-width: 1380px; margin: 0 auto; }
+  .sekme { display: none; }
+  .sekme.aktif { display: block; }
+  .kart { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .kart h2 { margin: 0 0 12px; font-size: 16px; color: #1f3a5f; }
+  label { display: block; font-size: 12px; color: #5a6b7d; margin-bottom: 2px; }
+  input[type=text], input[type=date], textarea, select { width: 100%; padding: 7px 9px; border: 1px solid #c3ccd6; border-radius: 5px; font-size: 14px; font-family: inherit; background: #fff; }
+  .satir { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+  .satir > div { flex: 1; min-width: 140px; }
+  .satir > div.dar { flex: 0 0 150px; min-width: 120px; }
+  button.btn { background: #1f3a5f; color: #fff; border: none; border-radius: 5px; padding: 8px 16px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+  button.btn:hover { background: #2b4a73; }
+  button.btn.ikincil { background: #e4e9ef; color: #1c2733; }
+  button.btn.ikincil:hover { background: #d4dce5; }
+  button.btn.tehlike { background: #a33; }
+  button.btn:disabled { opacity: .5; cursor: default; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid #dde3ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #eef2f6; font-weight: 600; white-space: nowrap; }
+  td.sag, th.sag { text-align: right; white-space: nowrap; }
+  tr.tiklanir { cursor: pointer; }
+  tr.tiklanir:hover td { background: #f4f8fd; }
+  td input { width: 100%; border: 1px solid transparent; background: transparent; padding: 4px; font-size: 13px; }
+  td input:focus { border-color: #1f3a5f; background: #fff; outline: none; }
+  .rozet { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .rozet.tamam { background: #2c7a3f; }
+  .rozet.kontrol { background: #d97706; }
+  .rozet.ocr_bekliyor { background: #b3261e; }
+  .rozet.alis { background: #1f5fae; }
+  .rozet.satis { background: #6b21a8; }
+  .rozet.yok { background: #7a8794; }
+  .mesaj { position: fixed; bottom: 18px; right: 18px; padding: 12px 18px; border-radius: 6px; color: #fff; font-size: 14px; display: none; z-index: 90; max-width: 480px; box-shadow: 0 3px 10px rgba(0,0,0,.25); white-space: pre-wrap; }
+  .mesaj.hata { background: #a33; }
+  .mesaj.basari { background: #2c7a3f; }
+  .birakma { border: 2px dashed #9fb2c5; border-radius: 8px; padding: 30px; text-align: center; color: #5a6b7d; cursor: pointer; }
+  .birakma.aktif { background: #eef6ff; border-color: #1f5fae; }
+  .ozet-cubugu { display: flex; gap: 22px; flex-wrap: wrap; font-size: 14px; margin: 10px 0; color: #1f3a5f; }
+  .ozet-cubugu b { font-size: 16px; }
+  .tablo-kaydir { overflow-x: auto; }
+  .sayfalama { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+  .kaplama { display: none; position: fixed; inset: 0; background: rgba(10,20,35,.5); z-index: 60; overflow-y: auto; padding: 24px; }
+  .kaplama.aktif { display: block; }
+  .pencere { background: #fff; border-radius: 10px; max-width: 1150px; margin: 0 auto; padding: 20px; }
+  .pencere h2 { margin: 0 0 14px; font-size: 17px; color: #1f3a5f; }
+  .ham-metin { display: none; background: #f6f8fa; border: 1px solid #dde3ea; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow-y: auto; margin-top: 10px; }
+  .uyari-kutu { background: #fef3e2; border: 1px solid #f0c684; border-radius: 6px; padding: 8px 12px; font-size: 13px; color: #7c4a03; margin-bottom: 10px; }
+  .durum-kutu { font-size: 14px; line-height: 1.9; }
+  .durum-kutu code { background: #eef2f6; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  a { color: #1f5fae; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fatura İnceleme Uygulaması</h1>
+  <div class="mukellef" id="baslik-mukellef"></div>
+</header>
+<nav id="nav">
+  <button data-sekme="yukle" class="aktif">Fatura Yükle</button>
+  <button data-sekme="sorgu">Sorgula</button>
+  <button data-sekme="elle">Elle Giriş</button>
+  <button data-sekme="ayarlar">Ayarlar / Durum</button>
+</nav>
+<main>
+
+<!-- ================= YUKLE ================= -->
+<section class="sekme aktif" id="sekme-yukle">
+  <div class="kart">
+    <h2>PDF Fatura Yükle (tek tek veya toplu)</h2>
+    <div class="birakma" id="birakma">
+      PDF faturaları buraya sürükleyip bırakın veya <u>tıklayıp seçin</u><br>
+      <small>e-Fatura / e-Arşiv PDF'leri doğrudan okunur; taranmış PDF'ler OCR gerektirir.</small>
+      <input type="file" id="pdf-girdi" accept=".pdf,application/pdf" multiple style="display:none">
+    </div>
+    <div id="yukleme-ilerleme" style="margin-top:10px; font-size:14px; color:#1f3a5f"></div>
+  </div>
+  <div class="kart" id="yukleme-sonuc-kart" style="display:none">
+    <h2>Yükleme Sonuçları</h2>
+    <div class="tablo-kaydir">
+    <table>
+      <thead><tr><th>Dosya</th><th>Fatura No</th><th>Tarih</th><th>Satıcı</th><th>Alıcı</th>
+        <th class="sag">Tutar</th><th class="sag">Kalem</th><th>Durum</th><th>Açıklama</th></tr></thead>
+      <tbody id="yukleme-sonuclar"></tbody>
+    </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SORGU ================= -->
+<section class="sekme" id="sekme-sorgu">
+  <div class="kart">
+    <h2>Sorgulama</h2>
+    <div class="satir">
+      <div><label>Ürün / mal-hizmet içeriği (ör. elma, gübre)</label><input type="text" id="f-urun"></div>
+      <div><label>Fatura No</label><input type="text" id="f-no"></div>
+      <div><label>Alıcı/Satıcı (ünvan veya VKN/TCKN)</label><input type="text" id="f-taraf"></div>
+    </div>
+    <div class="satir">
+      <div class="dar"><label>Başlangıç tarihi</label><input type="date" id="f-baslangic"></div>
+      <div class="dar"><label>Bitiş tarihi</label><input type="date" id="f-bitis"></div>
+      <div class="dar"><label>Yön</label>
+        <select id="f-yon"><option value="">Tümü</option><option value="alis">Alış</option>
+        <option value="satis">Satış</option></select></div>
+      <div class="dar"><label>Durum</label>
+        <select id="f-durum"><option value="">Tümü</option><option value="tamam">Tamam</option>
+        <option value="kontrol">Kontrol gerekli</option><option value="ocr_bekliyor">OCR bekliyor</option></select></div>
+      <div class="dar"><label>Görünüm</label>
+        <select id="f-gorunum"><option value="fatura">Fatura bazında</option>
+        <option value="kalem">Kalem (ürün) bazında</option></select></div>
+      <div class="dar" style="display:flex; gap:8px">
+        <button class="btn" onclick="sorgula(0)">Sorgula</button>
+        <button class="btn ikincil" onclick="excelIndir()">Excel İndir</button>
+      </div>
+    </div>
+    <div class="ozet-cubugu" id="sorgu-ozet"></div>
+    <div class="tablo-kaydir">
+      <table>
+        <thead id="sorgu-baslik"></thead>
+        <tbody id="sorgu-sonuclar"></tbody>
+      </table>
+    </div>
+    <div class="sayfalama">
+      <button class="btn ikincil" id="sayfa-geri" onclick="sorgula(sayfa-1)">← Önceki</button>
+      <span id="sayfa-bilgi"></span>
+      <button class="btn ikincil" id="sayfa-ileri" onclick="sorgula(sayfa+1)">Sonraki →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ELLE GIRIS ================= -->
+<section class="sekme" id="sekme-elle">
+  <div class="kart">
+    <h2>Elle Fatura Girişi (OCR'sız taranmış faturalar için)</h2>
+    <div id="elle-form"></div>
+    <div style="text-align:right; margin-top:10px">
+      <button class="btn" onclick="elleKaydet()">Kaydet</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= AYARLAR ================= -->
+<section class="sekme" id="sekme-ayarlar">
+  <div class="kart">
+    <h2>İncelenen Mükellef</h2>
+    <p style="font-size:13px; color:#5a6b7d; margin-top:0">VKN/TCKN girildiğinde her fatura otomatik
+      sınıflanır: mükellef <b>alıcıysa alış</b>, <b>satıcıysa satış</b> faturası sayılır.</p>
+    <div class="satir">
+      <div class="dar"><label>VKN / TCKN</label><input type="text" id="ayar-vkn"></div>
+      <div><label>Ad / Ünvan (bilgi amaçlı)</label><input type="text" id="ayar-ad"></div>
+      <div class="dar"><label style="visibility:hidden">.</label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#1c2733">
+          <input type="checkbox" id="ayar-yon-hesapla" checked style="width:16px;height:16px"> Kayıtlı faturaların yönünü yeniden hesapla</label></div>
+      <div class="dar"><button class="btn" onclick="ayarKaydet()">Kaydet</button></div>
+    </div>
+  </div>
+  <div class="kart">
+    <h2>OCR Durumu (taranmış faturalar için)</h2>
+    <div class="durum-kutu" id="ocr-durum">Yükleniyor...</div>
+    <div id="ocr-bekleyenler" style="margin-top:10px"></div>
+  </div>
+  <div class="kart">
+    <h2>Veritabanı</h2>
+    <div class="durum-kutu" id="istatistik"></div>
+    <div style="margin-top:10px; display:flex; gap:10px; align-items:center">
+      <button class="btn ikincil" onclick="yedekAl()">Yedek Al</button>
+      <select id="yedek-listesi" style="max-width:340px"></select>
+      <button class="btn tehlike" onclick="geriYukle()">Seçili Yedeğe Geri Dön</button>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ================= DETAY PENCERESI ================= -->
+<div class="kaplama" id="detay-kaplama">
+  <div class="pencere">
+    <h2 id="detay-baslik">Fatura Detayı</h2>
+    <div class="uyari-kutu" id="detay-uyari" style="display:none"></div>
+    <div id="detay-form"></div>
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between">
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn ikincil" id="detay-pdf" onclick="pdfAc()">PDF'i Aç</button>
+        <button class="btn ikincil" onclick="hamMetinGoster()">Ham Metni Göster/Gizle</button>
+        <button class="btn ikincil" id="detay-ocr" onclick="ocrYenile()">PDF'ten Yeniden Oku</button>
+        <button class="btn tehlike" onclick="faturaSil()">Kaydı Sil</button>
+      </div>
+      <div style="display:flex; gap:10px">
+        <button class="btn ikincil" onclick="detayKapat()">Vazgeç</button>
+        <button class="btn" onclick="detayKaydet()">Kaydet ve Onayla</button>
+      </div>
+    </div>
+    <div class="ham-metin" id="detay-ham"></div>
+  </div>
+</div>
+
+<div class="mesaj" id="mesaj"></div>
+
+<script>
+"use strict";
+let sayfa = 0, acikFatura = null;
+
+// ---------------------------------------------------------------- yardimci
+function $(id) { return document.getElementById(id); }
+function kacir(s) { const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; }
+function tl(x) { return (x == null || x === "") ? "" : Number(x).toLocaleString("tr-TR", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function trTarih(iso) { if (!iso) return ""; const p = iso.split("-"); return p.length === 3 ? p[2] + "." + p[1] + "." + p[0] : iso; }
+function yonRozet(y) { return y === "alis" ? '<span class="rozet alis">Alış</span>' : y === "satis" ? '<span class="rozet satis">Satış</span>' : '<span class="rozet yok">—</span>'; }
+function durumRozet(d) { const ad = {tamam: "Tamam", kontrol: "Kontrol", ocr_bekliyor: "OCR bekliyor"}[d] || d; return '<span class="rozet ' + kacir(d) + '">' + kacir(ad) + "</span>"; }
+
+function mesajGoster(metin, hata) {
+  const m = $("mesaj");
+  m.textContent = metin;
+  m.className = "mesaj " + (hata ? "hata" : "basari");
+  m.style.display = "block";
+  clearTimeout(m._z); m._z = setTimeout(() => m.style.display = "none", hata ? 8000 : 4000);
+}
+
+async function api(yol, veri) {
+  const secenek = veri === undefined ? {} :
+    {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(veri)};
+  const yanit = await fetch(yol, secenek);
+  const govde = await yanit.json();
+  if (!yanit.ok) throw new Error(govde.hata || "Sunucu hatasi");
+  return govde;
+}
+
+// ---------------------------------------------------------------- sekmeler
+$("nav").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("aktif", x === b));
+  document.querySelectorAll(".sekme").forEach(s => s.classList.toggle("aktif", s.id === "sekme-" + b.dataset.sekme));
+  if (b.dataset.sekme === "ayarlar") durumYukle();
+  if (b.dataset.sekme === "sorgu") sorgula(0);
+});
+
+// ---------------------------------------------------------------- yukleme
+const birakma = $("birakma"), pdfGirdi = $("pdf-girdi");
+birakma.addEventListener("click", () => pdfGirdi.click());
+birakma.addEventListener("dragover", (e) => { e.preventDefault(); birakma.classList.add("aktif"); });
+birakma.addEventListener("dragleave", () => birakma.classList.remove("aktif"));
+birakma.addEventListener("drop", (e) => {
+  e.preventDefault(); birakma.classList.remove("aktif");
+  dosyalariYukle([...e.dataTransfer.files]);
+});
+pdfGirdi.addEventListener("change", () => { dosyalariYukle([...pdfGirdi.files]); pdfGirdi.value = ""; });
+
+function dosyaOku(dosya) {
+  return new Promise((coz, reddet) => {
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => coz(okuyucu.result.split(",", 2)[1] || "");
+    okuyucu.onerror = () => reddet(new Error("Dosya okunamadi: " + dosya.name));
+    okuyucu.readAsDataURL(dosya);
+  });
+}
+
+async function dosyalariYukle(dosyalar) {
+  dosyalar = dosyalar.filter(d => d.name.toLowerCase().endsWith(".pdf"));
+  if (!dosyalar.length) { mesajGoster("PDF dosyası seçilmedi.", true); return; }
+  const ilerleme = $("yukleme-ilerleme"), govde = $("yukleme-sonuclar");
+  $("yukleme-sonuc-kart").style.display = "";
+  let islenen = 0;
+  const PARCA = 10; // istek basina dosya (OCR'li buyuk dosyalarda sunucuyu bogmamak icin)
+  for (let i = 0; i < dosyalar.length; i += PARCA) {
+    const parca = dosyalar.slice(i, i + PARCA);
+    ilerleme.textContent = `İşleniyor: ${islenen + 1}-${Math.min(islenen + parca.length, dosyalar.length)} / ${dosyalar.length} (taranmış faturalarda OCR uzun sürebilir)`;
+    let sonuclar;
+    try {
+      const paket = [];
+      for (const d of parca) paket.push({ad: d.name, icerik: await dosyaOku(d)});
+      sonuclar = (await api("/api/fatura/yukle", {dosyalar: paket})).sonuclar;
+    } catch (hata) {
+      sonuclar = parca.map(d => ({ad: d.name, tamam: false, hata: hata.message}));
+    }
+    for (const s of sonuclar) {
+      const tr = document.createElement("tr");
+      if (s.tamam) {
+        tr.innerHTML = `<td>${kacir(s.ad)}</td><td>${kacir(s.fatura_no || "")}</td>
+          <td>${trTarih(s.fatura_tarihi)}</td><td>${kacir(s.satici_unvan || "")}</td>
+          <td>${kacir(s.alici_unvan || "")}</td><td class="sag">${tl(s.odenecek_tutar)}</td>
+          <td class="sag">${s.kalem_sayisi ?? ""}</td><td>${durumRozet(s.durum)}</td>
+          <td>${kacir(s.uyari || "")}</td>`;
+        if (s.id) { tr.classList.add("tiklanir"); tr.onclick = () => detayAc(s.id); }
+      } else {
+        tr.innerHTML = `<td>${kacir(s.ad)}</td><td colspan="7"></td>
+          <td style="color:#a33">${kacir(s.hata)}</td>`;
+      }
+      govde.prepend(tr);
+    }
+    islenen += parca.length;
+  }
+  ilerleme.textContent = `Tamamlandı: ${islenen} dosya işlendi.`;
+}
+
+// ---------------------------------------------------------------- sorgu
+function filtreParametreleri() {
+  const p = new URLSearchParams();
+  p.set("urun", $("f-urun").value.trim());
+  p.set("fatura_no", $("f-no").value.trim());
+  p.set("taraf", $("f-taraf").value.trim());
+  p.set("baslangic", $("f-baslangic").value);
+  p.set("bitis", $("f-bitis").value);
+  p.set("yon", $("f-yon").value);
+  p.set("durum", $("f-durum").value);
+  return p;
+}
+
+async function sorgula(yeniSayfa) {
+  sayfa = Math.max(0, yeniSayfa || 0);
+  const gorunum = $("f-gorunum").value;
+  const p = filtreParametreleri(); p.set("sayfa", sayfa);
+  let veri;
+  try { veri = await api((gorunum === "kalem" ? "/api/kalemler?" : "/api/faturalar?") + p); }
+  catch (hata) { mesajGoster(hata.message, true); return; }
+
+  const baslik = $("sorgu-baslik"), govde = $("sorgu-sonuclar"), t = veri.toplam;
+  govde.innerHTML = "";
+  if (gorunum === "kalem") {
+    $("sorgu-ozet").innerHTML = `<span>Kalem: <b>${t.adet}</b></span>
+      <span>Miktar toplamı: <b>${tl(t.miktar_toplam)}</b></span>
+      <span>KDV toplamı: <b>${tl(t.kdv_toplam)} TL</b></span>
+      <span>Tutar toplamı: <b>${tl(t.tutar_toplam)} TL</b></span>`;
+    baslik.innerHTML = `<tr><th>Fatura No</th><th>Tarih</th><th>Yön</th><th>Satıcı</th><th>Alıcı</th>
+      <th>Mal / Hizmet</th><th class="sag">Miktar</th><th>Birim</th><th class="sag">Birim Fiyat</th>
+      <th class="sag">KDV %</th><th class="sag">Tutar</th></tr>`;
+    for (const k of veri.satirlar) {
+      const tr = document.createElement("tr");
+      tr.className = "tiklanir";
+      tr.onclick = () => detayAc(k.fatura_id);
+      tr.innerHTML = `<td>${kacir(k.fatura_no)}</td><td>${trTarih(k.fatura_tarihi)}</td>
+        <td>${yonRozet(k.yon)}</td><td>${kacir(k.satici_unvan)}</td><td>${kacir(k.alici_unvan)}</td>
+        <td>${kacir(k.mal_hizmet)}</td><td class="sag">${tl(k.miktar)}</td><td>${kacir(k.birim)}</td>
+        <td class="sag">${tl(k.birim_fiyat)}</td><td class="sag">${k.kdv_orani ?? ""}</td>
+        <td class="sag">${tl(k.tutar)}</td>`;
+      govde.appendChild(tr);
+    }
+  } else {
+    $("sorgu-ozet").innerHTML = `<span>Fatura: <b>${t.adet}</b></span>
+      <span>Matrah toplamı: <b>${tl(t.matrah_toplam)} TL</b></span>
+      <span>KDV toplamı: <b>${tl(t.kdv_toplam)} TL</b></span>
+      <span>Ödenecek toplamı: <b>${tl(t.odenecek_toplam)} TL</b></span>`;
+    baslik.innerHTML = `<tr><th>Fatura No</th><th>Tarih</th><th>Yön</th><th>Satıcı</th>
+      <th>Satıcı VKN</th><th>Alıcı</th><th>Alıcı VKN</th><th class="sag">Matrah</th>
+      <th class="sag">KDV</th><th class="sag">Ödenecek</th><th class="sag">Kalem</th><th>Durum</th></tr>`;
+    for (const f of veri.satirlar) {
+      const tr = document.createElement("tr");
+      tr.className = "tiklanir";
+      tr.onclick = () => detayAc(f.id);
+      tr.innerHTML = `<td>${kacir(f.fatura_no) || kacir(f.dosya_adi)}</td><td>${trTarih(f.fatura_tarihi)}</td>
+        <td>${yonRozet(f.yon)}</td><td>${kacir(f.satici_unvan)}</td><td>${kacir(f.satici_vkn)}</td>
+        <td>${kacir(f.alici_unvan)}</td><td>${kacir(f.alici_vkn)}</td>
+        <td class="sag">${tl(f.mal_hizmet_toplam)}</td><td class="sag">${tl(f.kdv_toplam)}</td>
+        <td class="sag">${tl(f.odenecek_tutar)}</td><td class="sag">${f.kalem_sayisi}</td>
+        <td>${durumRozet(f.durum)}</td>`;
+      govde.appendChild(tr);
+    }
+  }
+  const sonSayfa = (sayfa + 1) * veri.limit >= t.adet;
+  $("sayfa-geri").disabled = sayfa === 0;
+  $("sayfa-ileri").disabled = sonSayfa;
+  $("sayfa-bilgi").textContent = t.adet ? `Sayfa ${sayfa + 1} — ${t.adet} kayıttan ${sayfa * veri.limit + 1}-${Math.min((sayfa + 1) * veri.limit, t.adet)} gösteriliyor` : "Kayıt bulunamadı";
+}
+
+function excelIndir() { window.location = "/rapor?" + filtreParametreleri(); }
+
+// ---------------------------------------------------------------- form uretimi
+const BASLIK_ALANLARI = [
+  ["fatura_no", "Fatura No"], ["fatura_tarihi", "Tarih (GG.AA.YYYY)"], ["fatura_tipi", "Fatura Tipi"],
+  ["satici_unvan", "Satıcı Ünvanı"], ["satici_vkn", "Satıcı VKN/TCKN"],
+  ["alici_unvan", "Alıcı Ünvanı"], ["alici_vkn", "Alıcı VKN/TCKN"],
+  ["mal_hizmet_toplam", "Mal/Hizmet Toplamı"], ["toplam_iskonto", "Toplam İskonto"],
+  ["kdv_toplam", "KDV"], ["vergiler_dahil_toplam", "Vergiler Dahil Toplam"],
+  ["odenecek_tutar", "Ödenecek Tutar"], ["notlar", "Notlar"],
+];
+
+function formHtml(onEk) {
+  let html = '<div class="satir">';
+  BASLIK_ALANLARI.forEach(([ad, etiket], i) => {
+    if (i && i % 4 === 0) html += '</div><div class="satir">';
+    html += `<div><label>${etiket}</label><input type="text" id="${onEk}-${ad}"></div>`;
+  });
+  html += `<div class="dar"><label>Yön</label><select id="${onEk}-yon">
+    <option value="">Belirsiz</option><option value="alis">Alış</option>
+    <option value="satis">Satış</option></select></div></div>
+    <h2 style="font-size:15px; color:#1f3a5f; margin:14px 0 6px">Mal / Hizmet Kalemleri</h2>
+    <div class="tablo-kaydir"><table>
+    <thead><tr><th style="width:50px">Sıra</th><th>Mal / Hizmet</th><th style="width:90px">Miktar</th>
+      <th style="width:70px">Birim</th><th style="width:100px">Birim Fiyat</th><th style="width:70px">KDV %</th>
+      <th style="width:100px">KDV Tutarı</th><th style="width:110px">Tutar</th><th style="width:36px"></th></tr></thead>
+    <tbody id="${onEk}-kalemler"></tbody></table></div>
+    <button class="btn ikincil" style="margin-top:8px" onclick="kalemSatirEkle('${onEk}')">Satır Ekle</button>`;
+  return html;
+}
+
+const KALEM_ALANLARI = ["sira", "mal_hizmet", "miktar", "birim", "birim_fiyat", "kdv_orani", "kdv_tutari", "tutar"];
+
+function kalemSatirEkle(onEk, k) {
+  k = k || {};
+  const tr = document.createElement("tr");
+  tr.innerHTML = KALEM_ALANLARI.map(a =>
+    `<td><input data-alan="${a}" value="${kacir(a.includes("tutar") || a === "miktar" || a === "birim_fiyat" || a === "kdv_orani" ? (k[a] == null ? "" : tl(k[a]) || k[a]) : (k[a] ?? ""))}"></td>`
+  ).join("") + '<td style="text-align:center"><a href="#" onclick="this.closest(\'tr\').remove(); return false" style="color:#a33; text-decoration:none">✕</a></td>';
+  $(onEk + "-kalemler").appendChild(tr);
+}
+
+function formOku(onEk) {
+  const veri = {};
+  for (const [ad] of BASLIK_ALANLARI) veri[ad] = $(onEk + "-" + ad).value;
+  veri.yon = $(onEk + "-yon").value;
+  veri.kalemler = [...$(onEk + "-kalemler").querySelectorAll("tr")].map(tr => {
+    const k = {};
+    tr.querySelectorAll("input").forEach(g => k[g.dataset.alan] = g.value);
+    return k;
+  });
+  return veri;
+}
+
+function formDoldur(onEk, f) {
+  for (const [ad] of BASLIK_ALANLARI) {
+    const deger = f[ad];
+    $(onEk + "-" + ad).value = ad === "fatura_tarihi" ? trTarih(deger) :
+      (typeof deger === "number" ? tl(deger) : (deger ?? ""));
+  }
+  $(onEk + "-yon").value = f.yon || "";
+  $(onEk + "-kalemler").innerHTML = "";
+  (f.kalemler || []).forEach(k => kalemSatirEkle(onEk, k));
+}
+
+// ---------------------------------------------------------------- detay penceresi
+$("detay-form").innerHTML = formHtml("d");
+$("elle-form").innerHTML = formHtml("e");
+kalemSatirEkle("e");
+
+async function detayAc(id) {
+  let f;
+  try { f = await api("/api/fatura?id=" + id); }
+  catch (hata) { mesajGoster(hata.message, true); return; }
+  acikFatura = f;
+  $("detay-baslik").textContent = `Fatura Detayı — #${f.id} ${f.dosya_adi ? "(" + f.dosya_adi + ")" : ""}`;
+  const uyari = $("detay-uyari");
+  const uyariMetni = [f.uyarilar, f.durum === "ocr_bekliyor" ? "Bu fatura henüz okunamadı (OCR bekliyor). Alanları elle girip kaydedebilir ya da OCR kurulumundan sonra 'PDF'ten Yeniden Oku' diyebilirsiniz." : ""].filter(Boolean).join(" | ");
+  uyari.style.display = uyariMetni ? "" : "none";
+  uyari.textContent = uyariMetni;
+  formDoldur("d", f);
+  $("detay-pdf").style.display = f.belge_yolu ? "" : "none";
+  $("detay-ocr").style.display = f.belge_yolu ? "" : "none";
+  $("detay-ham").style.display = "none";
+  $("detay-ham").textContent = f.ham_metin || "(ham metin yok)";
+  $("detay-kaplama").classList.add("aktif");
+}
+
+function detayKapat() { $("detay-kaplama").classList.remove("aktif"); acikFatura = null; }
+$("detay-kaplama").addEventListener("click", (e) => { if (e.target === $("detay-kaplama")) detayKapat(); });
+
+function pdfAc() { if (acikFatura) window.open("/pdf?id=" + acikFatura.id); }
+function hamMetinGoster() { const h = $("detay-ham"); h.style.display = h.style.display === "none" ? "block" : "none"; }
+
+async function detayKaydet() {
+  if (!acikFatura) return;
+  try {
+    await api("/api/fatura/guncelle", {id: acikFatura.id, ...formOku("d"), durum: "tamam", uyarilar: ""});
+    mesajGoster("Fatura kaydedildi ve onaylandı.");
+    detayKapat(); sorgula(sayfa);
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+async function faturaSil() {
+  if (!acikFatura || !confirm("Bu fatura kaydı ve kalemleri silinecek. Emin misiniz?")) return;
+  try {
+    await api("/api/fatura/sil", {id: acikFatura.id});
+    mesajGoster("Kayıt silindi.");
+    detayKapat(); sorgula(sayfa);
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+async function ocrYenile() {
+  if (!acikFatura) return;
+  mesajGoster("PDF yeniden okunuyor, taranmış belgelerde bu uzun sürebilir...");
+  try {
+    const s = await api("/api/ocr_yenile", {id: acikFatura.id});
+    mesajGoster("Yeniden okundu." + (s.uyari ? "\n" + s.uyari : ""));
+    detayAc(acikFatura.id);
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+// ---------------------------------------------------------------- elle giris
+async function elleKaydet() {
+  try {
+    const s = await api("/api/fatura/elle", formOku("e"));
+    mesajGoster("Fatura kaydedildi (#" + s.id + ").");
+    formDoldur("e", {kalemler: []}); kalemSatirEkle("e");
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+// ---------------------------------------------------------------- ayarlar/durum
+async function durumYukle() {
+  let d;
+  try { d = await api("/api/durum"); } catch (hata) { mesajGoster(hata.message, true); return; }
+  $("ayar-vkn").value = d.mukellef_vkn || "";
+  $("ayar-ad").value = d.mukellef_ad || "";
+  basligiGuncelle(d);
+  const o = d.ocr;
+  $("ocr-durum").innerHTML = o.hazir
+    ? `✅ OCR hazır. Tesseract: <code>${kacir(o.tesseract)}</code>, pdftoppm: <code>${kacir(o.pdftoppm)}</code><br>` +
+      (o.turkce ? "✅ Türkçe dil paketi kurulu." : "⚠️ Türkçe dil paketi (tur) bulunamadı; okuma doğruluğu düşük olabilir.")
+    : `❌ OCR araçları eksik (Tesseract: ${o.tesseract ? "var" : "yok"}, Poppler/pdftoppm: ${o.pdftoppm ? "var" : "yok"}).<br>
+       Taranmış PDF'ler <b>OCR bekliyor</b> olarak kaydedilir; metin tabanlı e-Faturalar etkilenmez.
+       Kurulum için <b>KULLANIM_KILAVUZU.md</b> dosyasına bakın.`;
+  const b = d.ocr_bekleyen || [];
+  $("ocr-bekleyenler").innerHTML = b.length
+    ? `<b>${b.length}</b> fatura OCR bekliyor. ` +
+      (o.hazir ? `<button class="btn" onclick="tumunuYenidenOku()">Tümünü Şimdi Oku</button>` : "")
+    : "";
+  const i = d.istatistik;
+  $("istatistik").innerHTML = `Kayıtlı fatura: <b>${i.fatura}</b> (alış: ${i.alis}, satış: ${i.satis}) —
+    kalem: <b>${i.kalem}</b> — kontrol gerekli: <b>${i.kontrol}</b> — OCR bekleyen: <b>${i.ocr_bekliyor}</b>`;
+  try {
+    const yedekler = await api("/api/yedekler");
+    $("yedek-listesi").innerHTML = yedekler.map(y =>
+      `<option value="${kacir(y.dosya)}">${kacir(y.dosya)} (${y.boyut_kb} KB)</option>`).join("") ||
+      "<option value=''>Yedek yok</option>";
+  } catch (hata) { /* yedek listesi kritik degil */ }
+}
+
+function basligiGuncelle(d) {
+  $("baslik-mukellef").textContent = d.mukellef_vkn
+    ? `İncelenen: ${d.mukellef_ad || ""} (${d.mukellef_vkn})` : "İncelenen mükellef tanımlı değil (Ayarlar)";
+}
+
+async function ayarKaydet() {
+  try {
+    const s = await api("/api/ayarlar", {
+      mukellef_vkn: $("ayar-vkn").value, mukellef_ad: $("ayar-ad").value,
+      yonleri_hesapla: $("ayar-yon-hesapla").checked,
+    });
+    mesajGoster("Ayarlar kaydedildi." +
+      (s.yon_guncellenen ? ` ${s.yon_guncellenen} faturanın yönü güncellendi.` : ""));
+    durumYukle();
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+async function tumunuYenidenOku() {
+  let d;
+  try { d = await api("/api/durum"); } catch (hata) { mesajGoster(hata.message, true); return; }
+  const bekleyen = d.ocr_bekleyen || [];
+  let basarili = 0, hatali = 0;
+  for (const [i, f] of bekleyen.entries()) {
+    mesajGoster(`OCR: ${i + 1}/${bekleyen.length} — ${f.dosya_adi}`);
+    try { await api("/api/ocr_yenile", {id: f.id}); basarili++; }
+    catch (hata) { hatali++; }
+  }
+  mesajGoster(`OCR tamamlandı: ${basarili} okundu, ${hatali} hata.`, hatali > 0);
+  durumYukle();
+}
+
+async function yedekAl() {
+  try {
+    const s = await api("/api/yedek_al", {});
+    mesajGoster("Yedek alındı: " + s.dosya);
+    durumYukle();
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+async function geriYukle() {
+  const dosya = $("yedek-listesi").value;
+  if (!dosya || !confirm("Mevcut veritabanı, seçilen yedekle DEĞİŞTİRİLECEK: " + dosya + "\nDevam edilsin mi?")) return;
+  try {
+    await api("/api/geri_yukle", {dosya});
+    mesajGoster("Yedek geri yüklendi.");
+    durumYukle();
+  } catch (hata) { mesajGoster(hata.message, true); }
+}
+
+// ---------------------------------------------------------------- baslangic
+api("/api/durum").then(basligiGuncelle).catch(() => {});
+</script>
+</body>
+</html>

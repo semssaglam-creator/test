@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+veritabani/*.db
+belgeler/*.pdf
+raporlar/*.xlsx
+yedekler/
+gecici/*
+!gecici/.gitkeep
+araclar/*
+!araclar/.gitkeep
