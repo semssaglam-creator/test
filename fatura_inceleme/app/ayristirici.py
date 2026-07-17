@@ -232,6 +232,45 @@ def _kalemleri_ayristir(metin):
     return kalemler
 
 
+# ---------------------------------------------------------------- coklu fatura
+def _fatura_kimligi(sayfa_metni):
+    """Sayfadaki fatura kimligini (ETTN, yoksa fatura no) dondurur."""
+    m = _ETTN_DESEN.search(sayfa_metni)
+    if m:
+        return m.group(0).lower()
+    no = _etiket_ara(sayfa_metni, [r"Fatura\s*No(?:su)?", r"Belge\s*No"],
+                     r"[A-Z0-9]{9,20}")
+    if no:
+        return no
+    m = _FATURA_NO_DESEN.search(sayfa_metni)
+    return m.group(0) if m else ""
+
+
+def faturalari_bol(sayfalar):
+    """Sayfa metinlerini fatura bolumlerine ayirir.
+
+    Bir PDF birden fazla fatura icerebilir (birlestirilmis e-Arsiv ciktisi,
+    seri taranmis fatura destesi). Her sayfanin fatura kimligine (ETTN /
+    fatura no) bakilir; kimlik degistiginde yeni bolum baslar. Kimliksiz
+    sayfalar (kalem devami vb.) aktif bolume eklenir. Ayni sayfada iki
+    fatura varsa ayrilamaz; tek bolum olarak doner ve ayristirici uyari
+    uretir.
+    """
+    bolumler = []
+    aktif, aktif_kimlik = [], ""
+    for sayfa in sayfalar:
+        kimlik = _fatura_kimligi(sayfa)
+        if aktif and kimlik and aktif_kimlik and kimlik != aktif_kimlik:
+            bolumler.append("\n".join(aktif))
+            aktif, aktif_kimlik = [sayfa], kimlik
+        else:
+            aktif.append(sayfa)
+            aktif_kimlik = aktif_kimlik or kimlik
+    if aktif:
+        bolumler.append("\n".join(aktif))
+    return bolumler or [""]
+
+
 # ---------------------------------------------------------------- ana giris
 def fatura_ayristir(metin):
     """Fatura metnini (baslik, kalemler, uyarilar) uclusune ayristirir."""

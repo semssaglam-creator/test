@@ -13,7 +13,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, ocr
-from .ayristirici import fatura_ayristir, sayi_coz, tarih_iso
+from .ayristirici import fatura_ayristir, faturalari_bol, sayi_coz, tarih_iso
 from .excel_export import rapor_uret
 from .pdf_okuma import pdf_oku
 
@@ -45,23 +45,8 @@ def _belge_kaydet(ad, icerik):
     return dosya
 
 
-def _fatura_isle(ad, icerik):
-    """Tek PDF'i okur, ayristirir ve kaydeder; arayuz icin sonuc dondurur."""
-    if not icerik.startswith(b"%PDF"):
-        raise ApiHata("Dosya bir PDF degil.")
-
-    metin, kaynak, hata = pdf_oku(icerik)
-    belge = _belge_kaydet(ad, icerik)
-
-    if not metin:
-        # Buyuk olasilikla taranmis PDF ve OCR araclari eksik:
-        # kaydi 'OCR bekliyor' olarak ac, PDF sakli kalsin
-        fatura_id = db.fatura_ekle({
-            "dosya_adi": ad, "belge_yolu": belge, "kaynak": "ocr",
-            "durum": "ocr_bekliyor", "uyarilar": hata, "para_birimi": "TL",
-        }, [])
-        return {"id": fatura_id, "durum": "ocr_bekliyor", "uyari": hata}
-
+def _fatura_kaydet(ad, belge, metin, kaynak):
+    """Tek fatura bolumunu ayristirip kaydeder; ozet sonucu dondurur."""
     baslik, kalemler, uyarilar = fatura_ayristir(metin)
 
     mevcut = db.mukerrer_var_mi(baslik["fatura_no"], baslik["ettn"],
@@ -91,6 +76,42 @@ def _fatura_isle(ad, icerik):
             "uyari": " | ".join(uyarilar)}
 
 
+def _fatura_isle(ad, icerik):
+    """Tek PDF'i okur ve icindeki TUM faturalari kaydeder.
+
+    Bir PDF birden fazla fatura icerebilir (birlestirilmis cikti, seri
+    tarama); sayfa kimliklerine gore bolunur ve her bolum ayri kayit olur.
+    Donus: sonuc listesi.
+    """
+    if not icerik.startswith(b"%PDF"):
+        raise ApiHata("Dosya bir PDF degil.")
+
+    sayfalar, kaynak, hata = pdf_oku(icerik)
+    belge = _belge_kaydet(ad, icerik)
+
+    if not sayfalar:
+        # Buyuk olasilikla taranmis PDF ve OCR araclari eksik:
+        # kaydi 'OCR bekliyor' olarak ac, PDF sakli kalsin
+        fatura_id = db.fatura_ekle({
+            "dosya_adi": ad, "belge_yolu": belge, "kaynak": "ocr",
+            "durum": "ocr_bekliyor", "uyarilar": hata, "para_birimi": "TL",
+        }, [])
+        return [{"ad": ad, "tamam": True, "id": fatura_id,
+                 "durum": "ocr_bekliyor", "uyari": hata}]
+
+    bolumler = faturalari_bol(sayfalar)
+    sonuclar = []
+    for i, metin in enumerate(bolumler, 1):
+        etiket = ad if len(bolumler) == 1 else f"{ad} ({i}/{len(bolumler)})"
+        try:
+            sonuc = _fatura_kaydet(etiket, belge, metin, kaynak)
+            sonuc.update({"ad": etiket, "tamam": True})
+        except ApiHata as exc:
+            sonuc = {"ad": etiket, "tamam": False, "hata": str(exc)}
+        sonuclar.append(sonuc)
+    return sonuclar
+
+
 def _pdfleri_yukle(veri):
     dosyalar = veri.get("dosyalar") or []
     if not dosyalar:
@@ -103,13 +124,11 @@ def _pdfleri_yukle(veri):
         ad = d.get("ad", "dosya.pdf")
         try:
             icerik = base64.b64decode(d.get("icerik", ""), validate=True)
-            sonuc = _fatura_isle(ad, icerik)
-            sonuc.update({"ad": ad, "tamam": True})
+            sonuclar.extend(_fatura_isle(ad, icerik))
         except ApiHata as exc:
-            sonuc = {"ad": ad, "tamam": False, "hata": str(exc)}
+            sonuclar.append({"ad": ad, "tamam": False, "hata": str(exc)})
         except Exception as exc:  # noqa: BLE001 - tek dosya digerlerini durdurmasin
-            sonuc = {"ad": ad, "tamam": False, "hata": f"Islenemedi: {exc}"}
-        sonuclar.append(sonuc)
+            sonuclar.append({"ad": ad, "tamam": False, "hata": f"Islenemedi: {exc}"})
     return {"sonuclar": sonuclar}
 
 
@@ -214,10 +233,21 @@ def _ocr_yenile(veri):
     with open(yol, "rb") as f:
         icerik = f.read()
 
-    metin, kaynak, hata = pdf_oku(icerik)
-    if not metin:
+    sayfalar, kaynak, hata = pdf_oku(icerik)
+    if not sayfalar:
         raise ApiHata(hata or "PDF yine okunamadi.")
 
+    bolumler = faturalari_bol(sayfalar)
+    # Kayitla eslesen bolumu sec (ETTN/fatura no); eslesme yoksa ilk bolum
+    secilen_indeks = 0
+    if len(bolumler) > 1:
+        for i, b in enumerate(bolumler):
+            if (kayit["ettn"] and kayit["ettn"] in b.lower()) or \
+                    (kayit["fatura_no"] and kayit["fatura_no"] in b):
+                secilen_indeks = i
+                break
+
+    metin = bolumler[secilen_indeks]
     baslik, kalemler, uyarilar = fatura_ayristir(metin)
     if kaynak == "ocr":
         uyarilar.insert(0, "OCR ile okundu; alanları asıl PDF ile karşılaştırın.")
@@ -228,7 +258,27 @@ def _ocr_yenile(veri):
         "uyarilar": " | ".join(uyarilar), "ham_metin": metin[:200000],
     })
     db.fatura_guncelle(fatura_id, baslik, kalemler)
-    return {"tamam": True, "durum": baslik["durum"], "uyari": " | ".join(uyarilar)}
+
+    # PDF'te baska faturalar da varsa onlari yeni kayit olarak ekle
+    yeni, atlanan = 0, 0
+    ana_ad = kayit["dosya_adi"] or "belge.pdf"
+    for i, b in enumerate(bolumler, 1):
+        if i - 1 == secilen_indeks:
+            continue
+        try:
+            _fatura_kaydet(f"{ana_ad} ({i}/{len(bolumler)})", kayit["belge_yolu"],
+                           b, kaynak)
+            yeni += 1
+        except ApiHata:
+            atlanan += 1  # mukerrer: daha once kaydedilmis
+
+    uyari = " | ".join(uyarilar)
+    if yeni or atlanan:
+        ek = f"Bu PDF'te {len(bolumler)} fatura bulundu: {yeni} yeni kayıt eklendi"
+        if atlanan:
+            ek += f", {atlanan} mükerrer atlandı"
+        uyari = (uyari + " | " if uyari else "") + ek + "."
+    return {"tamam": True, "durum": baslik["durum"], "uyari": uyari}
 
 
 def _ayarlari_kaydet(veri):

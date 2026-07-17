@@ -97,7 +97,7 @@ def durum():
 
 
 def pdf_ocr(pdf_bytes):
-    """Taranmis PDF'i OCR ile metne cevirir. Donus: (metin, hata)."""
+    """Taranmis PDF'i OCR ile metne cevirir. Donus: (sayfa_listesi, hata)."""
     tesseract = tesseract_yolu()
     pdftoppm = pdftoppm_yolu()
     if not tesseract or not pdftoppm:
@@ -106,7 +106,7 @@ def pdf_ocr(pdf_bytes):
             eksik.append("Tesseract")
         if not pdftoppm:
             eksik.append("Poppler (pdftoppm)")
-        return "", ("Taranmis PDF icin OCR araci eksik: " + ", ".join(eksik) +
+        return [], ("Taranmis PDF icin OCR araci eksik: " + ", ".join(eksik) +
                     ". Kurulum icin kullanim kilavuzuna bakin.")
 
     os.makedirs(GECICI_DIR, exist_ok=True)
@@ -122,14 +122,14 @@ def pdf_ocr(pdf_bytes):
                 zaman_asimi=OCR_ZAMAN_ASIMI * 3,
             )
         except subprocess.TimeoutExpired:
-            return "", "PDF goruntuye cevrilirken zaman asimi olustu."
+            return [], "PDF goruntuye cevrilirken zaman asimi olustu."
         if sonuc.returncode != 0:
-            return "", "PDF goruntuye cevrilemedi: " + \
+            return [], "PDF goruntuye cevrilemedi: " + \
                 sonuc.stderr.decode("utf-8", "replace")[:200]
 
         sayfalar = sorted(glob.glob(os.path.join(tmp, "sayfa*.png")))
         if not sayfalar:
-            return "", "PDF'ten goruntu uretilemedi."
+            return [], "PDF'ten goruntu uretilemedi."
 
         metinler = []
         for resim in sayfalar:
@@ -139,9 +139,9 @@ def pdf_ocr(pdf_bytes):
             try:
                 sonuc = _calistir(komut)
             except subprocess.TimeoutExpired:
-                return "", "OCR sirasinda zaman asimi olustu."
+                return [], "OCR sirasinda zaman asimi olustu."
             if sonuc.returncode != 0:
-                return "", "OCR hatasi: " + sonuc.stderr.decode("utf-8", "replace")[:200]
+                return [], "OCR hatasi: " + sonuc.stderr.decode("utf-8", "replace")[:200]
             metinler.append(sonuc.stdout.decode("utf-8", "replace"))
 
-    return "\n".join(metinler), ""
+    return metinler, ""

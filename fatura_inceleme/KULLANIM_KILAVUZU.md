@@ -26,6 +26,13 @@ kütüphaneler `lib/` klasöründe paketli gelir.
    - Taranmış PDF'ler OCR ile okunur; OCR araçları yoksa **"OCR bekliyor"**
      olarak kaydedilir (aşağıya bakın).
    - Aynı fatura (ETTN veya fatura no + satıcı VKN) ikinci kez eklenmez.
+   - **Bir PDF'te birden fazla fatura** varsa (birleştirilmiş e-Arşiv
+     çıktısı, seri taranmış fatura destesi) sayfalardaki fatura
+     kimliklerine (ETTN / fatura no) göre bölünür ve her fatura ayrı
+     kayıt olur; sonuç listesinde `dosya.pdf (2/5)` gibi görünür.
+     Birden çok sayfaya yayılan faturaların devam sayfaları doğru
+     faturaya bağlanır. Sınır: aynı sayfada iki ayrı fatura varsa
+     ayrılamaz; kayıt "Kontrol" durumuna düşer ve elle düzeltilir.
 3. **Sorgula** sekmesinde filtreleri doldurun:
    - *Ürün içeriği*: ör. `elma` → kalemlerinde "elma" geçen faturalar.
      Yön filtresini `Alış` yapıp ürün alanına `gübre` yazarsanız
