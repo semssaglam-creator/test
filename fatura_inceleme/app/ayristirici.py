@@ -112,9 +112,21 @@ def _tutar_ara(metin, etiketler):
     return None
 
 
+# Rakam gruplari arasinda bosluk olabilir (PDF cikarimi: 'VKN: 631 1455442')
 _VKN_DESEN = re.compile(
     r"(?:VKN|TCKN|V\.K\.N|T\.C\.K\.N|Vergi\s*(?:Kimlik)?\s*No(?:su)?|"
-    r"Vergi\s*Numarası|TC\s*Kimlik\s*No)\s*:?\s*(\d{10,11})", re.IGNORECASE)
+    r"Vergi\s*Numarası|TC\s*Kimlik\s*No)\s*:?\s*(\d(?:[ \t]?\d){8,10})",
+    re.IGNORECASE)
+
+
+def _vknleri_bul(metin):
+    """Etiketli VKN/TCKN degerlerini bosluklardan arindirip dondurur."""
+    sonuc = []
+    for ham in _VKN_DESEN.findall(metin):
+        rakamlar = re.sub(r"\D", "", ham)
+        if len(rakamlar) in (10, 11):
+            sonuc.append(rakamlar)
+    return sonuc
 
 _ETTN_DESEN = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
@@ -130,7 +142,13 @@ def _unvan_tahmini(blok):
     atla = re.compile(
         r"^(e-?\s*(arşiv|arsiv|fatura)|fatura|irsaliye|sayın|sayin|alıcı|alici|"
         r"vergi dairesi|vkn|tckn|mersis|ticaret sicil|tel|fax|faks|e-?posta|"
-        r"web|adres|mah\.|cad\.|sok\.|no:|kat:|daire)", re.IGNORECASE)
+        r"web|adres|mah\.|cad\.|sok\.|no:|kat:|daire|"
+        # PDF cikarimi toplam blogunu metnin basina koyabilir; bu etiket
+        # satirlari unvan sanilmasin
+        r"mal\s*/?\s*hizmet|toplam|kdv|hesaplanan|matrah|vergi|ödenecek|"
+        r"odenecek|iskonto|yalnız|yalniz|gönderim|gonderim|ödeme|odeme|"
+        r"açıklama|aciklama|oluşma|olusma|senaryo|özelleştirme|ozellestirme|"
+        r"ettn|sıra|sira|tarih)", re.IGNORECASE)
     for satir in blok.splitlines():
         s = satir.strip(" \t:-")
         if len(s) < 3 or atla.match(s):
@@ -146,7 +164,11 @@ _KALEM_BASLIK = re.compile(
     r"S[ıi]ra\s*No.{0,120}?(?:Mal|Hizmet|Açıklama|Aciklama|Cinsi)", re.IGNORECASE | re.DOTALL)
 _KALEM_SON = re.compile(
     r"Mal\s*/?\s*Hizmet\s*Toplam|Toplam\s*İskonto|Toplam\s*Iskonto|"
-    r"Hesaplanan\s*KDV|Vergiler\s*Dahil|Ödenecek|Odenecek", re.IGNORECASE)
+    r"Hesaplanan\s*KDV|Vergiler\s*Dahil|Ödenecek|Odenecek|"
+    # Toplam blogu bazi PDF'lerde kalem tablosundan ONCE cikarilir; o zaman
+    # bolgeyi dipnot/odeme bolumu isaretleri kapatir
+    r"Gönderim\s*Şekli|Gonderim\s*Sekli|Ödeme\s*Şekli|Odeme\s*Sekli|"
+    r"ÖDEME\s*(?:ŞEKLİ|KOŞULLARI)|Yalnız\s*:|Yalniz\s*:", re.IGNORECASE)
 _SAYI_TOKEN = re.compile(r"^(" + SAYI_DESENI + r")(?:TL|TRY|₺)?$", re.IGNORECASE)
 _KDV_TOKEN = re.compile(r"^%\s*(\d{1,2}(?:[.,]\d+)?)$|^(\d{1,2})\s*%$")
 
@@ -263,23 +285,46 @@ def _kalem_akisi_coz(bolge):
     return kalemler
 
 
+def _bolge_temizle(bolge):
+    """PDF cikariminin bitistirdigi parcalari ayirir.
+
+    Ornekler: '1ODA' -> '1 ODA', 'Adet2.232,14' -> 'Adet 2.232,14'.
+    Yalnizca kalem bolgesine uygulanir; unvan/adres metnine dokunulmaz.
+    """
+    bolge = re.sub(r"(?<=\d)(?=[A-ZÇĞİÖŞÜa-zçğıöşü])", " ", bolge)
+    bolge = re.sub(r"(?<=[A-Za-zçğıöşüÇĞİÖŞÜ])(?=\d)", " ", bolge)
+    return bolge
+
+
+def _kalem_skoru(kalemler):
+    """Iki ayristirma sonucundan hangisinin daha dolu oldugunu kiyaslar."""
+    dolu = sum(1 for k in kalemler
+               for alan in ("miktar", "birim_fiyat", "kdv_orani", "kdv_tutari", "tutar")
+               if k.get(alan) is not None)
+    return (len(kalemler), dolu)
+
+
 def _kalemleri_ayristir(metin):
     baslik = _KALEM_BASLIK.search(metin)
     baslangic = baslik.end() if baslik else 0
     son = _KALEM_SON.search(metin, baslangic)
     bolge = metin[baslangic:son.start()] if son else metin[baslangic:]
+    bolge = _bolge_temizle(bolge)
 
-    kalemler = []
+    satir_kalemleri = []
     for satir in bolge.splitlines():
         satir = satir.strip()
         if not satir or _KALEM_SON.search(satir):
             continue
         kalem = _kalem_satiri_coz(satir)
         if kalem:
-            kalemler.append(kalem)
-    if not kalemler:
-        # Hucreler ayri satirlara dagilmis olabilir; akis modunu dene
-        kalemler = _kalem_akisi_coz(bolge)
+            satir_kalemleri.append(kalem)
+
+    # Hucreler ayri satirlara dagilmis olabilir; akis modunu da dene ve
+    # hangi yontem daha cok/daha dolu kalem bulduysa onu kullan
+    akis_kalemleri = _kalem_akisi_coz(bolge)
+    kalemler = max((satir_kalemleri, akis_kalemleri), key=_kalem_skoru)
+
     # Sira numarasi hic yoksa otomatik numarala
     if kalemler and all(k["sira"] is None for k in kalemler):
         for i, k in enumerate(kalemler, 1):
@@ -330,6 +375,9 @@ def faturalari_bol(sayfalar):
 def fatura_ayristir(metin):
     """Fatura metnini (baslik, kalemler, uyarilar) uclusune ayristirir."""
     metin = (metin or "").replace("\r", "")
+    # PDF cikarimi 'TL' ile sonraki blogu bitistirebilir
+    # ('2.500,00 TLNEW GATE HOTEL...'); yeni satira ayir
+    metin = re.sub(r"TL(?=[A-ZÇĞİÖŞÜ])", "TL\n", metin)
     uyarilar = []
 
     fatura_no = _etiket_ara(metin, [r"Fatura\s*No(?:su)?", r"Belge\s*No"],
@@ -368,12 +416,12 @@ def fatura_ayristir(metin):
         satici_blok, alici_blok = metin[:600], ""
         uyarilar.append("Alici bolumu (SAYIN) bulunamadi; taraf bilgilerini kontrol edin.")
 
-    satici_vknler = _VKN_DESEN.findall(satici_blok)
-    alici_vknler = _VKN_DESEN.findall(alici_blok)
+    satici_vknler = _vknleri_bul(satici_blok)
+    alici_vknler = _vknleri_bul(alici_blok)
     satici_vkn = satici_vknler[0] if satici_vknler else ""
     alici_vkn = alici_vknler[0] if alici_vknler else ""
     if not satici_vkn and not alici_vkn:
-        tum = _VKN_DESEN.findall(metin)
+        tum = _vknleri_bul(metin)
         if len(tum) >= 2:
             satici_vkn, alici_vkn = tum[0], tum[1]
         elif len(tum) == 1:
