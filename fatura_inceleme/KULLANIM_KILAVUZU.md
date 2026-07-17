@@ -59,7 +59,21 @@ kütüphaneler `lib/` klasöründe paketli gelir.
 klasöründe, sonra sistemde arar. Durumu **Ayarlar / Durum** sekmesinden
 görebilirsiniz.
 
-### Windows (kurulum yetkisi varsa — önerilen)
+### Windows — tek tıkla kurulum (önerilen)
+
+Uygulama klasöründeki **`OCR_KUR.bat`** dosyasına çift tıklayın. Betik:
+
+1. Poppler'ı otomatik indirip `araclar\` klasörüne açar (yönetici yetkisi
+   gerekmez),
+2. Tesseract kurulum sihirbazını indirip başlatır — sihirbazda
+   **"Additional language data"** altından **Turkish**'i işaretlemeniz
+   yeterli,
+3. sonunda "OCR HAZIR" doğrulamasını gösterir.
+
+İnternet bağlantısı gerekir; indirme engellenirse betik elle indirme
+adreslerini gösterir.
+
+### Windows (elle kurulum)
 
 1. Tesseract: https://github.com/UB-Mannheim/tesseract/wiki adresinden
    kurulum dosyasını indirin. Kurulumda **"Additional language data"**
