@@ -106,6 +106,35 @@ OZET_KOLONLARI = [
 ]
 
 
+# Tarhiyat ozeti tablosunun kolon duzeni (elde kullanilan tablonun karsiligi).
+# grup : ust baslik, kod : hesap.py'deki alan adi, vurgu : renk sinifi
+TARHIYAT_KOLONLARI = [
+    ("Ödenecek KDV", "odenecek_olmasi_gereken", "Olması Gereken", ""),
+    ("Ödenecek KDV", "odenecek_beyan", "Beyan Edilen", ""),
+    ("1", "resen_tarhi_gereken", "Re'sen Tarhı Gereken KDV", "vurgu1"),
+    ("İade Edil. KDV", "iade_olmasi_gereken", "Olması Gereken", ""),
+    ("İade Edil. KDV", "iade_beyan", "Beyan Edilen", ""),
+    ("2", "aranmasi_gereken", "Aranması Ger. KDV", "vurgu1"),
+    ("1+2", "resen_toplam", "Re'sen Tarhı Ger. Toplam", "vurgu2"),
+    ("İhr. Gerç. Dön. İade Edil. KDV", "ihracat_iade_olmasi_gereken", "Olması Gereken", ""),
+    ("İhr. Gerç. Dön. İade Edil. KDV", "ihracat_iade_beyan", "Beyan Edilen", ""),
+    ("3", "haksiz_iade", "Haksız Olarak İade Edilen KDV", "vurgu1"),
+    ("1+2+3", "toplam_fark", "Toplam Fark", "vurgu2"),
+]
+
+# Fark ayristirmasinda gosterilen bilesenler
+AYRISTIRMA_BLOKLARI = [
+    ("fark_tespit", "Tespitlerimin Etkisi",
+     "Bu dönemde girdiğiniz matrah ilavesi / indirim reddi gibi tespitlerin "
+     "doğrudan sonucu"),
+    ("fark_devir", "Devirden Gelen Etki",
+     "Önceki dönemlerdeki tespitlerin devir zinciriyle bu döneme taşınan etkisi"),
+    ("fark_beyan_hatasi", "Beyan Aritmetik Farkı",
+     "Beyannamenin kendi rakamları içinde tutmayan kısım; tespitten bağımsızdır"),
+    ("fark", "Toplam Fark", "Üç bileşenin toplamı: eleştirili − beyan edilen"),
+]
+
+
 def varsayilan_kdv_orani(yil, ay):
     """Genel KDV oranini donemine gore verir.
 

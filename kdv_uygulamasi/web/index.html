@@ -91,6 +91,8 @@
   <button data-sekme="beyan">Beyan Verisi</button>
   <button data-sekme="elestiri">İnceleme Tespitleri</button>
   <button data-sekme="sonuc">Sonuç ve Fark</button>
+  <button data-sekme="tarhiyat">Tarhiyat Özeti</button>
+  <button data-sekme="etki">Tespit Etkisi</button>
   <button data-sekme="ayarlar">Yedekleme</button>
 </nav>
 <main>
@@ -217,6 +219,71 @@
       tutarsızlıklarını gösterir (devir zinciri kopukluğu, toplam hataları).
     </div>
     <div id="bulguListe"></div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------- TARHIYAT -->
+<section class="sekme" id="sekme-tarhiyat">
+  <div class="kart">
+    <h2>Tarhiyat Özeti</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Her dönem için beyan edilen ile olması gereken tutarlar karşılaştırılır.
+      <strong>(1)</strong> re'sen tarhı gereken KDV, <strong>(2)</strong> haksız iade
+      talebi nedeniyle aranması gereken KDV, <strong>(3)</strong> iade gerçekleşmişse
+      haksız olarak iade edilen KDV. Sütunlar yalnızca mükellef aleyhine olan yönü
+      taşır; ters yöndeki sapma (fazla beyan) ayrıca aşağıda bildirilir.
+    </div>
+    <div class="kaydir"><table id="tarhiyatTablo"></table></div>
+    <div id="tarhiyatNot"></div>
+  </div>
+  <div class="kart">
+    <h2>Yıllara Göre Beyan Uyumu</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Çok yıllı incelemelerde genel görünüm. <strong>Tespit etkisi</strong> o yılda
+      girdiğiniz eleştirilerin, <strong>devir etkisi</strong> önceki yıllardan devir
+      zinciriyle taşınan farkın sonucudur.
+    </div>
+    <div class="kaydir"><table id="yilUyumTablo"></table></div>
+  </div>
+</section>
+
+<!-- --------------------------------------------------------------- ETKI -->
+<section class="sekme" id="sekme-etki">
+  <div class="kart">
+    <h2>Tespitlerimin Kaynak Bazında Etkisi</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Bir tespit yalnızca girildiği dönemi değil, devir zinciri yoluyla izleyen tüm
+      dönemleri etkiler. Aşağıda her tespitin ayrı ayrı katkısı gösterilir: örneğin
+      2023/Ocak'ta matraha yapılan ilave ile 2024/Şubat'ta yapılan indirim reddinin
+      2026/Nisan'daki sonuca katkıları ayrı sütunlarda görünür.
+    </div>
+    <div id="kaynakListe"></div>
+  </div>
+  <div class="kart">
+    <h2>Dönem × Kaynak Dağılımı</h2>
+    <div class="satir">
+      <div class="dar">
+        <label>Gösterilecek büyüklük</label>
+        <select id="etkiAlan">
+          <option value="odenecek">Ödenmesi gereken KDV</option>
+          <option value="sonraki_devir">Sonraki döneme devreden KDV</option>
+          <option value="iade">İade edilmesi gereken KDV</option>
+          <option value="indirimler">İndirimler toplamı</option>
+          <option value="matrah">Matrah</option>
+        </select>
+      </div>
+      <div class="dar">
+        <label>Yıl</label>
+        <select id="etkiYil"></select>
+      </div>
+      <div class="otomatik">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1c2733;">
+          <input type="checkbox" id="etkiSadeceDolu" checked style="width:16px;height:16px;">
+          Yalnızca etkilenen dönemler</label>
+      </div>
+    </div>
+    <div class="kaydir"><table id="etkiTablo"></table></div>
+    <div id="etkiNot"></div>
   </div>
 </section>
 
@@ -431,6 +498,11 @@ function ekraniCiz() {
   beyanIzgarasiniCiz();
   elestiriIzgarasiniCiz();
   sonucuCiz();
+  tarhiyatiCiz();
+  yilUyumunuCiz();
+  kaynaklariCiz();
+  etkiYilListesiniCiz();
+  etkiTablosunuCiz();
 }
 
 $("dKaydet").addEventListener("click", async () => {
@@ -890,6 +962,258 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
   kap.appendChild(sar);
   return kap;
 }
+
+// ---------------------------------------------------------- tarhiyat ozeti
+function tarhiyatiCiz() {
+  const tablo = $("tarhiyatTablo");
+  const not = $("tarhiyatNot");
+  tablo.innerHTML = ""; not.innerHTML = "";
+  const sonuc = durum.veri ? durum.veri.sonuc : null;
+  if (!sonuc || !sonuc.donemler || !sonuc.donemler.length) {
+    bosDurum(tablo, "Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın.");
+    return;
+  }
+  const kolonlar = durum.tanimlar.tarhiyat_kolonlari;
+
+  // Ust satir: gruplanmis basliklar
+  const ust = document.createElement("tr");
+  ust.appendChild(hucre("th", "Dönemi", { rowSpan: 2 }));
+  let i = 0;
+  while (i < kolonlar.length) {
+    let j = i;
+    while (j + 1 < kolonlar.length && kolonlar[j + 1].grup === kolonlar[i].grup) j++;
+    const th = hucre("th", kolonlar[i].grup, { colSpan: j - i + 1 });
+    th.style.textAlign = "center";
+    if (kolonlar[i].vurgu === "vurgu1") th.style.background = "#ffff99";
+    if (kolonlar[i].vurgu === "vurgu2") th.style.background = "#c6e0b4";
+    ust.appendChild(th);
+    i = j + 1;
+  }
+  tablo.appendChild(ust);
+
+  const alt = document.createElement("tr");
+  kolonlar.forEach((k) => {
+    const th = hucre("th", k.grup === k.etiket ? "" : k.etiket);
+    th.style.textAlign = "center";
+    th.style.fontSize = "11px";
+    if (k.vurgu === "vurgu1") th.style.background = "#ffff99";
+    if (k.vurgu === "vurgu2") th.style.background = "#c6e0b4";
+    alt.appendChild(th);
+  });
+  tablo.appendChild(alt);
+
+  let oncekiYil = null;
+  sonuc.donemler.forEach((d) => {
+    if (d.yil !== oncekiYil) {
+      const ayirac = document.createElement("tr");
+      const td = hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 });
+      td.style.background = "#dbe4ee"; td.style.fontWeight = "600";
+      ayirac.appendChild(td); tablo.appendChild(ayirac);
+      oncekiYil = d.yil;
+    }
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", d.ay_adi));
+    kolonlar.forEach((k) => {
+      const deger = d.tarhiyat[k.kod];
+      const td = hucre("td", deger ? tl(deger) : "0,00");
+      td.className = "sayi";
+      if (k.vurgu === "vurgu1") { td.style.background = "#ffff99"; td.style.color = "#c00"; }
+      if (k.vurgu === "vurgu2") { td.style.background = "#c6e0b4"; td.style.fontWeight = "600"; }
+      tr.appendChild(td);
+    });
+    tablo.appendChild(tr);
+  });
+
+  const t = sonuc.tarhiyat_toplami;
+  const trT = document.createElement("tr");
+  trT.className = "toplam";
+  trT.appendChild(hucre("td", "Toplam"));
+  kolonlar.forEach((k) => {
+    const td = hucre("td", t[k.kod] ? tl(t[k.kod]) : "0,00");
+    td.className = "sayi";
+    if (k.vurgu === "vurgu1") { td.style.background = "#ffe066"; td.style.color = "#c00"; }
+    if (k.vurgu === "vurgu2") { td.style.background = "#a9d08e"; }
+    trT.appendChild(td);
+  });
+  tablo.appendChild(trT);
+
+  const uyarilar = [];
+  if (t.fazla_beyan_odenecek > 0.005) {
+    uyarilar.push(`Mükellefin fazladan beyan ettiği ödenecek KDV toplamı ` +
+      `${tl(t.fazla_beyan_odenecek)} TL'dir. Bu tutar tarhiyata dahil edilmemiştir.`);
+  }
+  if (t.eksik_talep_iade > 0.005) {
+    uyarilar.push(`Mükellefin talep etmediği hâlde hak kazandığı iade tutarı ` +
+      `${tl(t.eksik_talep_iade)} TL'dir. Bu tutar tarhiyata dahil edilmemiştir.`);
+  }
+  not.innerHTML = uyarilar.map((u) => `<div class="bulgu">${u}</div>`).join("");
+}
+
+function hucre(tur, metin, ozellikler) {
+  const el = document.createElement(tur);
+  el.textContent = metin;
+  if (ozellikler) Object.assign(el, ozellikler);
+  return el;
+}
+
+function yilUyumunuCiz() {
+  const tablo = $("yilUyumTablo");
+  tablo.innerHTML = "";
+  const satirlar = durum.veri && durum.veri.sonuc ? (durum.veri.sonuc.yil_uyumu || []) : [];
+  if (!satirlar.length) { bosDurum(tablo, "Henüz veri yok."); return; }
+  const basliklar = ["Yıl", "Dönem", "Tespitli dönem", "Beyan matrah", "Olması gereken matrah",
+                     "Matrah farkı", "Beyan ödenecek", "Olması gereken ödenecek",
+                     "Re'sen tarhı gereken", "Tespit etkisi", "Devir etkisi",
+                     "Yıl sonu devir (beyan)", "Yıl sonu devir (olması gereken)"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  tablo.appendChild(tr);
+  satirlar.forEach((s) => {
+    const r = document.createElement("tr");
+    [s.yil, s.donem_sayisi, s.tespit_donem_sayisi].forEach((v) => r.appendChild(hucre("td", v)));
+    [["matrah_beyan"], ["matrah_olmasi_gereken"], ["matrah_farki", true],
+     ["odenecek_beyan"], ["odenecek_olmasi_gereken"], ["resen_tarhi_gereken", true],
+     ["tespit_etkisi", true], ["devir_etkisi", true],
+     ["devir_cikis_beyan"], ["devir_cikis"]].forEach(([kod, vurgu]) => {
+      const td = hucre("td", s[kod] ? tl(s[kod]) : "—");
+      td.className = "sayi";
+      if (vurgu && Math.abs(s[kod] || 0) > 0.005) td.classList.add("fark-var");
+      r.appendChild(td);
+    });
+    tablo.appendChild(r);
+  });
+}
+
+// ----------------------------------------------------------- tespit etkisi
+function kaynaklariCiz() {
+  const kap = $("kaynakListe");
+  kap.innerHTML = "";
+  const ka = durum.veri && durum.veri.sonuc ? durum.veri.sonuc.kaynak_analizi : null;
+  if (!ka || !ka.kaynaklar.length) {
+    kap.innerHTML = '<div class="bos-durum">Henüz tespit girilmedi. ' +
+      'İnceleme Tespitleri sekmesinden matrah ilavesi veya indirim reddi girin.</div>';
+    return;
+  }
+  const tablo = document.createElement("table");
+  const basliklar = ["Tespit dönemi", "Matrah ilavesi", "Hesaplanan KDV ilavesi",
+                     "İndirim reddi", "Devir çıkarması", "Yüklenilen reddi",
+                     "Etkilediği dönem", "İlk–son etki", "Seri geneli ödenecek etkisi"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  tablo.appendChild(tr);
+  ka.kaynaklar.forEach((k) => {
+    const r = document.createElement("tr");
+    const td0 = hucre("td", k.etiket); td0.style.fontWeight = "600";
+    r.appendChild(td0);
+    ["matrah_ilave", "hesaplanan_kdv_ilave", "indirim_cikar", "devir_cikar",
+     "yuklenilen_cikar"].forEach((kod) => {
+      const td = hucre("td", k[kod] ? tl(k[kod]) : "—");
+      td.className = "sayi";
+      r.appendChild(td);
+    });
+    r.appendChild(hucre("td", `${k.etkilenen_donem_sayisi} dönem`));
+    r.appendChild(hucre("td", k.ilk_etki ? `${k.ilk_etki} → ${k.son_etki}` : "—"));
+    const tdE = hucre("td", k.toplam_odenecek_etkisi ? tl(k.toplam_odenecek_etkisi) : "—");
+    tdE.className = "sayi";
+    if (Math.abs(k.toplam_odenecek_etkisi || 0) > 0.005) tdE.classList.add("fark-var");
+    r.appendChild(tdE);
+    tablo.appendChild(r);
+  });
+  const sar = document.createElement("div");
+  sar.className = "kaydir";
+  sar.appendChild(tablo);
+  kap.appendChild(sar);
+}
+
+function etkiTablosunuCiz() {
+  const tablo = $("etkiTablo");
+  const not = $("etkiNot");
+  tablo.innerHTML = ""; not.innerHTML = "";
+  const ka = durum.veri && durum.veri.sonuc ? durum.veri.sonuc.kaynak_analizi : null;
+  if (!ka || !ka.kaynaklar.length) {
+    bosDurum(tablo, "Henüz tespit girilmedi.");
+    return;
+  }
+  const alan = $("etkiAlan").value;
+  const yilSecim = $("etkiYil").value;
+  const sadeceDolu = $("etkiSadeceDolu").checked;
+
+  let donemler = ka.donemler;
+  if (yilSecim !== "hepsi") donemler = donemler.filter((d) => String(d.yil) === yilSecim);
+  if (sadeceDolu) {
+    donemler = donemler.filter((d) => Math.abs(d.toplam[alan] || 0) > 0.005
+      || ka.kaynaklar.some((k) => Math.abs(d.paylar[k.anahtar][alan] || 0) > 0.005));
+  }
+  if (!donemler.length) { bosDurum(tablo, "Seçilen ölçüte göre etkilenen dönem yok."); return; }
+
+  const tr = document.createElement("tr");
+  tr.appendChild(hucre("th", "Dönem"));
+  ka.kaynaklar.forEach((k) => {
+    const th = hucre("th", k.etiket);
+    th.style.textAlign = "right";
+    th.title = `Matrah ilavesi ${tl(k.matrah_ilave)} / indirim reddi ${tl(k.indirim_cikar)}`;
+    tr.appendChild(th);
+  });
+  if (ka.etkilesim_var) {
+    const th = hucre("th", "Etkileşim");
+    th.style.textAlign = "right";
+    th.title = "Tespitlerin birlikte uygulanmasından doğan, tek tek atfedilemeyen bakiye";
+    tr.appendChild(th);
+  }
+  const thT = hucre("th", "Toplam");
+  thT.style.textAlign = "right";
+  tr.appendChild(thT);
+  tablo.appendChild(tr);
+
+  donemler.forEach((d) => {
+    const r = document.createElement("tr");
+    r.appendChild(hucre("td", d.etiket));
+    ka.kaynaklar.forEach((k) => {
+      const v = d.paylar[k.anahtar][alan];
+      const td = hucre("td", v ? tl(v) : "—");
+      td.className = "sayi";
+      if (v < -0.005) td.classList.add("negatif");
+      r.appendChild(td);
+    });
+    if (ka.etkilesim_var) {
+      const v = d.etkilesim[alan];
+      const td = hucre("td", v ? tl(v) : "—");
+      td.className = "sayi";
+      r.appendChild(td);
+    }
+    const v = d.toplam[alan];
+    const tdT = hucre("td", v ? tl(v) : "—");
+    tdT.className = "sayi";
+    if (Math.abs(v || 0) > 0.005) tdT.classList.add("fark-var");
+    r.appendChild(tdT);
+    tablo.appendChild(r);
+  });
+
+  if (ka.etkilesim_var) {
+    not.innerHTML = '<div class="bulgu"><strong>Etkileşim sütunu nedir?</strong> ' +
+      'KDV hesabı doğrusal değildir: ödenecek ile devreden arasındaki eşikte alt/üst sınır ' +
+      'uygulanır. Bu nedenle tespitler tek tek uygulandığındaki etkilerin toplamı, hepsi ' +
+      'birlikte uygulandığındaki farkı tam vermeyebilir. Aradaki bakiye kaynaklara ' +
+      'dağıtılmaz, bu sütunda ayrıca gösterilir.</div>';
+  }
+}
+
+function etkiYilListesiniCiz() {
+  const sec = $("etkiYil");
+  const oncekiDeger = sec.value;
+  const yillar = durum.veri ? durum.veri.yillar.map((y) => y.yil).sort((a, b) => a - b) : [];
+  sec.innerHTML = '<option value="hepsi">Tümü</option>';
+  yillar.forEach((y) => {
+    const o = document.createElement("option");
+    o.value = y; o.textContent = y;
+    sec.appendChild(o);
+  });
+  if (oncekiDeger) sec.value = oncekiDeger;
+  if (!sec.value) sec.value = "hepsi";
+}
+
+["etkiAlan", "etkiYil"].forEach((id) => $(id).addEventListener("change", etkiTablosunuCiz));
+$("etkiSadeceDolu").addEventListener("change", etkiTablosunuCiz);
 
 $("excelIndir").addEventListener("click", () => {
   if (!durum.incelemeId) { mesaj("Önce bir dosya seçin.", "hata"); return; }

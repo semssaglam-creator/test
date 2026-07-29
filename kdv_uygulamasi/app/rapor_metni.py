@@ -87,9 +87,60 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
         f"KDV, beyana göre {_tl(son['beyan']['sonraki_devir'])} TL iken inceleme sonucunda "
         f"{_tl(son['elestirili']['sonraki_devir'])} TL olarak hesaplanmıştır.")
 
+    tarhiyat = sonuc.get("tarhiyat_toplami") or {}
+    if any(tarhiyat.get(k, 0) for k in ("resen_tarhi_gereken", "aranmasi_gereken",
+                                        "haksiz_iade")):
+        satirlar.append("")
+        satirlar.append("3. TARHİYAT ÖZETİ")
+        satirlar.append("")
+        if tarhiyat.get("resen_tarhi_gereken"):
+            satirlar.append(f"Re'sen tarhı gereken katma değer vergisi: "
+                            f"{_tl(tarhiyat['resen_tarhi_gereken'])} TL")
+        if tarhiyat.get("aranmasi_gereken"):
+            satirlar.append(f"Haksız iade talebi nedeniyle aranması gereken katma değer "
+                            f"vergisi: {_tl(tarhiyat['aranmasi_gereken'])} TL")
+        if tarhiyat.get("haksiz_iade"):
+            satirlar.append(f"İadesi gerçekleşmiş olması hâlinde haksız olarak iade edilen "
+                            f"katma değer vergisi: {_tl(tarhiyat['haksiz_iade'])} TL")
+        satirlar.append(f"Toplam fark: {_tl(tarhiyat.get('toplam_fark', 0))} TL")
+        if tarhiyat.get("fazla_beyan_odenecek"):
+            satirlar.append(f"(Mükellefin fazladan beyan ettiği {_tl(tarhiyat['fazla_beyan_odenecek'])} "
+                            f"TL tutarındaki ödenecek KDV tarhiyata dahil edilmemiştir.)")
+
+    analiz = sonuc.get("kaynak_analizi") or {}
+    kaynaklar = analiz.get("kaynaklar") or []
+    if len(kaynaklar) > 1:
+        satirlar.append("")
+        satirlar.append("4. TESPİTLERİN AYRI AYRI ETKİSİ")
+        satirlar.append("")
+        satirlar.append("Her tespit, girildiği dönemin yanı sıra devir zinciri yoluyla izleyen "
+                        "dönemleri de etkilemektedir. Tespitlerin ayrı ayrı katkıları aşağıdadır:")
+        satirlar.append("")
+        for k in kaynaklar:
+            parcalar = []
+            if k["matrah_ilave"]:
+                parcalar.append(f"matraha {_tl(k['matrah_ilave'])} TL ilave")
+            if k["indirim_cikar"]:
+                parcalar.append(f"indirilecek KDV'den {_tl(k['indirim_cikar'])} TL red")
+            if k["devir_cikar"]:
+                parcalar.append(f"devreden KDV'den {_tl(k['devir_cikar'])} TL çıkarma")
+            if k["yuklenilen_cikar"]:
+                parcalar.append(f"yüklenilen KDV'den {_tl(k['yuklenilen_cikar'])} TL red")
+            satirlar.append(
+                f"- {k['etiket']} dönemi ({', '.join(parcalar)}): "
+                f"{k['etkilenen_donem_sayisi']} dönemi etkilemekte olup, ödenmesi gereken "
+                f"KDV üzerindeki toplam etkisi {_tl(k['toplam_odenecek_etkisi'])} TL'dir.")
+        if analiz.get("etkilesim_var"):
+            satirlar.append("")
+            satirlar.append("Not: Katma değer vergisi hesabı, ödenecek vergi ile devreden vergi "
+                            "arasındaki eşikte alt ve üst sınır içerdiğinden doğrusal değildir. "
+                            "Bu nedenle tespitlerin tek tek etkilerinin toplamı, tümü birlikte "
+                            "uygulandığındaki farka eşit olmayabilir; aradaki bakiye çalışma "
+                            "tablosunda ayrıca gösterilmiştir.")
+
     if bulgular:
         satirlar.append("")
-        satirlar.append("3. BEYANNAMELERDE TESPİT EDİLEN TUTARSIZLIKLAR")
+        satirlar.append("5. BEYANNAMELERDE TESPİT EDİLEN TUTARSIZLIKLAR")
         satirlar.append("")
         for b in bulgular:
             satirlar.append(f"- {b['mesaj']}")

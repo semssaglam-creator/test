@@ -132,7 +132,7 @@ def _donem_hesapla(beyan, elestiri, yil, ay, devreden_giris):
         "iade_yuklenilen": _yuvarla(iade_yuklenilen),
         "ihrac_teslim": _yuvarla(ihrac_teslim),
         "tecil_edilebilir": _yuvarla(tecil_edilebilir),
-        "ihracat_iade_tecil_edilemeyen": _yuvarla(ihracat_iade_tecil_edilemeyen),
+        "ihracat_iade": _yuvarla(ihracat_iade_tecil_edilemeyen),
     }
 
 
@@ -152,11 +152,15 @@ def _beyan_ozeti(beyan, yil, ay):
         "sonraki_devir": _yuvarla(_d(beyan, "sonraki_donem_devreden", ay)),
         "iade": _yuvarla(_d(beyan, "iade_edilmesi_gereken_kdv", ay)),
         "tecil_edilecek": _yuvarla(_d(beyan, "tecil_edilecek_kdv", ay)),
+        "ihracat_iade": _yuvarla(_d(beyan, "ihracat_tecil_edilemeyen", ay)),
     }
 
 
 OZET_ALANLARI = ["matrah", "hesaplanan", "onceki_devir", "bu_donem_indirim",
                  "indirimler", "odenecek", "sonraki_devir", "iade"]
+
+# Fark ayristirmasinda karsilastirilan tum alanlar
+AYRISTIRMA_ALANLARI = OZET_ALANLARI + ["tecil_edilecek", "ihracat_iade"]
 
 
 def seri_hesapla(yillar, devreden_baslangic=None):
@@ -171,23 +175,46 @@ def seri_hesapla(yillar, devreden_baslangic=None):
     """
     donemler = []
     devreden = devreden_baslangic
+    bos = bos_elestiri()
     for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
         yil = int(yil_kaydi["yil"])
         beyan = yil_kaydi.get("beyan") or bos_beyan()
         elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
         ay_sayisi = int(yil_kaydi.get("ay_sayisi") or 12)
         for ay in range(min(max(ay_sayisi, 1), 12)):
-            elestirili = _donem_hesapla(beyan, elestiri, yil, ay, devreden)
             beyan_ozet = _beyan_ozeti(beyan, yil, ay)
-            fark = {alan: _yuvarla(elestirili[alan] - beyan_ozet[alan]) for alan in OZET_ALANLARI}
+            elestirili = _donem_hesapla(beyan, elestiri, yil, ay, devreden)
+
+            # Farki bilesenlerine ayirmak icin iki ara senaryo:
+            # beyan_hesap : beyandaki girdilerden, elestirisiz  -> beyanin
+            #               kendi aritmetigi dogru olsaydi cikacak sonuc
+            # tespit_tek  : beyandaki onceki devirle, YALNIZ bu donemin
+            #               tespiti uygulanmis -> tespitin kendi etkisi
+            beyan_devir = _d(beyan, "onceki_donem_devreden", ay)
+            beyan_hesap = _donem_hesapla(beyan, bos, yil, ay, beyan_devir)
+            tespit_tek = _donem_hesapla(beyan, elestiri, yil, ay, beyan_devir)
+
+            fark = {a: _yuvarla(elestirili[a] - beyan_ozet[a]) for a in AYRISTIRMA_ALANLARI}
+            fark_beyan_hatasi = {a: _yuvarla(beyan_hesap[a] - beyan_ozet[a])
+                                 for a in AYRISTIRMA_ALANLARI}
+            fark_tespit = {a: _yuvarla(tespit_tek[a] - beyan_hesap[a])
+                           for a in AYRISTIRMA_ALANLARI}
+            fark_devir = {a: _yuvarla(elestirili[a] - tespit_tek[a])
+                          for a in AYRISTIRMA_ALANLARI}
+
             donemler.append({
                 "yil": yil,
                 "ay": ay + 1,
                 "ay_adi": AYLAR[ay],
                 "beyan": beyan_ozet,
+                "beyan_hesap": beyan_hesap,
                 "elestirili": elestirili,
                 "fark": fark,
+                "fark_beyan_hatasi": fark_beyan_hatasi,
+                "fark_tespit": fark_tespit,
+                "fark_devir": fark_devir,
                 "elestiri_var": _elestiri_var(elestiri, ay),
+                "tarhiyat": _tarhiyat_satiri(beyan_ozet, elestirili),
             })
             devreden = elestirili["sonraki_devir"]
 
@@ -195,6 +222,206 @@ def seri_hesapla(yillar, devreden_baslangic=None):
         "donemler": donemler,
         "yil_toplamlari": _yil_toplamlari(donemler),
         "genel_toplam": _toplam(donemler),
+        "tarhiyat_toplami": _tarhiyat_toplami(donemler),
+        "yil_uyumu": _yil_uyumu(donemler),
+    }
+
+
+def _tarhiyat_satiri(beyan_ozet, elestirili):
+    """Bir donemin tarhiyat ozeti satirini uretir.
+
+    Sutunlar, elde kullanilan tarhiyat tablosunun karsiligidir:
+      1) Re'sen tarhi gereken KDV  = olmasi gereken odenecek - beyan edilen
+      2) Aranmasi gereken KDV      = beyan edilen iade - olmasi gereken iade
+      3) Haksiz olarak iade edilen = beyan edilen ihracat iadesi - olmasi gereken
+    Her uc sutun da yalnizca mukellef aleyhine olan yonu tasir; ters yondeki
+    tutar (fazla beyan) ayri alanlarda bildirilir, tarhiyata eklenmez.
+    """
+    odenecek_fark = elestirili["odenecek"] - beyan_ozet["odenecek"]
+    iade_fark = beyan_ozet["iade"] - elestirili["iade"]
+    ihracat_fark = beyan_ozet["ihracat_iade"] - elestirili["ihracat_iade"]
+
+    resen = max(odenecek_fark, 0.0)
+    aranmasi = max(iade_fark, 0.0)
+    haksiz = max(ihracat_fark, 0.0)
+    return {
+        "odenecek_olmasi_gereken": _yuvarla(elestirili["odenecek"]),
+        "odenecek_beyan": _yuvarla(beyan_ozet["odenecek"]),
+        "resen_tarhi_gereken": _yuvarla(resen),
+        "iade_olmasi_gereken": _yuvarla(elestirili["iade"]),
+        "iade_beyan": _yuvarla(beyan_ozet["iade"]),
+        "aranmasi_gereken": _yuvarla(aranmasi),
+        "resen_toplam": _yuvarla(resen + aranmasi),
+        "ihracat_iade_olmasi_gereken": _yuvarla(elestirili["ihracat_iade"]),
+        "ihracat_iade_beyan": _yuvarla(beyan_ozet["ihracat_iade"]),
+        "haksiz_iade": _yuvarla(haksiz),
+        "toplam_fark": _yuvarla(resen + aranmasi + haksiz),
+        # Mukellef lehine olan sapmalar: tarhiyata girmez, bilgi amaclidir
+        "fazla_beyan_odenecek": _yuvarla(max(-odenecek_fark, 0.0)),
+        "eksik_talep_iade": _yuvarla(max(-iade_fark, 0.0)),
+    }
+
+
+TARHIYAT_ALANLARI = ["odenecek_olmasi_gereken", "odenecek_beyan", "resen_tarhi_gereken",
+                     "iade_olmasi_gereken", "iade_beyan", "aranmasi_gereken", "resen_toplam",
+                     "ihracat_iade_olmasi_gereken", "ihracat_iade_beyan", "haksiz_iade",
+                     "toplam_fark", "fazla_beyan_odenecek", "eksik_talep_iade"]
+
+
+def _tarhiyat_toplami(donemler):
+    return {a: _yuvarla(sum(d["tarhiyat"][a] for d in donemler)) for a in TARHIYAT_ALANLARI}
+
+
+def _yil_uyumu(donemler):
+    """Yil bazinda beyan uyumu ozeti (cok yilli incelemelerde genel gorunum)."""
+    satirlar = []
+    for yil in sorted({d["yil"] for d in donemler}):
+        alt = [d for d in donemler if d["yil"] == yil]
+        satirlar.append({
+            "yil": yil,
+            "donem_sayisi": len(alt),
+            "tespit_donem_sayisi": sum(1 for d in alt if d["elestiri_var"]),
+            "matrah_beyan": _yuvarla(sum(d["beyan"]["matrah"] for d in alt)),
+            "matrah_olmasi_gereken": _yuvarla(sum(d["elestirili"]["matrah"] for d in alt)),
+            "matrah_farki": _yuvarla(sum(d["fark"]["matrah"] for d in alt)),
+            "odenecek_beyan": _yuvarla(sum(d["beyan"]["odenecek"] for d in alt)),
+            "odenecek_olmasi_gereken": _yuvarla(sum(d["elestirili"]["odenecek"] for d in alt)),
+            "resen_tarhi_gereken": _yuvarla(sum(d["tarhiyat"]["resen_tarhi_gereken"] for d in alt)),
+            "toplam_fark": _yuvarla(sum(d["tarhiyat"]["toplam_fark"] for d in alt)),
+            "tespit_etkisi": _yuvarla(sum(d["fark_tespit"]["odenecek"] for d in alt)),
+            "devir_etkisi": _yuvarla(sum(d["fark_devir"]["odenecek"] for d in alt)),
+            "beyan_hatasi_etkisi": _yuvarla(sum(d["fark_beyan_hatasi"]["odenecek"] for d in alt)),
+            "devir_giris": _yuvarla(alt[0]["elestirili"]["onceki_devir"]),
+            "devir_cikis": _yuvarla(alt[-1]["elestirili"]["sonraki_devir"]),
+            "devir_cikis_beyan": _yuvarla(alt[-1]["beyan"]["sonraki_devir"]),
+        })
+    return satirlar
+
+
+def kaynak_anahtari(yil, ay):
+    """Bir tespit kaynagini benzersiz tanimlar (ay: 0-11)."""
+    return f"{yil}-{ay + 1:02d}"
+
+
+def _zincir(yillar, devreden_baslangic, aktif=None):
+    """Seriyi hesaplar; `aktif` verilirse yalnizca o donemlerin tespiti uygulanir.
+
+    aktif=None  -> tum tespitler acik (tam senaryo)
+    aktif=set() -> hicbir tespit yok (baz senaryo)
+    aktif={"2023-01"} -> yalnizca Ocak 2023 tespiti acik
+    """
+    bos = bos_elestiri()
+    sonuc = {}
+    devreden = devreden_baslangic
+    for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
+        yil = int(yil_kaydi["yil"])
+        beyan = yil_kaydi.get("beyan") or bos_beyan()
+        elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
+        ay_sayisi = min(max(int(yil_kaydi.get("ay_sayisi") or 12), 1), 12)
+        for ay in range(ay_sayisi):
+            anahtar = kaynak_anahtari(yil, ay)
+            kullanilan = elestiri if (aktif is None or anahtar in aktif) else bos
+            kayit = _donem_hesapla(beyan, kullanilan, yil, ay, devreden)
+            sonuc[anahtar] = kayit
+            devreden = kayit["sonraki_devir"]
+    return sonuc
+
+
+KAYNAK_ETKI_ALANLARI = ["odenecek", "sonraki_devir", "iade", "indirimler", "matrah"]
+
+
+def kaynak_analizi(yillar, devreden_baslangic=None):
+    """Her tespitin, sonraki tum donemlere yaptigi etkiyi ayri ayri hesaplar.
+
+    Bir tespit yalnizca girildigi donemi degil, devir zinciri yoluyla izleyen
+    tum donemleri etkiler. Ornegin 2023/Ocak'ta matraha yapilan ilave ile
+    2024/Subat'ta yapilan indirim reddinin 2026/Nisan'daki sonuca katkilari
+    burada ayri ayri gorulur.
+
+    Yontem: her tespit tek basina acilarak seri bastan hesaplanir ve baz
+    senaryodan (hicbir tespit yok) farki o tespitin katkisi sayilir.
+
+    Onemli: hesap dogrusal degildir (odenecek/devir esiginde min-max vardir).
+    Bu nedenle tekil katkilarin toplami, tum tespitler birlikte uygulandigindaki
+    farki tam vermeyebilir. Aradaki bakiye "etkilesim" olarak ayri bildirilir;
+    gizlenmez ve kaynaklara dagitilmaz.
+    """
+    kaynaklar = []
+    for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
+        yil = int(yil_kaydi["yil"])
+        elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
+        ay_sayisi = min(max(int(yil_kaydi.get("ay_sayisi") or 12), 1), 12)
+        for ay in range(ay_sayisi):
+            if not _elestiri_var(elestiri, ay):
+                continue
+            kaynaklar.append({
+                "anahtar": kaynak_anahtari(yil, ay),
+                "yil": yil,
+                "ay": ay + 1,
+                "ay_adi": AYLAR[ay],
+                "etiket": f"{yil}/{AYLAR[ay]}",
+                "matrah_ilave": _yuvarla(_d(elestiri, "matrah_ilave", ay)),
+                "hesaplanan_kdv_ilave": _yuvarla(hesaplanan_kdv_ilavesi(elestiri, yil, ay)),
+                "devir_cikar": _yuvarla(_d(elestiri, "devir_cikar", ay)),
+                "indirim_cikar": _yuvarla(_d(elestiri, "indirim_cikar", ay)),
+                "yuklenilen_cikar": _yuvarla(_d(elestiri, "yuklenilen_cikar", ay)),
+            })
+
+    baz = _zincir(yillar, devreden_baslangic, aktif=set())
+    tam = _zincir(yillar, devreden_baslangic, aktif=None)
+    sirali = list(baz.keys())
+
+    katkilar = {}
+    for kaynak in kaynaklar:
+        tek = _zincir(yillar, devreden_baslangic, aktif={kaynak["anahtar"]})
+        katkilar[kaynak["anahtar"]] = {
+            anahtar: {alan: _yuvarla(tek[anahtar][alan] - baz[anahtar][alan])
+                      for alan in KAYNAK_ETKI_ALANLARI}
+            for anahtar in sirali
+        }
+
+    # Donem donem dagilim: her kaynagin katkisi + etkilesim bakiyesi
+    donemler = []
+    for anahtar in sirali:
+        toplam = {alan: _yuvarla(tam[anahtar][alan] - baz[anahtar][alan])
+                  for alan in KAYNAK_ETKI_ALANLARI}
+        paylar = {k["anahtar"]: katkilar[k["anahtar"]][anahtar] for k in kaynaklar}
+        etkilesim = {
+            alan: _yuvarla(toplam[alan] - sum(p[alan] for p in paylar.values()))
+            for alan in KAYNAK_ETKI_ALANLARI
+        }
+        if (any(abs(v) > 0.005 for v in toplam.values())
+                or any(abs(v) > 0.005 for p in paylar.values() for v in p.values())):
+            yil, ay = anahtar.split("-")
+            donemler.append({
+                "anahtar": anahtar,
+                "yil": int(yil),
+                "ay": int(ay),
+                "ay_adi": AYLAR[int(ay) - 1],
+                "etiket": f"{yil}/{AYLAR[int(ay) - 1]}",
+                "paylar": paylar,
+                "etkilesim": etkilesim,
+                "toplam": toplam,
+            })
+
+    # Her kaynagin seri genelindeki toplam etkisi
+    for kaynak in kaynaklar:
+        pay = katkilar[kaynak["anahtar"]]
+        kaynak["toplam_odenecek_etkisi"] = _yuvarla(
+            sum(pay[a]["odenecek"] for a in sirali))
+        kaynak["son_donem_devir_etkisi"] = _yuvarla(
+            pay[sirali[-1]]["sonraki_devir"]) if sirali else 0.0
+        etkilenen = [a for a in sirali if any(abs(pay[a][alan]) > 0.005
+                                              for alan in KAYNAK_ETKI_ALANLARI)]
+        kaynak["etkilenen_donem_sayisi"] = len(etkilenen)
+        kaynak["ilk_etki"] = etkilenen[0] if etkilenen else None
+        kaynak["son_etki"] = etkilenen[-1] if etkilenen else None
+
+    etkilesim_var = any(abs(v) > 0.005 for d in donemler for v in d["etkilesim"].values())
+    return {
+        "kaynaklar": kaynaklar,
+        "donemler": donemler,
+        "etkilesim_var": etkilesim_var,
     }
 
 

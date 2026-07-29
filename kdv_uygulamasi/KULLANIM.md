@@ -36,8 +36,13 @@ satır olsa da hizalama bozulmaz. Grup başlıkları (İNDİRİMLER, SONUÇ HESA
 gibi değer taşımayan satırlar) tanınır ve atlanır. Etiket sütunu olmayan
 yapıştırmalarda satırlar sıraya göre atanır ve bu durum uyarı olarak bildirilir.
 
-Birden çok yıl için: yılı değiştirip yeni bloğu yapıştırın. Yıllar arasında
-yapıştırma kutusunun altındaki sekmelerden geçiş yaparsınız.
+**Birden çok yıl (örneğin 6 yıllık uyum incelemesi):** Her yıl için yılı
+değiştirip o yılın bloğunu yapıştırın. Yıllar arasında yapıştırma kutusunun
+altındaki sekmelerden geçersiniz. Devir zinciri yıl sınırında kesilmez —
+bir yılın Aralık ayındaki devir, izleyen yılın Ocak ayına taşınır. Bu yüzden
+hiç tespit girmediğiniz yıllarda bile, önceki yıllardan gelen farklar
+kendiliğinden hesaplanır ve *Sonuç ve Fark* ile *Tarhiyat Özeti*
+sekmelerinde görünür.
 
 **Elle düzenleme:** Izgaradaki her hücreyi doğrudan değiştirebilirsiniz; alanı
 terk ettiğinizde kaydedilir ve seri anında yeniden hesaplanır.
@@ -89,10 +94,53 @@ Fark tablosunda sıfırdan farklı hücreler kırmızı vurgulanır. Tespit giri
 dönemler *tespit* rozetiyle işaretlenir.
 
 - **Excel Çalışmasını İndir** — her yıl için ayrı sayfa (eleştirili beyan,
-  tespit girişi, ham beyan, üç özet tablo) ve tüm dönemleri birleştiren bir
-  *Özet* sayfası.
-- **Rapor Metnini Üret** — dönem dönem matrah farkı ve toplam sonuç metni.
+  tespit girişi, ham beyan, üç özet tablo) ve ayrıca *Tarhiyat Özeti*,
+  *Yıl Uyumu*, *Tespit Etkisi* ve *Özet* sayfaları.
+- **Rapor Metnini Üret** — dönem dönem matrah farkı, tarhiyat özeti,
+  tespitlerin ayrı ayrı etkisi ve tutarsızlık bulguları.
   Taslaktır; hukuki nitelendirme ve gerekçe rapora sizin tarafınızdan eklenir.
+
+### 5. Tarhiyat Özeti sekmesi
+
+Elde kullanılan tarhiyat tablosunun karşılığıdır. Her dönem için beyan edilen
+ile olması gereken tutarlar yan yana konur ve üç tarhiyat kalemi hesaplanır:
+
+| Sütun | İçerik |
+|---|---|
+| **1** | Re'sen tarhı gereken KDV = olması gereken ödenecek − beyan edilen |
+| **2** | Aranması gereken KDV = beyan edilen iade − olması gereken iade |
+| **1+2** | Re'sen tarhı gereken toplam |
+| **3** | İade gerçekleşmişse haksız olarak iade edilen KDV |
+| **1+2+3** | Toplam fark |
+
+Üç sütun da yalnızca mükellef aleyhine olan yönü taşır. Ters yöndeki sapma
+(mükellefin fazladan beyan ettiği vergi veya talep etmediği iade) tarhiyata
+eklenmez, tablonun altında ayrıca bildirilir.
+
+Aynı sekmedeki **Yıllara Göre Beyan Uyumu** tablosu, çok yıllı incelemelerde
+her yıl için matrah farkını, re'sen tarhı gereken tutarı ve farkın ne kadarının
+o yılın tespitinden, ne kadarının önceki yıllardan devirle geldiğini gösterir.
+
+### 6. Tespit Etkisi sekmesi
+
+Bir tespit yalnızca girildiği dönemi değil, devir zinciri yoluyla izleyen tüm
+dönemleri etkiler. Bu sekme her tespitin katkısını **ayrı ayrı** gösterir.
+
+Örnek: 2023/Ocak'ta matraha ilave, 2024/Şubat'ta indirim reddi yaptınız.
+2026/Nisan'daki sonucun ne kadarının hangisinden geldiğini iki ayrı sütunda
+görürsünüz.
+
+- **Tespit kaynakları** tablosu: her tespitin ne olduğu, kaç dönemi etkilediği,
+  hangi dönem aralığına yayıldığı ve seri genelindeki toplam etkisi.
+- **Dönem × Kaynak dağılımı**: satırlarda dönemler, sütunlarda tespitler.
+  Üstteki listeden ödenecek KDV, devreden KDV, iade, indirimler veya matrah
+  büyüklüklerinden birini seçersiniz.
+
+**Etkileşim sütunu:** KDV hesabı doğrusal değildir — ödenecek ile devreden
+arasındaki eşikte alt/üst sınır uygulanır. Bu yüzden tespitlerin tek tek
+etkilerinin toplamı, hepsi birlikte uygulandığındaki farkı her zaman tam
+vermez. Aradaki bakiye kaynaklara dağıtılmaz; "Etkileşim" sütununda ayrıca
+gösterilir. Bu sütun yalnızca gerçekten bakiye oluştuğunda görünür.
 
 ## Devir zinciri
 

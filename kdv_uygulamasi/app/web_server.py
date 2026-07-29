@@ -14,8 +14,8 @@ from . import db, hesap
 from .excel_export import calisma_olustur
 from .paste_parser import beyan_ayristir, tek_satir_ayristir, tutar_coz
 from .rapor_metni import matrah_farki_ozeti
-from .satirlar import (AYLAR, BEYAN_SATIRLARI, ELESTIRI_ALANLARI, OZET_KOLONLARI,
-                       VERI_KODLARI)
+from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI, ELESTIRI_ALANLARI,
+                       OZET_KOLONLARI, TARHIYAT_KOLONLARI, VERI_KODLARI)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -34,6 +34,7 @@ def _inceleme_sonucu(inceleme_id):
         return veri, {"donemler": [], "yil_toplamlari": [], "genel_toplam": {}}, []
     baslangic = veri["inceleme"].get("devreden_baslangic")
     sonuc = hesap.seri_hesapla(yillar, devreden_baslangic=baslangic)
+    sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar, devreden_baslangic=baslangic)
     bulgular = hesap.beyan_tutarlilik_kontrol(yillar)
     return veri, sonuc, bulgular
 
@@ -91,6 +92,10 @@ class Istekci(BaseHTTPRequestHandler):
                     "aylar": AYLAR,
                     "elestiri_alanlari": [{"kod": k, "etiket": e} for k, e in ELESTIRI_ALANLARI],
                     "ozet_kolonlari": [{"kod": k, "etiket": e} for k, e in OZET_KOLONLARI],
+                    "tarhiyat_kolonlari": [{"grup": g, "kod": k, "etiket": e, "vurgu": v}
+                                           for g, k, e, v in TARHIYAT_KOLONLARI],
+                    "ayristirma_bloklari": [{"kod": k, "etiket": e, "aciklama": a}
+                                            for k, e, a in AYRISTIRMA_BLOKLARI],
                 })
             elif yol == "/api/mukellefler":
                 self._json_yanit({"mukellefler": db.mukellefleri_listele()})
