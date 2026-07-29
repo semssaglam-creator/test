@@ -54,6 +54,19 @@ veya alt alta ayrılmış olabilir; başta etiket sütunu bulunması sorun deği
 Ay sayısının dışında kalan sütunlar soluk gösterilir; veri girilebilir ancak
 hesaba katılmaz.
 
+**Verileri Temizle:** Izgaranın üstündeki düğme üç kapsam sunar:
+
+| Kapsam | Ne silinir |
+|---|---|
+| Bu yılın beyan verisi | Yalnızca o yılın 52 beyan satırı; tespitleriniz korunur |
+| Bu yılın beyan verisi + tespitleri | İkisi birlikte; KDV oranları yılın varsayılanına döner |
+| Tüm yıllar | Dosyadaki bütün yılların beyan verisi ve tespitleri |
+
+Hiçbir durumda yıl kayıtları veya inceleme dosyası silinmez; yalnızca içerik
+boşaltılır, yıllar boş olarak yerinde kalır. İşlem geri alınamaz — öncesinde
+Yedekleme sekmesinden yedek almanız önerilir. Bir yılı tümüyle kaldırmak
+isterseniz Dosyalar sekmesindeki *Sil* düğmesini kullanın.
+
 ### 2. Dosyalar sekmesi (isteğe bağlı)
 
 Burası yalnızca gerektiğinde kullanılır:

@@ -176,6 +176,12 @@
 
   <div class="kart">
     <h2>Beyan Verisi <span class="rozet">elle düzenlenebilir</span></h2>
+    <div class="satir">
+      <div class="otomatik"><button class="btn tehlike" id="veriTemizle">Verileri Temizle</button></div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">Yıl kaydı ve dosya silinmez; yalnızca içerik boşaltılır.</span>
+      </div>
+    </div>
     <div class="yardim" style="margin-bottom:10px;">
       Her hücreyi doğrudan değiştirebilirsiniz; alanı terk ettiğinizde kaydedilir.
       Bir satırın tamamını değiştirmek için satır başındaki <strong>⇥</strong> düğmesiyle
@@ -300,6 +306,21 @@
 </main>
 
 <div class="mesaj" id="mesaj"></div>
+
+<div class="modal-arka" id="temizleModal">
+  <div class="modal" style="max-width:560px;">
+    <h2>Verileri Temizle</h2>
+    <div class="yardim" style="margin-bottom:14px;">
+      Ne kadarının silineceğini seçin. Yıl kayıtları ve inceleme dosyası
+      silinmez; yalnızca içindeki değerler sıfırlanır. Bu işlem geri alınamaz —
+      önce Yedekleme sekmesinden yedek almanız önerilir.
+    </div>
+    <div id="temizleSecenekler"></div>
+    <div class="satir" style="margin-top:16px;">
+      <div class="otomatik"><button class="btn ikincil" id="temizleKapat">Vazgeç</button></div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-arka" id="raporModal">
   <div class="modal">
@@ -760,6 +781,77 @@ function beyanIzgarasiniCiz() {
     }
     tablo.appendChild(tr);
   });
+}
+
+// -------------------------------------------------------- veri temizleme
+$("veriTemizle").addEventListener("click", () => {
+  const yil = aktifYil();
+  if (!yil) { mesaj("Temizlenecek veri yok.", "hata"); return; }
+  const yilSayisi = durum.veri.yillar.length;
+  const secenekler = [
+    {
+      kapsam: "yil",
+      baslik: `${yil.yil} beyan verisi`,
+      aciklama: "Yalnızca bu yılın beyan satırları sıfırlanır. " +
+                "Girdiğiniz inceleme tespitleri korunur.",
+    },
+    {
+      kapsam: "yil_tespit",
+      baslik: `${yil.yil} beyan verisi + tespitleri`,
+      aciklama: "Bu yılın hem beyan satırları hem de inceleme tespitleri sıfırlanır. " +
+                "KDV oranları yılın varsayılanına döner.",
+    },
+  ];
+  if (yilSayisi > 1) {
+    secenekler.push({
+      kapsam: "tumu",
+      baslik: `Tüm yıllar (${yilSayisi} yıl)`,
+      aciklama: "Dosyadaki bütün yılların beyan verisi ve tespitleri sıfırlanır. " +
+                "Yıl kayıtları yerinde kalır, boş olarak.",
+    });
+  }
+
+  const kap = $("temizleSecenekler");
+  kap.innerHTML = "";
+  secenekler.forEach((s) => {
+    const kutu = document.createElement("div");
+    kutu.style.cssText = "border:1px solid #dde3ea;border-radius:6px;padding:12px;" +
+                         "margin-bottom:10px;display:flex;gap:12px;align-items:center;";
+    const metin = document.createElement("div");
+    metin.style.flex = "1";
+    const b = document.createElement("div");
+    b.textContent = s.baslik;
+    b.style.cssText = "font-weight:600;font-size:14px;margin-bottom:3px;";
+    const a = document.createElement("div");
+    a.className = "yardim";
+    a.style.margin = "0";
+    a.textContent = s.aciklama;
+    metin.append(b, a);
+    const dugme = document.createElement("button");
+    dugme.className = "btn tehlike";
+    dugme.textContent = "Temizle";
+    dugme.addEventListener("click", () => veriTemizle(s.kapsam, s.baslik));
+    kutu.append(metin, dugme);
+    kap.appendChild(kutu);
+  });
+  $("temizleModal").classList.add("acik");
+});
+
+$("temizleKapat").addEventListener("click", () => $("temizleModal").classList.remove("acik"));
+
+async function veriTemizle(kapsam, baslik) {
+  if (!confirm(`"${baslik}" temizlenecek. Bu işlem geri alınamaz. Onaylıyor musunuz?`)) return;
+  const yil = aktifYil();
+  try {
+    await api("/api/beyan/temizle", {
+      inceleme_id: durum.incelemeId,
+      yil_id: yil ? yil.yil_id : null,
+      kapsam,
+    });
+    $("temizleModal").classList.remove("acik");
+    await veriYukle();
+    mesaj(`${baslik} temizlendi.`);
+  } catch (hata) { mesaj(hata.message, "hata"); }
 }
 
 async function satirYapistir(yil, satir) {

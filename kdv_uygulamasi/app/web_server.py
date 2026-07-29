@@ -204,6 +204,8 @@ class Istekci(BaseHTTPRequestHandler):
                 except ValueError as exc:
                     raise ApiHata(str(exc))
                 self._json_yanit({"tamam": True})
+            elif yol == "/api/beyan/temizle":
+                self._json_yanit(self._veri_temizle(veri))
             elif yol == "/api/elestiri":
                 self._json_yanit(self._elestiri_kaydet(veri))
             elif yol == "/api/yedek_al":
@@ -256,6 +258,36 @@ class Istekci(BaseHTTPRequestHandler):
             raise ApiHata(str(exc))
         db.beyan_satir_guncelle(int(veri["yil_id"]), kod, degerler)
         return {"tamam": True, "degerler": degerler}
+
+    def _veri_temizle(self, veri):
+        """Beyan verisini ve istege bagli olarak tespitleri sifirlar.
+
+        kapsam:
+            "yil"          -> yalnizca secili yilin beyan verisi
+            "yil_tespit"   -> secili yilin beyan verisi ve tespitleri
+            "tumu"         -> dosyadaki tum yillarin beyan verisi ve tespitleri
+        Yil kayitlari ve dosya silinmez; yalnizca icerikleri bosaltilir.
+        """
+        inceleme_id = int(veri["inceleme_id"])
+        kapsam = veri.get("kapsam") or "yil"
+        if kapsam not in ("yil", "yil_tespit", "tumu"):
+            raise ApiHata("Geçersiz temizleme kapsamı.")
+
+        if kapsam == "tumu":
+            yil_idleri = db.inceleme_yil_idleri(inceleme_id)
+            for yil_id in yil_idleri:
+                db.beyan_temizle(yil_id)
+                db.elestiri_temizle(yil_id)
+            return {"tamam": True, "temizlenen_yil": len(yil_idleri)}
+
+        yil_id = veri.get("yil_id")
+        if not yil_id:
+            raise ApiHata("Temizlenecek yıl seçilmedi.")
+        _yil_dogrula(inceleme_id, int(yil_id))
+        db.beyan_temizle(int(yil_id))
+        if kapsam == "yil_tespit":
+            db.elestiri_temizle(int(yil_id))
+        return {"tamam": True, "temizlenen_yil": 1}
 
     def _elestiri_kaydet(self, veri):
         _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))

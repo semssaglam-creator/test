@@ -388,6 +388,52 @@ def elestiri_kaydet(yil_id, alanlar):
         conn.close()
 
 
+def beyan_temizle(yil_id):
+    """Bir yilin tum beyan satirlarini sifirlar; satirlar silinmez, bosaltilir."""
+    conn = _baglan()
+    try:
+        bos = json.dumps([0.0] * 12)
+        for kod in VERI_KODLARI:
+            conn.execute("INSERT INTO beyan_degerleri (yil_id, satir_kodu, degerler) "
+                         "VALUES (?, ?, ?) ON CONFLICT(yil_id, satir_kodu) DO UPDATE "
+                         "SET degerler = excluded.degerler", (yil_id, kod, bos))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def elestiri_temizle(yil_id):
+    """Bir yilin inceleme tespitlerini sifirlar; KDV oranlari yila gore tazelenir."""
+    conn = _baglan()
+    try:
+        kayit = conn.execute("SELECT yil FROM inceleme_yillari WHERE id = ?",
+                             (yil_id,)).fetchone()
+        yil = kayit["yil"] if kayit else datetime.now().year
+        for alan in ELESTIRI_ALAN_KODLARI:
+            if alan == "kdv_orani":
+                deger = [varsayilan_kdv_orani(yil, a + 1) for a in range(12)]
+            elif alan == "hesaplanan_otomatik":
+                deger = [True] * 12
+            else:
+                deger = [0.0] * 12
+            conn.execute("INSERT INTO elestiri_degerleri (yil_id, alan, degerler) "
+                         "VALUES (?, ?, ?) ON CONFLICT(yil_id, alan) DO UPDATE "
+                         "SET degerler = excluded.degerler", (yil_id, alan, json.dumps(deger)))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def inceleme_yil_idleri(inceleme_id):
+    conn = _baglan()
+    try:
+        return [r["id"] for r in conn.execute(
+            "SELECT id FROM inceleme_yillari WHERE inceleme_id = ? ORDER BY yil",
+            (inceleme_id,))]
+    finally:
+        conn.close()
+
+
 def inceleme_verisi(inceleme_id):
     """Bir incelemenin tum yillarini hesaplamaya hazir bicimde dondurur."""
     conn = _baglan()
