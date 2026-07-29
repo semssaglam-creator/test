@@ -121,6 +121,10 @@
   <div class="kart" id="dosyaAyar" style="display:none;">
     <h2>Seçili Dosya Ayarları</h2>
     <div class="satir">
+      <div><label>Mükellef adı / ünvanı</label><input type="text" id="dMukellefAd" placeholder="rapor başlığında kullanılır"></div>
+      <div class="dar"><label>VKN / TCKN</label><input type="text" id="dMukellefVkn"></div>
+    </div>
+    <div class="satir">
       <div><label>Dosya adı</label><input type="text" id="dAd"></div>
       <div class="dar"><label>Başlangıç devreden KDV</label><input type="text" id="dDevreden" placeholder="boş = beyandaki"></div>
       <div class="otomatik"><button class="btn ikincil" id="dKaydet">Kaydet</button></div>
@@ -145,6 +149,15 @@
 <section class="sekme" id="sekme-beyan">
   <div class="kart">
     <h2>Beyan Bloğunu Yapıştır</h2>
+    <div class="satir">
+      <div class="dar">
+        <label>Beyanın ait olduğu yıl</label>
+        <select id="beyanYilSec"></select>
+      </div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">KDV oranı bu yıla göre belirlenir<br>(10.07.2023 öncesi %18, sonrası %20).</span>
+      </div>
+    </div>
     <div class="yil-sekmeler" id="beyanYilSekme"></div>
     <label>Sistemden kopyaladığınız bloğu buraya yapıştırın (etiket sütunu + 12 ay)</label>
     <textarea id="beyanMetin" rows="7" placeholder="DÖNEMİ&#9;OCAK&#9;ŞUBAT&#9;...&#10;MATRAH TOPLAMI&#9;343869,40&#9;176004,00&#9;..."></textarea>
@@ -292,6 +305,16 @@ function aktifYil() {
   return durum.veri.yillar.find((y) => y.yil_id === durum.aktifYilId) || durum.veri.yillar[0] || null;
 }
 
+/** Bos tabloya yonlendirici aciklama koyar. */
+function bosDurum(tablo, metin) {
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  td.className = "bos-durum";
+  td.textContent = metin;
+  tr.appendChild(td);
+  tablo.appendChild(tr);
+}
+
 // --------------------------------------------------------------- gezinme
 document.querySelectorAll("nav button").forEach((dugme) => {
   dugme.addEventListener("click", () => {
@@ -366,9 +389,8 @@ async function incelemeleriYukle() {
 }
 
 $("iEkle").addEventListener("click", async () => {
-  if (!durum.mukellefId) { mesaj("Önce bir mükellef seçin.", "hata"); return; }
+  // Mukellef secilmemisse ve ad bos birakilmissa sunucu yer tutucu kullanir
   const ad = $("iAd").value.trim();
-  if (!ad) { mesaj("Dosya adı boş olamaz.", "hata"); return; }
   try {
     const y = await api("/api/inceleme", { mukellef_id: durum.mukellefId, ad });
     $("iAd").value = "";
@@ -400,6 +422,9 @@ function ekraniCiz() {
   $("dosyaBilgi").textContent = `${v.inceleme.ad_unvan} — ${v.inceleme.ad}`;
   $("dosyaAyar").style.display = "block";
   $("dAd").value = v.inceleme.ad || "";
+  // Yer tutucu ad kutuda bos gorunsun ki kullanici dogrudan yazabilsin
+  $("dMukellefAd").value = (v.inceleme.ad_unvan || "").startsWith("(Adsız") ? "" : v.inceleme.ad_unvan;
+  $("dMukellefVkn").value = v.inceleme.vkn_tckn || "";
   $("dDevreden").value = v.inceleme.devreden_baslangic != null ? tl(v.inceleme.devreden_baslangic) : "";
   yilTablosunuCiz();
   yilSekmeleriniCiz();
@@ -415,8 +440,13 @@ $("dKaydet").addEventListener("click", async () => {
       id: durum.incelemeId, ad: $("dAd").value.trim(),
       devreden_baslangic: ham === "" ? null : ham,
     });
+    await api("/api/mukellef/guncelle", {
+      id: durum.veri.inceleme.mukellef_id,
+      ad_unvan: $("dMukellefAd").value.trim(),
+      vkn_tckn: $("dMukellefVkn").value.trim(),
+    });
     mesaj("Dosya güncellendi.");
-    await veriYukle(); await incelemeleriYukle();
+    await veriYukle(); await mukellefleriYukle(); await incelemeleriYukle();
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
@@ -435,10 +465,14 @@ $("dSil").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------- yillar
 $("yEkle").addEventListener("click", async () => {
-  if (!durum.incelemeId) { mesaj("Önce bir dosya seçin.", "hata"); return; }
   const yil = parseInt($("yYil").value, 10);
   if (!yil) { mesaj("Yıl girin.", "hata"); return; }
   try {
+    if (!durum.incelemeId) {
+      const h = await api("/api/calisma_hazirla", {});
+      durum.incelemeId = h.inceleme_id;
+      await veriYukle();
+    }
     const y = await api("/api/yil", { inceleme_id: durum.incelemeId, yil, ay_sayisi: parseInt($("yAy").value, 10) || 12 });
     durum.aktifYilId = y.yil_id;
     $("yYil").value = "";
@@ -454,7 +488,21 @@ function yilTablosunuCiz() {
   tablo.innerHTML = "<tr><th>Yıl</th><th>Ay sayısı</th><th></th></tr>";
   yillar.forEach((y) => {
     const tr = document.createElement("tr");
-    const tdYil = document.createElement("td"); tdYil.textContent = y.yil;
+    // Yil duzeltilebilir: otomatik eklenen yil yanlissa buradan degistirilir
+    const tdYil = document.createElement("td");
+    const yilGiris = document.createElement("input");
+    yilGiris.type = "number"; yilGiris.min = 2000; yilGiris.max = 2100;
+    yilGiris.value = y.yil; yilGiris.style.width = "90px";
+    yilGiris.addEventListener("change", async () => {
+      const yeni = parseInt(yilGiris.value, 10);
+      if (!yeni) { yilGiris.value = y.yil; return; }
+      try {
+        await api("/api/yil/guncelle", { inceleme_id: durum.incelemeId, yil_id: y.yil_id, yil: yeni });
+        mesaj(`Yıl ${yeni} olarak güncellendi; KDV oranları da buna göre ayarlandı.`);
+        await veriYukle(); await incelemeleriYukle();
+      } catch (hata) { mesaj(hata.message, "hata"); yilGiris.value = y.yil; }
+    });
+    tdYil.appendChild(yilGiris);
     const tdAy = document.createElement("td");
     const giris = document.createElement("input");
     giris.type = "number"; giris.min = 1; giris.max = 12; giris.value = y.ay_sayisi;
@@ -500,22 +548,74 @@ function yilSekmeleriniCiz() {
       kap.appendChild(d);
     });
   });
+  yilSecimListesiniCiz();
+}
+
+/** Yapistirma kutusunun ustundeki yil listesi: hedef yili secmeye yarar. */
+function yilSecimListesiniCiz() {
+  const sec = $("beyanYilSec");
+  const buYil = new Date().getFullYear();
+  const mevcut = durum.veri ? durum.veri.yillar.map((y) => y.yil) : [];
+  const adaylar = [];
+  for (let y = buYil + 1; y >= buYil - 12; y--) adaylar.push(y);
+  mevcut.forEach((y) => { if (!adaylar.includes(y)) adaylar.push(y); });
+  adaylar.sort((a, b) => b - a);
+
+  const etkin = aktifYil();
+  const secili = sec.value ? parseInt(sec.value, 10) : (etkin ? etkin.yil : buYil - 1);
+  sec.innerHTML = "";
+  adaylar.forEach((y) => {
+    const se = document.createElement("option");
+    se.value = y;
+    se.textContent = mevcut.includes(y) ? `${y} (dosyada var)` : String(y);
+    if (y === secili) se.selected = true;
+    sec.appendChild(se);
+  });
+}
+
+// Listeden var olan bir yil secilirse o yila gec
+$("beyanYilSec").addEventListener("change", () => {
+  if (!durum.veri) return;
+  const yil = parseInt($("beyanYilSec").value, 10);
+  const kayit = durum.veri.yillar.find((y) => y.yil === yil);
+  if (kayit) {
+    durum.aktifYilId = kayit.yil_id;
+    yilSekmeleriniCiz(); beyanIzgarasiniCiz(); elestiriIzgarasiniCiz();
+  }
+});
+
+/** Secili yili dosyada bulur, yoksa olusturur ve etkin yil yapar. */
+async function hedefYiliHazirla() {
+  const yil = parseInt($("beyanYilSec").value, 10) || (new Date().getFullYear() - 1);
+  const kayit = durum.veri ? durum.veri.yillar.find((y) => y.yil === yil) : null;
+  if (kayit) { durum.aktifYilId = kayit.yil_id; return kayit; }
+  const y = await api("/api/yil", { inceleme_id: durum.incelemeId, yil });
+  durum.aktifYilId = y.yil_id;
+  await veriYukle();
+  await incelemeleriYukle();
+  return aktifYil();
 }
 
 // ------------------------------------------------------------ beyan izgara
 $("beyanYapistir").addEventListener("click", async () => {
-  const yil = aktifYil();
-  if (!yil) { mesaj("Önce bir yıl ekleyin.", "hata"); return; }
   const metin = $("beyanMetin").value;
   if (!metin.trim()) { mesaj("Yapıştırılacak metin boş.", "hata"); return; }
   try {
+    // Dosya veya yil yoksa akisi kesmeden kendiliginden olustur
+    if (!durum.incelemeId) {
+      const h = await api("/api/calisma_hazirla", {});
+      durum.incelemeId = h.inceleme_id;
+      await veriYukle();
+    }
+    const yil = await hedefYiliHazirla();
     const y = await api("/api/beyan/yapistir", {
       inceleme_id: durum.incelemeId, yil_id: yil.yil_id, metin,
       ay_sayisi_guncelle: $("ayOtomatik").checked,
     });
     $("beyanMetin").value = "";
     await veriYukle();
-    if (y.uyarilar && y.uyarilar.length) mesaj("Aktarıldı.\n" + y.uyarilar.join("\n"), "uyari");
+    await incelemeleriYukle();
+    if (y.uyarilar && y.uyarilar.length) mesaj(`${yil.yil} aktarıldı.\n` + y.uyarilar.join("\n"), "uyari");
     else mesaj(`${yil.yil} beyan verisi aktarıldı.`);
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
@@ -524,7 +624,7 @@ function beyanIzgarasiniCiz() {
   const tablo = $("beyanIzgara");
   const yil = aktifYil();
   tablo.innerHTML = "";
-  if (!yil) { tablo.innerHTML = '<tr><td class="bos-durum">Önce bir yıl ekleyin.</td></tr>'; return; }
+  if (!yil) { bosDurum(tablo, "Yukarıdaki kutuya beyan bloğunu yapıştırın; yıl kendiliğinden oluşturulur."); return; }
 
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">DÖNEMİ</th><th></th>' +
@@ -608,7 +708,7 @@ function elestiriIzgarasiniCiz() {
   const tablo = $("elestiriIzgara");
   const yil = aktifYil();
   tablo.innerHTML = "";
-  if (!yil) { tablo.innerHTML = '<tr><td class="bos-durum">Önce bir yıl ekleyin.</td></tr>'; return; }
+  if (!yil) { bosDurum(tablo, "Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın."); return; }
 
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">TESPİT</th>' +
@@ -702,7 +802,7 @@ function otomatikKdvGuncelle() {
 
 $("elestiriKaydet").addEventListener("click", async () => {
   const yil = aktifYil();
-  if (!yil) { mesaj("Önce bir yıl ekleyin.", "hata"); return; }
+  if (!yil) { mesaj("Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın.", "hata"); return; }
   const tablo = $("elestiriIzgara");
   const alanlar = {};
   ["matrah_ilave", "hesaplanan_kdv_ilave", "devir_cikar", "indirim_cikar", "yuklenilen_cikar", "kdv_orani"]
@@ -847,10 +947,23 @@ $("yedekAl").addEventListener("click", async () => {
 (async function baslat() {
   try {
     durum.tanimlar = await api("/api/tanimlar");
+    $("yYil").value = new Date().getFullYear() - 1;
+
+    // Mukellef/dosya/yil tanimlamak zorunda kalmadan hemen calisilabilsin:
+    // varsa son dosya secilir, yoksa bir calisma olusturulur.
+    const hazir = await api("/api/calisma_hazirla", {});
+    durum.incelemeId = hazir.inceleme_id;
+    await veriYukle();
+    durum.mukellefId = durum.veri ? durum.veri.inceleme.mukellef_id : null;
+
     await mukellefleriYukle();
     await incelemeleriYukle();
     await yedekleriYukle();
-    $("yYil").value = new Date().getFullYear() - 1;
+    yilSecimListesiniCiz();
+
+    // Kullanici dogrudan yapistirabilsin diye Beyan Verisi sekmesiyle acilir
+    document.querySelector('nav button[data-sekme="beyan"]').click();
+    $("beyanMetin").focus();
   } catch (hata) { mesaj("Başlatma hatası: " + hata.message, "hata"); }
 })();
 </script>

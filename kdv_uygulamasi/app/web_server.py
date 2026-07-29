@@ -7,6 +7,7 @@ import json
 import os
 import posixpath
 import urllib.parse
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
@@ -127,12 +128,19 @@ class Istekci(BaseHTTPRequestHandler):
         yol = urllib.parse.urlparse(self.path).path
         try:
             veri = self._govde_oku()
-            if yol == "/api/mukellef":
-                ad = (veri.get("ad_unvan") or "").strip()
-                if not ad:
-                    raise ApiHata("Mükellef adı/ünvanı boş olamaz.")
+            if yol == "/api/calisma_hazirla":
+                # Kullanici mukellef/dosya/yil tanimlamadan calisabilsin diye
+                # varsa son dosyayi, yoksa yeni bir calismayi dondurur.
+                self._json_yanit({"inceleme_id": db.varsayilan_calisma()})
+            elif yol == "/api/mukellef":
+                # Ad bos birakilabilir; yer tutucu adla olusturulur
+                ad = (veri.get("ad_unvan") or "").strip() or db.ADSIZ_MUKELLEF
                 yeni = db.mukellef_ekle(ad, veri.get("vkn_tckn"), veri.get("adres"))
                 self._json_yanit({"id": yeni})
+            elif yol == "/api/mukellef/guncelle":
+                db.mukellef_guncelle(int(veri["id"]), veri.get("ad_unvan"),
+                                     veri.get("vkn_tckn"), veri.get("adres"))
+                self._json_yanit({"tamam": True})
             elif yol == "/api/mukellef/sil":
                 try:
                     db.mukellef_sil(int(veri["id"]))
@@ -140,12 +148,12 @@ class Istekci(BaseHTTPRequestHandler):
                     raise ApiHata(str(exc))
                 self._json_yanit({"tamam": True})
             elif yol == "/api/inceleme":
+                # Mukellef secilmemisse yer tutucu mukellef, ad bossa
+                # varsayilan dosya adi kullanilir
                 mukellef_id = veri.get("mukellef_id")
-                ad = (veri.get("ad") or "").strip()
                 if not mukellef_id:
-                    raise ApiHata("Önce bir mükellef seçin.")
-                if not ad:
-                    raise ApiHata("İnceleme dosyasına bir ad verin.")
+                    mukellef_id = db.mukellef_ekle(db.ADSIZ_MUKELLEF)
+                ad = (veri.get("ad") or "").strip() or "Çalışma"
                 yeni = db.inceleme_ekle(int(mukellef_id), ad, veri.get("notlar"))
                 self._json_yanit({"id": yeni})
             elif yol == "/api/inceleme/guncelle":
@@ -167,6 +175,13 @@ class Istekci(BaseHTTPRequestHandler):
             elif yol == "/api/yil/sil":
                 _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
                 db.yil_sil(int(veri["yil_id"]))
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/yil/guncelle":
+                _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
+                try:
+                    db.yil_guncelle(int(veri["yil_id"]), veri["yil"])
+                except ValueError as exc:
+                    raise ApiHata(str(exc))
                 self._json_yanit({"tamam": True})
             elif yol == "/api/yil/ay_sayisi":
                 _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
@@ -206,7 +221,15 @@ class Istekci(BaseHTTPRequestHandler):
 
     # -------------------------------------------------------------- yardimci
     def _beyan_yapistir(self, veri):
-        _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
+        # Yil belirtilmemisse akisi kesmek yerine varsayilan bir yil olustur
+        inceleme_id = int(veri["inceleme_id"])
+        yil_id = veri.get("yil_id")
+        if not yil_id:
+            mevcut = db.inceleme_verisi(inceleme_id)["yillar"]
+            yil_id = (mevcut[0]["yil_id"] if mevcut
+                      else db.yil_ekle(inceleme_id, datetime.now().year - 1))
+            veri["yil_id"] = yil_id
+        _yil_dogrula(inceleme_id, int(yil_id))
         metin = veri.get("metin") or ""
         try:
             sonuc = beyan_ayristir(metin)

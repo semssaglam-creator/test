@@ -67,6 +67,9 @@ ELESTIRI_ALAN_KODLARI = ["matrah_ilave", "hesaplanan_kdv_ilave", "devir_cikar",
                          "indirim_cikar", "yuklenilen_cikar", "kdv_orani",
                          "hesaplanan_otomatik"]
 
+# Mukellef bilgisi girilmeden calisilabilmesi icin kullanilan yer tutucu ad
+ADSIZ_MUKELLEF = "(Adsız Mükellef)"
+
 
 def _baglan():
     os.makedirs(DB_DIR, exist_ok=True)
@@ -107,6 +110,24 @@ def mukellefleri_listele():
     try:
         return [dict(r) for r in conn.execute(
             "SELECT * FROM mukellefler ORDER BY ad_unvan COLLATE NOCASE")]
+    finally:
+        conn.close()
+
+
+def mukellef_guncelle(mukellef_id, ad_unvan=None, vkn_tckn=None, adres=None):
+    """Mukellef bilgilerini gunceller; bos birakilan alanlara dokunulmaz."""
+    conn = _baglan()
+    try:
+        if ad_unvan is not None:
+            ad = ad_unvan.strip() or ADSIZ_MUKELLEF
+            conn.execute("UPDATE mukellefler SET ad_unvan = ? WHERE id = ?", (ad, mukellef_id))
+        if vkn_tckn is not None:
+            conn.execute("UPDATE mukellefler SET vkn_tckn = ? WHERE id = ?",
+                         (vkn_tckn.strip(), mukellef_id))
+        if adres is not None:
+            conn.execute("UPDATE mukellefler SET adres = ? WHERE id = ?",
+                         (adres.strip(), mukellef_id))
+        conn.commit()
     finally:
         conn.close()
 
@@ -221,6 +242,63 @@ def yil_ekle(inceleme_id, yil, ay_sayisi=12):
         return yil_id
     finally:
         conn.close()
+
+
+def yil_guncelle(yil_id, yeni_yil):
+    """Bir yil kaydinin yilini degistirir (otomatik eklenen yili duzeltmek icin).
+
+    KDV orani varsayilanlari yila bagli oldugundan, kullanici orani elle
+    degistirmemisse oranlar yeni yila gore tazelenir.
+    """
+    yeni_yil = int(yeni_yil)
+    if not 2000 <= yeni_yil <= 2100:
+        raise ValueError("Yıl 2000-2100 aralığında olmalıdır.")
+    conn = _baglan()
+    try:
+        kayit = conn.execute("SELECT inceleme_id, yil FROM inceleme_yillari WHERE id = ?",
+                             (yil_id,)).fetchone()
+        if kayit is None:
+            raise ValueError("Yıl kaydı bulunamadı.")
+        if kayit["yil"] == yeni_yil:
+            return
+        cakisma = conn.execute(
+            "SELECT id FROM inceleme_yillari WHERE inceleme_id = ? AND yil = ? AND id != ?",
+            (kayit["inceleme_id"], yeni_yil, yil_id)).fetchone()
+        if cakisma:
+            raise ValueError(f"{yeni_yil} yılı bu dosyada zaten var.")
+        eski_varsayilan = [varsayilan_kdv_orani(kayit["yil"], a + 1) for a in range(12)]
+        satir = conn.execute("SELECT degerler FROM elestiri_degerleri WHERE yil_id = ? AND "
+                             "alan = 'kdv_orani'", (yil_id,)).fetchone()
+        conn.execute("UPDATE inceleme_yillari SET yil = ? WHERE id = ?", (yeni_yil, yil_id))
+        # Oranlar elle degistirilmemisse yeni yilin varsayilanina cek
+        if satir and json.loads(satir["degerler"]) == eski_varsayilan:
+            yeni = [varsayilan_kdv_orani(yeni_yil, a + 1) for a in range(12)]
+            conn.execute("UPDATE elestiri_degerleri SET degerler = ? WHERE yil_id = ? AND "
+                         "alan = 'kdv_orani'", (json.dumps(yeni), yil_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def varsayilan_calisma():
+    """Uygulama acilir acilmaz kullanilabilecek bir calisma dondurur.
+
+    Kayit yoksa adsiz bir mukellef, "Çalışma" adli bir dosya ve bir yil
+    olusturur. Boylece kullanici once mukellef/dosya/yil tanimlamak zorunda
+    kalmadan dogrudan beyan yapistirabilir; bu bilgileri sonradan
+    doldurabilir veya degistirebilir.
+    """
+    conn = _baglan()
+    try:
+        son = conn.execute("SELECT id FROM incelemeler ORDER BY id DESC LIMIT 1").fetchone()
+        if son:
+            return son["id"]
+    finally:
+        conn.close()
+    mukellef_id = mukellef_ekle(ADSIZ_MUKELLEF)
+    inceleme_id = inceleme_ekle(mukellef_id, "Çalışma")
+    yil_ekle(inceleme_id, datetime.now().year - 1)
+    return inceleme_id
 
 
 def yil_sil(yil_id):

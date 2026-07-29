@@ -17,23 +17,27 @@ açılır. Kurulum gerekmez; Excel çıktısı için gereken `openpyxl` kütüph
 
 ## Akış
 
-### 1. Dosyalar sekmesi
-1. **Mükellef** ekleyin (ad/ünvan, VKN).
-2. Mükellefi seçip bir **inceleme dosyası** oluşturun (örn. "2022-2023 KDV").
-3. Dosyaya **inceleme yıllarını** ekleyin. Yıl içinde kısmi dönem inceleniyorsa
-   *ay sayısını* düşürün.
+Uygulama **Beyan Verisi** sekmesiyle açılır ve doğrudan yapıştırmaya hazırdır.
+Mükellef, dosya veya yıl tanımlamak zorunda değilsiniz — açılışta bir çalışma
+kendiliğinden hazırlanır. Bu bilgileri sonradan doldurabilir veya
+değiştirebilirsiniz.
 
-**Başlangıç devreden KDV:** İnceleme döneminden önceki dönemden gelen ve
-düzeltilmiş devir tutarı varsa buraya yazın; seri bu tutarla başlar. Boş
-bırakılırsa ilk dönemin beyanındaki devir esas alınır.
+### 1. Beyan Verisi sekmesi
 
-### 2. Beyan Verisi sekmesi
+**Yıl seçin.** Yapıştırma kutusunun üstündeki listeden beyanın ait olduğu yılı
+seçin. Bu seçim önemlidir: **KDV oranı bu yıla göre belirlenir** (10.07.2023
+öncesi %18, sonrası %20) ve dönemler arası devir zinciri buna göre kurulur.
+Listede olmayan bir yıl seçerseniz yapıştırma sırasında kendiliğinden oluşur.
 
 **Blok yapıştırma:** Sistemden kopyaladığınız beyan bloğunu (etiket sütunu +
 12 ay, Excel'deki 45–96 satırlarının karşılığı) kutuya yapıştırıp *Bloğu Aktar*
 deyin. Satırlar etiketlerine göre sırayla eşleştirilir; arada eksik veya fazla
-satır olsa da hizalama bozulmaz. Etiket sütunu olmayan yapıştırmalarda satırlar
-sıraya göre atanır ve bu durum uyarı olarak bildirilir.
+satır olsa da hizalama bozulmaz. Grup başlıkları (İNDİRİMLER, SONUÇ HESAPLARI
+gibi değer taşımayan satırlar) tanınır ve atlanır. Etiket sütunu olmayan
+yapıştırmalarda satırlar sıraya göre atanır ve bu durum uyarı olarak bildirilir.
+
+Birden çok yıl için: yılı değiştirip yeni bloğu yapıştırın. Yıllar arasında
+yapıştırma kutusunun altındaki sekmelerden geçiş yaparsınız.
 
 **Elle düzenleme:** Izgaradaki her hücreyi doğrudan değiştirebilirsiniz; alanı
 terk ettiğinizde kaydedilir ve seri anında yeniden hesaplanır.
@@ -44,6 +48,21 @@ veya alt alta ayrılmış olabilir; başta etiket sütunu bulunması sorun deği
 
 Ay sayısının dışında kalan sütunlar soluk gösterilir; veri girilebilir ancak
 hesaba katılmaz.
+
+### 2. Dosyalar sekmesi (isteğe bağlı)
+
+Burası yalnızca gerektiğinde kullanılır:
+
+- **Mükellef adı / VKN** — rapor metninin başlığında kullanılır. Boş bırakırsanız
+  "(Adsız Mükellef)" olarak kalır, hesaplamayı etkilemez.
+- **Yıl düzeltme** — otomatik oluşan yıl yanlışsa buradan değiştirin. KDV oranı
+  varsayılanları da yeni yıla göre tazelenir (oranı elle değiştirmediyseniz).
+- **Ay sayısı** — yıl içinde kısmi dönem inceleniyorsa düşürün.
+- **Başlangıç devreden KDV** — inceleme döneminden önceki dönemden gelen ve
+  düzeltilmiş devir tutarı varsa buraya yazın; seri bu tutarla başlar. Boş
+  bırakılırsa ilk dönemin beyanındaki devir esas alınır.
+- Birden çok mükellefle çalışıyorsanız ayrı dosyalar oluşturup aralarında
+  buradan geçiş yaparsınız.
 
 ### 3. İnceleme Tespitleri sekmesi
 
