@@ -1,0 +1,84 @@
+KDV İNCELEME ÇALIŞMASI — KURULUM
+=================================
+
+Gereken tek şey Python 3'tür. Hemen her Linux dağıtımında kurulu gelir;
+kurulu değilse aşağıdaki "Sorun giderme" bölümüne bakın.
+
+
+1. ARŞİVİ AÇIN
+--------------
+İndirdiğiniz dosyaya sağ tıklayıp "Buraya Çıkar" deyin. Klasörü istediğiniz
+yere koyabilirsiniz (örneğin Belgeler içine). Uygulama bulunduğu yerden
+çalışır, sisteme dosya kopyalamaz.
+
+
+2. KURULUMU ÇALIŞTIRIN
+----------------------
+Klasörün içindeki  kur.sh  dosyasına ÇİFT TIKLAYIN.
+Çıkan pencerede "Çalıştır" / "Execute" / "Run in Terminal" seçeneğini seçin.
+
+Çift tıklayınca dosya metin düzenleyicide açılıyorsa (GNOME masaüstünde
+olur), bunun yerine klasörde boş bir yere sağ tıklayıp "Terminalde Aç"
+deyin ve şunu yazın:
+
+    ./kur.sh
+
+Kurulum birkaç saniye sürer, yönetici parolası istemez.
+
+
+3. ÇALIŞTIRIN
+-------------
+Kurulumdan sonra uygulamayı şu üç yoldan biriyle başlatabilirsiniz:
+
+  * Uygulamalar menüsünde "KDV İnceleme Çalışması"
+  * Masaüstündeki kısayola çift tıklayarak
+  * Klasördeki calistir.sh dosyasına çift tıklayarak
+
+Uygulama açılınca tarayıcınızda kendiliğinden bir sekme açılır.
+Kapatmak için açılan siyah terminal penceresini kapatın.
+
+Menüde hemen görünmezse oturumu kapatıp açın.
+
+
+KULLANIM
+--------
+Ayrıntılı kullanım için klasördeki KULLANIM.md dosyasına bakın.
+
+
+VERİLERİNİZ NEREDE
+------------------
+Hepsi uygulama klasörünün içinde durur:
+
+  veritabani/kdv.db   mükellefler, dosyalar, beyan ve tespit kayıtları
+  yedekler/           veritabanı yedekleri
+  ciktilar/           ürettiğiniz Excel dosyaları
+
+Klasörü başka bir bilgisayara kopyalarsanız verileriniz de birlikte gider.
+Uygulama tamamen çevrimdışıdır; hiçbir veri dışarı gönderilmez, sunucu
+yalnızca kendi bilgisayarınızdan erişilebilir (127.0.0.1).
+
+
+KALDIRMA
+--------
+Klasördeki  kaldir.sh  dosyasını çalıştırın; menü ve masaüstü kısayolları
+silinir. Verileriniz durur. Tamamen silmek için klasörü çöp kutusuna atın.
+
+
+SORUN GİDERME
+-------------
+"Python 3 bulunamadı" hatası:
+    Ubuntu / Debian / Mint : sudo apt install python3
+    Fedora                 : sudo dnf install python3
+    openSUSE               : sudo zypper install python3
+    Arch / Manjaro         : sudo pacman -S python
+
+Çift tıklayınca hiçbir şey olmuyor:
+    Dosyaya sağ tıklayın > Özellikler > İzinler > "Dosyanın program olarak
+    çalıştırılmasına izin ver" kutusunu işaretleyin.
+
+Tarayıcı açılmıyor:
+    Terminal penceresinde yazan adresi (http://127.0.0.1:8766/) elle
+    tarayıcınıza yapıştırın.
+
+Uygulama zaten açıkken tekrar başlatırsanız sıradaki boş port kullanılır
+(8766-8775); terminal penceresinde hangi adreste çalıştığı yazar.
