@@ -15,6 +15,106 @@ def _donem_adi(d):
     return f"{d['yil']}/{d['ay_adi']}"
 
 
+# Beyannamenin sonuc hesaplari; farklarin hangisini nasil etkiledigi raporlanir
+SONUC_HESAPLARI = [
+    ("odenecek", "Ödenmesi gereken KDV"),
+    ("sonraki_devir", "Sonraki döneme devreden KDV"),
+    ("iade", "İade edilmesi gereken KDV"),
+    ("tecil_edilecek", "Tecil edilecek KDV"),
+]
+SONUC_ALANLARI = [alan for alan, _ad in SONUC_HESAPLARI]
+
+
+class _BolumSayaci:
+    """Kosullu bolumler nedeniyle basliklari sirali numaralandirir."""
+
+    def __init__(self):
+        self.sira = 0
+
+    def basla(self, baslik):
+        self.sira += 1
+        return f"{self.sira}. {baslik}"
+
+
+def _degisiklik_ozeti(d):
+    """Bu donemde neyin degistigini (matrah, indirim vb.) cumleye cevirir."""
+    f = d["fark"]
+    parcalar = []
+    if abs(f["matrah"]) > 0.005:
+        parcalar.append(f"matraha {_tl(abs(f['matrah']))} TL "
+                        f"{'ilave edilmiş' if f['matrah'] > 0 else 'eksiltme yapılmış'}")
+    if abs(f["toplam_kdv"]) > 0.005:
+        parcalar.append(f"hesaplanan KDV {_tl(abs(f['toplam_kdv']))} TL "
+                        f"{'artmış' if f['toplam_kdv'] > 0 else 'azalmış'}")
+    if abs(f["bu_donem_indirim_toplam"]) > 0.005:
+        parcalar.append(f"indirilecek KDV {_tl(abs(f['bu_donem_indirim_toplam']))} TL "
+                        f"{'azaltılmış' if f['bu_donem_indirim_toplam'] < 0 else 'artırılmış'}")
+    if abs(f["onceki_devir"]) > 0.005:
+        parcalar.append(f"önceki dönemden devreden KDV {_tl(abs(f['onceki_devir']))} TL "
+                        f"{'artmış' if f['onceki_devir'] > 0 else 'azalmış'}")
+    return parcalar
+
+
+def _donem_paragrafi(d):
+    """Bir donemin degisikligini ve sonuc hesaplarina etkisini yazar."""
+    satirlar = []
+    parcalar = _degisiklik_ozeti(d)
+    if parcalar:
+        satirlar.append(f"{_donem_adi(d)} dönemi: " + ", ".join(parcalar) + ".")
+    else:
+        satirlar.append(f"{_donem_adi(d)} dönemi:")
+
+    # Sonuc hesaplarindan hangileri, ne kadar degisti
+    etkilenen = [(alan, ad) for alan, ad in SONUC_HESAPLARI
+                 if abs(d["fark"].get(alan, 0)) > 0.005]
+    if etkilenen:
+        satirlar.append("    Bu değişikliğin beyannamenin sonuç hesaplarına etkisi:")
+        for alan, ad in etkilenen:
+            once = d["beyan"][alan]
+            sonra = d["elestirili"][alan]
+            sapma = d["fark"][alan]
+            satirlar.append(
+                f"      - {ad}: {_tl(once)} TL iken {_tl(sonra)} TL olarak "
+                f"hesaplanmış; {_tl(abs(sapma))} TL "
+                f"{'artmıştır' if sapma > 0 else 'azalmıştır'}.")
+    else:
+        satirlar.append("    Bu değişiklik dönemin sonuç hesaplarını değiştirmemiş, "
+                        "yalnızca indirim ve devir tutarlarına yansımıştır.")
+
+    # Farkin kaynagi: bu donemin tespiti / devir / beyan hatasi
+    satirlar.extend(_kaynak_cumlesi(d, etkilenen))
+    satirlar.append("")
+    return satirlar
+
+
+def _kaynak_cumlesi(d, etkilenen):
+    """Odenecek KDV farkinin bilesenlerini acikca yazar."""
+    if not etkilenen:
+        return []
+    ana = "odenecek" if any(a == "odenecek" for a, _ in etkilenen) else etkilenen[0][0]
+    tespit = d["fark_tespit"].get(ana, 0)
+    devir = d["fark_devir"].get(ana, 0)
+    hata = d["fark_beyan_hatasi"].get(ana, 0)
+    ad = dict(SONUC_HESAPLARI)[ana]
+    bilesenler = [
+        (tespit, "bu dönemde yapılan tespitten"),
+        (devir, "önceki dönemlerden devir yoluyla"),
+        (hata, "beyannamenin kendi aritmetik tutarsızlığından"),
+    ]
+    dolu = [(tutar, kaynak) for tutar, kaynak in bilesenler if abs(tutar) > 0.005]
+    if not dolu:
+        return []
+    if len(dolu) == 1:
+        return [f"    {ad} farkının tamamı {dolu[0][1]} kaynaklanmaktadır."]
+    # Birden cok bilesen varsa yon de yazilir; aksi halde tutarlar toplanmiyormus
+    # gibi gorunur (ornegin -144.000 ile +180.000 net +36.000 eder).
+    parcalar = [f"{_tl(abs(tutar))} TL'lik {'artış' if tutar > 0 else 'azalış'} {kaynak}"
+                for tutar, kaynak in dolu]
+    return [f"    {ad} farkında " + ", ".join(parcalar) + " kaynaklanmaktadır; "
+            f"net etki {_tl(abs(d['fark'][ana]))} TL "
+            f"{'artıştır' if d['fark'][ana] > 0 else 'azalıştır'}."]
+
+
 def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
     """Rapora yapistirilabilir duz metin uretir."""
     donemler = sonuc["donemler"]
@@ -41,38 +141,62 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
                         "gerektiren bir tespit bulunmamıştır.")
         return "\n".join(satirlar)
 
-    satirlar.append("1. DÖNEMLER İTİBARIYLA TESPİT EDİLEN FARKLAR")
+    bolum = _BolumSayaci()
+    satirlar.append(bolum.basla("DÖNEMLER İTİBARIYLA TESPİT EDİLEN FARKLAR"))
     satirlar.append("")
-    for d in farkli:
-        parcalar = []
-        f = d["fark"]
-        if abs(f["matrah"]) > 0.005:
-            parcalar.append(f"matraha {_tl(abs(f['matrah']))} TL "
-                            f"{'ilave edilmiş' if f['matrah'] > 0 else 'eksiltme yapılmış'}")
-        if abs(f["toplam_kdv"]) > 0.005:
-            parcalar.append(f"hesaplanan KDV {_tl(abs(f['toplam_kdv']))} TL "
-                            f"{'artmış' if f['toplam_kdv'] > 0 else 'azalmış'}")
-        if abs(f["bu_donem_indirim_toplam"]) > 0.005:
-            parcalar.append(
-                f"indirilecek KDV {_tl(abs(f['bu_donem_indirim_toplam']))} TL "
-                f"{'azaltılmış' if f['bu_donem_indirim_toplam'] < 0 else 'artırılmış'}")
-        satirlar.append(f"{_donem_adi(d)} dönemi: " + ", ".join(parcalar) + ".")
-        if abs(f["odenecek"]) > 0.005:
-            satirlar.append(
-                f"    Bu dönemde beyan edilen ödenmesi gereken KDV "
-                f"{_tl(d['beyan']['odenecek'])} TL iken, yeniden hesaplama sonucunda "
-                f"{_tl(d['elestirili']['odenecek'])} TL'ye ulaşılmış; "
-                f"{_tl(abs(f['odenecek']))} TL tutarında vergi farkı doğmuştur.")
-        if abs(f["sonraki_devir"]) > 0.005:
-            satirlar.append(
-                f"    Sonraki döneme devreden KDV {_tl(d['beyan']['sonraki_devir'])} TL'den "
-                f"{_tl(d['elestirili']['sonraki_devir'])} TL'ye "
-                f"{'yükselmiştir' if f['sonraki_devir'] > 0 else 'düşmüştür'}; "
-                f"bu tutar izleyen dönem hesaplarına yansıtılmıştır.")
+
+    # Kendi tespiti olan donemler ayrintili yazilir; yalnizca devir yoluyla
+    # etkilenenler asagida toplu listelenir (uzun serilerde tekrari onler)
+    tespitli = [d for d in farkli if d["elestiri_var"]
+                or any(abs(d["fark_beyan_hatasi"].get(a, 0)) > 0.005 for a in SONUC_ALANLARI)]
+    devirli = [d for d in farkli if d not in tespitli]
+
+    for d in tespitli:
+        satirlar.extend(_donem_paragrafi(d))
+
+    if devirli:
+        satirlar.append("Yukarıdaki tespitlerin devir zinciriyle yansıdığı diğer dönemler "
+                        "ve bu dönemlerin sonuç hesaplarındaki değişim:")
+        satirlar.append("")
+        for d in devirli:
+            etkiler = []
+            for alan, hesap_adi in SONUC_HESAPLARI:
+                sapma = d["fark"].get(alan, 0)
+                if abs(sapma) <= 0.005:
+                    continue
+                etkiler.append(f"{hesap_adi} {_tl(d['beyan'][alan])} TL'den "
+                               f"{_tl(d['elestirili'][alan])} TL'ye "
+                               f"{'yükselmiş' if sapma > 0 else 'düşmüş'}")
+            if etkiler:
+                satirlar.append(f"    - {_donem_adi(d)}: " + "; ".join(etkiler) + ".")
         satirlar.append("")
 
     genel = sonuc["genel_toplam"]
-    satirlar.append("2. TOPLAM SONUÇ")
+    hatali = [d for d in donemler
+              if any(abs(d["fark_beyan_hatasi"].get(a, 0)) > 0.005 for a in SONUC_ALANLARI)]
+    if hatali:
+        satirlar.append(bolum.basla(
+            "BEYANNAMEDEKİ ARİTMETİK HATALARIN SONUÇ HESAPLARINA ETKİSİ"))
+        satirlar.append("")
+        satirlar.append(
+            "Aşağıdaki dönemlerde beyannamenin kendi rakamları içinde tutarsızlık "
+            "bulunmaktadır. Bu tutarsızlıklar, inceleme tespitlerinden bağımsız olarak "
+            "sonuç hesaplarını etkilemektedir:")
+        satirlar.append("")
+        for d in hatali:
+            satirlar.append(f"{_donem_adi(d)} dönemi:")
+            for alan, hesap_adi in SONUC_HESAPLARI:
+                sapma = d["fark_beyan_hatasi"].get(alan, 0)
+                if abs(sapma) <= 0.005:
+                    continue
+                satirlar.append(
+                    f"    - {hesap_adi}: beyanda {_tl(d['beyan'][alan])} TL gösterilmiş; "
+                    f"beyandaki diğer rakamlara göre {_tl(d['beyan_hesap'][alan])} TL "
+                    f"olması gerekirdi ({_tl(abs(sapma))} TL "
+                    f"{'fazla' if sapma < 0 else 'eksik'} gösterilmiş).")
+            satirlar.append("")
+
+    satirlar.append(bolum.basla("TOPLAM SONUÇ"))
     satirlar.append("")
     satirlar.append(
         f"İnceleme dönemleri toplamında beyan edilen matrah {_tl(genel['beyan']['matrah'])} TL, "
@@ -92,7 +216,7 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
     if any(tarhiyat.get(k, 0) for k in ("resen_tarhi_gereken", "aranmasi_gereken",
                                         "haksiz_iade")):
         satirlar.append("")
-        satirlar.append("3. TARHİYAT ÖZETİ")
+        satirlar.append(bolum.basla("TARHİYAT ÖZETİ"))
         satirlar.append("")
         if tarhiyat.get("resen_tarhi_gereken"):
             satirlar.append(f"Re'sen tarhı gereken katma değer vergisi: "
@@ -112,7 +236,7 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
     kaynaklar = analiz.get("kaynaklar") or []
     if len(kaynaklar) > 1:
         satirlar.append("")
-        satirlar.append("4. TESPİTLERİN AYRI AYRI ETKİSİ")
+        satirlar.append(bolum.basla("TESPİTLERİN AYRI AYRI ETKİSİ"))
         satirlar.append("")
         satirlar.append("Her tespit, girildiği dönemin yanı sıra devir zinciri yoluyla izleyen "
                         "dönemleri de etkilemektedir. Tespitlerin ayrı ayrı katkıları aşağıdadır:")
@@ -141,7 +265,7 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
 
     if bulgular:
         satirlar.append("")
-        satirlar.append("5. BEYANNAMELERDE TESPİT EDİLEN TUTARSIZLIKLAR")
+        satirlar.append(bolum.basla("BEYANNAMELERDE TESPİT EDİLEN TUTARSIZLIKLAR"))
         satirlar.append("")
         for b in bulgular:
             satirlar.append(f"- {b['mesaj']}")

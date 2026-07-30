@@ -188,8 +188,23 @@ Kapatmak için balon dışına tıklayın veya Esc'e basın.
   tablosunu; ayrıca *Tarhiyat Özeti*, *Yıl Uyumu*, *Tespit Etkisi* ve tüm
   dönemleri birleştiren *Özet* sayfalarını içerir. Aynı düğme Tarhiyat Özeti
   sekmesinde de vardır; ikisi de aynı dosyayı üretir.
-- **Rapor Metnini Üret** — dönem dönem matrah farkı, tarhiyat özeti,
-  tespitlerin ayrı ayrı etkisi ve tutarsızlık bulguları.
+- **Rapor Metnini Üret** — rapora yapıştırılabilir taslak metin. İçeriği:
+
+  1. **Dönemler itibarıyla tespit edilen farklar** — kendi tespitiniz bulunan
+     her dönem için ne değiştiği (matrah ilavesi, indirim reddi vb.) ve bu
+     değişikliğin **sonuç hesaplarına etkisi** kalem kalem yazılır: ödenmesi
+     gereken KDV, sonraki döneme devreden KDV, iade edilmesi gereken KDV ve
+     tecil edilecek KDV hangi tutardan hangi tutara geçmiş. Ardından farkın
+     kaynağı ayrıştırılır — ne kadarı o dönemin tespitinden, ne kadarı önceki
+     dönemlerden devirle, ne kadarı beyannamenin kendi aritmetik
+     tutarsızlığından geliyor. Yalnızca devir yoluyla etkilenen dönemler
+     tekrar olmasın diye altta toplu listelenir.
+  2. **Beyannamedeki aritmetik hataların sonuç hesaplarına etkisi** — beyanda
+     gösterilen tutar ile beyandaki diğer rakamlara göre çıkması gereken tutar
+     karşılaştırılır. Yalnızca böyle bir tutarsızlık varsa bu bölüm çıkar.
+  3. Toplam sonuç, tarhiyat özeti, tespitlerin ayrı ayrı etkisi ve tutarsızlık
+     bulguları.
+
   Taslaktır; hukuki nitelendirme ve gerekçe rapora sizin tarafınızdan eklenir.
 
 ### 4. Tarhiyat Özeti sekmesi

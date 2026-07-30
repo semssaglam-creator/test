@@ -29,6 +29,11 @@ def _yuvarla(deger):
     return round(deger + 0.0, 2)
 
 
+def _tl(deger):
+    """Turkce sayi bicimi: 1.234.567,89"""
+    return f"{deger:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+
+
 def bos_beyan():
     return {kod: [0.0] * 12 for kod in VERI_KODLARI}
 
@@ -505,9 +510,9 @@ def beyan_tutarlilik_kontrol(yillar):
                     "donem": donem,
                     "tur": "devir_zinciri",
                     "mesaj": (f"{onceki[0]}/{onceki[2]} dönemi sonraki döneme devreden KDV "
-                              f"{onceki[3]:,.2f} TL iken, {donem} dönemi önceki dönemden "
-                              f"devreden KDV {onceki_devir:,.2f} TL beyan edilmiş. "
-                              f"Fark: {onceki_devir - onceki[3]:,.2f} TL."),
+                              f"{_tl(onceki[3])} TL iken, {donem} dönemi önceki dönemden "
+                              f"devreden KDV {_tl(onceki_devir)} TL beyan edilmiş. "
+                              f"Fark: {_tl(onceki_devir - onceki[3])} TL."),
                 })
 
             beklenen_indirim = (onceki_devir + _d(beyan, "bu_donem_indirilecek", ay)
@@ -517,9 +522,9 @@ def beyan_tutarlilik_kontrol(yillar):
                 bulgular.append({
                     "donem": donem,
                     "tur": "indirim_toplami",
-                    "mesaj": (f"{donem} indirimler toplamı {beyan_indirim:,.2f} TL beyan edilmiş; "
-                              f"alt kalemlerin toplamı {beklenen_indirim:,.2f} TL. "
-                              f"Fark: {beyan_indirim - beklenen_indirim:,.2f} TL."),
+                    "mesaj": (f"{donem} indirimler toplamı {_tl(beyan_indirim)} TL beyan edilmiş; "
+                              f"alt kalemlerin toplamı {_tl(beklenen_indirim)} TL. "
+                              f"Fark: {_tl(beyan_indirim - beklenen_indirim)} TL."),
                 })
 
             fark = _d(beyan, "toplam_kdv", ay) - beyan_indirim
@@ -532,16 +537,16 @@ def beyan_tutarlilik_kontrol(yillar):
                     "donem": donem,
                     "tur": "sonuc_odenecek",
                     "mesaj": (f"{donem} ödenmesi gereken KDV "
-                              f"{_d(beyan, 'odenmesi_gereken_kdv', ay):,.2f} TL beyan edilmiş; "
-                              f"beyandaki rakamlara göre {beklenen_odenecek:,.2f} TL olmalıydı."),
+                              f"{_tl(_d(beyan, 'odenmesi_gereken_kdv', ay))} TL beyan edilmiş; "
+                              f"beyandaki rakamlara göre {_tl(beklenen_odenecek)} TL olmalıydı."),
                 })
             if abs(beklenen_devir - sonraki_devir) > 0.01:
                 bulgular.append({
                     "donem": donem,
                     "tur": "sonuc_devir",
-                    "mesaj": (f"{donem} sonraki döneme devreden KDV {sonraki_devir:,.2f} TL "
+                    "mesaj": (f"{donem} sonraki döneme devreden KDV {_tl(sonraki_devir)} TL "
                               f"beyan edilmiş; beyandaki rakamlara göre "
-                              f"{beklenen_devir:,.2f} TL olmalıydı."),
+                              f"{_tl(beklenen_devir)} TL olmalıydı."),
                 })
 
             onceki = (yil, ay, AYLAR[ay], sonraki_devir)
