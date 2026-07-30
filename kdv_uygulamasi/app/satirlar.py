@@ -106,6 +106,32 @@ OZET_KOLONLARI = [
 ]
 
 
+# Ozet tablosunun beyan satirlarina geri yazilmasi.
+#
+# Sonuc ve Fark sekmesindeki (ve Excel ciktisindaki) ozet tablo rapora
+# yapistiriliyor; dava sonucunda mahkeme bu tablodaki tutarlari degistirebiliyor.
+# Degismis tablo uygulamaya geri yapistirildiginda asagidaki eslemeye gore beyan
+# satirlarina yazilir.
+#
+#   ozet_kod : ozet tablosundaki kolon
+#   hedefler : bu degerin yazilacagi beyan satirlari
+#   sifirlar : ayni buyuklugun parcasi olan ve artik bilinmeyen satirlar
+#              (ornegin yalnizca Toplam KDV verildiginde ilave edilecek KDV)
+OZET_BEYAN_ESLEMESI = [
+    ("matrah", ["matrah_toplami"], []),
+    # Toplam KDV = hesaplanan + ilave edilecek. Ozet yalnizca toplami tasidigi
+    # icin tamami hesaplanan KDV'ye yazilir, ilave edilecek sifirlanir; toplam
+    # degismez.
+    ("toplam_kdv", ["hesaplanan_kdv", "toplam_kdv"], ["ilave_edilecek_kdv"]),
+    ("onceki_devir", ["onceki_donem_devreden"], []),
+    # Bu donem indirimi = bu doneme ait indirilecek KDV + 103+104+105 toplami
+    ("bu_donem_indirim_toplam", ["bu_donem_indirilecek"], ["diger_indirimler_toplami"]),
+    ("indirimler", ["indirimler_toplami"], []),
+    ("odenecek", ["odenmesi_gereken_kdv"], []),
+    ("sonraki_devir", ["sonraki_donem_devreden"], []),
+    ("iade", ["iade_edilmesi_gereken_kdv"], []),
+]
+
 # Tarhiyat ozeti tablosunun kolon duzeni (elde kullanilan tablonun karsiligi).
 # grup : ust baslik, kod : hesap.py'deki alan adi, vurgu : renk sinifi
 TARHIYAT_KOLONLARI = [
