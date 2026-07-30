@@ -140,9 +140,24 @@ ilavesini tamamen elle girmek isterseniz o dönemin **Oto** kutusunu kaldırın.
 
 Her değişiklikte seri baştan sona yeniden hesaplanır.
 
-**Başlangıç devri:** İnceleme döneminden önceki dönemden gelen düzeltilmiş devir
-tutarı varsa bu sekmenin altındaki kutuya yazın; seri bu tutarla başlar. Boş
-bırakılırsa ilk dönemin beyanındaki devir esas alınır.
+**Açılış devri (yıl bazında):** Bu sekmenin altındaki kutu, **seçili yılın**
+Ocak ayına önceki yıldan taşınan devri belirler. Kulakçıktan yılı değiştirince
+kutu da o yıla geçer.
+
+- **Boş bırakılırsa** zincir işler: bir önceki yılın Aralık ayının yeniden
+  hesaplanan devri taşınır. Serinin ilk yılında ise beyandaki açılış devri
+  kullanılır.
+- **Bir tutar yazarsanız** o yıl bu tutarla başlar; önceki yıldan gelen devir
+  dikkate alınmaz. **Zincire Bırak** düğmesi bu ayarı kaldırır.
+
+Ne zaman kullanılır: incelemeyi bir yıldan başlatıyorsanız ve önceki dönemin
+düzeltilmiş devrini biliyorsanız; ya da bir yılın açılış devri hakkında ayrı
+bir tespitiniz varsa.
+
+Dikkat: Bir yıla açılış devri yazdığınızda, **önceki yıllarda yaptığınız
+tespitler o noktadan sonrasına yansımaz** — zinciri orada siz sabitlemiş
+olursunuz. Kutunun yanındaki açıklama, zincirin o yıla ne taşıyacağını ve
+beyanda ne yazdığını gösterir; karşılaştırıp karar verebilirsiniz.
 
 ### 3. Sonuç ve Fark sekmesi
 

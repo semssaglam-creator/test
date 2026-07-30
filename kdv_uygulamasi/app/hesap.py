@@ -33,6 +33,22 @@ def bos_beyan():
     return {kod: [0.0] * 12 for kod in VERI_KODLARI}
 
 
+def _devir_pini(yil_kaydi):
+    """Yila ozel baslangic devri (yoksa None).
+
+    Bu deger verildiginde o yilin Ocak ayina onceki yildan gelen devir yerine
+    bu tutar tasinir. Boylece incelemenin bir yildan baslatilmasi ya da bir
+    yilin acilis devrinin ayrica belirlenmesi mumkun olur.
+    """
+    ham = yil_kaydi.get("devir_baslangic")
+    if ham in (None, ""):
+        return None
+    try:
+        return float(ham)
+    except (TypeError, ValueError):
+        return None
+
+
 def bos_elestiri():
     return {
         "matrah_ilave": [0.0] * 12,
@@ -190,6 +206,11 @@ def seri_hesapla(yillar, devreden_baslangic=None):
         beyan = yil_kaydi.get("beyan") or bos_beyan()
         elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
         ay_sayisi = int(yil_kaydi.get("ay_sayisi") or 12)
+        # Yila ozel baslangic devri verilmisse zincir bu yilin basinda o degerle
+        # yeniden kurulur; onceki yildan gelen devir yerine bu tutar kullanilir.
+        pin = _devir_pini(yil_kaydi)
+        if pin is not None:
+            devreden = pin
         for ay in range(min(max(ay_sayisi, 1), 12)):
             beyan_ozet = _beyan_ozeti(beyan, yil, ay)
             elestirili = _donem_hesapla(beyan, elestiri, yil, ay, devreden)
@@ -327,6 +348,9 @@ def _zincir(yillar, devreden_baslangic, aktif=None):
         beyan = yil_kaydi.get("beyan") or bos_beyan()
         elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
         ay_sayisi = min(max(int(yil_kaydi.get("ay_sayisi") or 12), 1), 12)
+        pin = _devir_pini(yil_kaydi)
+        if pin is not None:
+            devreden = pin
         for ay in range(ay_sayisi):
             anahtar = kaynak_anahtari(yil, ay)
             kullanilan = elestiri if (aktif is None or anahtar in aktif) else bos

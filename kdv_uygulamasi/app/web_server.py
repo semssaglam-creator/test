@@ -55,12 +55,21 @@ def _yillari_coz(calisma):
         elestiri["kdv_orani"] = [None if o in (None, "") else _sayi(o) for o in oranlar[:12]]
         otomatik = (gelen_e.get("hesaplanan_otomatik") or []) + [True] * 12
         elestiri["hesaplanan_otomatik"] = [bool(o) for o in otomatik[:12]]
+        pin = ham.get("devir_baslangic")
         yillar.append({
             "yil": yil,
             "ay_sayisi": max(1, min(int(ham.get("ay_sayisi") or 12), 12)),
+            "devir_baslangic": None if pin in (None, "") else _sayi(pin),
             "beyan": beyan,
             "elestiri": elestiri,
         })
+    # Eski kayitlarda calisma duzeyinde tutulan baslangic devri, ilk yilin
+    # kendi degeri yoksa o yila uygulanir (geriye donuk uyum)
+    ham_baslangic = calisma.get("devreden_baslangic")
+    if yillar and ham_baslangic not in (None, ""):
+        ilk = min(yillar, key=lambda y: y["yil"])
+        if ilk["devir_baslangic"] is None:
+            ilk["devir_baslangic"] = _sayi(ham_baslangic)
     return yillar
 
 
@@ -77,10 +86,10 @@ def _hesapla(calisma):
         return {"donemler": [], "yil_toplamlari": [], "genel_toplam": {},
                 "tarhiyat_toplami": {}, "yil_uyumu": [],
                 "kaynak_analizi": {"kaynaklar": [], "donemler": [], "etkilesim_var": False}}, []
-    ham = calisma.get("devreden_baslangic")
-    baslangic = _sayi(ham) if ham not in (None, "") else None
-    sonuc = hesap.seri_hesapla(yillar, devreden_baslangic=baslangic)
-    sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar, devreden_baslangic=baslangic)
+    # Baslangic devri artik yil bazinda tutulur; _yillari_coz eski kayitlardaki
+    # calisma duzeyindeki degeri ilk yila tasidi.
+    sonuc = hesap.seri_hesapla(yillar)
+    sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
     return sonuc, hesap.beyan_tutarlilik_kontrol(yillar)
 
 

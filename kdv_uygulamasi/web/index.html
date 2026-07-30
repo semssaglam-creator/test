@@ -199,14 +199,12 @@
     <div class="kaydir"><table class="izgara" id="elestiriIzgara"></table></div>
   </div>
   <div class="kart">
-    <h2>Başlangıç Devri</h2>
+    <h2 id="devirBaslik">Başlangıç Devri</h2>
     <div class="satir">
-      <div class="dar"><label>Serinin ilk dönemine taşınan devir</label>
-        <input type="text" id="devredenBaslangic" placeholder="boş = beyandaki"></div>
-      <div class="otomatik" style="padding-bottom:2px;">
-        <span class="yardim" style="margin:0;">İnceleme döneminden önceki dönemden gelen<br>
-        düzeltilmiş devir varsa buraya yazın.</span>
-      </div>
+      <div class="dar"><label id="devirEtiket">Önceki yıldan devreden KDV</label>
+        <input type="text" id="devredenBaslangic" placeholder="boş = zincirden gelen"></div>
+      <div class="otomatik"><button class="btn ikincil" id="devirSifirla">Zincire Bırak</button></div>
+      <div style="min-width:280px;"><div class="yardim" id="devirAciklama" style="margin:0;"></div></div>
     </div>
   </div>
 </section>
@@ -636,8 +634,8 @@ $("beyanYapistir").addEventListener("click", async () => {
     const doluAylar = (y.dolu_aylar && y.dolu_aylar.length)
       ? y.dolu_aylar : Array.from({ length: 12 }, (_, i) => i + 1);
     if (!kayit) {
-      kayit = { yil: hedefYil, ay_sayisi: 12, beyan: bosBeyan(),
-                elestiri: bosElestiri(hedefYil), kaynaklar: [] };
+      kayit = { yil: hedefYil, ay_sayisi: 12, devir_baslangic: null,
+                beyan: bosBeyan(), elestiri: bosElestiri(hedefYil), kaynaklar: [] };
       durum.calisma.yillar.push(kayit);
       bilgiler.push(kunye.yil ? `Dönem yılı sorgudan alındı: ${hedefYil}.`
                               : `${hedefYil} yılı oluşturuldu.`);
@@ -989,11 +987,67 @@ function otomatikKdvGuncelle(yil, yalnizGorunum) {
 }
 
 $("devredenBaslangic").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
   const v = $("devredenBaslangic").value.trim();
-  durum.calisma.devreden_baslangic = v === "" ? null : sayiCoz(v);
-  $("devredenBaslangic").value = v === "" ? "" : tl(durum.calisma.devreden_baslangic);
+  yil.devir_baslangic = v === "" ? null : sayiCoz(v);
+  $("devredenBaslangic").value = v === "" ? "" : tl(yil.devir_baslangic);
   isaretle();
 });
+
+$("devirSifirla").addEventListener("click", () => {
+  const yil = aktifYilKaydi();
+  if (!yil || yil.devir_baslangic == null) return;
+  yil.devir_baslangic = null;
+  $("devredenBaslangic").value = "";
+  isaretle();
+  mesaj(`${yil.yil} açılış devri zincire bırakıldı.`);
+});
+
+/** Secili yilin baslangic devri kutusunu ve aciklamasini tazeler. */
+function devirKutusunuCiz() {
+  const yil = aktifYilKaydi();
+  const giris = $("devredenBaslangic");
+  const aciklama = $("devirAciklama");
+  const sifirla = $("devirSifirla");
+  if (!yil) {
+    $("devirBaslik").textContent = "Başlangıç Devri";
+    $("devirEtiket").textContent = "Önceki yıldan devreden KDV";
+    giris.value = ""; giris.disabled = true; sifirla.disabled = true;
+    aciklama.textContent = "Önce beyan verisi yapıştırın.";
+    return;
+  }
+  giris.disabled = false;
+  $("devirBaslik").textContent = `${yil.yil} Açılış Devri`;
+  $("devirEtiket").textContent = `${yil.yil} Ocak'a önceki yıldan devreden KDV`;
+  giris.value = yil.devir_baslangic != null ? tl(yil.devir_baslangic) : "";
+  sifirla.disabled = yil.devir_baslangic == null;
+
+  // Zincirin bu yila kendiliginden tasidigi tutar (karsilastirma icin)
+  const oncekiYil = yillar().filter((y) => y.yil < yil.yil).pop();
+  const beyanDevir = (yil.beyan.onceki_donem_devreden || [])[0] || 0;
+  let metin;
+  if (yil.devir_baslangic != null) {
+    metin = `Bu yıl ${tl(yil.devir_baslangic)} TL ile başlatılıyor; ` +
+      (oncekiYil ? `${oncekiYil.yil} Aralık'tan gelen devir dikkate alınmıyor. ` +
+                   "Önceki yıllarda yaptığınız tespitler bu noktadan sonrasına yansımaz."
+                 : "beyandaki açılış devri dikkate alınmıyor.");
+  } else if (oncekiYil) {
+    const zincir = durum.sonuc
+      ? (durum.sonuc.donemler.find((d) => d.yil === yil.yil && d.ay === 1) || {})
+      : {};
+    const gelen = zincir.elestirili ? zincir.elestirili.onceki_devir : null;
+    metin = `Zincirden geliyor: ${oncekiYil.yil} Aralık'ın yeniden hesaplanan devri` +
+      (gelen != null ? ` (${tl(gelen)} TL)` : "") +
+      `. Beyanda ${tl(beyanDevir)} TL yazıyor. Farklı bir tutarla başlatmak isterseniz ` +
+      "kutuya yazın.";
+  } else {
+    metin = `Serinin ilk yılı. Boş bırakılırsa beyandaki açılış devri ` +
+      `(${tl(beyanDevir)} TL) kullanılır. İnceleme öncesi dönemden gelen düzeltilmiş ` +
+      "devir varsa kutuya yazın.";
+  }
+  aciklama.textContent = metin;
+}
 
 // -------------------------------------------------- hesap açıklama balonu
 function hesapAciklamasi(donem, blok, kod) {
@@ -1665,11 +1719,18 @@ async function calismaAc(id) {
       yillar: (c.yillar || []).map((yk) => ({
         yil: yk.yil,
         ay_sayisi: yk.ay_sayisi || 12,
+        devir_baslangic: yk.devir_baslangic ?? null,
         beyan: Object.assign(bosBeyan(), yk.beyan || {}),
         elestiri: Object.assign(bosElestiri(yk.yil), yk.elestiri || {}),
         kaynaklar: yk.kaynaklar || [],
       })),
     };
+    // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
+    if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
+      const ilk = durum.calisma.yillar.reduce((a, b) => (a.yil <= b.yil ? a : b));
+      if (ilk.devir_baslangic == null) ilk.devir_baslangic = durum.calisma.devreden_baslangic;
+      durum.calisma.devreden_baslangic = null;
+    }
     durum.kayitliId = id;
     durum.degisti = false;
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
@@ -1785,8 +1846,7 @@ function ekraniCiz() {
   }, false, true);
   beyanIzgarasiniCiz();
   elestiriIzgarasiniCiz();
-  $("devredenBaslangic").value = durum.calisma.devreden_baslangic != null
-    ? tl(durum.calisma.devreden_baslangic) : "";
+  devirKutusunuCiz();
   $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
   $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
   $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
