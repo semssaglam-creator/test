@@ -161,9 +161,15 @@
         <input type="checkbox" id="ayOtomatik" checked style="width:16px;height:16px;"> Ay sayısını veriye göre ayarla</label></div>
     </div>
     <div class="yardim">
+      <strong>İki biçim tanınır, hangisini yapıştırdığınız kendiliğinden anlaşılır:</strong><br>
+      • <strong>Sistem sorgusu</strong> — satırlar beyan kalemleri, sütunlar aylar.
       Aynı yıla ait ikinci bir sorgu yapıştırırsanız (mükellef yıl içinde vergi dairesi
       değiştirmişse) veriler <strong>tek yılda birleştirilir</strong>: yeni sorgu yalnızca
-      kendi dolu aylarını günceller, diğer aylar korunur.
+      kendi dolu aylarını günceller.<br>
+      • <strong>Özet tablo</strong> — satırlar dönemler, sütunlar büyüklükler. Rapordaki
+      tablo mahkeme kararıyla değiştiyse buraya yapıştırıp beyan verisine geri
+      yazabilirsiniz. Sütunlar <em>başlıklarına göre</em> eşleştirilir; sıraları değişebilir,
+      eksik sütun olabilir. Tanınmayan başlık çıkarsa elle eşleştirme sorulur.
     </div>
     <div id="kunyeKarti" style="display:none;margin-top:12px;"></div>
   </div>
@@ -325,6 +331,22 @@
 
 <div class="mesaj" id="mesaj"></div>
 <div class="balon" id="balon"></div>
+
+<div class="modal-arka" id="eslemeModal">
+  <div class="modal" style="max-width:640px;">
+    <h2>Sütunları Eşleştir</h2>
+    <div class="yardim" style="margin-bottom:14px;">
+      Yapıştırdığınız özet tablonun bazı sütun başlıkları tanınamadı. Her birini
+      hangi beyan kalemine yazacağınızı seçin. Boş bırakılan sütunlar atlanır.
+    </div>
+    <table id="eslemeTablo"></table>
+    <div class="satir" style="margin-top:16px;">
+      <div class="otomatik"><button class="btn" id="eslemeUygula">Aktar</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="eslemeAtla">Tanınmayanları Atla</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="eslemeKapat">Vazgeç</button></div>
+    </div>
+  </div>
+</div>
 
 <div class="modal-arka" id="temizleModal">
   <div class="modal" style="max-width:560px;">
@@ -606,11 +628,15 @@ function yilSecimListesiniCiz() {
 }
 
 // -------------------------------------------------------------- yapistirma
-$("beyanYapistir").addEventListener("click", async () => {
+$("beyanYapistir").addEventListener("click", () => yapistirmayiIsle());
+
+/** Yapıştırılan metni ayrıştırıp uygular. esleme: elle eşleştirilen sütunlar. */
+async function yapistirmayiIsle(esleme) {
   const metin = $("beyanMetin").value;
   if (!metin.trim()) { mesaj("Yapıştırılacak metin boş.", "hata"); return; }
   try {
-    const y = await api("/api/ayristir", { metin });
+    const y = await api("/api/ayristir", { metin, esleme });
+    if (y.tur === "ozet") { ozetiUygula(y, metin); return; }
     const kunye = y.kunye || {};
     const hedefYil = kunye.yil || parseInt($("beyanYilSec").value, 10) || durum.tanimlar.bu_yil - 1;
     const uyarilar = (y.uyarilar || []).slice();
@@ -679,7 +705,135 @@ $("beyanYapistir").addEventListener("click", async () => {
     else mesaj(`${hedefYil} beyan verisi aktarıldı.` +
                (bilgiler.length ? "\n" + bilgiler.join("\n") : ""));
   } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+/**
+ * Özet tabloyu beyan satırlarına yazar.
+ *
+ * Sonuç ve Fark tablosu rapora yapıştırılıyor; dava sonucunda mahkeme
+ * tutarları değiştirebiliyor. Değişmiş tablo buraya yapıştırıldığında yalnızca
+ * tablonun taşıdığı kalemler güncellenir; ihraç kayıtlı teslimler, istisna ve
+ * tevkifat gibi satırlar olduğu gibi kalır.
+ */
+function ozetiUygula(y, metin) {
+  // Tanınmayan sütun varsa önce eşleştirme sorulur
+  if (y.tanimsiz && y.tanimsiz.length) {
+    eslemeSor(y, metin);
+    return;
+  }
+  const uyarilar = (y.uyarilar || []).slice();
+  const yeniYillar = [];
+  let yazilan = 0;
+  const etkilenen = new Set();
+
+  y.satirlar.forEach((s) => {
+    const hedefYil = s.yil || parseInt($("beyanYilSec").value, 10) || durum.tanimlar.bu_yil - 1;
+    let kayit = yilBul(hedefYil);
+    if (!kayit) {
+      kayit = { yil: hedefYil, ay_sayisi: 12, devir_baslangic: null,
+                beyan: bosBeyan(), elestiri: bosElestiri(hedefYil), kaynaklar: [] };
+      durum.calisma.yillar.push(kayit);
+      yeniYillar.push(hedefYil);
+    }
+    Object.keys(s.degerler).forEach((kod) => {
+      if (!kayit.beyan[kod]) return;
+      kayit.beyan[kod][s.ay - 1] = s.degerler[kod];
+      yazilan++;
+    });
+    etkilenen.add(hedefYil);
+  });
+
+  // Yeni oluşan yıllarda ay sayısını tablonun kapsamına çek
+  yeniYillar.forEach((yil) => {
+    const kayit = yilBul(yil);
+    const aylar = y.satirlar.filter((s) => (s.yil || yil) === yil).map((s) => s.ay);
+    if (kayit && aylar.length) kayit.ay_sayisi = Math.max(...aylar);
+  });
+
+  const hedefler = [...etkilenen].sort();
+  durum.aktifYil = hedefler[0];
+  $("beyanMetin").value = "";
+  $("kunyeKarti").style.display = "none";
+  $("eslemeModal").classList.remove("acik");
+
+  // Tespiti olan yıla özet yazmak çift sayıma yol açabilir; sessiz kalmayalım
+  const tespitli = hedefler.filter((yil) => {
+    const k = yilBul(yil);
+    return k && Object.keys(k.elestiri).some((alan) =>
+      Array.isArray(k.elestiri[alan]) && alan.indexOf("kdv_orani") < 0
+      && alan.indexOf("otomatik") < 0 && k.elestiri[alan].some((v) => Math.abs(v || 0) > 0.005));
+  });
+  if (tespitli.length) {
+    uyarilar.push(`${tespitli.join(", ")} yılında girilmiş inceleme tespitleri duruyor. ` +
+      "Yapıştırdığınız tablo bu tespitleri zaten içeriyorsa, tespitler ikinci kez " +
+      "uygulanacağı için Verileri Temizle ile sıfırlamanız gerekir.");
+  }
+
+  const turetilen = y.satirlar[0] && y.satirlar[0].turetilen ? y.satirlar[0].turetilen : [];
+  const bilgi = `${hedefler.join(", ")} — ${y.satirlar.length} dönem, ${yazilan} değer aktarıldı.` +
+    (turetilen.length ? "\nİlave edilecek KDV ve 103+104+105 toplamı tablodan türetildi." : "");
+  isaretle();
+  if (uyarilar.length) mesaj(bilgi + "\n" + uyarilar.join("\n"), "uyari");
+  else mesaj(bilgi);
+}
+
+/** Tanınmayan sütunlar için eşleştirme penceresini açar. */
+function eslemeSor(y, metin) {
+  const tablo = $("eslemeTablo");
+  tablo.innerHTML = "<tr><th>Tablodaki sütun</th><th>Örnek değer</th>" +
+    "<th>Yazılacağı beyan kalemi</th></tr>";
+  const ilk = y.satirlar[0] || { ham_degerler: {} };
+  y.tanimsiz.forEach((t) => {
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", t.baslik));
+    const ornek = (ilk.ham_degerler || {})[t.sira];
+    const tdOrnek = hucre("td", ornek != null ? tl(ornek) : "—");
+    tdOrnek.className = "sayi";
+    tr.appendChild(tdOrnek);
+    const td = document.createElement("td");
+    const sec = document.createElement("select");
+    sec.dataset.sira = t.sira;
+    sec.innerHTML = '<option value="">(atla)</option>' +
+      durum.tanimlar.ozet_hedefleri.map((o) => `<option value="${o.kod}">${o.etiket}</option>`).join("");
+    td.appendChild(sec);
+    tr.appendChild(td);
+    tablo.appendChild(tr);
+  });
+  $("eslemeModal")._metin = metin;
+  $("eslemeModal").classList.add("acik");
+}
+
+$("eslemeUygula").addEventListener("click", () => {
+  const esleme = {};
+  $("eslemeTablo").querySelectorAll("select").forEach((s) => {
+    if (s.value) esleme[s.dataset.sira] = s.value;
+  });
+  if (!Object.keys(esleme).length) {
+    mesaj("Hiçbir sütun eşleştirilmedi; atlamak için 'Tanınmayanları Atla' deyin.", "hata");
+    return;
+  }
+  yapistirmayiIsle(esleme);
 });
+
+$("eslemeAtla").addEventListener("click", () => {
+  // Tanınmayanları boş eşleştirmeyle geçir: sunucu onları atlar
+  const esleme = {};
+  $("eslemeTablo").querySelectorAll("select").forEach((s) => { esleme[s.dataset.sira] = null; });
+  $("eslemeModal").classList.remove("acik");
+  yapistirmayiIsleAtlayarak();
+});
+
+/** Tanınmayan sütunları yok sayarak uygular. */
+async function yapistirmayiIsleAtlayarak() {
+  const metin = $("eslemeModal")._metin || $("beyanMetin").value;
+  try {
+    const y = await api("/api/ayristir", { metin });
+    y.tanimsiz = [];
+    ozetiUygula(y, metin);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("eslemeKapat").addEventListener("click", () => $("eslemeModal").classList.remove("acik"));
 
 function kunyeKartiniCiz(kunye) {
   const kap = $("kunyeKarti");

@@ -117,19 +117,68 @@ OZET_KOLONLARI = [
 #   hedefler : bu degerin yazilacagi beyan satirlari
 #   sifirlar : ayni buyuklugun parcasi olan ve artik bilinmeyen satirlar
 #              (ornegin yalnizca Toplam KDV verildiginde ilave edilecek KDV)
-OZET_BEYAN_ESLEMESI = [
-    ("matrah", ["matrah_toplami"], []),
-    # Toplam KDV = hesaplanan + ilave edilecek. Ozet yalnizca toplami tasidigi
-    # icin tamami hesaplanan KDV'ye yazilir, ilave edilecek sifirlanir; toplam
-    # degismez.
-    ("toplam_kdv", ["hesaplanan_kdv", "toplam_kdv"], ["ilave_edilecek_kdv"]),
-    ("onceki_devir", ["onceki_donem_devreden"], []),
-    # Bu donem indirimi = bu doneme ait indirilecek KDV + 103+104+105 toplami
-    ("bu_donem_indirim_toplam", ["bu_donem_indirilecek"], ["diger_indirimler_toplami"]),
-    ("indirimler", ["indirimler_toplami"], []),
-    ("odenecek", ["odenmesi_gereken_kdv"], []),
-    ("sonraki_devir", ["sonraki_donem_devreden"], []),
-    ("iade", ["iade_edilmesi_gereken_kdv"], []),
+# Ozet tablo sutun basliklarinin beyan satirlarina karsiligi. Anahtarlar
+# normalize edilmis (buyuk harf, noktalama ve bosluk atilmis) bicimdedir; ayni
+# buyukluk icin kullanilan farkli yazimlar birlikte tanimlanir.
+OZET_BASLIK_ESLEMESI = {
+    "MATRAHTOPLAMI": "matrah_toplami",
+    "KDVMATRAHI": "matrah_toplami",
+    "HESAPLANANKDV": "hesaplanan_kdv",
+    "HSPLKDV": "hesaplanan_kdv",
+    "ILAVEEDILECEKKDV": "ilave_edilecek_kdv",
+    "TOPLAMKDV": "toplam_kdv",
+    "ONCEKIDONDEVRINDKDV": "onceki_donem_devreden",
+    "ONCEKIDONEMDEVREDENINDKDV": "onceki_donem_devreden",
+    "ONCEKIDONEMDENINDIRILECEKKDV": "onceki_donem_devreden",
+    "ONCDONDEVKDV": "onceki_donem_devreden",
+    "BUDONAITINDKDV": "bu_donem_indirilecek",
+    "BUDONEMEAITINDIRILECEKKDV": "bu_donem_indirilecek",
+    "BUDONINDLKDV": "bu_donem_indirilecek",
+    "103104105TOP": "diger_indirimler_toplami",
+    "INDIRIMLERTOPLAMI": "indirimler_toplami",
+    "ODENMESIGEREKENKDV": "odenmesi_gereken_kdv",
+    "ODENECEKKDV": "odenmesi_gereken_kdv",
+    "SONRAKIDONDEVREDENKDV": "sonraki_donem_devreden",
+    "SONRAKIDONEMEDEVREDENKDV": "sonraki_donem_devreden",
+    "SONDONDEVKDV": "sonraki_donem_devreden",
+    "IADEEDILMESIGEREKENKDV": "iade_edilmesi_gereken_kdv",
+    "IADEEDILKDV": "iade_edilmesi_gereken_kdv",
+    "TECILEDILECEKKDV": "tecil_edilecek_kdv",
+}
+
+# Basliklar rapordan rapora degistigi icin tam eslesme yeterli olmaz. Asagidaki
+# kurallar sirayla denenir: baslikta gecmesi gereken parcalar (hepsi) ve
+# gecmemesi gereken parcalar (hicbiri). Sira onemlidir; ozel olan once gelir.
+OZET_BASLIK_KURALLARI = [
+    (["ILAVE"], [], "ilave_edilecek_kdv"),
+    (["MATRAH"], [], "matrah_toplami"),
+    (["HESAPLANAN"], ["TOPLAM"], "hesaplanan_kdv"),
+    (["TOPLAMKDV"], [], "toplam_kdv"),
+    (["ONCEKI"], [], "onceki_donem_devreden"),
+    (["SONRAKI"], [], "sonraki_donem_devreden"),
+    (["DEVREDEN"], ["ONCEKI", "SONRAKI"], "sonraki_donem_devreden"),
+    (["103"], [], "diger_indirimler_toplami"),
+    (["INDIRIMLER", "TOPLAM"], [], "indirimler_toplami"),
+    (["IND"], ["TOPLAM", "ONCEKI", "SONRAKI"], "bu_donem_indirilecek"),
+    (["ODEN"], [], "odenmesi_gereken_kdv"),
+    (["TECIL"], [], "tecil_edilecek_kdv"),
+    (["IADE"], [], "iade_edilmesi_gereken_kdv"),
+]
+
+# Elle eslestirme ekraninda sunulan hedefler
+OZET_HEDEF_SECENEKLERI = [
+    ("matrah_toplami", "Matrah Toplamı"),
+    ("hesaplanan_kdv", "Hesaplanan KDV"),
+    ("ilave_edilecek_kdv", "İlave Edilecek KDV"),
+    ("toplam_kdv", "Toplam KDV"),
+    ("onceki_donem_devreden", "Önceki Dönemden Devreden KDV"),
+    ("bu_donem_indirilecek", "Bu Döneme Ait İndirilecek KDV"),
+    ("diger_indirimler_toplami", "103+104+105 Toplamı"),
+    ("indirimler_toplami", "İndirimler Toplamı"),
+    ("odenmesi_gereken_kdv", "Ödenmesi Gereken KDV"),
+    ("iade_edilmesi_gereken_kdv", "İade Edilmesi Gereken KDV"),
+    ("tecil_edilecek_kdv", "Tecil Edilecek KDV"),
+    ("sonraki_donem_devreden", "Sonraki Döneme Devreden KDV"),
 ]
 
 # Tarhiyat ozeti tablosunun kolon duzeni (elde kullanilan tablonun karsiligi).

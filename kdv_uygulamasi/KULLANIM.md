@@ -79,6 +79,50 @@ yalnızca kendi dolu aylarını günceller, diğer aylar korunur. Hangi ayın ha
 daireden geldiği ızgaranın üstünde etiketler hâlinde görünür. Aynı ay iki
 sorguda da doluysa üzerine yazılır ve uyarı verilir.
 
+#### Özet tablo yapıştırma (mahkeme kararı sonrası)
+
+Sonuç ve Fark tablosu rapora yapıştırılıyor; dava açıldığında mahkeme bu
+tablodaki tutarları değiştirebiliyor. Değişmiş tabloyu aynı kutuya
+yapıştırdığınızda uygulama bunu **özet tablo** olarak tanır ve beyan verisinin
+ilgili satırlarını doldurur. Hangi biçimi yapıştırdığınızı söylemenize gerek
+yok; kendiliğinden ayırt edilir.
+
+Beklenen düzen — satırlar dönem, sütunlar büyüklük:
+
+```
+Dönemi 2023   Matrah Toplamı  Hesaplanan Kdv  Toplam Kdv  Önceki Dön. Devr. İnd. Kdv  ...
+Ocak          12906740,41     2323213,27      2336423,83  102420,13                   ...
+Şubat         11854007,98     2133721,44      2135593,44  0                           ...
+```
+
+- **Sütun sırası önemli değil** — eşleştirme başlık adına göre yapılır.
+- **Eksik sütun sorun değil** — yalnızca tablodaki kalemler yazılır.
+- **Yıl** başlıktan (`Dönemi 2023`) veya dönem etiketinden (`2023/Ocak`) alınır;
+  ikisi de yoksa listeden seçtiğiniz yıl kullanılır.
+- **Kısmi yıl olabilir** — yalnızca tablodaki aylar güncellenir.
+- **Farklı yazımlar tanınır:** "Ödenecek KDV" / "Ödenmesi Gereken Kdv",
+  "Son. Dön. Dev. KDV" / "Sonraki Dön. Devreden Kdv" / "Devreden KDV" gibi.
+  Tanınmayan bir başlık kalırsa **elle eşleştirme** penceresi açılır; her
+  sütunu örnek değeriyle birlikte görüp hangi kaleme yazılacağını seçersiniz.
+
+İki kalem tabloda ayrı sütun olmasa da türetilir:
+
+| Türetilen | Nasıl |
+|---|---|
+| İlave edilecek KDV | Toplam KDV − Hesaplanan KDV |
+| 103+104+105 toplamı | İndirimler Toplamı − Önceki devir − Bu dönem indirimi |
+
+Böylece beyanın iç tutarlılığı korunur. Yalnızca tablonun taşıdığı satırlar
+güncellenir; ihraç kayıtlı teslimler, istisna ve tevkifat satırları olduğu
+gibi kalır.
+
+**Dikkat:** Yapıştırdığınız tablo mahkeme kararını yansıtıyorsa, o yıldaki
+inceleme tespitleriniz zaten bu tutarların içindedir. Tespitler duruyorsa
+ikinci kez uygulanır ve çift sayım olur — uygulama bu durumda uyarır;
+*Verileri Temizle* ile tespitleri sıfırlamanız gerekir.
+
+#### Sistem sorgusu yapıştırma
+
 **Blok yapıştırma:** Beyan bloğunu (etiket sütunu + 12 ay, Excel'deki 45–96
 satırlarının karşılığı) kutuya yapıştırıp *Bloğu Aktar* deyin. Satırlar etiketlerine göre sırayla eşleştirilir; arada eksik veya fazla
 satır olsa da hizalama bozulmaz. Grup başlıkları (İNDİRİMLER, SONUÇ HESAPLARI

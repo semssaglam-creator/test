@@ -17,10 +17,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
 from .excel_export import calisma_olustur
-from .paste_parser import beyan_ayristir, tek_satir_ayristir, tutar_coz
+from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
+                           tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
 from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI, ELESTIRI_ALANLARI,
-                       OZET_KOLONLARI, TARHIYAT_KOLONLARI, VERI_KODLARI)
+                       OZET_HEDEF_SECENEKLERI, OZET_KOLONLARI, TARHIYAT_KOLONLARI,
+                       VERI_KODLARI)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -152,6 +154,8 @@ class Istekci(BaseHTTPRequestHandler):
                                            for g, k, e, v in TARHIYAT_KOLONLARI],
                     "ayristirma_bloklari": [{"kod": k, "etiket": e, "aciklama": a}
                                             for k, e, a in AYRISTIRMA_BLOKLARI],
+                    "ozet_hedefleri": [{"kod": k, "etiket": e}
+                                       for k, e in OZET_HEDEF_SECENEKLERI],
                     "bu_yil": datetime.now().year,
                 })
             elif yol == "/api/calismalar":
@@ -225,12 +229,28 @@ class Istekci(BaseHTTPRequestHandler):
 
     # --------------------------------------------------------------- yardimci
     def _ayristir(self, veri):
-        """Yapistirmayi ayristirir ve sonucu dondurur; hicbir sey saklanmaz."""
+        """Yapistirmayi ayristirir ve sonucu dondurur; hicbir sey saklanmaz.
+
+        Iki bicim taninir ve kendiliginden ayirt edilir:
+        - Sistem sorgusu: satirlar beyan kalemleri, sutunlar aylar
+        - Ozet tablo: satirlar donemler, sutunlar buyuklukler (Sonuc ve Fark
+          sekmesinden veya rapordan kopyalanan, mahkeme kararindan sonra
+          degismis olabilecek tablo)
+        """
+        metin = veri.get("metin") or ""
+        if ozet_tablosu_mu(metin):
+            try:
+                sonuc = ozet_ayristir(metin, veri.get("esleme"))
+            except ValueError as exc:
+                raise ApiHata(str(exc))
+            return {"tur": "ozet", "satirlar": sonuc["satirlar"], "yil": sonuc["yil"],
+                    "yillar": sonuc["yillar"], "kolonlar": sonuc["kolonlar"],
+                    "tanimsiz": sonuc["tanimsiz"], "uyarilar": sonuc["uyarilar"]}
         try:
-            sonuc = beyan_ayristir(veri.get("metin") or "")
+            sonuc = beyan_ayristir(metin)
         except ValueError as exc:
             raise ApiHata(str(exc))
-        return {"degerler": sonuc["degerler"], "uyarilar": sonuc["uyarilar"],
+        return {"tur": "beyan", "degerler": sonuc["degerler"], "uyarilar": sonuc["uyarilar"],
                 "ay_sayisi": sonuc["ay_sayisi"], "kunye": sonuc.get("kunye") or {},
                 "dolu_aylar": sonuc.get("dolu_aylar") or []}
 

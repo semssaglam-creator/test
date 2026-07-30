@@ -15,7 +15,8 @@ Ayristirma iki asamalidir:
 """
 import re
 
-from .satirlar import AYLAR_BUYUK, BEYAN_SATIRLARI, VERI_KODLARI
+from .satirlar import (AYLAR_BUYUK, BEYAN_SATIRLARI, OZET_BASLIK_ESLEMESI,
+                       OZET_BASLIK_KURALLARI, VERI_KODLARI)
 
 
 def _normalize(metin):
@@ -241,6 +242,204 @@ def _konuma_gore_esle(veri_satirlari):
             degerler[kod] = [0.0] * 12
     uyarilar.append("Etiket sütunu bulunamadı; satırlar sıraya göre eşleştirildi, kontrol edin.")
     return {"degerler": degerler, "uyarilar": uyarilar, "ay_sayisi": _ay_sayisi(degerler)}
+
+
+_AY_ANAHTARLARI = {_normalize(a): i + 1 for i, a in enumerate(AYLAR_BUYUK)}
+
+
+def _ay_numarasi(etiket):
+    """'Ocak', 'OCAK', '2023/Ocak' gibi etiketten ay numarasini (1-12) cikarir."""
+    if not etiket:
+        return None, None
+    metin = etiket.strip()
+    yil = None
+    e = re.search(r"(19|20)\d{2}", metin)
+    if e:
+        yil = int(e.group(0))
+        metin = metin.replace(e.group(0), " ")
+    norm = _normalize(metin)
+    for ay_norm, no in _AY_ANAHTARLARI.items():
+        if norm == ay_norm or (len(norm) >= 4 and norm.startswith(ay_norm[:4])):
+            return no, yil
+    return None, yil
+
+
+def ozet_kolonu_esle(baslik):
+    """Bir ozet sutun basligini beyan satir koduna cevirir (yoksa None).
+
+    Once tam eslesme denenir; tutmazsa baslikta gecmesi/gecmemesi gereken
+    parcalara dayanan kurallar sirayla uygulanir. Boylece rapordan rapora
+    degisen yazimlar ("Sonraki Dön. Devreden Kdv", "Devreden KDV", "Devir")
+    ayni alana dusier.
+    """
+    norm = _normalize(baslik)
+    if not norm:
+        return None
+    dogrudan = OZET_BASLIK_ESLEMESI.get(norm)
+    if dogrudan:
+        return dogrudan
+    for gerekli, yasak, kod in OZET_BASLIK_KURALLARI:
+        if all(p in norm for p in gerekli) and not any(p in norm for p in yasak):
+            return kod
+    return None
+
+
+def ozet_tablosu_mu(metin):
+    """Metin, donemleri satirlarda tasiyan ozet tablosu mu?
+
+    Sistem sorgusunda satirlar beyan kalemleri, sutunlar aylardir. Ozet tabloda
+    ise tam tersi: her satir bir donem, her sutun bir buyukluktur. Ilk hucresi
+    ay adi olan iki veya daha fazla satir varsa ozet tablosu kabul edilir.
+    """
+    ay_satiri = 0
+    for satir in (metin or "").replace("\r", "").split("\n"):
+        if not satir.strip():
+            continue
+        hucreler = _hucrelere_bol(satir)
+        if len(hucreler) < 2:
+            continue
+        no, _yil = _ay_numarasi(hucreler[0])
+        if no and any(_sayisal_mi(h) for h in hucreler[1:]):
+            ay_satiri += 1
+    return ay_satiri >= 2
+
+
+def ozet_ayristir(metin, ek_esleme=None):
+    """Ozet tablosunu donem donem beyan degerlerine cevirir.
+
+    Beklenen bicim (Sonuc ve Fark sekmesinden veya rapordan kopyalanan tablo):
+
+        Dönemi 2023   Matrah Toplamı   Hesaplanan Kdv   Toplam Kdv   ...
+        Ocak          12906740,41      2323213,27       2336423,83   ...
+
+    Sutunlar basliklarina gore eslestirilir; tablonun tasimadigi kalemler
+    yazilmaz. Iki deger, tabloda ayri sutun olarak bulunmasa da tureyebilir:
+        ilave edilecek KDV  = Toplam KDV - Hesaplanan KDV
+        103+104+105 toplami = Indirimler Toplami - onceki devir - bu donem
+    Boylece mahkeme kararindan sonra degismis bir tablo geri yuklendiginde
+    beyanin ic tutarliligi korunur.
+
+    ek_esleme: {sutun_sirasi: beyan_kodu} - basligi taninmayan sutunlar icin
+    kullanicinin ekrandan yaptigi eslestirme.
+    """
+    ek_esleme = {int(k): v for k, v in (ek_esleme or {}).items() if v}
+    ham = [s for s in (metin or "").replace("\r", "").split("\n") if s.strip()]
+    if not ham:
+        raise ValueError("Yapıştırılan metin boş.")
+
+    kolonlar = []       # sutun sirasina gore beyan satir kodlari (bilinmeyen: None)
+    tablo_yili = None
+    uyarilar = []
+    tanimsiz = []
+
+    # --- Baslik satiri: ilk hucresi ay olmayan, tanidik etiketler tasiyan satir
+    for satir in ham:
+        hucreler = _hucrelere_bol(satir)
+        if len(hucreler) < 2:
+            continue
+        ay_no, _y = _ay_numarasi(hucreler[0])
+        if ay_no:
+            break
+        eslesme = [ozet_kolonu_esle(h) for h in hucreler[1:]]
+        if sum(1 for e in eslesme if e) >= 2:
+            for sira, kod in ek_esleme.items():
+                if 0 <= sira < len(eslesme):
+                    eslesme[sira] = kod
+            kolonlar = eslesme
+            tanimsiz = [{"sira": i, "baslik": h}
+                        for i, (h, e) in enumerate(zip(hucreler[1:], eslesme))
+                        if not e and h]
+            _no, tablo_yili = _ay_numarasi(hucreler[0])
+            if tablo_yili is None:
+                e = re.search(r"(19|20)\d{2}", hucreler[0])
+                tablo_yili = int(e.group(0)) if e else None
+            break
+
+    if not kolonlar:
+        raise ValueError(
+            "Özet tablonun başlık satırı tanınamadı. Başlıklar 'Matrah Toplamı', "
+            "'Hesaplanan Kdv', 'Toplam Kdv', 'Önceki Dön. Devr. İnd. Kdv', "
+            "'Bu Dön. Ait İnd. Kdv', 'İndirimler Toplamı', 'Ödenmesi Gereken Kdv', "
+            "'Sonraki Dön. Devreden Kdv' gibi olmalıdır.")
+    if tanimsiz:
+        uyarilar.append("Tanınmayan sütunlar: "
+                        + ", ".join(t["baslik"] for t in tanimsiz[:5])
+                        + ". Bunları ekrandan elle eşleştirebilirsiniz.")
+
+    # --- Donem satirlari
+    satirlar = []
+    for satir in ham:
+        hucreler = _hucrelere_bol(satir)
+        if len(hucreler) < 2:
+            continue
+        ay_no, satir_yili = _ay_numarasi(hucreler[0])
+        if not ay_no:
+            continue  # baslik, yil ayraci ("2023 Dönemi") veya "Toplam" satiri
+        degerler = {}
+        ham_degerler = {}
+        for i, kod in enumerate(kolonlar):
+            if i + 1 >= len(hucreler):
+                continue
+            deger = tutar_coz(hucreler[i + 1])
+            if deger is None:
+                continue
+            if kod:
+                degerler[kod] = deger
+            else:
+                ham_degerler[i] = deger
+        if not degerler:
+            continue
+        turetilen = _ozet_turet(degerler)
+        satirlar.append({
+            "yil": satir_yili or tablo_yili,
+            "ay": ay_no,
+            "degerler": degerler,
+            "ham_degerler": ham_degerler,
+            "turetilen": turetilen,
+        })
+
+    if not satirlar:
+        raise ValueError("Özet tabloda dönem satırı bulunamadı.")
+
+    yillar = sorted({s["yil"] for s in satirlar if s["yil"]})
+    if len(yillar) > 1:
+        uyarilar.append("Tablo birden çok yıl içeriyor; her dönem kendi yılına yazıldı.")
+    return {
+        "satirlar": satirlar,
+        "yil": tablo_yili,
+        "yillar": yillar,
+        "kolonlar": [k for k in kolonlar if k],
+        "tanimsiz": tanimsiz,
+        "uyarilar": uyarilar,
+    }
+
+
+def _ozet_turet(degerler):
+    """Tabloda ayri sutunu olmayan kalemleri, verilenlerden hesaplar."""
+    turetilen = []
+    hes = degerler.get("hesaplanan_kdv")
+    top = degerler.get("toplam_kdv")
+    if hes is not None and top is not None and "ilave_edilecek_kdv" not in degerler:
+        degerler["ilave_edilecek_kdv"] = round(top - hes, 2)
+        turetilen.append("ilave_edilecek_kdv")
+    elif top is not None and hes is None:
+        # Yalnizca toplam verilmisse tamami hesaplanan KDV sayilir
+        degerler["hesaplanan_kdv"] = top
+        degerler["ilave_edilecek_kdv"] = 0.0
+        turetilen.extend(["hesaplanan_kdv", "ilave_edilecek_kdv"])
+    elif hes is not None and top is None:
+        degerler["toplam_kdv"] = hes
+        degerler["ilave_edilecek_kdv"] = 0.0
+        turetilen.extend(["toplam_kdv", "ilave_edilecek_kdv"])
+
+    ind = degerler.get("indirimler_toplami")
+    onc = degerler.get("onceki_donem_devreden")
+    bu = degerler.get("bu_donem_indirilecek")
+    if (ind is not None and onc is not None and bu is not None
+            and "diger_indirimler_toplami" not in degerler):
+        degerler["diger_indirimler_toplami"] = round(ind - onc - bu, 2)
+        turetilen.append("diger_indirimler_toplami")
+    return turetilen
 
 
 def tek_satir_ayristir(metin):
