@@ -96,9 +96,9 @@ ELESTIRI_ALANLARI = [
 # Ozet tablo kolonlari (Excel'deki 30-43 / 100-113 / 134-146 bloklari)
 OZET_KOLONLARI = [
     ("matrah", "KDV Matrahı"),
-    ("hesaplanan", "Hspl. KDV"),
+    ("toplam_kdv", "Toplam KDV"),
     ("onceki_devir", "Önc. Dön. Dev. KDV"),
-    ("bu_donem_indirim", "Bu Dön. İndl. KDV"),
+    ("bu_donem_indirim_toplam", "Bu Dön. İndl. KDV"),
     ("indirimler", "İndirimler Toplamı"),
     ("odenecek", "Ödenecek KDV"),
     ("sonraki_devir", "Son. Dön. Dev. KDV"),

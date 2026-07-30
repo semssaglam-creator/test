@@ -79,6 +79,19 @@
   pre.rapor { background: #f6f9fc; border: 1px solid #dde3ea; border-radius: 5px; padding: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: inherit; max-height: 60vh; overflow-y: auto; }
   .rozet { display: inline-block; background: #e4e9ef; border-radius: 10px; padding: 1px 9px; font-size: 11px; color: #5a6b7d; margin-left: 6px; }
   .rozet.uyari { background: #fdf3d8; color: #8a6d1a; }
+  td.aciklanabilir { cursor: help; }
+  td.aciklanabilir:hover { outline: 2px solid #1f3a5f; outline-offset: -2px; }
+  .balon { position: absolute; z-index: 80; background: #1c2733; color: #fff; border-radius: 6px; padding: 12px 14px; font-size: 12.5px; line-height: 1.65; box-shadow: 0 6px 20px rgba(0,0,0,.35); max-width: 460px; display: none; }
+  .balon.acik { display: block; }
+  .balon h4 { margin: 0 0 8px; font-size: 13px; color: #ffb347; }
+  .balon table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .balon td { border: none; padding: 2px 0; color: #dfe6ee; }
+  .balon td.bsag { text-align: right; font-variant-numeric: tabular-nums; padding-left: 14px; white-space: nowrap; }
+  .balon tr.bsonuc td { border-top: 1px solid #4a5a6b; padding-top: 5px; font-weight: 700; color: #fff; }
+  .balon .bformul { color: #9fb3c8; font-family: "Consolas", monospace; font-size: 11.5px; margin-bottom: 8px; }
+  .balon .bnot { color: #9fb3c8; margin-top: 8px; font-size: 11.5px; }
+  .balon .bkapat { position: absolute; top: 6px; right: 9px; cursor: pointer; color: #7f8fa0; font-size: 15px; }
+  .balon .bkapat:hover { color: #fff; }
 </style>
 </head>
 <body>
@@ -169,9 +182,13 @@
         <input type="checkbox" id="ayOtomatik" checked style="width:16px;height:16px;"> Ay sayısını veriye göre ayarla</label></div>
     </div>
     <div class="yardim">
-      Satırlar etiketlerine göre sırayla eşleştirilir; eksik veya fazla satır olsa da hizalama
-      bozulmaz. Etiket sütunu olmayan yapıştırmalarda satırlar sıraya göre atanır.
+      Sistem sorgusunun tamamını (üstteki VERGİ NO / UNVAN / VERGİ DAİRESİ / YIL /
+      RAPOR TARİHİ satırları dahil) yapıştırabilirsiniz. Bu alanlar bulunursa mükellef
+      bilgisi ve dönem yılı kendiliğinden doldurulur; yılı elle seçmeniz gerekmez.
+      Satırlar etiketlerine göre sırayla eşleştirilir; eksik veya fazla satır olsa da
+      hizalama bozulmaz.
     </div>
+    <div id="kunyeKarti" style="display:none;margin-top:12px;"></div>
   </div>
 
   <div class="kart">
@@ -306,6 +323,7 @@
 </main>
 
 <div class="mesaj" id="mesaj"></div>
+<div class="balon" id="balon"></div>
 
 <div class="modal-arka" id="temizleModal">
   <div class="modal" style="max-width:560px;">
@@ -700,16 +718,27 @@ $("beyanYapistir").addEventListener("click", async () => {
       durum.incelemeId = h.inceleme_id;
       await veriYukle();
     }
+    // Sorgunun künyesinde yıl varsa sunucu onu kullanır; yoksa listedeki yıl
     const yil = await hedefYiliHazirla();
     const y = await api("/api/beyan/yapistir", {
       inceleme_id: durum.incelemeId, yil_id: yil.yil_id, metin,
       ay_sayisi_guncelle: $("ayOtomatik").checked,
     });
     $("beyanMetin").value = "";
+    // Künyeden gelen yıl farklı olabilir; ızgara o yıla geçsin
+    if (y.yil_id) durum.aktifYilId = y.yil_id;
+    if (y.kunye && y.kunye.yil) $("beyanYilSec").value = y.kunye.yil;
     await veriYukle();
     await incelemeleriYukle();
-    if (y.uyarilar && y.uyarilar.length) mesaj(`${yil.yil} aktarıldı.\n` + y.uyarilar.join("\n"), "uyari");
-    else mesaj(`${yil.yil} beyan verisi aktarıldı.`);
+    kunyeKartiniCiz(y.kunye);
+    const etkinYil = aktifYil();
+    const etiket = etkinYil ? etkinYil.yil : "";
+    if (y.uyarilar && y.uyarilar.length) {
+      mesaj(`${etiket} aktarıldı.\n` + y.uyarilar.join("\n"), "uyari");
+    } else {
+      const ek = (y.bilgiler && y.bilgiler.length) ? "\n" + y.bilgiler.join("\n") : "";
+      mesaj(`${etiket} beyan verisi aktarıldı.` + ek);
+    }
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
@@ -752,8 +781,10 @@ function beyanIzgarasiniCiz() {
       const td = document.createElement("td");
       const giris = document.createElement("input");
       giris.type = "text";
-      giris.value = degerler[ay] ? tl(degerler[ay]) : "";
+      // Sifirlar da yazilir: yapistirilan verinin tamami gorunur olmali
+      giris.value = tl(degerler[ay] || 0);
       giris.dataset.ilk = giris.value;
+      if (!degerler[ay]) giris.style.color = "#9aa7b4";  // sifirlar soluk
       if (ay >= yil.ay_sayisi) giris.style.opacity = "0.45";
       giris.addEventListener("focus", () => giris.select());
       giris.addEventListener("blur", async () => {
@@ -781,6 +812,29 @@ function beyanIzgarasiniCiz() {
     }
     tablo.appendChild(tr);
   });
+}
+
+/** Sorgunun künyesinden okunan mükellef ve dönem bilgisini gösterir. */
+function kunyeKartiniCiz(kunye) {
+  const kap = $("kunyeKarti");
+  if (!kunye || !Object.keys(kunye).length) { kap.style.display = "none"; return; }
+  const alanlar = [
+    ["Ünvan", kunye.unvan],
+    ["Vergi No", kunye.vkn],
+    ["T.C. Kimlik No", kunye.tckn],
+    ["Vergi Dairesi", kunye.vergi_dairesi],
+    ["Yıl", kunye.yil],
+    ["Rapor Tarihi", kunye.rapor_tarihi],
+  ].filter(([, v]) => v);
+  kap.innerHTML =
+    '<div style="border-left:4px solid #2c7a3f;background:#f2f9f4;padding:10px 14px;' +
+    'border-radius:0 4px 4px 0;font-size:13px;">' +
+    '<strong style="color:#2c7a3f;">Sorgudan okunan bilgiler</strong><div style="margin-top:6px;' +
+    'display:flex;flex-wrap:wrap;gap:4px 24px;">' +
+    alanlar.map(([e, v]) =>
+      `<span><span style="color:#5a6b7d;">${e}:</span> <strong>${v}</strong></span>`).join("") +
+    "</div></div>";
+  kap.style.display = "block";
 }
 
 // -------------------------------------------------------- veri temizleme
@@ -990,6 +1044,252 @@ $("elestiriKaydet").addEventListener("click", async () => {
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
+// -------------------------------------------------- hesap açıklama balonu
+/** Bir sonuç hücresinin hangi verilerden çıktığını anlatan açıklamayı üretir. */
+function hesapAciklamasi(donem, blok, kod) {
+  const e = donem.elestirili;
+  const b = donem.beyan;
+  const fark = e.toplam_kdv - e.indirimler;
+
+  if (blok === "beyan") {
+    const kaynaklar = {
+      matrah: "MATRAH TOPLAMI",
+      toplam_kdv: "TOPLAM KDV",
+      onceki_devir: "ÖNCEKİ DÖN. DEVR. İND. KDV",
+      bu_donem_indirim_toplam: "BU DÖN. AİT İND. KDV + 103+104+105 TOP.",
+      indirimler: "İNDİRİMLER TOPLAMI",
+      odenecek: "ÖDENMESİ GEREKEN KDV",
+      sonraki_devir: "SONRAKİ DÖN. DEVREDEN KDV",
+      iade: "İADE EDİLMESİ GEREKEN KDV",
+      tecil_edilecek: "TECİL EDİLECEK KDV",
+      ihracat_iade: "İHRACATIN GERÇ. DÖN. İADE EDİLECEK TECİL EDİLEMEYEN KDV",
+    };
+    return {
+      baslik: "Beyan edilen değer",
+      formul: null,
+      satirlar: [[`Beyannamedeki "${kaynaklar[kod] || kod}" satırı`, b[kod]]],
+      sonuc: ["Beyan edilen", b[kod]],
+      not: "Bu tutar mükellefin beyanından alınmıştır; hesaplanmamıştır.",
+    };
+  }
+
+  if (blok === "fark") {
+    return {
+      baslik: "Fark",
+      formul: "Fark = Olması gereken − Beyan edilen",
+      satirlar: [["Olması gereken (yeniden hesaplanan)", e[kod]],
+                 ["Beyan edilen", -b[kod]]],
+      sonuc: ["Fark", donem.fark[kod]],
+      not: donem.fark_tespit && Math.abs(donem.fark_tespit[kod] || 0) > 0.005
+        ? `Bunun ${tl(donem.fark_tespit[kod])} TL'si bu dönemin tespitinden, ` +
+          `${tl(donem.fark_devir[kod] || 0)} TL'si devirden geliyor.`
+        : "Bu fark tümüyle önceki dönemlerden devir yoluyla taşınmıştır.",
+    };
+  }
+
+  // blok === "elestirili": yeniden hesaplanan değerler
+  const tanimlar = {
+    matrah: () => ({
+      formul: "Matrah = Beyan edilen matrah + Matraha ilave",
+      satirlar: [["Beyan edilen matrah", b.matrah], ["Matraha ilave (tespit)", e.matrah - b.matrah]],
+    }),
+    toplam_kdv: () => ({
+      formul: "Toplam KDV = Hesaplanan KDV + İlave edilecek KDV",
+      satirlar: [["Hesaplanan KDV (matrah × oran)", e.hesaplanan],
+                 ["İlave edilecek KDV", e.ilave_edilecek]],
+    }),
+    onceki_devir: () => ({
+      formul: donem.ay === 1 && !donem.ilk_donem
+        ? "Önceki devir = Bir önceki yılın Aralık ayından devreden (− devir çıkarması)"
+        : "Önceki devir = Bir önceki dönemin devreden KDV'si (− devir çıkarması)",
+      satirlar: [["Önceki dönemin (yeniden hesaplanan) devri", e.onceki_devir]],
+      not: "Devir zinciri yıl sınırında kesilmez; bir önceki dönemin düzeltilmiş " +
+           "devri buraya taşınır.",
+    }),
+    bu_donem_indirim_toplam: () => ({
+      formul: "Bu dönem indirimi = (Beyan edilen indirilecek KDV − İndirim reddi) "
+              + "+ Diğer indirimler",
+      satirlar: [["Beyan edilen bu dönem indirilecek KDV", b.bu_donem_indirim],
+                 ["İndirim reddi (tespit)", e.bu_donem_indirim - b.bu_donem_indirim],
+                 ["Diğer indirimler (103+104+105)", e.diger_indirim]],
+    }),
+    indirimler: () => ({
+      formul: "İndirimler = Önceki devir + Bu dönem indirimi + Diğer indirimler",
+      satirlar: [["Önceki dönemden devreden", e.onceki_devir],
+                 ["Bu döneme ait indirilecek KDV", e.bu_donem_indirim],
+                 ["Diğer indirimler (103+104+105)", e.diger_indirim]],
+    }),
+    odenecek: () => (fark > 0 ? {
+      formul: "Ödenecek = (Toplam KDV − İndirimler) − Tecil edilecek KDV",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler],
+                 ["Tecil edilecek KDV", -e.tecil_edilecek]],
+    } : {
+      formul: "İndirimler toplamı KDV'yi aştığı için ödenecek vergi doğmaz.",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler],
+                 ["Aşan kısım devreder", 0]],
+      not: `İndirimler toplamı KDV'yi ${tl(-fark)} TL aşıyor; bu tutar devreden ` +
+           "KDV olarak sonraki döneme taşınır.",
+    }),
+    sonraki_devir: () => (fark < 0 ? {
+      formul: "Devreden = (İndirimler − Toplam KDV) − İade edilecek KDV",
+      satirlar: [["İndirimler toplamı", e.indirimler], ["Toplam KDV", -e.toplam_kdv],
+                 ["İade edilmesi gereken KDV", -e.iade]],
+    } : {
+      formul: "Toplam KDV indirimleri aştığı için devreden KDV oluşmaz.",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler]],
+      not: `Aradaki ${tl(fark)} TL ödenecek vergi olarak sonuçlanır.`,
+    }),
+    iade: () => ({
+      formul: "İade = En küçüğü (Devir fazlası ; İade hakkı doğuran işlem yüklenimi)",
+      satirlar: [["Devir fazlası (indirimler − KDV)", Math.max(-fark, 0)],
+                 ["İade hakkı doğuran işlemlerde yüklenilen KDV", e.iade_yuklenilen]],
+      not: "İade, bu iki tutarın küçüğü kadar olabilir.",
+    }),
+    tecil_edilecek: () => ({
+      formul: "Tecil = En küçüğü (Ödenecek fark ; Tecil edilebilir KDV)",
+      satirlar: [["Ödenecek fark (KDV − indirimler)", Math.max(fark, 0)],
+                 ["Tecil edilebilir KDV (ihraç kayıtlı)", e.tecil_edilebilir]],
+    }),
+    ihracat_iade: () => ({
+      formul: "İhracatın gerçekleştiği dönemde iade = Tecil edilebilir − Tecil edilen",
+      satirlar: [["Tecil edilebilir KDV", e.tecil_edilebilir],
+                 ["Tecil edilecek KDV", -e.tecil_edilecek]],
+    }),
+  };
+  const uret = tanimlar[kod];
+  if (!uret) return null;
+  const c = uret();
+  const kolon = durum.tanimlar.ozet_kolonlari.find((k) => k.kod === kod);
+  return {
+    baslik: (kolon ? kolon.etiket : kod) + " — olması gereken",
+    formul: c.formul,
+    satirlar: c.satirlar,
+    sonuc: ["Sonuç", e[kod]],
+    not: c.not,
+  };
+}
+
+/** Tarhiyat tablosu hücrelerinin açıklaması. */
+function tarhiyatAciklamasi(donem, kod) {
+  const t = donem.tarhiyat;
+  const tanimlar = {
+    resen_tarhi_gereken: {
+      baslik: "Re'sen Tarhı Gereken KDV",
+      formul: "= Olması gereken ödenecek KDV − Beyan edilen ödenecek KDV",
+      satirlar: [["Olması gereken ödenecek KDV", t.odenecek_olmasi_gereken],
+                 ["Beyan edilen ödenecek KDV", -t.odenecek_beyan]],
+      sonuc: ["Re'sen tarhı gereken", t.resen_tarhi_gereken],
+      not: t.fazla_beyan_odenecek > 0.005
+        ? `Bu dönemde mükellef ${tl(t.fazla_beyan_odenecek)} TL fazla beyan etmiş; ` +
+          "tarhiyata dahil edilmez, sütun sıfır gösterilir."
+        : "Sonuç eksi çıkarsa tarhiyat doğmaz; sütun sıfır gösterilir.",
+    },
+    aranmasi_gereken: {
+      baslik: "Aranması Gereken KDV",
+      formul: "= Beyan edilen iade − Olması gereken iade",
+      satirlar: [["Beyan edilen iade edilecek KDV", t.iade_beyan],
+                 ["Olması gereken iade", -t.iade_olmasi_gereken]],
+      sonuc: ["Aranması gereken", t.aranmasi_gereken],
+      not: "Mükellefin hak etmediği hâlde talep ettiği iade tutarıdır.",
+    },
+    resen_toplam: {
+      baslik: "Re'sen Tarhı Gereken Toplam (1+2)",
+      formul: "= Re'sen tarhı gereken + Aranması gereken",
+      satirlar: [["(1) Re'sen tarhı gereken KDV", t.resen_tarhi_gereken],
+                 ["(2) Aranması gereken KDV", t.aranmasi_gereken]],
+      sonuc: ["Toplam", t.resen_toplam],
+    },
+    haksiz_iade: {
+      baslik: "Haksız Olarak İade Edilen KDV",
+      formul: "= Beyan edilen ihracat iadesi − Olması gereken",
+      satirlar: [["Beyan edilen (ihr. gerç. dön. iade edilecek)", t.ihracat_iade_beyan],
+                 ["Olması gereken", -t.ihracat_iade_olmasi_gereken]],
+      sonuc: ["Haksız iade", t.haksiz_iade],
+      not: "Yalnızca iade fiilen gerçekleşmişse aranır.",
+    },
+    toplam_fark: {
+      baslik: "Toplam Fark (1+2+3)",
+      formul: "= Re'sen tarhı gereken + Aranması gereken + Haksız iade",
+      satirlar: [["(1) Re'sen tarhı gereken KDV", t.resen_tarhi_gereken],
+                 ["(2) Aranması gereken KDV", t.aranmasi_gereken],
+                 ["(3) Haksız olarak iade edilen KDV", t.haksiz_iade]],
+      sonuc: ["Toplam fark", t.toplam_fark],
+    },
+  };
+  const esler = {
+    odenecek_olmasi_gereken: ["elestirili", "odenecek"],
+    odenecek_beyan: ["beyan", "odenecek"],
+    iade_olmasi_gereken: ["elestirili", "iade"],
+    iade_beyan: ["beyan", "iade"],
+    ihracat_iade_olmasi_gereken: ["elestirili", "ihracat_iade"],
+    ihracat_iade_beyan: ["beyan", "ihracat_iade"],
+  };
+  if (esler[kod]) return hesapAciklamasi(donem, esler[kod][0], esler[kod][1]);
+  return tanimlar[kod] || null;
+}
+
+function balonGoster(hedef, aciklama, donemEtiketi) {
+  if (!aciklama) return;
+  const balon = $("balon");
+  const satirlar = aciklama.satirlar.map(([ad, deger]) =>
+    `<tr><td>${ad}</td><td class="bsag">${tl(deger)}</td></tr>`).join("");
+  balon.innerHTML =
+    '<span class="bkapat" title="Kapat">×</span>' +
+    `<h4>${donemEtiketi} — ${aciklama.baslik}</h4>` +
+    (aciklama.formul ? `<div class="bformul">${aciklama.formul}</div>` : "") +
+    `<table>${satirlar}` +
+    `<tr class="bsonuc"><td>${aciklama.sonuc[0]}</td>` +
+    `<td class="bsag">${tl(aciklama.sonuc[1])}</td></tr></table>` +
+    (aciklama.not ? `<div class="bnot">${aciklama.not}</div>` : "");
+  balon.classList.add("acik");
+
+  // Konumlandır: hücrenin altına, ekran dışına taşmayacak şekilde
+  const k = hedef.getBoundingClientRect();
+  const genislik = balon.offsetWidth;
+  let sol = window.scrollX + k.left;
+  if (sol + genislik > window.scrollX + document.documentElement.clientWidth - 12) {
+    sol = window.scrollX + document.documentElement.clientWidth - genislik - 12;
+  }
+  balon.style.left = Math.max(window.scrollX + 8, sol) + "px";
+  let ust = window.scrollY + k.bottom + 6;
+  if (k.bottom + balon.offsetHeight + 20 > document.documentElement.clientHeight) {
+    ust = window.scrollY + k.top - balon.offsetHeight - 6;
+  }
+  balon.style.top = Math.max(window.scrollY + 8, ust) + "px";
+  balon._hedef = hedef;
+}
+
+function balonKapat() {
+  const balon = $("balon");
+  balon.classList.remove("acik");
+  balon._hedef = null;
+}
+
+document.addEventListener("click", (olay) => {
+  const balon = $("balon");
+  if (!balon.classList.contains("acik")) return;
+  if (olay.target.classList.contains("bkapat")) { balonKapat(); return; }
+  if (balon.contains(olay.target)) return;
+  if (olay.target.closest("td.aciklanabilir") === balon._hedef) return;
+  balonKapat();
+});
+document.addEventListener("keydown", (olay) => { if (olay.key === "Escape") balonKapat(); });
+window.addEventListener("resize", balonKapat);
+
+/** Bir hücreyi tıklanabilir yapar ve açıklamasını bağlar. */
+function aciklamaBagla(td, uret, donemEtiketi) {
+  td.classList.add("aciklanabilir");
+  td.title = "Bu tutarın nasıl hesaplandığını görmek için tıklayın";
+  td.addEventListener("click", (olay) => {
+    olay.stopPropagation();
+    if ($("balon").classList.contains("acik") && $("balon")._hedef === td) {
+      balonKapat();
+      return;
+    }
+    balonGoster(td, uret(), donemEtiketi);
+  });
+}
+
 // -------------------------------------------------------------------- sonuc
 function sonucuCiz() {
   const kap = $("sonucIcerik");
@@ -1033,6 +1333,7 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
       if (farkMi && Math.abs(deger || 0) > 0.005) h.classList.add("fark-var");
       else if ((deger || 0) < 0) h.classList.add("negatif");
       h.textContent = deger ? tl(deger) : "—";
+      aciklamaBagla(h, () => hesapAciklamasi(d, blok, k.kod), `${d.yil}/${d.ay_adi}`);
       tr.appendChild(h);
     });
     tablo.appendChild(tr);
@@ -1111,6 +1412,7 @@ function tarhiyatiCiz() {
       td.className = "sayi";
       if (k.vurgu === "vurgu1") { td.style.background = "#ffff99"; td.style.color = "#c00"; }
       if (k.vurgu === "vurgu2") { td.style.background = "#c6e0b4"; td.style.fontWeight = "600"; }
+      aciklamaBagla(td, () => tarhiyatAciklamasi(d, k.kod), `${d.yil}/${d.ay_adi}`);
       tr.appendChild(td);
     });
     tablo.appendChild(tr);

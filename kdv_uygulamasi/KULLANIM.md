@@ -24,14 +24,34 @@ değiştirebilirsiniz.
 
 ### 1. Beyan Verisi sekmesi
 
-**Yıl seçin.** Yapıştırma kutusunun üstündeki listeden beyanın ait olduğu yılı
-seçin. Bu seçim önemlidir: **KDV oranı bu yıla göre belirlenir** (10.07.2023
-öncesi %18, sonrası %20) ve dönemler arası devir zinciri buna göre kurulur.
-Listede olmayan bir yıl seçerseniz yapıştırma sırasında kendiliğinden oluşur.
+**Sorgunun tamamını yapıştırın.** Sistem sorgusunun üst kısmındaki künye
+satırları da tanınır:
 
-**Blok yapıştırma:** Sistemden kopyaladığınız beyan bloğunu (etiket sütunu +
-12 ay, Excel'deki 45–96 satırlarının karşılığı) kutuya yapıştırıp *Bloğu Aktar*
-deyin. Satırlar etiketlerine göre sırayla eşleştirilir; arada eksik veya fazla
+```
+VERGİ NO:        6660666666
+T.C. KİMLİK NO:  -----
+UNVAN:           ... ANONİM ŞİRKETİ
+VERGİ DAİRESİ:   ... VERGİ DAİRESİ (MERKEZ, FAAL)
+YIL:             2022
+RAPOR TARİHİ:    30/07/2026
+DÖNEMİ           OCAK  ŞUBAT  ...
+```
+
+Bu alanlar bulunursa **yılı elle seçmeniz gerekmez** — dönem yılı sorgudan
+alınır, dosyada yoksa oluşturulur; mükellef ünvanı, vergi kimlik numarası ve
+vergi dairesi kendiliğinden doldurulur; rapor tarihi o yılın kaydına yazılır.
+Okunan bilgiler yapıştırma kutusunun altında yeşil bir kutuda özetlenir.
+
+Künyede yıl yoksa, yapıştırma kutusunun üstündeki listeden seçtiğiniz yıl
+kullanılır. Yıl önemlidir: **KDV oranı bu yıla göre belirlenir** (10.07.2023
+öncesi %18, sonrası %20) ve devir zinciri buna göre kurulur.
+
+Açık dosyadaki mükellefin vergi numarası, yapıştırdığınız sorgudakinden
+farklıysa mükellef bilgisi **değiştirilmez**; uyarı verilir ve veri açık
+dosyaya işlenir. Farklı mükellef için Dosyalar sekmesinden yeni dosya açın.
+
+**Blok yapıştırma:** Beyan bloğunu (etiket sütunu + 12 ay, Excel'deki 45–96
+satırlarının karşılığı) kutuya yapıştırıp *Bloğu Aktar* deyin. Satırlar etiketlerine göre sırayla eşleştirilir; arada eksik veya fazla
 satır olsa da hizalama bozulmaz. Grup başlıkları (İNDİRİMLER, SONUÇ HESAPLARI
 gibi değer taşımayan satırlar) tanınır ve atlanır. Etiket sütunu olmayan
 yapıştırmalarda satırlar sıraya göre atanır ve bu durum uyarı olarak bildirilir.
@@ -44,8 +64,10 @@ hiç tespit girmediğiniz yıllarda bile, önceki yıllardan gelen farklar
 kendiliğinden hesaplanır ve *Sonuç ve Fark* ile *Tarhiyat Özeti*
 sekmelerinde görünür.
 
-**Elle düzenleme:** Izgaradaki her hücreyi doğrudan değiştirebilirsiniz; alanı
-terk ettiğinizde kaydedilir ve seri anında yeniden hesaplanır.
+**Elle düzenleme:** Yapıştırdıktan sonra ızgarada **bütün değerler görünür**
+(sıfırlar dahil, soluk renkte). Her hücreyi doğrudan değiştirebilirsiniz; alanı
+terk ettiğinizde kaydedilir ve seri anında yeniden hesaplanır. Böylece mevcut
+veri üzerinde çalışırsınız.
 
 **Tek satır yapıştırma:** Satır başındaki **⇥** düğmesiyle yalnızca o satırın
 12 aylık değerini tek seferde yapıştırabilirsiniz. Değerler sekmeyle, boşlukla
@@ -105,6 +127,23 @@ ilavesini tamamen elle girmek isterseniz o dönemin **Oto** kutusunu kaldırın.
 Üç tablo yan yana gösterilir: **eleştirili**, **beyan edilen** ve **fark**.
 Fark tablosunda sıfırdan farklı hücreler kırmızı vurgulanır. Tespit girilen
 dönemler *tespit* rozetiyle işaretlenir.
+
+**Bir tutarın nasıl çıktığını görmek için hücreye tıklayın.** Açılan balonda
+hesabın formülü, kullanılan kalemler ve sonuç satır satır gösterilir. Örneğin
+ödenecek KDV hücresine tıkladığınızda:
+
+```
+Ödenecek = (Toplam KDV − İndirimler) − Tecil edilecek KDV
+  Toplam KDV                 2.281.743,46
+  İndirimler toplamı        −2.254.565,06
+  Tecil edilecek KDV                 0,00
+  Sonuç                         27.178,40
+```
+
+Beyan tablosunda balon, tutarın beyannamenin hangi satırından geldiğini söyler.
+Fark tablosunda ise farkın ne kadarının o dönemin tespitinden, ne kadarının
+devirden geldiğini belirtir. Aynı balon Tarhiyat Özeti tablosunda da çalışır.
+Kapatmak için balon dışına tıklayın veya Esc'e basın.
 
 - **Excel Çalışmasını İndir** — her yıl için ayrı sayfa (eleştirili beyan,
   tespit girişi, ham beyan, üç özet tablo) ve ayrıca *Tarhiyat Özeti*,

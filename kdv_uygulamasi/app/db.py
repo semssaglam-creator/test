@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS mukellefler (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ad_unvan TEXT NOT NULL,
     vkn_tckn TEXT,
-    adres TEXT
+    adres TEXT,
+    vergi_dairesi TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_mukellef_ad ON mukellefler(ad_unvan);
 
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS inceleme_yillari (
     inceleme_id INTEGER NOT NULL REFERENCES incelemeler(id) ON DELETE CASCADE,
     yil INTEGER NOT NULL,
     ay_sayisi INTEGER NOT NULL DEFAULT 12,
+    rapor_tarihi TEXT,
     UNIQUE (inceleme_id, yil)
 );
 
@@ -79,10 +81,22 @@ def _baglan():
     return conn
 
 
+# Sema sonradan genisletildiginde eski veritabanlarina eklenecek kolonlar
+_EK_KOLONLAR = [
+    ("mukellefler", "vergi_dairesi", "TEXT"),
+    ("inceleme_yillari", "rapor_tarihi", "TEXT"),
+]
+
+
 def init_db():
     conn = _baglan()
     try:
         conn.executescript(SCHEMA)
+        # Onceki surumlerde olusmus veritabanlari icin eksik kolonlari ekle
+        for tablo, kolon, tur in _EK_KOLONLAR:
+            mevcut = {r["name"] for r in conn.execute(f"PRAGMA table_info({tablo})")}
+            if kolon not in mevcut:
+                conn.execute(f"ALTER TABLE {tablo} ADD COLUMN {kolon} {tur}")
         conn.commit()
     finally:
         conn.close()
@@ -114,7 +128,8 @@ def mukellefleri_listele():
         conn.close()
 
 
-def mukellef_guncelle(mukellef_id, ad_unvan=None, vkn_tckn=None, adres=None):
+def mukellef_guncelle(mukellef_id, ad_unvan=None, vkn_tckn=None, adres=None,
+                      vergi_dairesi=None):
     """Mukellef bilgilerini gunceller; bos birakilan alanlara dokunulmaz."""
     conn = _baglan()
     try:
@@ -127,6 +142,9 @@ def mukellef_guncelle(mukellef_id, ad_unvan=None, vkn_tckn=None, adres=None):
         if adres is not None:
             conn.execute("UPDATE mukellefler SET adres = ? WHERE id = ?",
                          (adres.strip(), mukellef_id))
+        if vergi_dairesi is not None:
+            conn.execute("UPDATE mukellefler SET vergi_dairesi = ? WHERE id = ?",
+                         (vergi_dairesi.strip(), mukellef_id))
         conn.commit()
     finally:
         conn.close()
@@ -296,9 +314,10 @@ def varsayilan_calisma():
     finally:
         conn.close()
     mukellef_id = mukellef_ekle(ADSIZ_MUKELLEF)
-    inceleme_id = inceleme_ekle(mukellef_id, "Çalışma")
-    yil_ekle(inceleme_id, datetime.now().year - 1)
-    return inceleme_id
+    # Yil olusturulmaz: yil, yapistirilan sorgunun kunyesinden ya da kullanicinin
+    # sectigi degerden belirlenir. Bos bir yil kaydi, devir zinciri denetiminde
+    # yanlis bulgu uretirdi.
+    return inceleme_ekle(mukellef_id, "Çalışma")
 
 
 def yil_sil(yil_id):
@@ -388,6 +407,17 @@ def elestiri_kaydet(yil_id, alanlar):
         conn.close()
 
 
+def rapor_tarihi_ayarla(yil_id, rapor_tarihi):
+    """Sistem sorgusunun uretildigi tarihi yil kaydina yazar."""
+    conn = _baglan()
+    try:
+        conn.execute("UPDATE inceleme_yillari SET rapor_tarihi = ? WHERE id = ?",
+                     ((rapor_tarihi or "").strip(), yil_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def beyan_temizle(yil_id):
     """Bir yilin tum beyan satirlarini sifirlar; satirlar silinmez, bosaltilir."""
     conn = _baglan()
@@ -439,7 +469,8 @@ def inceleme_verisi(inceleme_id):
     conn = _baglan()
     try:
         inceleme = conn.execute(
-            "SELECT i.*, m.ad_unvan, m.vkn_tckn, m.adres FROM incelemeler i "
+            "SELECT i.*, m.ad_unvan, m.vkn_tckn, m.adres, m.vergi_dairesi "
+            "FROM incelemeler i "
             "JOIN mukellefler m ON m.id = i.mukellef_id WHERE i.id = ?",
             (inceleme_id,)).fetchone()
         if inceleme is None:
@@ -462,6 +493,7 @@ def inceleme_verisi(inceleme_id):
                 else:
                     elestiri.setdefault(alan, [0.0] * 12)
             yillar.append({"yil_id": y["id"], "yil": y["yil"], "ay_sayisi": y["ay_sayisi"],
+                           "rapor_tarihi": y["rapor_tarihi"],
                            "beyan": beyan, "elestiri": elestiri})
         return {"inceleme": dict(inceleme), "yillar": yillar}
     finally:

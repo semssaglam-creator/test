@@ -49,12 +49,13 @@ def matrah_farki_ozeti(inceleme, sonuc, bulgular=None):
         if abs(f["matrah"]) > 0.005:
             parcalar.append(f"matraha {_tl(abs(f['matrah']))} TL "
                             f"{'ilave edilmiş' if f['matrah'] > 0 else 'eksiltme yapılmış'}")
-        if abs(f["hesaplanan"]) > 0.005:
-            parcalar.append(f"hesaplanan KDV {_tl(abs(f['hesaplanan']))} TL "
-                            f"{'artmış' if f['hesaplanan'] > 0 else 'azalmış'}")
-        if abs(f["bu_donem_indirim"]) > 0.005:
-            parcalar.append(f"indirilecek KDV {_tl(abs(f['bu_donem_indirim']))} TL "
-                            f"{'azaltılmış' if f['bu_donem_indirim'] < 0 else 'artırılmış'}")
+        if abs(f["toplam_kdv"]) > 0.005:
+            parcalar.append(f"hesaplanan KDV {_tl(abs(f['toplam_kdv']))} TL "
+                            f"{'artmış' if f['toplam_kdv'] > 0 else 'azalmış'}")
+        if abs(f["bu_donem_indirim_toplam"]) > 0.005:
+            parcalar.append(
+                f"indirilecek KDV {_tl(abs(f['bu_donem_indirim_toplam']))} TL "
+                f"{'azaltılmış' if f['bu_donem_indirim_toplam'] < 0 else 'artırılmış'}")
         satirlar.append(f"{_donem_adi(d)} dönemi: " + ", ".join(parcalar) + ".")
         if abs(f["odenecek"]) > 0.005:
             satirlar.append(

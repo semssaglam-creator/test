@@ -123,6 +123,9 @@ def _donem_hesapla(beyan, elestiri, yil, ay, devreden_giris):
         "onceki_devir": _yuvarla(onceki_devir),
         "bu_donem_indirim": _yuvarla(bu_donem_indirim),
         "diger_indirim": _yuvarla(diger_indirim),
+        # Ozet tablosunda beyan tarafiyla ayni tanim kullanilir: bu doneme ait
+        # indirilecek KDV ile 103+104+105 toplaminin birlesimi
+        "bu_donem_indirim_toplam": _yuvarla(bu_donem_indirim + diger_indirim),
         "indirimler": _yuvarla(indirimler),
         "odenecek": _yuvarla(odenecek),
         "sonraki_devir": _yuvarla(sonraki_devir),
@@ -143,10 +146,16 @@ def _beyan_ozeti(beyan, yil, ay):
         "ay": ay + 1,
         "ay_adi": AYLAR[ay],
         "matrah": _yuvarla(_d(beyan, "matrah_toplami", ay)),
-        "hesaplanan": _yuvarla(_d(beyan, "toplam_kdv", ay)),
+        # Ozet kolonlari her iki tarafta ayni tanimi tasimali: "hesaplanan"
+        # yalnizca hesaplanan KDV, "toplam_kdv" ilave edilecek KDV ile birlikte
+        "hesaplanan": _yuvarla(_d(beyan, "hesaplanan_kdv", ay)),
+        "ilave_edilecek": _yuvarla(_d(beyan, "ilave_edilecek_kdv", ay)),
+        "toplam_kdv": _yuvarla(_d(beyan, "toplam_kdv", ay)),
         "onceki_devir": _yuvarla(_d(beyan, "onceki_donem_devreden", ay)),
-        "bu_donem_indirim": _yuvarla(_d(beyan, "bu_donem_indirilecek", ay)
-                                     + _d(beyan, "diger_indirimler_toplami", ay)),
+        "bu_donem_indirim": _yuvarla(_d(beyan, "bu_donem_indirilecek", ay)),
+        "diger_indirim": _yuvarla(_d(beyan, "diger_indirimler_toplami", ay)),
+        "bu_donem_indirim_toplam": _yuvarla(_d(beyan, "bu_donem_indirilecek", ay)
+                                            + _d(beyan, "diger_indirimler_toplami", ay)),
         "indirimler": _yuvarla(_d(beyan, "indirimler_toplami", ay)),
         "odenecek": _yuvarla(_d(beyan, "odenmesi_gereken_kdv", ay)),
         "sonraki_devir": _yuvarla(_d(beyan, "sonraki_donem_devreden", ay)),
@@ -156,7 +165,7 @@ def _beyan_ozeti(beyan, yil, ay):
     }
 
 
-OZET_ALANLARI = ["matrah", "hesaplanan", "onceki_devir", "bu_donem_indirim",
+OZET_ALANLARI = ["matrah", "toplam_kdv", "onceki_devir", "bu_donem_indirim_toplam",
                  "indirimler", "odenecek", "sonraki_devir", "iade"]
 
 # Fark ayristirmasinda karsilastirilan tum alanlar
@@ -441,7 +450,7 @@ def beyan_tutarlilik_kontrol(yillar):
     girilmeden once ortaya cikarir.
     """
     bulgular = []
-    onceki = None  # (yil, ay_adi, beyan edilen sonraki devir)
+    onceki = None  # (yil, ay, ay_adi, beyan edilen sonraki devir)
     for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
         yil = int(yil_kaydi["yil"])
         beyan = yil_kaydi.get("beyan") or bos_beyan()
@@ -451,14 +460,30 @@ def beyan_tutarlilik_kontrol(yillar):
             onceki_devir = _d(beyan, "onceki_donem_devreden", ay)
             sonraki_devir = _d(beyan, "sonraki_donem_devreden", ay)
 
-            if onceki is not None and abs(onceki[2] - onceki_devir) > 0.01:
+            # Zincir denetimi yalnizca birbirini izleyen donemler icin gecerlidir.
+            # Arada eksik donem varsa (ornegin bir yil yuklenmemisse) devirin
+            # tutmamasi beklenir; bu bir tutarsizlik degil, veri bosluguduur.
+            if onceki is not None:
+                ardisik = ((onceki[0] == yil and onceki[1] == ay - 1)
+                           or (onceki[0] == yil - 1 and onceki[1] == 11 and ay == 0))
+                if not ardisik:
+                    bulgular.append({
+                        "donem": donem,
+                        "tur": "donem_boslugu",
+                        "mesaj": (f"{onceki[0]}/{onceki[2]} ile {donem} arasında yüklenmemiş "
+                                  f"dönem var. Devir zinciri bu boşlukta kesildiği için "
+                                  f"aradaki devir farkı denetlenemedi."),
+                    })
+                    onceki = None
+
+            if onceki is not None and abs(onceki[3] - onceki_devir) > 0.01:
                 bulgular.append({
                     "donem": donem,
                     "tur": "devir_zinciri",
-                    "mesaj": (f"{onceki[0]}/{onceki[1]} dönemi sonraki döneme devreden KDV "
-                              f"{onceki[2]:,.2f} TL iken, {donem} dönemi önceki dönemden "
+                    "mesaj": (f"{onceki[0]}/{onceki[2]} dönemi sonraki döneme devreden KDV "
+                              f"{onceki[3]:,.2f} TL iken, {donem} dönemi önceki dönemden "
                               f"devreden KDV {onceki_devir:,.2f} TL beyan edilmiş. "
-                              f"Fark: {onceki_devir - onceki[2]:,.2f} TL."),
+                              f"Fark: {onceki_devir - onceki[3]:,.2f} TL."),
                 })
 
             beklenen_indirim = (onceki_devir + _d(beyan, "bu_donem_indirilecek", ay)
@@ -495,7 +520,7 @@ def beyan_tutarlilik_kontrol(yillar):
                               f"{beklenen_devir:,.2f} TL olmalıydı."),
                 })
 
-            onceki = (yil, AYLAR[ay], sonraki_devir)
+            onceki = (yil, ay, AYLAR[ay], sonraki_devir)
     return bulgular
 
 
@@ -511,7 +536,8 @@ def _toplam(donemler):
     Devir sutunlari stok niteliginde oldugu icin toplanmaz; donem sonu
     (serinin son donemi) degeri gosterilir. Akim sutunlari toplanir.
     """
-    akim = ["matrah", "hesaplanan", "bu_donem_indirim", "indirimler", "odenecek", "iade"]
+    akim = ["matrah", "toplam_kdv", "bu_donem_indirim_toplam", "indirimler",
+            "odenecek", "iade"]
     sonuc = {"beyan": {}, "elestirili": {}, "fark": {}}
     for blok in ("beyan", "elestirili", "fark"):
         for alan in akim:

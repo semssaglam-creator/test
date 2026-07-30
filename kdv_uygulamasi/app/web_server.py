@@ -228,24 +228,71 @@ class Istekci(BaseHTTPRequestHandler):
 
     # -------------------------------------------------------------- yardimci
     def _beyan_yapistir(self, veri):
-        # Yil belirtilmemisse akisi kesmek yerine varsayilan bir yil olustur
+        """Yapistirmayi ayristirir, kunyeyi uygular ve beyan verisini kaydeder.
+
+        Sistem sorgusunun ust kisminda VERGİ NO / UNVAN / VERGİ DAİRESİ / YIL /
+        RAPOR TARİHİ alanlari varsa bunlar kullaniciya sorulmadan uygulanir:
+        yil bu bilgiden alinir, mukellef kaydi doldurulur. Acik dosyadaki
+        mukellef baska bir VKN tasiyorsa bilgi ezilmez, uyari dondurulur.
+        """
         inceleme_id = int(veri["inceleme_id"])
-        yil_id = veri.get("yil_id")
-        if not yil_id:
-            mevcut = db.inceleme_verisi(inceleme_id)["yillar"]
-            yil_id = (mevcut[0]["yil_id"] if mevcut
-                      else db.yil_ekle(inceleme_id, datetime.now().year - 1))
-            veri["yil_id"] = yil_id
-        _yil_dogrula(inceleme_id, int(yil_id))
         metin = veri.get("metin") or ""
         try:
             sonuc = beyan_ayristir(metin)
         except ValueError as exc:
             raise ApiHata(str(exc))
-        db.beyan_kaydet(int(veri["yil_id"]), sonuc["degerler"])
+        kunye = sonuc.get("kunye") or {}
+        uyarilar = list(sonuc["uyarilar"])
+        bilgiler = []
+
+        # --- Hedef yil: kunyedeki yil, yoksa istemcinin sectigi, yoksa varsayilan
+        mevcut = db.inceleme_verisi(inceleme_id)
+        yil_id = veri.get("yil_id")
+        kunye_yili = kunye.get("yil")
+        if kunye_yili:
+            eslesen = next((y for y in mevcut["yillar"] if y["yil"] == kunye_yili), None)
+            if eslesen:
+                yil_id = eslesen["yil_id"]
+            else:
+                yil_id = db.yil_ekle(inceleme_id, kunye_yili)
+            bilgiler.append(f"Dönem yılı sorgudan alındı: {kunye_yili}.")
+        elif not yil_id:
+            yil_id = (mevcut["yillar"][0]["yil_id"] if mevcut["yillar"]
+                      else db.yil_ekle(inceleme_id, datetime.now().year - 1))
+        _yil_dogrula(inceleme_id, int(yil_id))
+        yil_id = int(yil_id)
+
+        # --- Mukellef bilgisi
+        mukellef_id = mevcut["inceleme"]["mukellef_id"]
+        mevcut_vkn = (mevcut["inceleme"].get("vkn_tckn") or "").strip()
+        mevcut_ad = mevcut["inceleme"].get("ad_unvan") or ""
+        kunye_vkn = kunye.get("vkn") or kunye.get("tckn") or ""
+        yer_tutucu = (mevcut_ad == db.ADSIZ_MUKELLEF) or not mevcut_vkn
+
+        if kunye_vkn and mevcut_vkn and kunye_vkn != mevcut_vkn:
+            uyarilar.append(
+                f"Yapıştırılan veri {kunye_vkn} numaralı mükellefe ait; açık dosya ise "
+                f"{mevcut_vkn} numaralı mükellefe ({mevcut_ad}). Mükellef bilgisi "
+                f"değiştirilmedi, beyan verisi açık dosyaya işlendi. Farklı mükellef için "
+                f"Dosyalar sekmesinden yeni bir dosya oluşturun.")
+        elif yer_tutucu or kunye_vkn == mevcut_vkn:
+            db.mukellef_guncelle(
+                mukellef_id,
+                ad_unvan=kunye.get("unvan") if kunye.get("unvan") else None,
+                vkn_tckn=kunye_vkn or None,
+                vergi_dairesi=kunye.get("vergi_dairesi") or None)
+            if kunye.get("unvan") or kunye_vkn:
+                bilgiler.append("Mükellef bilgisi sorgudan alındı.")
+
+        if kunye.get("rapor_tarihi"):
+            db.rapor_tarihi_ayarla(yil_id, kunye["rapor_tarihi"])
+
+        db.beyan_kaydet(yil_id, sonuc["degerler"])
         if veri.get("ay_sayisi_guncelle"):
-            db.ay_sayisi_ayarla(int(veri["yil_id"]), sonuc["ay_sayisi"])
-        return {"tamam": True, "uyarilar": sonuc["uyarilar"], "ay_sayisi": sonuc["ay_sayisi"]}
+            db.ay_sayisi_ayarla(yil_id, sonuc["ay_sayisi"])
+        return {"tamam": True, "uyarilar": uyarilar, "bilgiler": bilgiler,
+                "ay_sayisi": sonuc["ay_sayisi"], "yil_id": yil_id,
+                "kunye": kunye}
 
     def _satir_yapistir(self, veri):
         _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))

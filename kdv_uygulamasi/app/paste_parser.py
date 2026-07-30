@@ -77,15 +77,79 @@ def _baslik_satiri_mi(hucreler):
     return len(norm & {_normalize(a) for a in AYLAR_BUYUK}) >= 3
 
 
+# Sistem sorgusunun ust kismindaki kunye alanlari.
+# Anahtar: normalize edilmis etiket, deger: donen sozlukteki alan adi.
+_KUNYE_ETIKETLERI = {
+    "VERGINO": "vkn",
+    "VERGIKIMLIKNO": "vkn",
+    "TCKIMLIKNO": "tckn",
+    "TCKNO": "tckn",
+    "UNVAN": "unvan",
+    "ADSOYADUNVAN": "unvan",
+    "VERGIDAIRESI": "vergi_dairesi",
+    "YIL": "yil",
+    "DONEMYILI": "yil",
+    "RAPORTARIHI": "rapor_tarihi",
+}
+
+
+def _kunye_alani(hucreler):
+    """Satir bir kunye alani ise (alan_adi, deger) dondurur, degilse None."""
+    if not hucreler or not hucreler[0]:
+        return None
+    etiket = _normalize(hucreler[0].rstrip(":").strip())
+    alan = _KUNYE_ETIKETLERI.get(etiket)
+    if alan is None:
+        return None
+    deger = " ".join(h for h in hucreler[1:] if h).strip()
+    return alan, deger
+
+
+def kunye_ayikla(metin):
+    """Yapistirmanin ust kismindaki mukellef ve donem bilgisini okur.
+
+    Sistem sorgusu, beyan tablosunun uzerinde su alanlari tasir:
+        VERGİ NO / T.C. KİMLİK NO / UNVAN / VERGİ DAİRESİ / YIL / RAPOR TARİHİ
+    Bu alanlar bulunursa mukellef kaydi ve inceleme yili kullaniciya sorulmadan
+    doldurulur. Bulunamazsa sozluk bos doner; yapistirma yine calisir.
+    """
+    kunye = {}
+    for satir in (metin or "").replace("\r", "").split("\n"):
+        if not satir.strip():
+            continue
+        bulgu = _kunye_alani(_hucrelere_bol(satir))
+        if bulgu is None:
+            continue
+        alan, deger = bulgu
+        # Bos veya yer tutucu degerleri ("-----", "-") yok say
+        if not deger or not deger.strip("-. "):
+            continue
+        if alan == "yil":
+            e = re.search(r"(19|20)\d{2}", deger)
+            if e:
+                kunye["yil"] = int(e.group(0))
+            continue
+        if alan in ("vkn", "tckn"):
+            rakamlar = re.sub(r"\D", "", deger)
+            if rakamlar:
+                kunye[alan] = rakamlar
+            continue
+        kunye[alan] = re.sub(r"\s+", " ", deger).strip()
+    return kunye
+
+
 def beyan_ayristir(metin):
     """Yapistirilan metni {satir_kodu: [12 aylik deger]} sozlugune cevirir.
 
-    Donen sozluk: {"degerler": {...}, "uyarilar": [...], "ay_sayisi": n}
+    Donen sozluk: {"degerler": {...}, "uyarilar": [...], "ay_sayisi": n,
+                   "kunye": {...}}
     Eslesmeyen satirlar uyari olarak bildirilir; hesaplama yine de yapilabilir.
     """
     ham_satirlar = [s for s in (metin or "").replace("\r", "").split("\n") if s.strip()]
     if not ham_satirlar:
         raise ValueError("Yapıştırılan metin boş.")
+
+    kunye = kunye_ayikla(metin)
 
     veri_satirlari = []  # (etiket, [12 deger])
     for satir in ham_satirlar:
@@ -93,6 +157,9 @@ def beyan_ayristir(metin):
         if not hucreler:
             continue
         if _baslik_satiri_mi(hucreler):
+            continue
+        # Kunye satirlari tabloya karismasin
+        if _kunye_alani(hucreler) is not None:
             continue
         # Etiket sutunu: ilk hucre sayisal degilse etikettir
         if hucreler and not _sayisal_mi(hucreler[0]):
@@ -110,8 +177,11 @@ def beyan_ayristir(metin):
 
     etiketli = sum(1 for e, _d in veri_satirlari if e)
     if etiketli >= len(veri_satirlari) / 2:
-        return _etikete_gore_esle(veri_satirlari)
-    return _konuma_gore_esle(veri_satirlari)
+        sonuc = _etikete_gore_esle(veri_satirlari)
+    else:
+        sonuc = _konuma_gore_esle(veri_satirlari)
+    sonuc["kunye"] = kunye
+    return sonuc
 
 
 def _etikete_gore_esle(veri_satirlari):
