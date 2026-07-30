@@ -7,9 +7,17 @@
 <style>
   * { box-sizing: border-box; }
   body { font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; margin: 0; background: #f0f2f5; color: #1c2733; }
-  header { background: #1f3a5f; color: #fff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-  header h1 { margin: 0; font-size: 20px; }
-  header .dosya-bilgi { font-size: 13px; color: #cfd9e6; }
+  header { background: #1f3a5f; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  header h1 { margin: 0; font-size: 19px; }
+  header .durum-bilgi { font-size: 13px; color: #cfd9e6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  header .kaydet-grup { display: flex; gap: 6px; align-items: center; }
+  header button { background: #2b4a73; color: #fff; border: 1px solid #47698f; border-radius: 5px; padding: 6px 13px; font-size: 13px; cursor: pointer; }
+  header button:hover { background: #3a5c88; }
+  header button.birincil { background: #2c7a3f; border-color: #2c7a3f; font-weight: 600; }
+  header button.birincil:hover { background: #35924b; }
+  .kayit-rozeti { font-size: 12px; padding: 2px 9px; border-radius: 10px; background: #47698f; }
+  .kayit-rozeti.degisti { background: #b8860b; color: #fff; }
+  .kayit-rozeti.kayitli { background: #2c7a3f; }
   nav { display: flex; gap: 4px; background: #2b4a73; padding: 0 12px; flex-wrap: wrap; }
   nav button { background: none; border: none; color: #cfd9e6; padding: 11px 16px; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; }
   nav button.aktif { color: #fff; border-bottom-color: #ffb347; font-weight: 600; }
@@ -40,15 +48,27 @@
   .mesaj.hata { background: #a33; }
   .mesaj.basari { background: #2c7a3f; }
   .mesaj.uyari { background: #b8860b; }
-  a.indir { color: #1f3a5f; }
   .liste { list-style: none; padding: 0; margin: 0; }
-  .liste li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid #eef2f6; cursor: pointer; font-size: 14px; }
+  .liste li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid #eef2f6; font-size: 14px; }
   .liste li:hover { background: #f6f9fc; }
-  .liste li.secili { background: #fff6e3; font-weight: 600; }
-  .liste li small { color: #5a6b7d; font-weight: 400; }
-  .yil-sekmeler { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-  .yil-sekmeler button { background: #e4e9ef; border: 1px solid #c3ccd6; border-radius: 5px 5px 0 0; padding: 7px 16px; cursor: pointer; font-size: 14px; }
-  .yil-sekmeler button.aktif { background: #1f3a5f; color: #fff; border-color: #1f3a5f; font-weight: 600; }
+  .liste li.secili { background: #fff6e3; }
+  .liste li small { color: #5a6b7d; }
+  .liste li .ad { flex: 1; cursor: pointer; }
+
+  /* Yil kulakciklari */
+  .yil-sekmeler { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; border-bottom: 2px solid #c3ccd6; padding-bottom: 0; }
+  .yil-kulak { display: flex; align-items: center; background: #e4e9ef; border: 1px solid #c3ccd6; border-bottom: none; border-radius: 6px 6px 0 0; overflow: hidden; position: relative; bottom: -2px; }
+  .yil-kulak.aktif { background: #1f3a5f; border-color: #1f3a5f; }
+  .yil-kulak > button.ad { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 14px; color: #1c2733; }
+  .yil-kulak.aktif > button.ad { color: #fff; font-weight: 600; }
+  .yil-kulak > button.kapat { background: none; border: none; padding: 8px 9px 8px 2px; cursor: pointer; color: #8b98a6; font-size: 15px; line-height: 1; }
+  .yil-kulak > button.kapat:hover { color: #a33; }
+  .yil-kulak.aktif > button.kapat { color: #9fb3c8; }
+  .yil-kulak.aktif > button.kapat:hover { color: #ff8b7d; }
+  .yil-kulak.tumu > button.ad { font-style: italic; }
+  .yil-kulak.bos > button.ad { color: #9aa7b4; }
+  .yil-kulak.bos.aktif > button.ad { color: #cfd9e6; }
+
   .kaydir { overflow-x: auto; }
   table.izgara { font-size: 12px; }
   table.izgara th, table.izgara td { padding: 2px 4px; white-space: nowrap; }
@@ -59,7 +79,6 @@
   table.izgara input { width: 96px; border: 1px solid transparent; background: transparent; padding: 3px 4px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; border-radius: 3px; }
   table.izgara input:hover { border-color: #c3ccd6; }
   table.izgara input:focus { border-color: #1f3a5f; background: #fff; outline: none; }
-  table.izgara input.degisti { background: #fff6e3; }
   table.izgara tr.elestiri input { background: #fff9e6; border-color: #e8d9a8; }
   table.izgara tr.elestiri td.etiket { background: #fdf3d8; }
   table.izgara td.satir-yapistir { position: sticky; left: 300px; background: #fff; z-index: 2; }
@@ -68,6 +87,7 @@
   td.fark-var { background: #fdece8; color: #a33; font-weight: 600; }
   td.negatif { color: #a33; }
   tr.toplam td { background: #e2efda; font-weight: 700; }
+  tr.yil-ayirac td { background: #dbe4ee; font-weight: 600; }
   .bulgu { border-left: 4px solid #b8860b; background: #fdf6e3; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 0 4px 4px 0; }
   .bulgu strong { color: #8a6d1a; }
   .bos-durum { color: #5a6b7d; font-size: 14px; padding: 20px; text-align: center; }
@@ -92,117 +112,75 @@
   .balon .bnot { color: #9fb3c8; margin-top: 8px; font-size: 11.5px; }
   .balon .bkapat { position: absolute; top: 6px; right: 9px; cursor: pointer; color: #7f8fa0; font-size: 15px; }
   .balon .bkapat:hover { color: #fff; }
+  .kaynak-etiket { display: inline-block; background: #eef2f6; border: 1px solid #dde3ea; border-radius: 4px; padding: 2px 8px; font-size: 11.5px; margin: 2px 4px 2px 0; color: #5a6b7d; }
 </style>
 </head>
 <body>
 <header>
   <h1>KDV İnceleme Çalışması</h1>
-  <div class="dosya-bilgi" id="dosyaBilgi">Dosya seçilmedi</div>
+  <div class="durum-bilgi">
+    <span id="calismaAdi">Yeni çalışma</span>
+    <span class="kayit-rozeti" id="kayitRozeti">boş</span>
+    <span class="kaydet-grup">
+      <button class="birincil" id="hKaydet">Kaydet</button>
+      <button id="hFarkliKaydet">Farklı Kaydet</button>
+      <button id="hYeni">Yeni</button>
+    </span>
+  </div>
 </header>
 <nav>
-  <button data-sekme="dosyalar" class="aktif">Dosyalar</button>
-  <button data-sekme="beyan">Beyan Verisi</button>
+  <button data-sekme="beyan" class="aktif">Beyan Verisi</button>
   <button data-sekme="elestiri">İnceleme Tespitleri</button>
   <button data-sekme="sonuc">Sonuç ve Fark</button>
   <button data-sekme="tarhiyat">Tarhiyat Özeti</button>
   <button data-sekme="etki">Tespit Etkisi</button>
-  <button data-sekme="ayarlar">Yedekleme</button>
+  <button data-sekme="kayitlar">Kayıtlı Çalışmalar</button>
 </nav>
 <main>
 
-<!-- ---------------------------------------------------------- DOSYALAR -->
-<section class="sekme aktif" id="sekme-dosyalar">
-  <div class="satir" style="align-items: stretch;">
-    <div class="kart" style="flex:1; min-width:320px;">
-      <h2>Mükellefler</h2>
-      <div class="satir">
-        <div><label>Ad / Ünvan</label><input type="text" id="mAd"></div>
-        <div class="dar"><label>VKN / TCKN</label><input type="text" id="mVkn"></div>
-        <div class="otomatik"><button class="btn" id="mEkle">Ekle</button></div>
-      </div>
-      <ul class="liste" id="mukellefListe"></ul>
-    </div>
-    <div class="kart" style="flex:1; min-width:320px;">
-      <h2>İnceleme Dosyaları</h2>
-      <div class="satir">
-        <div><label>Dosya adı</label><input type="text" id="iAd" placeholder="Örn. 2022-2023 KDV incelemesi"></div>
-        <div class="otomatik"><button class="btn" id="iEkle">Oluştur</button></div>
-      </div>
-      <div class="yardim">Önce soldan bir mükellef seçin, sonra dosya oluşturun.</div>
-      <ul class="liste" id="incelemeListe"></ul>
-    </div>
-  </div>
-
-  <div class="kart" id="dosyaAyar" style="display:none;">
-    <h2>Seçili Dosya Ayarları</h2>
-    <div class="satir">
-      <div><label>Mükellef adı / ünvanı</label><input type="text" id="dMukellefAd" placeholder="rapor başlığında kullanılır"></div>
-      <div class="dar"><label>VKN / TCKN</label><input type="text" id="dMukellefVkn"></div>
-    </div>
-    <div class="satir">
-      <div><label>Dosya adı</label><input type="text" id="dAd"></div>
-      <div class="dar"><label>Başlangıç devreden KDV</label><input type="text" id="dDevreden" placeholder="boş = beyandaki"></div>
-      <div class="otomatik"><button class="btn ikincil" id="dKaydet">Kaydet</button></div>
-      <div class="otomatik"><button class="btn tehlike" id="dSil">Dosyayı Sil</button></div>
-    </div>
-    <div class="yardim">
-      <strong>Başlangıç devreden KDV:</strong> İnceleme döneminden önceki dönemden gelen ve
-      inceleme sonucu düzeltilmiş devir tutarını buraya yazarsanız, seri bu tutarla başlar.
-      Boş bırakılırsa ilk dönemin beyanındaki devir esas alınır.
-    </div>
-    <h3>İnceleme Yılları</h3>
-    <div class="satir">
-      <div class="dar"><label>Yıl</label><input type="number" id="yYil" min="2000" max="2100"></div>
-      <div class="dar"><label>Ay sayısı</label><input type="number" id="yAy" min="1" max="12" value="12"></div>
-      <div class="otomatik"><button class="btn" id="yEkle">Yıl Ekle</button></div>
-    </div>
-    <table id="yilTablo"></table>
-  </div>
-</section>
-
 <!-- ------------------------------------------------------------- BEYAN -->
-<section class="sekme" id="sekme-beyan">
+<section class="sekme aktif" id="sekme-beyan">
   <div class="kart">
-    <h2>Beyan Bloğunu Yapıştır</h2>
+    <h2>Sistem Sorgusunu Yapıştır</h2>
     <div class="satir">
       <div class="dar">
-        <label>Beyanın ait olduğu yıl</label>
+        <label>Yıl (künyede yoksa kullanılır)</label>
         <select id="beyanYilSec"></select>
       </div>
       <div class="otomatik" style="padding-bottom:2px;">
-        <span class="yardim" style="margin:0;">KDV oranı bu yıla göre belirlenir<br>(10.07.2023 öncesi %18, sonrası %20).</span>
+        <span class="yardim" style="margin:0;">Sorgunun üstündeki VERGİ NO / UNVAN / VERGİ DAİRESİ /<br>
+        YIL / RAPOR TARİHİ satırlarını da yapıştırabilirsiniz.</span>
       </div>
     </div>
-    <div class="yil-sekmeler" id="beyanYilSekme"></div>
-    <label>Sistemden kopyaladığınız bloğu buraya yapıştırın (etiket sütunu + 12 ay)</label>
-    <textarea id="beyanMetin" rows="7" placeholder="DÖNEMİ&#9;OCAK&#9;ŞUBAT&#9;...&#10;MATRAH TOPLAMI&#9;343869,40&#9;176004,00&#9;..."></textarea>
+    <label>Sorgunun tamamını buraya yapıştırın</label>
+    <textarea id="beyanMetin" rows="7" placeholder="VERGİ NO:&#9;...&#10;UNVAN:&#9;...&#10;YIL:&#9;2022&#10;DÖNEMİ&#9;OCAK&#9;ŞUBAT&#9;...&#10;MATRAH TOPLAMI&#9;...">
+</textarea>
     <div class="satir" style="margin-top:10px;">
       <div class="otomatik"><button class="btn" id="beyanYapistir">Bloğu Aktar</button></div>
       <div class="otomatik"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1c2733;">
         <input type="checkbox" id="ayOtomatik" checked style="width:16px;height:16px;"> Ay sayısını veriye göre ayarla</label></div>
     </div>
     <div class="yardim">
-      Sistem sorgusunun tamamını (üstteki VERGİ NO / UNVAN / VERGİ DAİRESİ / YIL /
-      RAPOR TARİHİ satırları dahil) yapıştırabilirsiniz. Bu alanlar bulunursa mükellef
-      bilgisi ve dönem yılı kendiliğinden doldurulur; yılı elle seçmeniz gerekmez.
-      Satırlar etiketlerine göre sırayla eşleştirilir; eksik veya fazla satır olsa da
-      hizalama bozulmaz.
+      Aynı yıla ait ikinci bir sorgu yapıştırırsanız (mükellef yıl içinde vergi dairesi
+      değiştirmişse) veriler <strong>tek yılda birleştirilir</strong>: yeni sorgu yalnızca
+      kendi dolu aylarını günceller, diğer aylar korunur.
     </div>
     <div id="kunyeKarti" style="display:none;margin-top:12px;"></div>
   </div>
 
   <div class="kart">
     <h2>Beyan Verisi <span class="rozet">elle düzenlenebilir</span></h2>
+    <div class="yil-sekmeler" id="beyanYilSekme"></div>
+    <div id="yilKaynaklari"></div>
     <div class="satir">
+      <div class="dar"><label>Ay sayısı</label><input type="number" id="ayS" min="1" max="12"></div>
+      <div class="dar"><label>Yılı değiştir</label><input type="number" id="yilDegistir" min="2000" max="2100"></div>
       <div class="otomatik"><button class="btn tehlike" id="veriTemizle">Verileri Temizle</button></div>
-      <div class="otomatik" style="padding-bottom:2px;">
-        <span class="yardim" style="margin:0;">Yıl kaydı ve dosya silinmez; yalnızca içerik boşaltılır.</span>
-      </div>
     </div>
     <div class="yardim" style="margin-bottom:10px;">
-      Her hücreyi doğrudan değiştirebilirsiniz; alanı terk ettiğinizde kaydedilir.
-      Bir satırın tamamını değiştirmek için satır başındaki <strong>⇥</strong> düğmesiyle
-      12 aylık değeri tek seferde yapıştırabilirsiniz.
+      Her hücreyi doğrudan değiştirebilirsiniz. Bir satırın tamamını değiştirmek için
+      satır başındaki <strong>⇥</strong> düğmesiyle 12 aylık değeri tek seferde yapıştırın.
+      Kulakçıklardaki <strong>×</strong> ile yılı çalışmadan çıkarabilirsiniz.
     </div>
     <div class="kaydir"><table class="izgara" id="beyanIzgara"></table></div>
   </div>
@@ -219,8 +197,16 @@
       <strong>Oto</strong> kutusunu kaldırıp tutarı elle girebilirsiniz.
     </div>
     <div class="kaydir"><table class="izgara" id="elestiriIzgara"></table></div>
-    <div class="satir" style="margin-top:12px;">
-      <div class="otomatik"><button class="btn" id="elestiriKaydet">Kaydet ve Hesapla</button></div>
+  </div>
+  <div class="kart">
+    <h2>Başlangıç Devri</h2>
+    <div class="satir">
+      <div class="dar"><label>Serinin ilk dönemine taşınan devir</label>
+        <input type="text" id="devredenBaslangic" placeholder="boş = beyandaki"></div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">İnceleme döneminden önceki dönemden gelen<br>
+        düzeltilmiş devir varsa buraya yazın.</span>
+      </div>
     </div>
   </div>
 </section>
@@ -228,19 +214,20 @@
 <!-- ------------------------------------------------------------- SONUC -->
 <section class="sekme" id="sekme-sonuc">
   <div class="kart">
-    <h2>Karşılaştırma</h2>
+    <h2>Sonuç ve Fark</h2>
+    <div class="yil-sekmeler" id="sonucYilSekme"></div>
     <div class="satir">
-      <div class="otomatik"><button class="btn" id="excelIndir">Excel Çalışmasını İndir</button></div>
+      <div class="otomatik"><button class="btn" id="excelIndir">Excel'e Aktar</button></div>
       <div class="otomatik"><button class="btn ikincil" id="raporGoster">Rapor Metnini Üret</button></div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">Excel dosyası her yıl için sonuç/fark tablolarını,<br>
+        tarhiyat özetini ve tespit etkisini birlikte içerir.</span>
+      </div>
     </div>
     <div id="sonucIcerik"></div>
   </div>
   <div class="kart" id="bulguKart" style="display:none;">
     <h2>Beyan Tutarlılık Bulguları</h2>
-    <div class="yardim" style="margin-bottom:10px;">
-      Aşağıdaki uyarılar, eleştiriden bağımsız olarak beyannamelerin kendi içindeki
-      tutarsızlıklarını gösterir (devir zinciri kopukluğu, toplam hataları).
-    </div>
     <div id="bulguListe"></div>
   </div>
 </section>
@@ -249,23 +236,20 @@
 <section class="sekme" id="sekme-tarhiyat">
   <div class="kart">
     <h2>Tarhiyat Özeti</h2>
+    <div class="yil-sekmeler" id="tarhiyatYilSekme"></div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="excelIndir2">Excel'e Aktar</button></div>
+    </div>
     <div class="yardim" style="margin-bottom:12px;">
-      Her dönem için beyan edilen ile olması gereken tutarlar karşılaştırılır.
       <strong>(1)</strong> re'sen tarhı gereken KDV, <strong>(2)</strong> haksız iade
       talebi nedeniyle aranması gereken KDV, <strong>(3)</strong> iade gerçekleşmişse
-      haksız olarak iade edilen KDV. Sütunlar yalnızca mükellef aleyhine olan yönü
-      taşır; ters yöndeki sapma (fazla beyan) ayrıca aşağıda bildirilir.
+      haksız olarak iade edilen KDV. Sütunlar yalnızca mükellef aleyhine olan yönü taşır.
     </div>
     <div class="kaydir"><table id="tarhiyatTablo"></table></div>
     <div id="tarhiyatNot"></div>
   </div>
   <div class="kart">
     <h2>Yıllara Göre Beyan Uyumu</h2>
-    <div class="yardim" style="margin-bottom:12px;">
-      Çok yıllı incelemelerde genel görünüm. <strong>Tespit etkisi</strong> o yılda
-      girdiğiniz eleştirilerin, <strong>devir etkisi</strong> önceki yıllardan devir
-      zinciriyle taşınan farkın sonucudur.
-    </div>
     <div class="kaydir"><table id="yilUyumTablo"></table></div>
   </div>
 </section>
@@ -276,9 +260,7 @@
     <h2>Tespitlerimin Kaynak Bazında Etkisi</h2>
     <div class="yardim" style="margin-bottom:12px;">
       Bir tespit yalnızca girildiği dönemi değil, devir zinciri yoluyla izleyen tüm
-      dönemleri etkiler. Aşağıda her tespitin ayrı ayrı katkısı gösterilir: örneğin
-      2023/Ocak'ta matraha yapılan ilave ile 2024/Şubat'ta yapılan indirim reddinin
-      2026/Nisan'daki sonuca katkıları ayrı sütunlarda görünür.
+      dönemleri etkiler. Her tespitin katkısı ayrı sütunda gösterilir.
     </div>
     <div id="kaynakListe"></div>
   </div>
@@ -295,10 +277,7 @@
           <option value="matrah">Matrah</option>
         </select>
       </div>
-      <div class="dar">
-        <label>Yıl</label>
-        <select id="etkiYil"></select>
-      </div>
+      <div class="dar"><label>Yıl</label><select id="etkiYil"></select></div>
       <div class="otomatik">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1c2733;">
           <input type="checkbox" id="etkiSadeceDolu" checked style="width:16px;height:16px;">
@@ -310,10 +289,34 @@
   </div>
 </section>
 
-<!-- ----------------------------------------------------------- AYARLAR -->
-<section class="sekme" id="sekme-ayarlar">
+<!-- ---------------------------------------------------------- KAYITLAR -->
+<section class="sekme" id="sekme-kayitlar">
+  <div class="kart">
+    <h2>Kayıtlı Çalışmalar</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Üzerinde çalıştığınız veri, siz <strong>Kaydet</strong> demedikçe saklanmaz.
+      Kaydedilen çalışmalar burada listelenir; açabilir veya silebilirsiniz.
+    </div>
+    <ul class="liste" id="kayitListe"></ul>
+  </div>
+  <div class="kart">
+    <h2>Çalışma Bilgileri</h2>
+    <div class="satir">
+      <div><label>Çalışma adı</label><input type="text" id="cAd" placeholder="boş bırakılırsa mükellef adı ve yıllardan üretilir"></div>
+    </div>
+    <div class="satir">
+      <div><label>Mükellef adı / ünvanı</label><input type="text" id="cMukellefAd"></div>
+      <div class="dar"><label>VKN / TCKN</label><input type="text" id="cVkn"></div>
+    </div>
+    <div class="satir">
+      <div><label>Vergi dairesi</label><input type="text" id="cVergiDairesi"></div>
+    </div>
+  </div>
   <div class="kart">
     <h2>Yedekleme</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Yedek, kayıtlı çalışmaların tamamının kopyasıdır. Kaydedilmemiş veriler yedeğe girmez.
+    </div>
     <div class="satir">
       <div class="otomatik"><button class="btn" id="yedekAl">Yedek Al</button></div>
     </div>
@@ -329,9 +332,8 @@
   <div class="modal" style="max-width:560px;">
     <h2>Verileri Temizle</h2>
     <div class="yardim" style="margin-bottom:14px;">
-      Ne kadarının silineceğini seçin. Yıl kayıtları ve inceleme dosyası
-      silinmez; yalnızca içindeki değerler sıfırlanır. Bu işlem geri alınamaz —
-      önce Yedekleme sekmesinden yedek almanız önerilir.
+      Ne kadarının sıfırlanacağını seçin. Bu işlem yalnızca üzerinde çalıştığınız
+      veriyi etkiler; kayıtlı çalışmalar Kaydet demediğiniz sürece değişmez.
     </div>
     <div id="temizleSecenekler"></div>
     <div class="satir" style="margin-top:16px;">
@@ -354,26 +356,64 @@
 <script>
 "use strict";
 
+// Calisma verisi yalnizca burada, bellekte tutulur. Sunucu hesaplar; kayit
+// islemi ancak kullanici "Kaydet" dediginde yapilir.
 const durum = {
   tanimlar: null,
-  mukellefler: [],
-  incelemeler: [],
-  mukellefId: null,
-  incelemeId: null,
-  veri: null,        // {inceleme, yillar, sonuc, bulgular}
-  aktifYilId: null,
+  calisma: null,
+  kayitliId: null,
+  degisti: false,
+  sonuc: null,
+  bulgular: [],
+  aktifYil: null,       // Beyan / Tespit sekmeleri
+  sonucYil: "tumu",
+  tarhiyatYil: "tumu",
+  kayitlar: [],
 };
 
-// ------------------------------------------------------------------ yardimci
 const $ = (id) => document.getElementById(id);
 
+function bosCalisma() {
+  return {
+    ad: "",
+    mukellef: { ad_unvan: "", vkn_tckn: "", vergi_dairesi: "" },
+    devreden_baslangic: null,
+    yillar: [],
+  };
+}
+
+function bosBeyan() {
+  const b = {};
+  durum.tanimlar.satirlar.forEach((s) => { if (!s.baslik) b[s.kod] = new Array(12).fill(0); });
+  return b;
+}
+
+function varsayilanOran(yil, ay) {
+  if (yil > 2023) return 20;
+  if (yil < 2023) return 18;
+  return ay >= 7 ? 20 : 18;
+}
+
+function bosElestiri(yil) {
+  return {
+    matrah_ilave: new Array(12).fill(0),
+    hesaplanan_kdv_ilave: new Array(12).fill(0),
+    devir_cikar: new Array(12).fill(0),
+    indirim_cikar: new Array(12).fill(0),
+    yuklenilen_cikar: new Array(12).fill(0),
+    kdv_orani: Array.from({ length: 12 }, (_, i) => varsayilanOran(yil, i + 1)),
+    hesaplanan_otomatik: new Array(12).fill(true),
+  };
+}
+
+// ------------------------------------------------------------------ yardimci
 function mesaj(metin, tur = "basari") {
   const el = $("mesaj");
   el.textContent = metin;
   el.className = "mesaj " + tur;
   el.style.display = "block";
   clearTimeout(el._zaman);
-  el._zaman = setTimeout(() => { el.style.display = "none"; }, tur === "hata" ? 8000 : 4500);
+  el._zaman = setTimeout(() => { el.style.display = "none"; }, tur === "hata" ? 8000 : 5000);
 }
 
 async function api(yol, govde) {
@@ -406,20 +446,57 @@ function sayiCoz(metin) {
   return isNaN(d) ? 0 : d;
 }
 
-function aktifYil() {
-  if (!durum.veri) return null;
-  return durum.veri.yillar.find((y) => y.yil_id === durum.aktifYilId) || durum.veri.yillar[0] || null;
+function yillar() { return durum.calisma.yillar.slice().sort((a, b) => a.yil - b.yil); }
+function yilBul(yil) { return durum.calisma.yillar.find((y) => y.yil === Number(yil)) || null; }
+function aktifYilKaydi() { return yilBul(durum.aktifYil) || yillar()[0] || null; }
+
+/** Degisiklik isaretler ve yeniden hesaplar. */
+function isaretle(yenidenHesapla = true) {
+  durum.degisti = true;
+  rozetiTazele();
+  if (yenidenHesapla) hesaplaGecikmeli();
 }
 
-/** Bos tabloya yonlendirici aciklama koyar. */
-function bosDurum(tablo, metin) {
-  const tr = document.createElement("tr");
-  const td = document.createElement("td");
-  td.className = "bos-durum";
-  td.textContent = metin;
-  tr.appendChild(td);
-  tablo.appendChild(tr);
+let hesapZaman = null;
+function hesaplaGecikmeli() {
+  clearTimeout(hesapZaman);
+  hesapZaman = setTimeout(hesapla, 150);
 }
+
+async function hesapla() {
+  if (!durum.calisma.yillar.length) {
+    durum.sonuc = null; durum.bulgular = [];
+    ekraniCiz();
+    return;
+  }
+  try {
+    const y = await api("/api/hesapla", { calisma: durum.calisma });
+    durum.sonuc = y.sonuc;
+    durum.bulgular = y.bulgular;
+  } catch (hata) { mesaj("Hesaplama hatası: " + hata.message, "hata"); }
+  ekraniCiz();
+}
+
+function rozetiTazele() {
+  const rozet = $("kayitRozeti");
+  const ad = durum.calisma.ad || (durum.calisma.mukellef.ad_unvan || "Yeni çalışma");
+  $("calismaAdi").textContent = ad;
+  if (!durum.calisma.yillar.length) {
+    rozet.textContent = "boş"; rozet.className = "kayit-rozeti";
+  } else if (durum.degisti) {
+    rozet.textContent = durum.kayitliId ? "kaydedilmemiş değişiklik" : "kaydedilmedi";
+    rozet.className = "kayit-rozeti degisti";
+  } else {
+    rozet.textContent = "kayıtlı"; rozet.className = "kayit-rozeti kayitli";
+  }
+}
+
+window.addEventListener("beforeunload", (olay) => {
+  if (durum.degisti && durum.calisma.yillar.length) {
+    olay.preventDefault();
+    olay.returnValue = "";
+  }
+});
 
 // --------------------------------------------------------------- gezinme
 document.querySelectorAll("nav button").forEach((dugme) => {
@@ -428,325 +505,230 @@ document.querySelectorAll("nav button").forEach((dugme) => {
     document.querySelectorAll(".sekme").forEach((s) => s.classList.remove("aktif"));
     dugme.classList.add("aktif");
     $("sekme-" + dugme.dataset.sekme).classList.add("aktif");
+    balonKapat();
   });
 });
 
-// ------------------------------------------------------------- mukellefler
-async function mukellefleriYukle() {
-  const veri = await api("/api/mukellefler");
-  durum.mukellefler = veri.mukellefler;
-  const liste = $("mukellefListe");
-  liste.innerHTML = "";
-  if (!veri.mukellefler.length) {
-    liste.innerHTML = '<li class="bos-durum">Kayıtlı mükellef yok.</li>';
-    return;
+// --------------------------------------------------------- yil kulakciklari
+/**
+ * Yil kulakciklarini cizer.
+ * @param kapsayici hedef elemanin id'si
+ * @param secili    secili yil ("tumu" olabilir)
+ * @param sec       yil secildiginde cagrilir
+ * @param tumuVar   "Tümü" kulakcigi gosterilsin mi
+ * @param kapatilir kulakciklarda x (yili cikar) olsun mu
+ */
+function yilKulaklariniCiz(kapsayici, secili, sec, tumuVar, kapatilir) {
+  const kap = $(kapsayici);
+  kap.innerHTML = "";
+  const liste = yillar();
+  if (tumuVar && liste.length) {
+    const k = document.createElement("div");
+    k.className = "yil-kulak tumu" + (String(secili) === "tumu" ? " aktif" : "");
+    const b = document.createElement("button");
+    b.className = "ad"; b.textContent = "Tümü";
+    b.title = "Bütün yılları tek tabloda göster";
+    b.addEventListener("click", () => sec("tumu"));
+    k.appendChild(b);
+    kap.appendChild(k);
   }
-  veri.mukellefler.forEach((m) => {
-    const li = document.createElement("li");
-    if (m.id === durum.mukellefId) li.className = "secili";
-    const ad = document.createElement("span");
-    ad.innerHTML = `${m.ad_unvan}${m.vkn_tckn ? ` <small>${m.vkn_tckn}</small>` : ""}`;
-    const sil = document.createElement("button");
-    sil.className = "btn tehlike";
-    sil.style.padding = "3px 9px";
-    sil.style.fontSize = "12px";
-    sil.textContent = "Sil";
-    sil.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      if (!confirm(`"${m.ad_unvan}" silinsin mi?`)) return;
-      try { await api("/api/mukellef/sil", { id: m.id }); mesaj("Mükellef silindi."); await mukellefleriYukle(); }
-      catch (hata) { mesaj(hata.message, "hata"); }
-    });
-    li.append(ad, sil);
-    li.addEventListener("click", () => { durum.mukellefId = m.id; mukellefleriYukle(); incelemeleriYukle(); });
-    liste.appendChild(li);
-  });
-}
-
-$("mEkle").addEventListener("click", async () => {
-  const ad = $("mAd").value.trim();
-  if (!ad) { mesaj("Mükellef adı boş olamaz.", "hata"); return; }
-  try {
-    const y = await api("/api/mukellef", { ad_unvan: ad, vkn_tckn: $("mVkn").value.trim() });
-    $("mAd").value = ""; $("mVkn").value = "";
-    durum.mukellefId = y.id;
-    mesaj("Mükellef eklendi.");
-    await mukellefleriYukle(); await incelemeleriYukle();
-  } catch (hata) { mesaj(hata.message, "hata"); }
-});
-
-// ------------------------------------------------------------- incelemeler
-async function incelemeleriYukle() {
-  const veri = await api("/api/incelemeler" + (durum.mukellefId ? `?mukellef_id=${durum.mukellefId}` : ""));
-  durum.incelemeler = veri.incelemeler;
-  const liste = $("incelemeListe");
-  liste.innerHTML = "";
-  if (!veri.incelemeler.length) {
-    liste.innerHTML = '<li class="bos-durum">Bu mükellefe ait dosya yok.</li>';
-    return;
-  }
-  veri.incelemeler.forEach((i) => {
-    const li = document.createElement("li");
-    if (i.id === durum.incelemeId) li.className = "secili";
-    li.innerHTML = `<span>${i.ad}<small> — ${i.ad_unvan}${i.yillar.length ? " · " + i.yillar.join(", ") : ""}</small></span>`;
-    li.addEventListener("click", () => dosyaSec(i.id));
-    liste.appendChild(li);
-  });
-}
-
-$("iEkle").addEventListener("click", async () => {
-  // Mukellef secilmemisse ve ad bos birakilmissa sunucu yer tutucu kullanir
-  const ad = $("iAd").value.trim();
-  try {
-    const y = await api("/api/inceleme", { mukellef_id: durum.mukellefId, ad });
-    $("iAd").value = "";
-    mesaj("Dosya oluşturuldu.");
-    await incelemeleriYukle();
-    await dosyaSec(y.id);
-  } catch (hata) { mesaj(hata.message, "hata"); }
-});
-
-async function dosyaSec(id) {
-  durum.incelemeId = id;
-  await veriYukle();
-  await incelemeleriYukle();
-}
-
-async function veriYukle() {
-  if (!durum.incelemeId) return;
-  durum.veri = await api(`/api/inceleme?id=${durum.incelemeId}`);
-  const yillar = durum.veri.yillar;
-  if (!yillar.find((y) => y.yil_id === durum.aktifYilId)) {
-    durum.aktifYilId = yillar.length ? yillar[0].yil_id : null;
-  }
-  ekraniCiz();
-}
-
-function ekraniCiz() {
-  const v = durum.veri;
-  if (!v) return;
-  $("dosyaBilgi").textContent = `${v.inceleme.ad_unvan} — ${v.inceleme.ad}`;
-  $("dosyaAyar").style.display = "block";
-  $("dAd").value = v.inceleme.ad || "";
-  // Yer tutucu ad kutuda bos gorunsun ki kullanici dogrudan yazabilsin
-  $("dMukellefAd").value = (v.inceleme.ad_unvan || "").startsWith("(Adsız") ? "" : v.inceleme.ad_unvan;
-  $("dMukellefVkn").value = v.inceleme.vkn_tckn || "";
-  $("dDevreden").value = v.inceleme.devreden_baslangic != null ? tl(v.inceleme.devreden_baslangic) : "";
-  yilTablosunuCiz();
-  yilSekmeleriniCiz();
-  beyanIzgarasiniCiz();
-  elestiriIzgarasiniCiz();
-  sonucuCiz();
-  tarhiyatiCiz();
-  yilUyumunuCiz();
-  kaynaklariCiz();
-  etkiYilListesiniCiz();
-  etkiTablosunuCiz();
-}
-
-$("dKaydet").addEventListener("click", async () => {
-  try {
-    const ham = $("dDevreden").value.trim();
-    await api("/api/inceleme/guncelle", {
-      id: durum.incelemeId, ad: $("dAd").value.trim(),
-      devreden_baslangic: ham === "" ? null : ham,
-    });
-    await api("/api/mukellef/guncelle", {
-      id: durum.veri.inceleme.mukellef_id,
-      ad_unvan: $("dMukellefAd").value.trim(),
-      vkn_tckn: $("dMukellefVkn").value.trim(),
-    });
-    mesaj("Dosya güncellendi.");
-    await veriYukle(); await mukellefleriYukle(); await incelemeleriYukle();
-  } catch (hata) { mesaj(hata.message, "hata"); }
-});
-
-$("dSil").addEventListener("click", async () => {
-  if (!confirm("Dosya ve tüm verileri silinsin mi?")) return;
-  try {
-    await api("/api/inceleme/sil", { id: durum.incelemeId });
-    durum.incelemeId = null; durum.veri = null; durum.aktifYilId = null;
-    $("dosyaAyar").style.display = "none";
-    $("dosyaBilgi").textContent = "Dosya seçilmedi";
-    $("sonucIcerik").innerHTML = ""; $("beyanIzgara").innerHTML = ""; $("elestiriIzgara").innerHTML = "";
-    mesaj("Dosya silindi.");
-    await incelemeleriYukle();
-  } catch (hata) { mesaj(hata.message, "hata"); }
-});
-
-// ------------------------------------------------------------------- yillar
-$("yEkle").addEventListener("click", async () => {
-  const yil = parseInt($("yYil").value, 10);
-  if (!yil) { mesaj("Yıl girin.", "hata"); return; }
-  try {
-    if (!durum.incelemeId) {
-      const h = await api("/api/calisma_hazirla", {});
-      durum.incelemeId = h.inceleme_id;
-      await veriYukle();
+  liste.forEach((y) => {
+    const doluAy = doluAySayisi(y);
+    const k = document.createElement("div");
+    k.className = "yil-kulak" + (String(secili) === String(y.yil) ? " aktif" : "")
+      + (doluAy === 0 ? " bos" : "");
+    const b = document.createElement("button");
+    b.className = "ad";
+    b.textContent = y.yil + (doluAy === 0 ? " (boş)" : "");
+    b.title = doluAy === 0 ? "Bu yıla henüz veri yapıştırılmadı"
+      : `${doluAy} ayda veri var`;
+    b.addEventListener("click", () => sec(y.yil));
+    k.appendChild(b);
+    if (kapatilir) {
+      const x = document.createElement("button");
+      x.className = "kapat";
+      x.textContent = "×";
+      x.title = `${y.yil} yılını çalışmadan çıkar`;
+      x.addEventListener("click", (olay) => { olay.stopPropagation(); yiliKapat(y.yil); });
+      k.appendChild(x);
     }
-    const y = await api("/api/yil", { inceleme_id: durum.incelemeId, yil, ay_sayisi: parseInt($("yAy").value, 10) || 12 });
-    durum.aktifYilId = y.yil_id;
-    $("yYil").value = "";
-    mesaj(`${yil} yılı eklendi.`);
-    await veriYukle(); await incelemeleriYukle();
-  } catch (hata) { mesaj(hata.message, "hata"); }
-});
-
-function yilTablosunuCiz() {
-  const tablo = $("yilTablo");
-  const yillar = durum.veri.yillar;
-  if (!yillar.length) { tablo.innerHTML = '<tr><td class="bos-durum">Henüz yıl eklenmedi.</td></tr>'; return; }
-  tablo.innerHTML = "<tr><th>Yıl</th><th>Ay sayısı</th><th></th></tr>";
-  yillar.forEach((y) => {
-    const tr = document.createElement("tr");
-    // Yil duzeltilebilir: otomatik eklenen yil yanlissa buradan degistirilir
-    const tdYil = document.createElement("td");
-    const yilGiris = document.createElement("input");
-    yilGiris.type = "number"; yilGiris.min = 2000; yilGiris.max = 2100;
-    yilGiris.value = y.yil; yilGiris.style.width = "90px";
-    yilGiris.addEventListener("change", async () => {
-      const yeni = parseInt(yilGiris.value, 10);
-      if (!yeni) { yilGiris.value = y.yil; return; }
-      try {
-        await api("/api/yil/guncelle", { inceleme_id: durum.incelemeId, yil_id: y.yil_id, yil: yeni });
-        mesaj(`Yıl ${yeni} olarak güncellendi; KDV oranları da buna göre ayarlandı.`);
-        await veriYukle(); await incelemeleriYukle();
-      } catch (hata) { mesaj(hata.message, "hata"); yilGiris.value = y.yil; }
-    });
-    tdYil.appendChild(yilGiris);
-    const tdAy = document.createElement("td");
-    const giris = document.createElement("input");
-    giris.type = "number"; giris.min = 1; giris.max = 12; giris.value = y.ay_sayisi;
-    giris.style.width = "80px";
-    giris.addEventListener("change", async () => {
-      try {
-        await api("/api/yil/ay_sayisi", { inceleme_id: durum.incelemeId, yil_id: y.yil_id, ay_sayisi: parseInt(giris.value, 10) || 12 });
-        await veriYukle();
-      } catch (hata) { mesaj(hata.message, "hata"); }
-    });
-    tdAy.appendChild(giris);
-    const tdSil = document.createElement("td");
-    const sil = document.createElement("button");
-    sil.className = "btn tehlike"; sil.style.padding = "3px 9px"; sil.style.fontSize = "12px";
-    sil.textContent = "Sil";
-    sil.addEventListener("click", async () => {
-      if (!confirm(`${y.yil} yılı ve verileri silinsin mi?`)) return;
-      try {
-        await api("/api/yil/sil", { inceleme_id: durum.incelemeId, yil_id: y.yil_id });
-        if (durum.aktifYilId === y.yil_id) durum.aktifYilId = null;
-        mesaj("Yıl silindi.");
-        await veriYukle(); await incelemeleriYukle();
-      } catch (hata) { mesaj(hata.message, "hata"); }
-    });
-    tdSil.appendChild(sil);
-    tr.append(tdYil, tdAy, tdSil);
-    tablo.appendChild(tr);
+    kap.appendChild(k);
   });
+  if (!liste.length) {
+    const bos = document.createElement("span");
+    bos.className = "yardim";
+    bos.style.padding = "6px 2px";
+    bos.textContent = "Henüz yıl yok — yukarıdaki kutuya sistem sorgusunu yapıştırın.";
+    kap.appendChild(bos);
+  }
 }
 
-function yilSekmeleriniCiz() {
-  ["beyanYilSekme", "elestiriYilSekme"].forEach((id) => {
-    const kap = $(id);
-    kap.innerHTML = "";
-    durum.veri.yillar.forEach((y) => {
-      const d = document.createElement("button");
-      d.textContent = y.yil;
-      if (y.yil_id === durum.aktifYilId) d.className = "aktif";
-      d.addEventListener("click", () => {
-        durum.aktifYilId = y.yil_id;
-        yilSekmeleriniCiz(); beyanIzgarasiniCiz(); elestiriIzgarasiniCiz();
-      });
-      kap.appendChild(d);
-    });
-  });
-  yilSecimListesiniCiz();
+function doluAySayisi(yilKaydi) {
+  let n = 0;
+  for (let ay = 0; ay < 12; ay++) {
+    const dolu = Object.keys(yilKaydi.beyan).some((k) => Math.abs(yilKaydi.beyan[k][ay] || 0) > 0);
+    if (dolu) n++;
+  }
+  return n;
 }
 
-/** Yapistirma kutusunun ustundeki yil listesi: hedef yili secmeye yarar. */
+function yiliKapat(yil) {
+  const kayit = yilBul(yil);
+  const doluAy = kayit ? doluAySayisi(kayit) : 0;
+  const soru = doluAy === 0
+    ? `${yil} yılı (boş) çalışmadan çıkarılsın mı?`
+    : `${yil} yılı ve ${doluAy} aylık verisi çalışmadan çıkarılsın mı?`;
+  if (!confirm(soru)) return;
+  durum.calisma.yillar = durum.calisma.yillar.filter((y) => y.yil !== Number(yil));
+  if (durum.aktifYil === Number(yil)) durum.aktifYil = yillar().length ? yillar()[0].yil : null;
+  if (String(durum.sonucYil) === String(yil)) durum.sonucYil = "tumu";
+  if (String(durum.tarhiyatYil) === String(yil)) durum.tarhiyatYil = "tumu";
+  isaretle();
+  mesaj(`${yil} yılı çıkarıldı. Kalıcı olması için Kaydet deyin.`, "uyari");
+}
+
+// ------------------------------------------------------------ yil listesi
 function yilSecimListesiniCiz() {
   const sec = $("beyanYilSec");
-  const buYil = new Date().getFullYear();
-  const mevcut = durum.veri ? durum.veri.yillar.map((y) => y.yil) : [];
+  const buYil = durum.tanimlar.bu_yil;
+  const onceki = sec.value;
   const adaylar = [];
   for (let y = buYil + 1; y >= buYil - 12; y--) adaylar.push(y);
-  mevcut.forEach((y) => { if (!adaylar.includes(y)) adaylar.push(y); });
+  yillar().forEach((y) => { if (!adaylar.includes(y.yil)) adaylar.push(y.yil); });
   adaylar.sort((a, b) => b - a);
-
-  const etkin = aktifYil();
-  const secili = sec.value ? parseInt(sec.value, 10) : (etkin ? etkin.yil : buYil - 1);
+  const mevcut = yillar().map((y) => y.yil);
   sec.innerHTML = "";
   adaylar.forEach((y) => {
-    const se = document.createElement("option");
-    se.value = y;
-    se.textContent = mevcut.includes(y) ? `${y} (dosyada var)` : String(y);
-    if (y === secili) se.selected = true;
-    sec.appendChild(se);
+    const o = document.createElement("option");
+    o.value = y;
+    o.textContent = mevcut.includes(y) ? `${y} (çalışmada var)` : String(y);
+    sec.appendChild(o);
   });
+  sec.value = onceki || (durum.aktifYil || buYil - 1);
 }
 
-// Listeden var olan bir yil secilirse o yila gec
-$("beyanYilSec").addEventListener("change", () => {
-  if (!durum.veri) return;
-  const yil = parseInt($("beyanYilSec").value, 10);
-  const kayit = durum.veri.yillar.find((y) => y.yil === yil);
-  if (kayit) {
-    durum.aktifYilId = kayit.yil_id;
-    yilSekmeleriniCiz(); beyanIzgarasiniCiz(); elestiriIzgarasiniCiz();
-  }
-});
-
-/** Secili yili dosyada bulur, yoksa olusturur ve etkin yil yapar. */
-async function hedefYiliHazirla() {
-  const yil = parseInt($("beyanYilSec").value, 10) || (new Date().getFullYear() - 1);
-  const kayit = durum.veri ? durum.veri.yillar.find((y) => y.yil === yil) : null;
-  if (kayit) { durum.aktifYilId = kayit.yil_id; return kayit; }
-  const y = await api("/api/yil", { inceleme_id: durum.incelemeId, yil });
-  durum.aktifYilId = y.yil_id;
-  await veriYukle();
-  await incelemeleriYukle();
-  return aktifYil();
-}
-
-// ------------------------------------------------------------ beyan izgara
+// -------------------------------------------------------------- yapistirma
 $("beyanYapistir").addEventListener("click", async () => {
   const metin = $("beyanMetin").value;
   if (!metin.trim()) { mesaj("Yapıştırılacak metin boş.", "hata"); return; }
   try {
-    // Dosya veya yil yoksa akisi kesmeden kendiliginden olustur
-    if (!durum.incelemeId) {
-      const h = await api("/api/calisma_hazirla", {});
-      durum.incelemeId = h.inceleme_id;
-      await veriYukle();
-    }
-    // Sorgunun künyesinde yıl varsa sunucu onu kullanır; yoksa listedeki yıl
-    const yil = await hedefYiliHazirla();
-    const y = await api("/api/beyan/yapistir", {
-      inceleme_id: durum.incelemeId, yil_id: yil.yil_id, metin,
-      ay_sayisi_guncelle: $("ayOtomatik").checked,
-    });
-    $("beyanMetin").value = "";
-    // Künyeden gelen yıl farklı olabilir; ızgara o yıla geçsin
-    if (y.yil_id) durum.aktifYilId = y.yil_id;
-    if (y.kunye && y.kunye.yil) $("beyanYilSec").value = y.kunye.yil;
-    await veriYukle();
-    await incelemeleriYukle();
-    kunyeKartiniCiz(y.kunye);
-    const etkinYil = aktifYil();
-    const etiket = etkinYil ? etkinYil.yil : "";
-    if (y.uyarilar && y.uyarilar.length) {
-      mesaj(`${etiket} aktarıldı.\n` + y.uyarilar.join("\n"), "uyari");
+    const y = await api("/api/ayristir", { metin });
+    const kunye = y.kunye || {};
+    const hedefYil = kunye.yil || parseInt($("beyanYilSec").value, 10) || durum.tanimlar.bu_yil - 1;
+    const uyarilar = (y.uyarilar || []).slice();
+    const bilgiler = [];
+
+    // Mukellef bilgisi
+    const m = durum.calisma.mukellef;
+    const gelenVkn = kunye.vkn || kunye.tckn || "";
+    if (gelenVkn && m.vkn_tckn && gelenVkn !== m.vkn_tckn) {
+      uyarilar.push(`Yapıştırılan veri ${gelenVkn} numaralı mükellefe ait; çalışmadaki ` +
+        `mükellef ise ${m.vkn_tckn} (${m.ad_unvan}). Mükellef bilgisi değiştirilmedi.`);
     } else {
-      const ek = (y.bilgiler && y.bilgiler.length) ? "\n" + y.bilgiler.join("\n") : "";
-      mesaj(`${etiket} beyan verisi aktarıldı.` + ek);
+      if (kunye.unvan) m.ad_unvan = kunye.unvan;
+      if (gelenVkn) m.vkn_tckn = gelenVkn;
+      if (kunye.vergi_dairesi) m.vergi_dairesi = kunye.vergi_dairesi;
+      if (kunye.unvan || gelenVkn) bilgiler.push("Mükellef bilgisi sorgudan alındı.");
     }
+
+    // Yil: varsa birlestir, yoksa olustur
+    let kayit = yilBul(hedefYil);
+    const doluAylar = (y.dolu_aylar && y.dolu_aylar.length)
+      ? y.dolu_aylar : Array.from({ length: 12 }, (_, i) => i + 1);
+    if (!kayit) {
+      kayit = { yil: hedefYil, ay_sayisi: 12, beyan: bosBeyan(),
+                elestiri: bosElestiri(hedefYil), kaynaklar: [] };
+      durum.calisma.yillar.push(kayit);
+      bilgiler.push(kunye.yil ? `Dönem yılı sorgudan alındı: ${hedefYil}.`
+                              : `${hedefYil} yılı oluşturuldu.`);
+      Object.keys(y.degerler).forEach((kod) => {
+        if (kayit.beyan[kod]) kayit.beyan[kod] = y.degerler[kod].slice(0, 12);
+      });
+      if ($("ayOtomatik").checked) kayit.ay_sayisi = y.ay_sayisi;
+    } else {
+      // Birlestir: yalnizca yeni sorgunun dolu aylari guncellenir
+      const cakisan = (kayit.kaynaklar || [])
+        .flatMap((k) => k.aylar || [])
+        .filter((ay) => doluAylar.includes(ay));
+      Object.keys(y.degerler).forEach((kod) => {
+        if (!kayit.beyan[kod]) return;
+        doluAylar.forEach((ay) => { kayit.beyan[kod][ay - 1] = y.degerler[kod][ay - 1]; });
+      });
+      if ($("ayOtomatik").checked) {
+        kayit.ay_sayisi = Math.max(kayit.ay_sayisi, y.ay_sayisi, Math.max(...doluAylar));
+      }
+      const adlar = doluAylar.map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+      bilgiler.push(`${hedefYil} yılına birleştirildi — güncellenen aylar: ${adlar}.`);
+      if (cakisan.length) {
+        const c = cakisan.map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+        uyarilar.push(`Şu aylar daha önce başka bir sorgudan gelmişti ve üzerine yazıldı: ${c}.`);
+      }
+    }
+
+    kayit.kaynaklar = kayit.kaynaklar || [];
+    kayit.kaynaklar.push({
+      vergi_dairesi: kunye.vergi_dairesi || "",
+      rapor_tarihi: kunye.rapor_tarihi || "",
+      aylar: doluAylar,
+    });
+
+    durum.aktifYil = hedefYil;
+    $("beyanYilSec").value = hedefYil;
+    $("beyanMetin").value = "";
+    kunyeKartiniCiz(kunye);
+    isaretle();
+    if (uyarilar.length) mesaj(`${hedefYil} aktarıldı.\n` + uyarilar.join("\n"), "uyari");
+    else mesaj(`${hedefYil} beyan verisi aktarıldı.` +
+               (bilgiler.length ? "\n" + bilgiler.join("\n") : ""));
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
+function kunyeKartiniCiz(kunye) {
+  const kap = $("kunyeKarti");
+  if (!kunye || !Object.keys(kunye).length) { kap.style.display = "none"; return; }
+  const alanlar = [
+    ["Ünvan", kunye.unvan], ["Vergi No", kunye.vkn], ["T.C. Kimlik No", kunye.tckn],
+    ["Vergi Dairesi", kunye.vergi_dairesi], ["Yıl", kunye.yil],
+    ["Rapor Tarihi", kunye.rapor_tarihi],
+  ].filter(([, v]) => v);
+  kap.innerHTML =
+    '<div style="border-left:4px solid #2c7a3f;background:#f2f9f4;padding:10px 14px;' +
+    'border-radius:0 4px 4px 0;font-size:13px;">' +
+    '<strong style="color:#2c7a3f;">Sorgudan okunan bilgiler</strong>' +
+    '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 24px;">' +
+    alanlar.map(([e, v]) =>
+      `<span><span style="color:#5a6b7d;">${e}:</span> <strong>${v}</strong></span>`).join("") +
+    "</div></div>";
+  kap.style.display = "block";
+}
+
+// ------------------------------------------------------------ beyan izgara
 function beyanIzgarasiniCiz() {
   const tablo = $("beyanIzgara");
-  const yil = aktifYil();
+  const yil = aktifYilKaydi();
   tablo.innerHTML = "";
-  if (!yil) { bosDurum(tablo, "Yukarıdaki kutuya beyan bloğunu yapıştırın; yıl kendiliğinden oluşturulur."); return; }
+  const kaynakKap = $("yilKaynaklari");
+  if (!yil) {
+    kaynakKap.innerHTML = "";
+    tablo.innerHTML = '<tr><td class="bos-durum">Yukarıdaki kutuya sistem sorgusunu ' +
+      'yapıştırın; yıl kendiliğinden oluşturulur.</td></tr>';
+    $("ayS").value = ""; $("yilDegistir").value = "";
+    return;
+  }
+  $("ayS").value = yil.ay_sayisi;
+  $("yilDegistir").value = yil.yil;
+
+  // Bu yila hangi sorgulardan veri geldigi
+  const kaynaklar = yil.kaynaklar || [];
+  kaynakKap.innerHTML = kaynaklar.length
+    ? '<div style="margin-bottom:10px;">' + kaynaklar.map((k) => {
+        const ay = (k.aylar || []).map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+        const vd = k.vergi_dairesi || "vergi dairesi belirtilmemiş";
+        return `<span class="kaynak-etiket" title="${ay}">${vd}` +
+               (k.rapor_tarihi ? ` · ${k.rapor_tarihi}` : "") +
+               ` · ${(k.aylar || []).length} ay</span>`;
+      }).join("") + "</div>"
+    : "";
 
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">DÖNEMİ</th><th></th>' +
@@ -769,8 +751,7 @@ function beyanIzgarasiniCiz() {
     const tdYapistir = document.createElement("td");
     tdYapistir.className = "satir-yapistir";
     const dugme = document.createElement("button");
-    dugme.className = "mini";
-    dugme.textContent = "⇥";
+    dugme.className = "mini"; dugme.textContent = "⇥";
     dugme.title = "Bu satırın 12 aylık değerini tek seferde yapıştır";
     dugme.addEventListener("click", () => satirYapistir(yil, s));
     tdYapistir.appendChild(dugme);
@@ -781,30 +762,16 @@ function beyanIzgarasiniCiz() {
       const td = document.createElement("td");
       const giris = document.createElement("input");
       giris.type = "text";
-      // Sifirlar da yazilir: yapistirilan verinin tamami gorunur olmali
       giris.value = tl(degerler[ay] || 0);
-      giris.dataset.ilk = giris.value;
-      if (!degerler[ay]) giris.style.color = "#9aa7b4";  // sifirlar soluk
+      if (!degerler[ay]) giris.style.color = "#9aa7b4";
       if (ay >= yil.ay_sayisi) giris.style.opacity = "0.45";
       giris.addEventListener("focus", () => giris.select());
-      giris.addEventListener("blur", async () => {
-        const yeni = giris.value.trim();
-        if (yeni === giris.dataset.ilk) return;
-        const sayi = sayiCoz(yeni);
-        try {
-          await api("/api/beyan/hucre", {
-            inceleme_id: durum.incelemeId, yil_id: yil.yil_id,
-            satir_kodu: s.kod, ay, deger: yeni === "" ? "0" : yeni,
-          });
-          giris.value = sayi ? tl(sayi) : "";
-          giris.dataset.ilk = giris.value;
-          giris.classList.add("degisti");
-          yil.beyan[s.kod][ay] = sayi;
-          await veriYukle();
-        } catch (hata) {
-          mesaj(hata.message, "hata");
-          giris.value = giris.dataset.ilk;
-        }
+      giris.addEventListener("change", () => {
+        const sayi = sayiCoz(giris.value);
+        yil.beyan[s.kod][ay] = sayi;
+        giris.value = tl(sayi);
+        giris.style.color = sayi ? "" : "#9aa7b4";
+        isaretle();
       });
       giris.addEventListener("keydown", (e) => { if (e.key === "Enter") giris.blur(); });
       td.appendChild(giris);
@@ -814,57 +781,61 @@ function beyanIzgarasiniCiz() {
   });
 }
 
-/** Sorgunun künyesinden okunan mükellef ve dönem bilgisini gösterir. */
-function kunyeKartiniCiz(kunye) {
-  const kap = $("kunyeKarti");
-  if (!kunye || !Object.keys(kunye).length) { kap.style.display = "none"; return; }
-  const alanlar = [
-    ["Ünvan", kunye.unvan],
-    ["Vergi No", kunye.vkn],
-    ["T.C. Kimlik No", kunye.tckn],
-    ["Vergi Dairesi", kunye.vergi_dairesi],
-    ["Yıl", kunye.yil],
-    ["Rapor Tarihi", kunye.rapor_tarihi],
-  ].filter(([, v]) => v);
-  kap.innerHTML =
-    '<div style="border-left:4px solid #2c7a3f;background:#f2f9f4;padding:10px 14px;' +
-    'border-radius:0 4px 4px 0;font-size:13px;">' +
-    '<strong style="color:#2c7a3f;">Sorgudan okunan bilgiler</strong><div style="margin-top:6px;' +
-    'display:flex;flex-wrap:wrap;gap:4px 24px;">' +
-    alanlar.map(([e, v]) =>
-      `<span><span style="color:#5a6b7d;">${e}:</span> <strong>${v}</strong></span>`).join("") +
-    "</div></div>";
-  kap.style.display = "block";
+async function satirYapistir(yil, satir) {
+  const metin = prompt(`"${satir.etiket}" satırının 12 aylık değerini yapıştırın:\n` +
+    "(sekme, boşluk veya alt alta ayrılmış olabilir)");
+  if (metin === null || !metin.trim()) return;
+  try {
+    const y = await api("/api/satir_ayristir", { metin });
+    yil.beyan[satir.kod] = y.degerler.slice(0, 12);
+    isaretle();
+    mesaj("Satır güncellendi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
 }
+
+$("ayS").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
+  yil.ay_sayisi = Math.max(1, Math.min(parseInt($("ayS").value, 10) || 12, 12));
+  isaretle();
+});
+
+$("yilDegistir").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
+  const yeni = parseInt($("yilDegistir").value, 10);
+  if (!yeni || yeni < 2000 || yeni > 2100) { $("yilDegistir").value = yil.yil; return; }
+  if (yeni !== yil.yil && yilBul(yeni)) {
+    mesaj(`${yeni} yılı çalışmada zaten var.`, "hata");
+    $("yilDegistir").value = yil.yil;
+    return;
+  }
+  const eski = yil.yil;
+  yil.yil = yeni;
+  // Oran elle degistirilmemisse yeni yilin varsayilanina cek
+  const eskiVarsayilan = Array.from({ length: 12 }, (_, i) => varsayilanOran(eski, i + 1));
+  if (JSON.stringify(yil.elestiri.kdv_orani) === JSON.stringify(eskiVarsayilan)) {
+    yil.elestiri.kdv_orani = Array.from({ length: 12 }, (_, i) => varsayilanOran(yeni, i + 1));
+  }
+  durum.aktifYil = yeni;
+  isaretle();
+  mesaj(`Yıl ${yeni} olarak değiştirildi; KDV oranları da buna göre ayarlandı.`);
+});
 
 // -------------------------------------------------------- veri temizleme
 $("veriTemizle").addEventListener("click", () => {
-  const yil = aktifYil();
+  const yil = aktifYilKaydi();
   if (!yil) { mesaj("Temizlenecek veri yok.", "hata"); return; }
-  const yilSayisi = durum.veri.yillar.length;
   const secenekler = [
-    {
-      kapsam: "yil",
-      baslik: `${yil.yil} beyan verisi`,
-      aciklama: "Yalnızca bu yılın beyan satırları sıfırlanır. " +
-                "Girdiğiniz inceleme tespitleri korunur.",
-    },
-    {
-      kapsam: "yil_tespit",
-      baslik: `${yil.yil} beyan verisi + tespitleri`,
-      aciklama: "Bu yılın hem beyan satırları hem de inceleme tespitleri sıfırlanır. " +
-                "KDV oranları yılın varsayılanına döner.",
-    },
+    { kapsam: "yil", baslik: `${yil.yil} beyan verisi`,
+      aciklama: "Yalnızca bu yılın beyan satırları sıfırlanır; tespitleriniz korunur." },
+    { kapsam: "yil_tespit", baslik: `${yil.yil} beyan verisi + tespitleri`,
+      aciklama: "Bu yılın beyan satırları ve inceleme tespitleri sıfırlanır." },
   ];
-  if (yilSayisi > 1) {
-    secenekler.push({
-      kapsam: "tumu",
-      baslik: `Tüm yıllar (${yilSayisi} yıl)`,
-      aciklama: "Dosyadaki bütün yılların beyan verisi ve tespitleri sıfırlanır. " +
-                "Yıl kayıtları yerinde kalır, boş olarak.",
-    });
+  if (durum.calisma.yillar.length > 1) {
+    secenekler.push({ kapsam: "tumu", baslik: `Tüm yıllar (${durum.calisma.yillar.length} yıl)`,
+      aciklama: "Bütün yılların beyan verisi ve tespitleri sıfırlanır; yıllar boş kalır." });
   }
-
   const kap = $("temizleSecenekler");
   kap.innerHTML = "";
   secenekler.forEach((s) => {
@@ -877,13 +848,10 @@ $("veriTemizle").addEventListener("click", () => {
     b.textContent = s.baslik;
     b.style.cssText = "font-weight:600;font-size:14px;margin-bottom:3px;";
     const a = document.createElement("div");
-    a.className = "yardim";
-    a.style.margin = "0";
-    a.textContent = s.aciklama;
+    a.className = "yardim"; a.style.margin = "0"; a.textContent = s.aciklama;
     metin.append(b, a);
     const dugme = document.createElement("button");
-    dugme.className = "btn tehlike";
-    dugme.textContent = "Temizle";
+    dugme.className = "btn tehlike"; dugme.textContent = "Temizle";
     dugme.addEventListener("click", () => veriTemizle(s.kapsam, s.baslik));
     kutu.append(metin, dugme);
     kap.appendChild(kutu);
@@ -893,41 +861,30 @@ $("veriTemizle").addEventListener("click", () => {
 
 $("temizleKapat").addEventListener("click", () => $("temizleModal").classList.remove("acik"));
 
-async function veriTemizle(kapsam, baslik) {
-  if (!confirm(`"${baslik}" temizlenecek. Bu işlem geri alınamaz. Onaylıyor musunuz?`)) return;
-  const yil = aktifYil();
-  try {
-    await api("/api/beyan/temizle", {
-      inceleme_id: durum.incelemeId,
-      yil_id: yil ? yil.yil_id : null,
-      kapsam,
-    });
-    $("temizleModal").classList.remove("acik");
-    await veriYukle();
-    mesaj(`${baslik} temizlendi.`);
-  } catch (hata) { mesaj(hata.message, "hata"); }
-}
-
-async function satirYapistir(yil, satir) {
-  const metin = prompt(`"${satir.etiket}" satırının 12 aylık değerini yapıştırın:\n` +
-    "(sekme, boşluk veya alt alta ayrılmış olabilir)");
-  if (metin === null || !metin.trim()) return;
-  try {
-    await api("/api/beyan/satir_yapistir", {
-      inceleme_id: durum.incelemeId, yil_id: yil.yil_id, satir_kodu: satir.kod, metin,
-    });
-    mesaj("Satır güncellendi.");
-    await veriYukle();
-  } catch (hata) { mesaj(hata.message, "hata"); }
+function veriTemizle(kapsam, baslik) {
+  if (!confirm(`"${baslik}" temizlenecek. Onaylıyor musunuz?`)) return;
+  const hedefler = kapsam === "tumu" ? durum.calisma.yillar : [aktifYilKaydi()];
+  hedefler.forEach((y) => {
+    if (!y) return;
+    y.beyan = bosBeyan();
+    y.kaynaklar = [];
+    if (kapsam !== "yil") y.elestiri = bosElestiri(y.yil);
+  });
+  $("temizleModal").classList.remove("acik");
+  isaretle();
+  mesaj(`${baslik} temizlendi.`);
 }
 
 // --------------------------------------------------------- elestiri izgara
 function elestiriIzgarasiniCiz() {
   const tablo = $("elestiriIzgara");
-  const yil = aktifYil();
+  const yil = aktifYilKaydi();
   tablo.innerHTML = "";
-  if (!yil) { bosDurum(tablo, "Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın."); return; }
-
+  if (!yil) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Önce Beyan Verisi sekmesinden ' +
+      'sorguyu yapıştırın.</td></tr>';
+    return;
+  }
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">TESPİT</th>' +
     durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("");
@@ -937,115 +894,108 @@ function elestiriIzgarasiniCiz() {
     const tr = document.createElement("tr");
     tr.className = "elestiri";
     const td = document.createElement("td");
-    td.className = "etiket";
-    td.textContent = alan.etiket;
+    td.className = "etiket"; td.textContent = alan.etiket;
     tr.appendChild(td);
-    const degerler = yil.elestiri[alan.kod] || new Array(12).fill(0);
     for (let ay = 0; ay < 12; ay++) {
       const hucre = document.createElement("td");
       const giris = document.createElement("input");
       giris.type = "text";
-      giris.dataset.alan = alan.kod;
-      giris.dataset.ay = ay;
-      giris.value = degerler[ay] ? tl(degerler[ay]) : "";
+      giris.dataset.alan = alan.kod; giris.dataset.ay = ay;
+      const d = yil.elestiri[alan.kod][ay];
+      giris.value = d ? tl(d) : "";
       if (ay >= yil.ay_sayisi) giris.style.opacity = "0.45";
       giris.addEventListener("focus", () => giris.select());
-      if (alan.kod === "matrah_ilave") giris.addEventListener("input", otomatikKdvGuncelle);
+      giris.addEventListener("change", () => {
+        yil.elestiri[alan.kod][ay] = sayiCoz(giris.value);
+        giris.value = yil.elestiri[alan.kod][ay] ? tl(yil.elestiri[alan.kod][ay]) : "";
+        otomatikKdvGuncelle(yil);
+        isaretle();
+      });
+      if (alan.kod === "matrah_ilave") {
+        giris.addEventListener("input", () => otomatikKdvGuncelle(yil, true));
+      }
       hucre.appendChild(giris);
       tr.appendChild(hucre);
     }
     tablo.appendChild(tr);
   });
 
-  // KDV orani satiri
   const trOran = document.createElement("tr");
   trOran.className = "elestiri";
   trOran.innerHTML = '<td class="etiket">Uygulanan KDV Oranı (%)</td>';
-  const oranlar = yil.elestiri.kdv_orani || new Array(12).fill(null);
   for (let ay = 0; ay < 12; ay++) {
     const td = document.createElement("td");
     const giris = document.createElement("input");
     giris.type = "text";
-    giris.dataset.alan = "kdv_orani";
-    giris.dataset.ay = ay;
-    giris.value = oranlar[ay] != null ? String(oranlar[ay]).replace(".", ",") : "";
-    giris.addEventListener("input", otomatikKdvGuncelle);
+    giris.dataset.alan = "kdv_orani"; giris.dataset.ay = ay;
+    const o = yil.elestiri.kdv_orani[ay];
+    giris.value = o != null ? String(o).replace(".", ",") : "";
+    giris.addEventListener("change", () => {
+      const v = giris.value.trim();
+      yil.elestiri.kdv_orani[ay] = v === "" ? null : sayiCoz(v);
+      otomatikKdvGuncelle(yil);
+      isaretle();
+    });
     td.appendChild(giris);
     trOran.appendChild(td);
   }
   tablo.appendChild(trOran);
 
-  // Otomatik hesaplama isareti
   const trOto = document.createElement("tr");
   trOto.className = "elestiri";
   trOto.innerHTML = '<td class="etiket">Hesaplanan KDV ilavesi otomatik</td>';
-  const otomatik = yil.elestiri.hesaplanan_otomatik || new Array(12).fill(true);
   for (let ay = 0; ay < 12; ay++) {
     const td = document.createElement("td");
     td.style.textAlign = "center";
     const kutu = document.createElement("input");
     kutu.type = "checkbox";
-    kutu.checked = otomatik[ay] !== false;
-    kutu.dataset.alan = "hesaplanan_otomatik";
-    kutu.dataset.ay = ay;
+    kutu.checked = yil.elestiri.hesaplanan_otomatik[ay] !== false;
+    kutu.dataset.alan = "hesaplanan_otomatik"; kutu.dataset.ay = ay;
     kutu.style.width = "16px"; kutu.style.height = "16px";
-    kutu.addEventListener("change", otomatikKdvGuncelle);
+    kutu.addEventListener("change", () => {
+      yil.elestiri.hesaplanan_otomatik[ay] = kutu.checked;
+      otomatikKdvGuncelle(yil);
+      isaretle();
+    });
     td.appendChild(kutu);
     trOto.appendChild(td);
   }
   tablo.appendChild(trOto);
-  otomatikKdvGuncelle();
+  otomatikKdvGuncelle(yil, true);
 }
 
-function otomatikKdvGuncelle() {
+/** Otomatik isaretli donemlerde hesaplanan KDV ilavesini matrah x orandan turetir. */
+function otomatikKdvGuncelle(yil, yalnizGorunum) {
   const tablo = $("elestiriIzgara");
   for (let ay = 0; ay < 12; ay++) {
-    const oto = tablo.querySelector(`input[data-alan="hesaplanan_otomatik"][data-ay="${ay}"]`);
     const hedef = tablo.querySelector(`input[data-alan="hesaplanan_kdv_ilave"][data-ay="${ay}"]`);
-    if (!oto || !hedef) continue;
-    if (oto.checked) {
-      const matrah = sayiCoz(tablo.querySelector(`input[data-alan="matrah_ilave"][data-ay="${ay}"]`).value);
-      const oran = sayiCoz(tablo.querySelector(`input[data-alan="kdv_orani"][data-ay="${ay}"]`).value);
-      hedef.value = matrah ? tl(Math.round(matrah * oran) / 100) : "";
+    if (!hedef) continue;
+    if (yil.elestiri.hesaplanan_otomatik[ay] !== false) {
+      const matrahGiris = tablo.querySelector(`input[data-alan="matrah_ilave"][data-ay="${ay}"]`);
+      const matrah = yalnizGorunum && matrahGiris ? sayiCoz(matrahGiris.value)
+                                                  : yil.elestiri.matrah_ilave[ay];
+      const oran = yil.elestiri.kdv_orani[ay] != null ? yil.elestiri.kdv_orani[ay]
+                                                      : varsayilanOran(yil.yil, ay + 1);
+      const tutar = Math.round(matrah * oran) / 100;
+      yil.elestiri.hesaplanan_kdv_ilave[ay] = tutar;
+      hedef.value = tutar ? tl(tutar) : "";
       hedef.readOnly = true;
-      hedef.style.background = "#f0f2f5";
-      hedef.style.color = "#5a6b7d";
+      hedef.style.background = "#f0f2f5"; hedef.style.color = "#5a6b7d";
     } else {
       hedef.readOnly = false;
-      hedef.style.background = "";
-      hedef.style.color = "";
+      hedef.style.background = ""; hedef.style.color = "";
     }
   }
 }
 
-$("elestiriKaydet").addEventListener("click", async () => {
-  const yil = aktifYil();
-  if (!yil) { mesaj("Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın.", "hata"); return; }
-  const tablo = $("elestiriIzgara");
-  const alanlar = {};
-  ["matrah_ilave", "hesaplanan_kdv_ilave", "devir_cikar", "indirim_cikar", "yuklenilen_cikar", "kdv_orani"]
-    .forEach((kod) => {
-      alanlar[kod] = [];
-      for (let ay = 0; ay < 12; ay++) {
-        const giris = tablo.querySelector(`input[data-alan="${kod}"][data-ay="${ay}"]`);
-        const ham = giris ? giris.value.trim() : "";
-        alanlar[kod].push(kod === "kdv_orani" ? (ham === "" ? null : ham) : (ham === "" ? "0" : ham));
-      }
-    });
-  alanlar.hesaplanan_otomatik = [];
-  for (let ay = 0; ay < 12; ay++) {
-    const kutu = tablo.querySelector(`input[data-alan="hesaplanan_otomatik"][data-ay="${ay}"]`);
-    alanlar.hesaplanan_otomatik.push(kutu ? kutu.checked : true);
-  }
-  try {
-    await api("/api/elestiri", { inceleme_id: durum.incelemeId, yil_id: yil.yil_id, alanlar });
-    await veriYukle();
-    mesaj("Tespitler kaydedildi ve seri yeniden hesaplandı.");
-  } catch (hata) { mesaj(hata.message, "hata"); }
+$("devredenBaslangic").addEventListener("change", () => {
+  const v = $("devredenBaslangic").value.trim();
+  durum.calisma.devreden_baslangic = v === "" ? null : sayiCoz(v);
+  $("devredenBaslangic").value = v === "" ? "" : tl(durum.calisma.devreden_baslangic);
+  isaretle();
 });
 
 // -------------------------------------------------- hesap açıklama balonu
-/** Bir sonuç hücresinin hangi verilerden çıktığını anlatan açıklamayı üretir. */
 function hesapAciklamasi(donem, blok, kod) {
   const e = donem.elestirili;
   const b = donem.beyan;
@@ -1053,32 +1003,25 @@ function hesapAciklamasi(donem, blok, kod) {
 
   if (blok === "beyan") {
     const kaynaklar = {
-      matrah: "MATRAH TOPLAMI",
-      toplam_kdv: "TOPLAM KDV",
+      matrah: "MATRAH TOPLAMI", toplam_kdv: "TOPLAM KDV",
       onceki_devir: "ÖNCEKİ DÖN. DEVR. İND. KDV",
       bu_donem_indirim_toplam: "BU DÖN. AİT İND. KDV + 103+104+105 TOP.",
-      indirimler: "İNDİRİMLER TOPLAMI",
-      odenecek: "ÖDENMESİ GEREKEN KDV",
-      sonraki_devir: "SONRAKİ DÖN. DEVREDEN KDV",
-      iade: "İADE EDİLMESİ GEREKEN KDV",
+      indirimler: "İNDİRİMLER TOPLAMI", odenecek: "ÖDENMESİ GEREKEN KDV",
+      sonraki_devir: "SONRAKİ DÖN. DEVREDEN KDV", iade: "İADE EDİLMESİ GEREKEN KDV",
       tecil_edilecek: "TECİL EDİLECEK KDV",
       ihracat_iade: "İHRACATIN GERÇ. DÖN. İADE EDİLECEK TECİL EDİLEMEYEN KDV",
     };
     return {
-      baslik: "Beyan edilen değer",
-      formul: null,
+      baslik: "Beyan edilen değer", formul: null,
       satirlar: [[`Beyannamedeki "${kaynaklar[kod] || kod}" satırı`, b[kod]]],
       sonuc: ["Beyan edilen", b[kod]],
       not: "Bu tutar mükellefin beyanından alınmıştır; hesaplanmamıştır.",
     };
   }
-
   if (blok === "fark") {
     return {
-      baslik: "Fark",
-      formul: "Fark = Olması gereken − Beyan edilen",
-      satirlar: [["Olması gereken (yeniden hesaplanan)", e[kod]],
-                 ["Beyan edilen", -b[kod]]],
+      baslik: "Fark", formul: "Fark = Olması gereken − Beyan edilen",
+      satirlar: [["Olması gereken (yeniden hesaplanan)", e[kod]], ["Beyan edilen", -b[kod]]],
       sonuc: ["Fark", donem.fark[kod]],
       not: donem.fark_tespit && Math.abs(donem.fark_tespit[kod] || 0) > 0.005
         ? `Bunun ${tl(donem.fark_tespit[kod])} TL'si bu dönemin tespitinden, ` +
@@ -1086,8 +1029,6 @@ function hesapAciklamasi(donem, blok, kod) {
         : "Bu fark tümüyle önceki dönemlerden devir yoluyla taşınmıştır.",
     };
   }
-
-  // blok === "elestirili": yeniden hesaplanan değerler
   const tanimlar = {
     matrah: () => ({
       formul: "Matrah = Beyan edilen matrah + Matraha ilave",
@@ -1099,9 +1040,7 @@ function hesapAciklamasi(donem, blok, kod) {
                  ["İlave edilecek KDV", e.ilave_edilecek]],
     }),
     onceki_devir: () => ({
-      formul: donem.ay === 1 && !donem.ilk_donem
-        ? "Önceki devir = Bir önceki yılın Aralık ayından devreden (− devir çıkarması)"
-        : "Önceki devir = Bir önceki dönemin devreden KDV'si (− devir çıkarması)",
+      formul: "Önceki devir = Bir önceki dönemin devreden KDV'si (− devir çıkarması)",
       satirlar: [["Önceki dönemin (yeniden hesaplanan) devri", e.onceki_devir]],
       not: "Devir zinciri yıl sınırında kesilmez; bir önceki dönemin düzeltilmiş " +
            "devri buraya taşınır.",
@@ -1125,8 +1064,7 @@ function hesapAciklamasi(donem, blok, kod) {
                  ["Tecil edilecek KDV", -e.tecil_edilecek]],
     } : {
       formul: "İndirimler toplamı KDV'yi aştığı için ödenecek vergi doğmaz.",
-      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler],
-                 ["Aşan kısım devreder", 0]],
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler]],
       not: `İndirimler toplamı KDV'yi ${tl(-fark)} TL aşıyor; bu tutar devreden ` +
            "KDV olarak sonraki döneme taşınır.",
     }),
@@ -1160,16 +1098,10 @@ function hesapAciklamasi(donem, blok, kod) {
   if (!uret) return null;
   const c = uret();
   const kolon = durum.tanimlar.ozet_kolonlari.find((k) => k.kod === kod);
-  return {
-    baslik: (kolon ? kolon.etiket : kod) + " — olması gereken",
-    formul: c.formul,
-    satirlar: c.satirlar,
-    sonuc: ["Sonuç", e[kod]],
-    not: c.not,
-  };
+  return { baslik: (kolon ? kolon.etiket : kod) + " — olması gereken", formul: c.formul,
+           satirlar: c.satirlar, sonuc: ["Sonuç", e[kod]], not: c.not };
 }
 
-/** Tarhiyat tablosu hücrelerinin açıklaması. */
 function tarhiyatAciklamasi(donem, kod) {
   const t = donem.tarhiyat;
   const tanimlar = {
@@ -1181,7 +1113,7 @@ function tarhiyatAciklamasi(donem, kod) {
       sonuc: ["Re'sen tarhı gereken", t.resen_tarhi_gereken],
       not: t.fazla_beyan_odenecek > 0.005
         ? `Bu dönemde mükellef ${tl(t.fazla_beyan_odenecek)} TL fazla beyan etmiş; ` +
-          "tarhiyata dahil edilmez, sütun sıfır gösterilir."
+          "tarhiyata dahil edilmez."
         : "Sonuç eksi çıkarsa tarhiyat doğmaz; sütun sıfır gösterilir.",
     },
     aranmasi_gereken: {
@@ -1242,13 +1174,10 @@ function balonGoster(hedef, aciklama, donemEtiketi) {
     `<td class="bsag">${tl(aciklama.sonuc[1])}</td></tr></table>` +
     (aciklama.not ? `<div class="bnot">${aciklama.not}</div>` : "");
   balon.classList.add("acik");
-
-  // Konumlandır: hücrenin altına, ekran dışına taşmayacak şekilde
   const k = hedef.getBoundingClientRect();
-  const genislik = balon.offsetWidth;
   let sol = window.scrollX + k.left;
-  if (sol + genislik > window.scrollX + document.documentElement.clientWidth - 12) {
-    sol = window.scrollX + document.documentElement.clientWidth - genislik - 12;
+  if (sol + balon.offsetWidth > window.scrollX + document.documentElement.clientWidth - 12) {
+    sol = window.scrollX + document.documentElement.clientWidth - balon.offsetWidth - 12;
   }
   balon.style.left = Math.max(window.scrollX + 8, sol) + "px";
   let ust = window.scrollY + k.bottom + 6;
@@ -1276,35 +1205,54 @@ document.addEventListener("click", (olay) => {
 document.addEventListener("keydown", (olay) => { if (olay.key === "Escape") balonKapat(); });
 window.addEventListener("resize", balonKapat);
 
-/** Bir hücreyi tıklanabilir yapar ve açıklamasını bağlar. */
 function aciklamaBagla(td, uret, donemEtiketi) {
   td.classList.add("aciklanabilir");
   td.title = "Bu tutarın nasıl hesaplandığını görmek için tıklayın";
   td.addEventListener("click", (olay) => {
     olay.stopPropagation();
-    if ($("balon").classList.contains("acik") && $("balon")._hedef === td) {
-      balonKapat();
-      return;
-    }
+    if ($("balon").classList.contains("acik") && $("balon")._hedef === td) { balonKapat(); return; }
     balonGoster(td, uret(), donemEtiketi);
   });
 }
 
+function hucre(tur, metin, ozellikler) {
+  const el = document.createElement(tur);
+  el.textContent = metin;
+  if (ozellikler) Object.assign(el, ozellikler);
+  return el;
+}
+
+/** Secili yila gore donemleri suzer. */
+function suzulmusDonemler(yilSecim) {
+  if (!durum.sonuc || !durum.sonuc.donemler) return [];
+  if (String(yilSecim) === "tumu") return durum.sonuc.donemler;
+  return durum.sonuc.donemler.filter((d) => String(d.yil) === String(yilSecim));
+}
+
 // -------------------------------------------------------------------- sonuc
 function sonucuCiz() {
+  yilKulaklariniCiz("sonucYilSekme", durum.sonucYil, (y) => {
+    durum.sonucYil = y;
+    sonucuCiz();
+  }, true, false);
+
   const kap = $("sonucIcerik");
-  const sonuc = durum.veri.sonuc;
   kap.innerHTML = "";
-  if (!sonuc.donemler || !sonuc.donemler.length) {
-    kap.innerHTML = '<div class="bos-durum">Önce bir yıl ekleyip beyan verisini aktarın.</div>';
+  const donemler = suzulmusDonemler(durum.sonucYil);
+  if (!donemler.length) {
+    kap.innerHTML = '<div class="bos-durum">Önce Beyan Verisi sekmesinden sorguyu yapıştırın.</div>';
     $("bulguKart").style.display = "none";
     return;
   }
-  kap.appendChild(karsilastirmaTablosu("Eleştirili (Yeniden Hesaplanmış)", sonuc.donemler, "elestirili", sonuc.genel_toplam));
-  kap.appendChild(karsilastirmaTablosu("Beyan Edilen", sonuc.donemler, "beyan", sonuc.genel_toplam));
-  kap.appendChild(karsilastirmaTablosu("Fark (Eleştirili − Beyan)", sonuc.donemler, "fark", sonuc.genel_toplam, true));
+  const toplam = String(durum.sonucYil) === "tumu"
+    ? durum.sonuc.genel_toplam
+    : (durum.sonuc.yil_toplamlari.find((y) => String(y.yil) === String(durum.sonucYil))
+       || durum.sonuc.genel_toplam);
+  kap.appendChild(karsilastirmaTablosu("Eleştirili (Yeniden Hesaplanmış)", donemler, "elestirili", toplam));
+  kap.appendChild(karsilastirmaTablosu("Beyan Edilen", donemler, "beyan", toplam));
+  kap.appendChild(karsilastirmaTablosu("Fark (Eleştirili − Beyan)", donemler, "fark", toplam, true));
 
-  const bulgular = durum.veri.bulgular || [];
+  const bulgular = durum.bulgular || [];
   $("bulguKart").style.display = bulgular.length ? "block" : "none";
   $("bulguListe").innerHTML = bulgular.map((b) =>
     `<div class="bulgu"><strong>${b.donem}</strong> — ${b.mesaj}</div>`).join("");
@@ -1312,18 +1260,26 @@ function sonucuCiz() {
 
 function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
   const kap = document.createElement("div");
-  const h = document.createElement("h3");
-  h.textContent = baslik;
-  kap.appendChild(h);
+  kap.appendChild(hucre("h3", baslik));
   const sar = document.createElement("div");
   sar.className = "kaydir";
   const tablo = document.createElement("table");
   const kolonlar = durum.tanimlar.ozet_kolonlari;
-  tablo.innerHTML = "<tr><th>Dönem</th>" + kolonlar.map((k) => `<th class="sag">${k.etiket}</th>`).join("") + "</tr>";
+  tablo.innerHTML = "<tr><th>Dönem</th>" +
+    kolonlar.map((k) => `<th class="sag">${k.etiket}</th>`).join("") + "</tr>";
+  let oncekiYil = null;
+  const cokYil = String(durum.sonucYil) === "tumu";
   donemler.forEach((d) => {
+    if (cokYil && d.yil !== oncekiYil) {
+      const ayirac = document.createElement("tr");
+      ayirac.className = "yil-ayirac";
+      ayirac.appendChild(hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 }));
+      tablo.appendChild(ayirac);
+      oncekiYil = d.yil;
+    }
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.textContent = `${d.yil}/${d.ay_adi}`;
+    td.textContent = cokYil ? `${d.yil}/${d.ay_adi}` : d.ay_adi;
     if (d.elestiri_var) td.innerHTML += ' <span class="rozet uyari">tespit</span>';
     tr.appendChild(td);
     kolonlar.forEach((k) => {
@@ -1340,14 +1296,15 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
   });
   const trT = document.createElement("tr");
   trT.className = "toplam";
-  trT.innerHTML = "<td>Toplam</td>";
+  trT.appendChild(hucre("td", "Toplam"));
   kolonlar.forEach((k) => {
     const h = document.createElement("td");
     h.className = "sayi";
     const deger = (toplam[blok] || {})[k.kod];
     h.textContent = deger ? tl(deger) : "—";
-    h.title = (k.kod === "onceki_devir" || k.kod === "sonraki_devir")
-      ? "Devir stok kalemidir; toplanmaz, dönem sonu değeri gösterilir." : "";
+    if (k.kod === "onceki_devir" || k.kod === "sonraki_devir") {
+      h.title = "Devir stok kalemidir; toplanmaz, dönem sonu değeri gösterilir.";
+    }
     trT.appendChild(h);
   });
   tablo.appendChild(trT);
@@ -1358,17 +1315,21 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
 
 // ---------------------------------------------------------- tarhiyat ozeti
 function tarhiyatiCiz() {
+  yilKulaklariniCiz("tarhiyatYilSekme", durum.tarhiyatYil, (y) => {
+    durum.tarhiyatYil = y; tarhiyatiCiz();
+  }, true, false);
+
   const tablo = $("tarhiyatTablo");
   const not = $("tarhiyatNot");
   tablo.innerHTML = ""; not.innerHTML = "";
-  const sonuc = durum.veri ? durum.veri.sonuc : null;
-  if (!sonuc || !sonuc.donemler || !sonuc.donemler.length) {
-    bosDurum(tablo, "Önce Beyan Verisi sekmesinden beyan bloğunu yapıştırın.");
+  const donemler = suzulmusDonemler(durum.tarhiyatYil);
+  if (!donemler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Önce Beyan Verisi sekmesinden ' +
+      'sorguyu yapıştırın.</td></tr>';
     return;
   }
   const kolonlar = durum.tanimlar.tarhiyat_kolonlari;
 
-  // Ust satir: gruplanmis basliklar
   const ust = document.createElement("tr");
   ust.appendChild(hucre("th", "Dönemi", { rowSpan: 2 }));
   let i = 0;
@@ -1387,8 +1348,7 @@ function tarhiyatiCiz() {
   const alt = document.createElement("tr");
   kolonlar.forEach((k) => {
     const th = hucre("th", k.grup === k.etiket ? "" : k.etiket);
-    th.style.textAlign = "center";
-    th.style.fontSize = "11px";
+    th.style.textAlign = "center"; th.style.fontSize = "11px";
     if (k.vurgu === "vurgu1") th.style.background = "#ffff99";
     if (k.vurgu === "vurgu2") th.style.background = "#c6e0b4";
     alt.appendChild(th);
@@ -1396,16 +1356,17 @@ function tarhiyatiCiz() {
   tablo.appendChild(alt);
 
   let oncekiYil = null;
-  sonuc.donemler.forEach((d) => {
-    if (d.yil !== oncekiYil) {
+  const cokYil = String(durum.tarhiyatYil) === "tumu";
+  donemler.forEach((d) => {
+    if (cokYil && d.yil !== oncekiYil) {
       const ayirac = document.createElement("tr");
-      const td = hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 });
-      td.style.background = "#dbe4ee"; td.style.fontWeight = "600";
-      ayirac.appendChild(td); tablo.appendChild(ayirac);
+      ayirac.className = "yil-ayirac";
+      ayirac.appendChild(hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 }));
+      tablo.appendChild(ayirac);
       oncekiYil = d.yil;
     }
     const tr = document.createElement("tr");
-    tr.appendChild(hucre("td", d.ay_adi));
+    tr.appendChild(hucre("td", cokYil ? `${d.yil}/${d.ay_adi}` : d.ay_adi));
     kolonlar.forEach((k) => {
       const deger = d.tarhiyat[k.kod];
       const td = hucre("td", deger ? tl(deger) : "0,00");
@@ -1418,7 +1379,14 @@ function tarhiyatiCiz() {
     tablo.appendChild(tr);
   });
 
-  const t = sonuc.tarhiyat_toplami;
+  // Toplam: secili kapsama gore hesaplanir
+  const t = {};
+  kolonlar.forEach((k) => {
+    t[k.kod] = donemler.reduce((a, d) => a + (d.tarhiyat[k.kod] || 0), 0);
+  });
+  ["fazla_beyan_odenecek", "eksik_talep_iade"].forEach((kod) => {
+    t[kod] = donemler.reduce((a, d) => a + (d.tarhiyat[kod] || 0), 0);
+  });
   const trT = document.createElement("tr");
   trT.className = "toplam";
   trT.appendChild(hucre("td", "Toplam"));
@@ -1434,27 +1402,20 @@ function tarhiyatiCiz() {
   const uyarilar = [];
   if (t.fazla_beyan_odenecek > 0.005) {
     uyarilar.push(`Mükellefin fazladan beyan ettiği ödenecek KDV toplamı ` +
-      `${tl(t.fazla_beyan_odenecek)} TL'dir. Bu tutar tarhiyata dahil edilmemiştir.`);
+      `${tl(t.fazla_beyan_odenecek)} TL'dir. Tarhiyata dahil edilmemiştir.`);
   }
   if (t.eksik_talep_iade > 0.005) {
     uyarilar.push(`Mükellefin talep etmediği hâlde hak kazandığı iade tutarı ` +
-      `${tl(t.eksik_talep_iade)} TL'dir. Bu tutar tarhiyata dahil edilmemiştir.`);
+      `${tl(t.eksik_talep_iade)} TL'dir. Tarhiyata dahil edilmemiştir.`);
   }
   not.innerHTML = uyarilar.map((u) => `<div class="bulgu">${u}</div>`).join("");
-}
-
-function hucre(tur, metin, ozellikler) {
-  const el = document.createElement(tur);
-  el.textContent = metin;
-  if (ozellikler) Object.assign(el, ozellikler);
-  return el;
 }
 
 function yilUyumunuCiz() {
   const tablo = $("yilUyumTablo");
   tablo.innerHTML = "";
-  const satirlar = durum.veri && durum.veri.sonuc ? (durum.veri.sonuc.yil_uyumu || []) : [];
-  if (!satirlar.length) { bosDurum(tablo, "Henüz veri yok."); return; }
+  const satirlar = durum.sonuc ? (durum.sonuc.yil_uyumu || []) : [];
+  if (!satirlar.length) { tablo.innerHTML = '<tr><td class="bos-durum">Henüz veri yok.</td></tr>'; return; }
   const basliklar = ["Yıl", "Dönem", "Tespitli dönem", "Beyan matrah", "Olması gereken matrah",
                      "Matrah farkı", "Beyan ödenecek", "Olması gereken ödenecek",
                      "Re'sen tarhı gereken", "Tespit etkisi", "Devir etkisi",
@@ -1482,7 +1443,7 @@ function yilUyumunuCiz() {
 function kaynaklariCiz() {
   const kap = $("kaynakListe");
   kap.innerHTML = "";
-  const ka = durum.veri && durum.veri.sonuc ? durum.veri.sonuc.kaynak_analizi : null;
+  const ka = durum.sonuc ? durum.sonuc.kaynak_analizi : null;
   if (!ka || !ka.kaynaklar.length) {
     kap.innerHTML = '<div class="bos-durum">Henüz tespit girilmedi. ' +
       'İnceleme Tespitleri sekmesinden matrah ilavesi veya indirim reddi girin.</div>';
@@ -1523,23 +1484,24 @@ function etkiTablosunuCiz() {
   const tablo = $("etkiTablo");
   const not = $("etkiNot");
   tablo.innerHTML = ""; not.innerHTML = "";
-  const ka = durum.veri && durum.veri.sonuc ? durum.veri.sonuc.kaynak_analizi : null;
+  const ka = durum.sonuc ? durum.sonuc.kaynak_analizi : null;
   if (!ka || !ka.kaynaklar.length) {
-    bosDurum(tablo, "Henüz tespit girilmedi.");
+    tablo.innerHTML = '<tr><td class="bos-durum">Henüz tespit girilmedi.</td></tr>';
     return;
   }
   const alan = $("etkiAlan").value;
   const yilSecim = $("etkiYil").value;
   const sadeceDolu = $("etkiSadeceDolu").checked;
-
   let donemler = ka.donemler;
   if (yilSecim !== "hepsi") donemler = donemler.filter((d) => String(d.yil) === yilSecim);
   if (sadeceDolu) {
     donemler = donemler.filter((d) => Math.abs(d.toplam[alan] || 0) > 0.005
       || ka.kaynaklar.some((k) => Math.abs(d.paylar[k.anahtar][alan] || 0) > 0.005));
   }
-  if (!donemler.length) { bosDurum(tablo, "Seçilen ölçüte göre etkilenen dönem yok."); return; }
-
+  if (!donemler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Seçilen ölçüte göre etkilenen dönem yok.</td></tr>';
+    return;
+  }
   const tr = document.createElement("tr");
   tr.appendChild(hucre("th", "Dönem"));
   ka.kaynaklar.forEach((k) => {
@@ -1594,30 +1556,52 @@ function etkiTablosunuCiz() {
 
 function etkiYilListesiniCiz() {
   const sec = $("etkiYil");
-  const oncekiDeger = sec.value;
-  const yillar = durum.veri ? durum.veri.yillar.map((y) => y.yil).sort((a, b) => a - b) : [];
+  const onceki = sec.value;
   sec.innerHTML = '<option value="hepsi">Tümü</option>';
-  yillar.forEach((y) => {
+  yillar().forEach((y) => {
     const o = document.createElement("option");
-    o.value = y; o.textContent = y;
+    o.value = y.yil; o.textContent = y.yil;
     sec.appendChild(o);
   });
-  if (oncekiDeger) sec.value = oncekiDeger;
+  sec.value = onceki || "hepsi";
   if (!sec.value) sec.value = "hepsi";
 }
 
 ["etkiAlan", "etkiYil"].forEach((id) => $(id).addEventListener("change", etkiTablosunuCiz));
 $("etkiSadeceDolu").addEventListener("change", etkiTablosunuCiz);
 
-$("excelIndir").addEventListener("click", () => {
-  if (!durum.incelemeId) { mesaj("Önce bir dosya seçin.", "hata"); return; }
-  window.location = `/api/excel?id=${durum.incelemeId}`;
-});
+// ------------------------------------------------------------ excel / rapor
+async function excelIndir() {
+  if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
+  try {
+    const yanit = await fetch("/api/excel", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ calisma: durum.calisma }),
+    });
+    if (!yanit.ok) {
+      const h = await yanit.json();
+      throw new Error(h.hata || "Excel üretilemedi");
+    }
+    const blob = await yanit.blob();
+    const bag = document.createElement("a");
+    bag.href = URL.createObjectURL(blob);
+    const ad = (durum.calisma.ad || durum.calisma.mukellef.ad_unvan || "kdv")
+      .replace(/[^\wğüşiöçĞÜŞİÖÇ -]/g, "").trim() || "kdv";
+    bag.download = `KDV_calisma_${ad}.xlsx`.replace(/\s+/g, "_");
+    document.body.appendChild(bag);
+    bag.click();
+    document.body.removeChild(bag);
+    URL.revokeObjectURL(bag.href);
+    mesaj("Excel dosyası indirildi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+$("excelIndir").addEventListener("click", excelIndir);
+$("excelIndir2").addEventListener("click", excelIndir);
 
 $("raporGoster").addEventListener("click", async () => {
-  if (!durum.incelemeId) { mesaj("Önce bir dosya seçin.", "hata"); return; }
+  if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
   try {
-    const y = await api(`/api/rapor_metni?id=${durum.incelemeId}`);
+    const y = await api("/api/rapor_metni", { calisma: durum.calisma });
     $("raporMetin").textContent = y.metin;
     $("raporModal").classList.add("acik");
   } catch (hata) { mesaj(hata.message, "hata"); }
@@ -1628,26 +1612,151 @@ $("raporKopyala").addEventListener("click", async () => {
   catch { mesaj("Kopyalanamadı; metni seçip elle kopyalayın.", "hata"); }
 });
 
+// ------------------------------------------------------- kaydet / ac / sil
+async function kaydet(yeniKayit) {
+  if (!durum.calisma.yillar.length) {
+    mesaj("Kaydedilecek veri yok; önce sorguyu yapıştırın.", "hata");
+    return;
+  }
+  durum.calisma.ad = $("cAd").value.trim();
+  try {
+    const y = await api("/api/kaydet", {
+      calisma: durum.calisma,
+      id: yeniKayit ? null : durum.kayitliId,
+    });
+    durum.kayitliId = y.id;
+    durum.kayitlar = y.calismalar;
+    durum.degisti = false;
+    const kayit = y.calismalar.find((k) => k.id === y.id);
+    if (kayit) { durum.calisma.ad = kayit.ad; $("cAd").value = kayit.ad; }
+    rozetiTazele();
+    kayitlariCiz();
+    mesaj(yeniKayit ? "Yeni kayıt olarak kaydedildi." : "Çalışma kaydedildi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("hKaydet").addEventListener("click", () => kaydet(false));
+$("hFarkliKaydet").addEventListener("click", () => kaydet(true));
+
+$("hYeni").addEventListener("click", () => {
+  if (durum.degisti && durum.calisma.yillar.length &&
+      !confirm("Kaydedilmemiş değişiklikler var. Yeni çalışmaya geçilsin mi?")) return;
+  durum.calisma = bosCalisma();
+  durum.kayitliId = null;
+  durum.degisti = false;
+  durum.aktifYil = null;
+  durum.sonuc = null; durum.bulgular = [];
+  durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
+  $("cAd").value = ""; $("kunyeKarti").style.display = "none";
+  ekraniCiz();
+  mesaj("Yeni boş çalışma açıldı.");
+});
+
+async function calismaAc(id) {
+  if (durum.degisti && durum.calisma.yillar.length &&
+      !confirm("Kaydedilmemiş değişiklikler var. Kayıtlı çalışma açılsın mı?")) return;
+  try {
+    const y = await api(`/api/calisma?id=${id}`);
+    const c = y.calisma;
+    durum.calisma = {
+      ad: c.ad || "",
+      mukellef: Object.assign({ ad_unvan: "", vkn_tckn: "", vergi_dairesi: "" }, c.mukellef || {}),
+      devreden_baslangic: c.devreden_baslangic ?? null,
+      yillar: (c.yillar || []).map((yk) => ({
+        yil: yk.yil,
+        ay_sayisi: yk.ay_sayisi || 12,
+        beyan: Object.assign(bosBeyan(), yk.beyan || {}),
+        elestiri: Object.assign(bosElestiri(yk.yil), yk.elestiri || {}),
+        kaynaklar: yk.kaynaklar || [],
+      })),
+    };
+    durum.kayitliId = id;
+    durum.degisti = false;
+    durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
+    durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
+    $("cAd").value = durum.calisma.ad;
+    await hesapla();
+    mesaj(`"${durum.calisma.ad || "Çalışma"}" açıldı.`);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+async function calismaSil(id, ad) {
+  if (!confirm(`"${ad}" kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) return;
+  try {
+    const y = await api("/api/calisma/sil", { id });
+    durum.kayitlar = y.calismalar;
+    if (durum.kayitliId === id) { durum.kayitliId = null; durum.degisti = true; }
+    rozetiTazele();
+    kayitlariCiz();
+    mesaj("Kayıt silindi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+function kayitlariCiz() {
+  const liste = $("kayitListe");
+  liste.innerHTML = "";
+  if (!durum.kayitlar.length) {
+    liste.innerHTML = '<li class="bos-durum">Henüz kaydedilmiş çalışma yok.</li>';
+    return;
+  }
+  durum.kayitlar.forEach((k) => {
+    const li = document.createElement("li");
+    if (k.id === durum.kayitliId) li.className = "secili";
+    const ad = document.createElement("span");
+    ad.className = "ad";
+    ad.innerHTML = `<strong>${k.ad}</strong><br><small>` +
+      `${k.mukellef_ad || "—"}${k.vkn_tckn ? " · " + k.vkn_tckn : ""}` +
+      `${k.yillar.length ? " · " + k.yillar.join(", ") : ""} · ${k.guncelleme_tarihi}</small>`;
+    ad.addEventListener("click", () => calismaAc(k.id));
+    const dugmeler = document.createElement("span");
+    const ac = document.createElement("button");
+    ac.className = "btn ikincil"; ac.style.cssText = "padding:4px 10px;font-size:12px;margin-right:6px;";
+    ac.textContent = "Aç";
+    ac.addEventListener("click", () => calismaAc(k.id));
+    const sil = document.createElement("button");
+    sil.className = "btn tehlike"; sil.style.cssText = "padding:4px 10px;font-size:12px;";
+    sil.textContent = "Sil";
+    sil.addEventListener("click", () => calismaSil(k.id, k.ad));
+    dugmeler.append(ac, sil);
+    li.append(ad, dugmeler);
+    liste.appendChild(li);
+  });
+}
+
+["cAd", "cMukellefAd", "cVkn", "cVergiDairesi"].forEach((id) => {
+  $(id).addEventListener("change", () => {
+    if (id === "cAd") durum.calisma.ad = $(id).value.trim();
+    if (id === "cMukellefAd") durum.calisma.mukellef.ad_unvan = $(id).value.trim();
+    if (id === "cVkn") durum.calisma.mukellef.vkn_tckn = $(id).value.trim();
+    if (id === "cVergiDairesi") durum.calisma.mukellef.vergi_dairesi = $(id).value.trim();
+    isaretle(false);
+  });
+});
+
 // ----------------------------------------------------------------- yedekler
 async function yedekleriYukle() {
   const veri = await api("/api/yedekler");
   const tablo = $("yedekTablo");
-  if (!veri.yedekler.length) { tablo.innerHTML = '<tr><td class="bos-durum">Yedek yok.</td></tr>'; return; }
+  if (!veri.yedekler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Yedek yok.</td></tr>';
+    return;
+  }
   tablo.innerHTML = "<tr><th>Dosya</th><th></th></tr>";
   veri.yedekler.forEach((d) => {
     const tr = document.createElement("tr");
-    const td = document.createElement("td"); td.textContent = d;
+    const td = hucre("td", d);
     const tdD = document.createElement("td");
     const dugme = document.createElement("button");
-    dugme.className = "btn ikincil"; dugme.style.padding = "3px 9px"; dugme.style.fontSize = "12px";
+    dugme.className = "btn ikincil";
+    dugme.style.cssText = "padding:3px 9px;font-size:12px;";
     dugme.textContent = "Geri Yükle";
     dugme.addEventListener("click", async () => {
-      if (!confirm("Mevcut veriler bu yedekle değiştirilsin mi?")) return;
+      if (!confirm("Kayıtlı çalışmaların tamamı bu yedekle değiştirilsin mi?")) return;
       try {
-        await api("/api/geri_yukle", { dosya: d });
+        const y = await api("/api/geri_yukle", { dosya: d });
+        durum.kayitlar = y.calismalar;
+        kayitlariCiz();
         mesaj("Geri yüklendi.");
-        durum.incelemeId = null; durum.veri = null;
-        await mukellefleriYukle(); await incelemeleriYukle();
       } catch (hata) { mesaj(hata.message, "hata"); }
     });
     tdD.appendChild(dugme);
@@ -1657,30 +1766,48 @@ async function yedekleriYukle() {
 }
 
 $("yedekAl").addEventListener("click", async () => {
-  try { const y = await api("/api/yedek_al", {}); mesaj("Yedek alındı: " + y.dosya); await yedekleriYukle(); }
-  catch (hata) { mesaj(hata.message, "hata"); }
+  try {
+    const y = await api("/api/yedek_al", {});
+    mesaj("Yedek alındı: " + y.dosya);
+    await yedekleriYukle();
+  } catch (hata) { mesaj(hata.message, "hata"); }
 });
+
+// ------------------------------------------------------------------- cizim
+function ekraniCiz() {
+  rozetiTazele();
+  yilSecimListesiniCiz();
+  yilKulaklariniCiz("beyanYilSekme", durum.aktifYil, (y) => {
+    durum.aktifYil = Number(y); ekraniCiz();
+  }, false, true);
+  yilKulaklariniCiz("elestiriYilSekme", durum.aktifYil, (y) => {
+    durum.aktifYil = Number(y); ekraniCiz();
+  }, false, true);
+  beyanIzgarasiniCiz();
+  elestiriIzgarasiniCiz();
+  $("devredenBaslangic").value = durum.calisma.devreden_baslangic != null
+    ? tl(durum.calisma.devreden_baslangic) : "";
+  $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
+  $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
+  $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
+  sonucuCiz();
+  tarhiyatiCiz();
+  yilUyumunuCiz();
+  kaynaklariCiz();
+  etkiYilListesiniCiz();
+  etkiTablosunuCiz();
+  kayitlariCiz();
+}
 
 // ------------------------------------------------------------------ baslat
 (async function baslat() {
   try {
     durum.tanimlar = await api("/api/tanimlar");
-    $("yYil").value = new Date().getFullYear() - 1;
-
-    // Mukellef/dosya/yil tanimlamak zorunda kalmadan hemen calisilabilsin:
-    // varsa son dosya secilir, yoksa bir calisma olusturulur.
-    const hazir = await api("/api/calisma_hazirla", {});
-    durum.incelemeId = hazir.inceleme_id;
-    await veriYukle();
-    durum.mukellefId = durum.veri ? durum.veri.inceleme.mukellef_id : null;
-
-    await mukellefleriYukle();
-    await incelemeleriYukle();
+    durum.calisma = bosCalisma();
+    const k = await api("/api/calismalar");
+    durum.kayitlar = k.calismalar;
     await yedekleriYukle();
-    yilSecimListesiniCiz();
-
-    // Kullanici dogrudan yapistirabilsin diye Beyan Verisi sekmesiyle acilir
-    document.querySelector('nav button[data-sekme="beyan"]').click();
+    ekraniCiz();
     $("beyanMetin").focus();
   } catch (hata) { mesaj("Başlatma hatası: " + hata.message, "hata"); }
 })();

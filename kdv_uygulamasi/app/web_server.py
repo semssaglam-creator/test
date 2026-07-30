@@ -1,5 +1,10 @@
 """Yerel web sunucusu: JSON API + tek sayfalik arayuz.
 
+Calisma verisi sunucuda tutulmaz. Tarayici, uzerinde calisilan veriyi bellekte
+tasir ve her hesaplama icin sunucuya gonderir; sunucu yalnizca hesaplar ve
+sonucu dondurur. Veritabanina yazma, kullanici acikca "Kaydet" dediginde
+gerceklesir.
+
 Yalnizca Python standart kutuphanesi kullanilir (http.server, json).
 Sunucu 127.0.0.1 adresine baglanir; disaridan erisime acilmaz.
 """
@@ -26,30 +31,72 @@ class ApiHata(Exception):
     """Kullaniciya gosterilecek hata mesaji."""
 
 
-def _inceleme_sonucu(inceleme_id):
-    """Bir incelemenin verisini okur, hesaplar ve bulgulariyla birlikte dondurur."""
-    veri = db.inceleme_verisi(inceleme_id)
-    yillar = veri["yillar"]
+# --------------------------------------------------------------------- yardimci
+def _yillari_coz(calisma):
+    """Istemciden gelen calismayi hesap motorunun bekledigi bicime getirir."""
+    yillar = []
+    for ham in calisma.get("yillar") or []:
+        try:
+            yil = int(ham.get("yil"))
+        except (TypeError, ValueError):
+            raise ApiHata("Yıl değeri geçersiz.")
+        beyan = {}
+        gelen = ham.get("beyan") or {}
+        for kod in VERI_KODLARI:
+            dizi = gelen.get(kod) or []
+            beyan[kod] = [_sayi(d) for d in (list(dizi) + [0.0] * 12)[:12]]
+        elestiri = hesap.bos_elestiri()
+        gelen_e = ham.get("elestiri") or {}
+        for alan in ("matrah_ilave", "hesaplanan_kdv_ilave", "devir_cikar",
+                     "indirim_cikar", "yuklenilen_cikar"):
+            dizi = gelen_e.get(alan) or []
+            elestiri[alan] = [_sayi(d) for d in (list(dizi) + [0.0] * 12)[:12]]
+        oranlar = (gelen_e.get("kdv_orani") or []) + [None] * 12
+        elestiri["kdv_orani"] = [None if o in (None, "") else _sayi(o) for o in oranlar[:12]]
+        otomatik = (gelen_e.get("hesaplanan_otomatik") or []) + [True] * 12
+        elestiri["hesaplanan_otomatik"] = [bool(o) for o in otomatik[:12]]
+        yillar.append({
+            "yil": yil,
+            "ay_sayisi": max(1, min(int(ham.get("ay_sayisi") or 12), 12)),
+            "beyan": beyan,
+            "elestiri": elestiri,
+        })
+    return yillar
+
+
+def _sayi(deger):
+    if isinstance(deger, (int, float)):
+        return float(deger)
+    return tutar_coz(deger) or 0.0
+
+
+def _hesapla(calisma):
+    """Calismayi hesaplar; veritabanina dokunmaz."""
+    yillar = _yillari_coz(calisma)
     if not yillar:
-        return veri, {"donemler": [], "yil_toplamlari": [], "genel_toplam": {}}, []
-    baslangic = veri["inceleme"].get("devreden_baslangic")
+        return {"donemler": [], "yil_toplamlari": [], "genel_toplam": {},
+                "tarhiyat_toplami": {}, "yil_uyumu": [],
+                "kaynak_analizi": {"kaynaklar": [], "donemler": [], "etkilesim_var": False}}, []
+    ham = calisma.get("devreden_baslangic")
+    baslangic = _sayi(ham) if ham not in (None, "") else None
     sonuc = hesap.seri_hesapla(yillar, devreden_baslangic=baslangic)
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar, devreden_baslangic=baslangic)
-    bulgular = hesap.beyan_tutarlilik_kontrol(yillar)
-    return veri, sonuc, bulgular
+    return sonuc, hesap.beyan_tutarlilik_kontrol(yillar)
 
 
-def _yil_dogrula(inceleme_id, yil_id):
-    """yil_id'nin gercekten bu incelemeye ait oldugunu dogrular."""
-    veri = db.inceleme_verisi(inceleme_id)
-    for y in veri["yillar"]:
-        if y["yil_id"] == yil_id:
-            return y
-    raise ApiHata("Yıl kaydı bu incelemeye ait değil.")
+def _inceleme_bilgisi(calisma):
+    """Excel ve rapor basliklarinda kullanilan mukellef bilgisi."""
+    mukellef = calisma.get("mukellef") or {}
+    return {
+        "ad": calisma.get("ad") or "Çalışma",
+        "ad_unvan": mukellef.get("ad_unvan") or db.ADSIZ_MUKELLEF,
+        "vkn_tckn": mukellef.get("vkn_tckn") or "",
+        "vergi_dairesi": mukellef.get("vergi_dairesi") or "",
+    }
 
 
 class Istekci(BaseHTTPRequestHandler):
-    server_version = "KDVIncelemeSunucu/1.0"
+    server_version = "KDVIncelemeSunucu/2.0"
 
     def log_message(self, bicim, *args):  # sunucu gunlugunu sessizlestir
         pass
@@ -96,27 +143,12 @@ class Istekci(BaseHTTPRequestHandler):
                                            for g, k, e, v in TARHIYAT_KOLONLARI],
                     "ayristirma_bloklari": [{"kod": k, "etiket": e, "aciklama": a}
                                             for k, e, a in AYRISTIRMA_BLOKLARI],
+                    "bu_yil": datetime.now().year,
                 })
-            elif yol == "/api/mukellefler":
-                self._json_yanit({"mukellefler": db.mukellefleri_listele()})
-            elif yol == "/api/incelemeler":
-                mid = params.get("mukellef_id", [None])[0]
-                self._json_yanit({"incelemeler": db.incelemeleri_listele(
-                    int(mid) if mid else None)})
-            elif yol == "/api/inceleme":
-                inceleme_id = int(params.get("id", [""])[0])
-                veri, sonuc, bulgular = _inceleme_sonucu(inceleme_id)
-                self._json_yanit({"inceleme": veri["inceleme"], "yillar": veri["yillar"],
-                                  "sonuc": sonuc, "bulgular": bulgular})
-            elif yol == "/api/rapor_metni":
-                inceleme_id = int(params.get("id", [""])[0])
-                veri, sonuc, bulgular = _inceleme_sonucu(inceleme_id)
-                if not sonuc["donemler"]:
-                    raise ApiHata("İncelemeye önce bir yıl ekleyin.")
-                self._json_yanit({"metin": matrah_farki_ozeti(
-                    veri["inceleme"], sonuc, bulgular)})
-            elif yol == "/api/excel":
-                self._excel_indir(params)
+            elif yol == "/api/calismalar":
+                self._json_yanit({"calismalar": db.calismalari_listele()})
+            elif yol == "/api/calisma":
+                self._json_yanit({"calisma": db.calisma_getir(int(params["id"][0]))})
             elif yol == "/api/yedekler":
                 self._json_yanit({"yedekler": db.yedekleri_listele()})
             else:
@@ -133,90 +165,46 @@ class Istekci(BaseHTTPRequestHandler):
         yol = urllib.parse.urlparse(self.path).path
         try:
             veri = self._govde_oku()
-            if yol == "/api/calisma_hazirla":
-                # Kullanici mukellef/dosya/yil tanimlamadan calisabilsin diye
-                # varsa son dosyayi, yoksa yeni bir calismayi dondurur.
-                self._json_yanit({"inceleme_id": db.varsayilan_calisma()})
-            elif yol == "/api/mukellef":
-                # Ad bos birakilabilir; yer tutucu adla olusturulur
-                ad = (veri.get("ad_unvan") or "").strip() or db.ADSIZ_MUKELLEF
-                yeni = db.mukellef_ekle(ad, veri.get("vkn_tckn"), veri.get("adres"))
-                self._json_yanit({"id": yeni})
-            elif yol == "/api/mukellef/guncelle":
-                db.mukellef_guncelle(int(veri["id"]), veri.get("ad_unvan"),
-                                     veri.get("vkn_tckn"), veri.get("adres"))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/mukellef/sil":
+            if yol == "/api/hesapla":
+                sonuc, bulgular = _hesapla(veri.get("calisma") or {})
+                self._json_yanit({"sonuc": sonuc, "bulgular": bulgular})
+            elif yol == "/api/ayristir":
+                self._json_yanit(self._ayristir(veri))
+            elif yol == "/api/satir_ayristir":
                 try:
-                    db.mukellef_sil(int(veri["id"]))
+                    self._json_yanit({"degerler": tek_satir_ayristir(veri.get("metin") or "")})
                 except ValueError as exc:
                     raise ApiHata(str(exc))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/inceleme":
-                # Mukellef secilmemisse yer tutucu mukellef, ad bossa
-                # varsayilan dosya adi kullanilir
-                mukellef_id = veri.get("mukellef_id")
-                if not mukellef_id:
-                    mukellef_id = db.mukellef_ekle(db.ADSIZ_MUKELLEF)
-                ad = (veri.get("ad") or "").strip() or "Çalışma"
-                yeni = db.inceleme_ekle(int(mukellef_id), ad, veri.get("notlar"))
-                self._json_yanit({"id": yeni})
-            elif yol == "/api/inceleme/guncelle":
-                devreden = veri.get("devreden_baslangic")
-                db.inceleme_guncelle(
-                    int(veri["id"]), veri.get("ad"), veri.get("notlar"),
-                    tutar_coz(devreden) if devreden not in (None, "") else None)
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/inceleme/sil":
-                db.inceleme_sil(int(veri["id"]))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/yil":
-                yil = int(veri["yil"])
-                if not 2000 <= yil <= 2100:
-                    raise ApiHata("Yıl 2000-2100 aralığında olmalıdır.")
-                yil_id = db.yil_ekle(int(veri["inceleme_id"]), yil,
-                                     int(veri.get("ay_sayisi") or 12))
-                self._json_yanit({"yil_id": yil_id})
-            elif yol == "/api/yil/sil":
-                _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
-                db.yil_sil(int(veri["yil_id"]))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/yil/guncelle":
-                _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
+            elif yol == "/api/kaydet":
+                calisma = veri.get("calisma") or {}
+                if not (calisma.get("yillar") or []):
+                    raise ApiHata("Kaydedilecek veri yok; önce beyan bloğunu yapıştırın.")
+                yeni = db.calisma_kaydet(calisma, veri.get("id"))
+                self._json_yanit({"id": yeni, "calismalar": db.calismalari_listele()})
+            elif yol == "/api/calisma/sil":
                 try:
-                    db.yil_guncelle(int(veri["yil_id"]), veri["yil"])
+                    db.calisma_sil(int(veri["id"]))
                 except ValueError as exc:
                     raise ApiHata(str(exc))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/yil/ay_sayisi":
-                _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
-                db.ay_sayisi_ayarla(int(veri["yil_id"]), int(veri["ay_sayisi"]))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/beyan/yapistir":
-                self._json_yanit(self._beyan_yapistir(veri))
-            elif yol == "/api/beyan/satir_yapistir":
-                self._json_yanit(self._satir_yapistir(veri))
-            elif yol == "/api/beyan/hucre":
-                _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
-                try:
-                    db.beyan_hucre_guncelle(int(veri["yil_id"]), veri["satir_kodu"],
-                                            int(veri["ay"]), tutar_coz(veri.get("deger")) or 0.0)
-                except ValueError as exc:
-                    raise ApiHata(str(exc))
-                self._json_yanit({"tamam": True})
-            elif yol == "/api/beyan/temizle":
-                self._json_yanit(self._veri_temizle(veri))
-            elif yol == "/api/elestiri":
-                self._json_yanit(self._elestiri_kaydet(veri))
+                self._json_yanit({"tamam": True, "calismalar": db.calismalari_listele()})
+            elif yol == "/api/rapor_metni":
+                calisma = veri.get("calisma") or {}
+                sonuc, bulgular = _hesapla(calisma)
+                if not sonuc["donemler"]:
+                    raise ApiHata("Önce beyan bloğunu yapıştırın.")
+                self._json_yanit({"metin": matrah_farki_ozeti(
+                    _inceleme_bilgisi(calisma), sonuc, bulgular)})
+            elif yol == "/api/excel":
+                self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
-                hedef = db.yedek_al()
-                self._json_yanit({"dosya": os.path.basename(hedef)})
+                self._json_yanit({"dosya": os.path.basename(db.yedek_al())})
             elif yol == "/api/geri_yukle":
                 dosya = posixpath.basename(veri.get("dosya", ""))
                 if not dosya.endswith(".db"):
                     raise ApiHata("Geçersiz yedek dosyası.")
                 db.yedekten_geri_yukle(dosya)
-                self._json_yanit({"tamam": True})
+                db.init_db()
+                self._json_yanit({"tamam": True, "calismalar": db.calismalari_listele()})
             else:
                 self._hata("Bulunamadı", 404)
         except ApiHata as exc:
@@ -226,141 +214,28 @@ class Istekci(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001
             self._hata(f"Sunucu hatası: {exc}", 500)
 
-    # -------------------------------------------------------------- yardimci
-    def _beyan_yapistir(self, veri):
-        """Yapistirmayi ayristirir, kunyeyi uygular ve beyan verisini kaydeder.
-
-        Sistem sorgusunun ust kisminda VERGİ NO / UNVAN / VERGİ DAİRESİ / YIL /
-        RAPOR TARİHİ alanlari varsa bunlar kullaniciya sorulmadan uygulanir:
-        yil bu bilgiden alinir, mukellef kaydi doldurulur. Acik dosyadaki
-        mukellef baska bir VKN tasiyorsa bilgi ezilmez, uyari dondurulur.
-        """
-        inceleme_id = int(veri["inceleme_id"])
-        metin = veri.get("metin") or ""
+    # --------------------------------------------------------------- yardimci
+    def _ayristir(self, veri):
+        """Yapistirmayi ayristirir ve sonucu dondurur; hicbir sey saklanmaz."""
         try:
-            sonuc = beyan_ayristir(metin)
+            sonuc = beyan_ayristir(veri.get("metin") or "")
         except ValueError as exc:
             raise ApiHata(str(exc))
-        kunye = sonuc.get("kunye") or {}
-        uyarilar = list(sonuc["uyarilar"])
-        bilgiler = []
+        return {"degerler": sonuc["degerler"], "uyarilar": sonuc["uyarilar"],
+                "ay_sayisi": sonuc["ay_sayisi"], "kunye": sonuc.get("kunye") or {},
+                "dolu_aylar": sonuc.get("dolu_aylar") or []}
 
-        # --- Hedef yil: kunyedeki yil, yoksa istemcinin sectigi, yoksa varsayilan
-        mevcut = db.inceleme_verisi(inceleme_id)
-        yil_id = veri.get("yil_id")
-        kunye_yili = kunye.get("yil")
-        if kunye_yili:
-            eslesen = next((y for y in mevcut["yillar"] if y["yil"] == kunye_yili), None)
-            if eslesen:
-                yil_id = eslesen["yil_id"]
-            else:
-                yil_id = db.yil_ekle(inceleme_id, kunye_yili)
-            bilgiler.append(f"Dönem yılı sorgudan alındı: {kunye_yili}.")
-        elif not yil_id:
-            yil_id = (mevcut["yillar"][0]["yil_id"] if mevcut["yillar"]
-                      else db.yil_ekle(inceleme_id, datetime.now().year - 1))
-        _yil_dogrula(inceleme_id, int(yil_id))
-        yil_id = int(yil_id)
-
-        # --- Mukellef bilgisi
-        mukellef_id = mevcut["inceleme"]["mukellef_id"]
-        mevcut_vkn = (mevcut["inceleme"].get("vkn_tckn") or "").strip()
-        mevcut_ad = mevcut["inceleme"].get("ad_unvan") or ""
-        kunye_vkn = kunye.get("vkn") or kunye.get("tckn") or ""
-        yer_tutucu = (mevcut_ad == db.ADSIZ_MUKELLEF) or not mevcut_vkn
-
-        if kunye_vkn and mevcut_vkn and kunye_vkn != mevcut_vkn:
-            uyarilar.append(
-                f"Yapıştırılan veri {kunye_vkn} numaralı mükellefe ait; açık dosya ise "
-                f"{mevcut_vkn} numaralı mükellefe ({mevcut_ad}). Mükellef bilgisi "
-                f"değiştirilmedi, beyan verisi açık dosyaya işlendi. Farklı mükellef için "
-                f"Dosyalar sekmesinden yeni bir dosya oluşturun.")
-        elif yer_tutucu or kunye_vkn == mevcut_vkn:
-            db.mukellef_guncelle(
-                mukellef_id,
-                ad_unvan=kunye.get("unvan") if kunye.get("unvan") else None,
-                vkn_tckn=kunye_vkn or None,
-                vergi_dairesi=kunye.get("vergi_dairesi") or None)
-            if kunye.get("unvan") or kunye_vkn:
-                bilgiler.append("Mükellef bilgisi sorgudan alındı.")
-
-        if kunye.get("rapor_tarihi"):
-            db.rapor_tarihi_ayarla(yil_id, kunye["rapor_tarihi"])
-
-        db.beyan_kaydet(yil_id, sonuc["degerler"])
-        if veri.get("ay_sayisi_guncelle"):
-            db.ay_sayisi_ayarla(yil_id, sonuc["ay_sayisi"])
-        return {"tamam": True, "uyarilar": uyarilar, "bilgiler": bilgiler,
-                "ay_sayisi": sonuc["ay_sayisi"], "yil_id": yil_id,
-                "kunye": kunye}
-
-    def _satir_yapistir(self, veri):
-        _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
-        kod = veri.get("satir_kodu")
-        if kod not in VERI_KODLARI:
-            raise ApiHata("Geçersiz satır seçimi.")
-        try:
-            degerler = tek_satir_ayristir(veri.get("metin") or "")
-        except ValueError as exc:
-            raise ApiHata(str(exc))
-        db.beyan_satir_guncelle(int(veri["yil_id"]), kod, degerler)
-        return {"tamam": True, "degerler": degerler}
-
-    def _veri_temizle(self, veri):
-        """Beyan verisini ve istege bagli olarak tespitleri sifirlar.
-
-        kapsam:
-            "yil"          -> yalnizca secili yilin beyan verisi
-            "yil_tespit"   -> secili yilin beyan verisi ve tespitleri
-            "tumu"         -> dosyadaki tum yillarin beyan verisi ve tespitleri
-        Yil kayitlari ve dosya silinmez; yalnizca icerikleri bosaltilir.
-        """
-        inceleme_id = int(veri["inceleme_id"])
-        kapsam = veri.get("kapsam") or "yil"
-        if kapsam not in ("yil", "yil_tespit", "tumu"):
-            raise ApiHata("Geçersiz temizleme kapsamı.")
-
-        if kapsam == "tumu":
-            yil_idleri = db.inceleme_yil_idleri(inceleme_id)
-            for yil_id in yil_idleri:
-                db.beyan_temizle(yil_id)
-                db.elestiri_temizle(yil_id)
-            return {"tamam": True, "temizlenen_yil": len(yil_idleri)}
-
-        yil_id = veri.get("yil_id")
-        if not yil_id:
-            raise ApiHata("Temizlenecek yıl seçilmedi.")
-        _yil_dogrula(inceleme_id, int(yil_id))
-        db.beyan_temizle(int(yil_id))
-        if kapsam == "yil_tespit":
-            db.elestiri_temizle(int(yil_id))
-        return {"tamam": True, "temizlenen_yil": 1}
-
-    def _elestiri_kaydet(self, veri):
-        _yil_dogrula(int(veri["inceleme_id"]), int(veri["yil_id"]))
-        alanlar = veri.get("alanlar") or {}
-        temiz = {}
-        for alan, dizi in alanlar.items():
-            if alan == "hesaplanan_otomatik":
-                temiz[alan] = [bool(d) for d in dizi]
-            elif alan == "kdv_orani":
-                temiz[alan] = [None if d in (None, "") else tutar_coz(d) for d in dizi]
-            else:
-                temiz[alan] = [tutar_coz(d) or 0.0 for d in dizi]
-        db.elestiri_kaydet(int(veri["yil_id"]), temiz)
-        return {"tamam": True}
-
-    def _excel_indir(self, params):
-        inceleme_id = int(params.get("id", [""])[0])
-        veri, sonuc, bulgular = _inceleme_sonucu(inceleme_id)
+    def _excel_gonder(self, veri):
+        calisma = veri.get("calisma") or {}
+        sonuc, bulgular = _hesapla(calisma)
         if not sonuc["donemler"]:
-            raise ApiHata("İncelemeye önce bir yıl ekleyin.")
-        inceleme = veri["inceleme"]
-        guvenli_ad = "".join(c for c in (inceleme.get("ad") or "kdv")
-                             if c.isalnum() or c in " -_").strip() or "kdv"
-        dosya_adi = f"KDV_calisma_{guvenli_ad}.xlsx".replace(" ", "_")
+            raise ApiHata("Önce beyan bloğunu yapıştırın.")
+        inceleme = _inceleme_bilgisi(calisma)
+        guvenli = "".join(c for c in (calisma.get("ad") or "kdv")
+                          if c.isalnum() or c in " -_").strip() or "kdv"
+        dosya_adi = f"KDV_calisma_{guvenli}.xlsx".replace(" ", "_")
         dosya_yolu = os.path.join(CIKTI_DIR, dosya_adi)
-        calisma_olustur(dosya_yolu, inceleme, veri["yillar"], sonuc, bulgular)
+        calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular)
         with open(dosya_yolu, "rb") as f:
             govde = f.read()
         self.send_response(200)

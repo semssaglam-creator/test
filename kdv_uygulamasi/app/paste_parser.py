@@ -181,6 +181,7 @@ def beyan_ayristir(metin):
     else:
         sonuc = _konuma_gore_esle(veri_satirlari)
     sonuc["kunye"] = kunye
+    sonuc["dolu_aylar"] = dolu_aylar(sonuc["degerler"])
     return sonuc
 
 
@@ -275,3 +276,14 @@ def _ay_sayisi(degerler):
         if any(abs(degerler.get(kod, [0] * 12)[ay] or 0) > 0 for kod in VERI_KODLARI):
             son = ay + 1
     return son or 12
+
+
+def dolu_aylar(degerler):
+    """Yapistirmanin gercekten veri tasidigi aylari (1-12) dondurur.
+
+    Mukellef yil icinde vergi dairesi degistirdiginde her daireden alinan sorgu
+    12 sutun tasir ama yalnizca kendi donemlerinde dolu olur. Birlestirme, bu
+    listeye gore yapilir: yeni blok yalnizca kendi dolu aylarini gunceller.
+    """
+    return [ay + 1 for ay in range(12)
+            if any(abs(degerler.get(kod, [0] * 12)[ay] or 0) > 0 for kod in VERI_KODLARI)]

@@ -15,12 +15,34 @@ veya `calistir.sh`. Tarayıcı `http://127.0.0.1:8766/` adresinde kendiliğinden
 açılır. Kurulum gerekmez; Excel çıktısı için gereken `openpyxl` kütüphanesi
 `lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
 
+## Kayıt modeli — önce anlayın
+
+Uygulama, üzerinde çalıştığınız veriyi **kendiliğinden saklamaz**. Yapıştırdığınız
+sorgular, elle yaptığınız düzeltmeler ve tespitler yalnızca açık pencerede tutulur;
+hesaplama da bunun üzerinden yapılır. Veritabanına yazma yalnızca üstteki
+**Kaydet** düğmesine bastığınızda olur.
+
+Üst çubuktaki rozet durumu gösterir:
+
+| Rozet | Anlamı |
+|---|---|
+| `boş` | Henüz veri yok |
+| `kaydedilmedi` | Veri var, hiç kaydedilmemiş |
+| `kaydedilmemiş değişiklik` | Kayıtlı çalışma açık ama üzerinde değişiklik yapılmış |
+| `kayıtlı` | Ekrandaki her şey kayıtlı |
+
+- **Kaydet** — açık çalışmayı kaydeder (kayıtlıysa üzerine yazar)
+- **Farklı Kaydet** — yeni bir kayıt oluşturur, öncekine dokunmaz
+- **Yeni** — boş çalışmaya geçer (kaydedilmemiş veri varsa uyarır)
+
+Kaydedilmiş çalışmalar **Kayıtlı Çalışmalar** sekmesinde listelenir; oradan
+açabilir veya silebilirsiniz. Pencereyi kaydetmeden kapatmaya çalışırsanız
+tarayıcı uyarır.
+
 ## Akış
 
-Uygulama **Beyan Verisi** sekmesiyle açılır ve doğrudan yapıştırmaya hazırdır.
-Mükellef, dosya veya yıl tanımlamak zorunda değilsiniz — açılışta bir çalışma
-kendiliğinden hazırlanır. Bu bilgileri sonradan doldurabilir veya
-değiştirebilirsiniz.
+Uygulama **Beyan Verisi** sekmesiyle boş olarak açılır ve doğrudan yapıştırmaya
+hazırdır. Mükellef veya yıl tanımlamak zorunda değilsiniz.
 
 ### 1. Beyan Verisi sekmesi
 
@@ -46,9 +68,16 @@ Künyede yıl yoksa, yapıştırma kutusunun üstündeki listeden seçtiğiniz y
 kullanılır. Yıl önemlidir: **KDV oranı bu yıla göre belirlenir** (10.07.2023
 öncesi %18, sonrası %20) ve devir zinciri buna göre kurulur.
 
-Açık dosyadaki mükellefin vergi numarası, yapıştırdığınız sorgudakinden
+Açık çalışmadaki mükellefin vergi numarası, yapıştırdığınız sorgudakinden
 farklıysa mükellef bilgisi **değiştirilmez**; uyarı verilir ve veri açık
-dosyaya işlenir. Farklı mükellef için Dosyalar sekmesinden yeni dosya açın.
+çalışmaya işlenir. Farklı mükellef için üstteki **Yeni** düğmesini kullanın.
+
+**Yıl içinde vergi dairesi değişikliği:** Mükellef yılın farklı aylarında farklı
+vergi dairelerinde mükellefse, her daireden aldığınız sorguyu ayrı ayrı
+yapıştırın. Aynı yıla ait ikinci sorgu **tek yılda birleştirilir**: yeni sorgu
+yalnızca kendi dolu aylarını günceller, diğer aylar korunur. Hangi ayın hangi
+daireden geldiği ızgaranın üstünde etiketler hâlinde görünür. Aynı ay iki
+sorguda da doluysa üzerine yazılır ve uyarı verilir.
 
 **Blok yapıştırma:** Beyan bloğunu (etiket sütunu + 12 ay, Excel'deki 45–96
 satırlarının karşılığı) kutuya yapıştırıp *Bloğu Aktar* deyin. Satırlar etiketlerine göre sırayla eşleştirilir; arada eksik veya fazla
@@ -66,8 +95,14 @@ sekmelerinde görünür.
 
 **Elle düzenleme:** Yapıştırdıktan sonra ızgarada **bütün değerler görünür**
 (sıfırlar dahil, soluk renkte). Her hücreyi doğrudan değiştirebilirsiniz; alanı
-terk ettiğinizde kaydedilir ve seri anında yeniden hesaplanır. Böylece mevcut
-veri üzerinde çalışırsınız.
+terk ettiğinizde seri anında yeniden hesaplanır. Böylece mevcut veri üzerinde
+çalışırsınız. (Değişiklik kalıcı olmaz — Kaydet demeniz gerekir.)
+
+**Yıl kulakçıkları:** Yıllar arasında kulakçıklardan geçersiniz. Bir kulakçıktaki
+**×** ile o yılı çalışmadan çıkarırsınız; yanlışlıkla oluşmuş boş yıllar böyle
+kaldırılır. Boş yıllar kulakçıkta *(boş)* ibaresiyle işaretlenir.
+Bir yılın numarasını düzeltmek için **Yılı değiştir** kutusunu kullanın; oranı
+elle değiştirmediyseniz KDV oranları da yeni yıla göre tazelenir.
 
 **Tek satır yapıştırma:** Satır başındaki **⇥** düğmesiyle yalnızca o satırın
 12 aylık değerini tek seferde yapıştırabilirsiniz. Değerler sekmeyle, boşlukla
@@ -84,27 +119,10 @@ hesaba katılmaz.
 | Bu yılın beyan verisi + tespitleri | İkisi birlikte; KDV oranları yılın varsayılanına döner |
 | Tüm yıllar | Dosyadaki bütün yılların beyan verisi ve tespitleri |
 
-Hiçbir durumda yıl kayıtları veya inceleme dosyası silinmez; yalnızca içerik
-boşaltılır, yıllar boş olarak yerinde kalır. İşlem geri alınamaz — öncesinde
-Yedekleme sekmesinden yedek almanız önerilir. Bir yılı tümüyle kaldırmak
-isterseniz Dosyalar sekmesindeki *Sil* düğmesini kullanın.
+Yıllar silinmez; yalnızca içerik boşaltılır, yıllar boş olarak yerinde kalır.
+Bir yılı tümüyle kaldırmak için kulakçıktaki **×** düğmesini kullanın.
 
-### 2. Dosyalar sekmesi (isteğe bağlı)
-
-Burası yalnızca gerektiğinde kullanılır:
-
-- **Mükellef adı / VKN** — rapor metninin başlığında kullanılır. Boş bırakırsanız
-  "(Adsız Mükellef)" olarak kalır, hesaplamayı etkilemez.
-- **Yıl düzeltme** — otomatik oluşan yıl yanlışsa buradan değiştirin. KDV oranı
-  varsayılanları da yeni yıla göre tazelenir (oranı elle değiştirmediyseniz).
-- **Ay sayısı** — yıl içinde kısmi dönem inceleniyorsa düşürün.
-- **Başlangıç devreden KDV** — inceleme döneminden önceki dönemden gelen ve
-  düzeltilmiş devir tutarı varsa buraya yazın; seri bu tutarla başlar. Boş
-  bırakılırsa ilk dönemin beyanındaki devir esas alınır.
-- Birden çok mükellefle çalışıyorsanız ayrı dosyalar oluşturup aralarında
-  buradan geçiş yaparsınız.
-
-### 3. İnceleme Tespitleri sekmesi
+### 2. İnceleme Tespitleri sekmesi
 
 Dönem dönem beş kalem girilir:
 
@@ -120,11 +138,16 @@ Dönem dönem beş kalem girilir:
 %20). Farklı oranlı teslimlerde (%1, %10) oranı değiştirin. Hesaplanan KDV
 ilavesini tamamen elle girmek isterseniz o dönemin **Oto** kutusunu kaldırın.
 
-*Kaydet ve Hesapla* dediğinizde seri baştan sona yeniden hesaplanır.
+Her değişiklikte seri baştan sona yeniden hesaplanır.
 
-### 4. Sonuç ve Fark sekmesi
+**Başlangıç devri:** İnceleme döneminden önceki dönemden gelen düzeltilmiş devir
+tutarı varsa bu sekmenin altındaki kutuya yazın; seri bu tutarla başlar. Boş
+bırakılırsa ilk dönemin beyanındaki devir esas alınır.
 
-Üç tablo yan yana gösterilir: **eleştirili**, **beyan edilen** ve **fark**.
+### 3. Sonuç ve Fark sekmesi
+
+Yıl kulakçıklarından tek bir yılı seçebilir ya da **Tümü** kulakçığıyla bütün
+yılları tek tabloda görebilirsiniz. Üç tablo yan yana gösterilir: **eleştirili**, **beyan edilen** ve **fark**.
 Fark tablosunda sıfırdan farklı hücreler kırmızı vurgulanır. Tespit girilen
 dönemler *tespit* rozetiyle işaretlenir.
 
@@ -145,14 +168,16 @@ Fark tablosunda ise farkın ne kadarının o dönemin tespitinden, ne kadarını
 devirden geldiğini belirtir. Aynı balon Tarhiyat Özeti tablosunda da çalışır.
 Kapatmak için balon dışına tıklayın veya Esc'e basın.
 
-- **Excel Çalışmasını İndir** — her yıl için ayrı sayfa (eleştirili beyan,
-  tespit girişi, ham beyan, üç özet tablo) ve ayrıca *Tarhiyat Özeti*,
-  *Yıl Uyumu*, *Tespit Etkisi* ve *Özet* sayfaları.
+- **Excel'e Aktar** — rapora yapıştırmak için. Üretilen dosya her yıl için ayrı
+  bir sayfada eleştirili beyanı, tespit girişini, ham beyanı ve üç sonuç/fark
+  tablosunu; ayrıca *Tarhiyat Özeti*, *Yıl Uyumu*, *Tespit Etkisi* ve tüm
+  dönemleri birleştiren *Özet* sayfalarını içerir. Aynı düğme Tarhiyat Özeti
+  sekmesinde de vardır; ikisi de aynı dosyayı üretir.
 - **Rapor Metnini Üret** — dönem dönem matrah farkı, tarhiyat özeti,
   tespitlerin ayrı ayrı etkisi ve tutarsızlık bulguları.
   Taslaktır; hukuki nitelendirme ve gerekçe rapora sizin tarafınızdan eklenir.
 
-### 5. Tarhiyat Özeti sekmesi
+### 4. Tarhiyat Özeti sekmesi
 
 Elde kullanılan tarhiyat tablosunun karşılığıdır. Her dönem için beyan edilen
 ile olması gereken tutarlar yan yana konur ve üç tarhiyat kalemi hesaplanır:
@@ -169,11 +194,14 @@ ile olması gereken tutarlar yan yana konur ve üç tarhiyat kalemi hesaplanır:
 (mükellefin fazladan beyan ettiği vergi veya talep etmediği iade) tarhiyata
 eklenmez, tablonun altında ayrıca bildirilir.
 
+Bu sekmede de yıl kulakçıkları vardır; **Tümü** ile bütün yılları tek tabloda
+görürsünüz. Toplam satırı seçili kapsama göre hesaplanır.
+
 Aynı sekmedeki **Yıllara Göre Beyan Uyumu** tablosu, çok yıllı incelemelerde
 her yıl için matrah farkını, re'sen tarhı gereken tutarı ve farkın ne kadarının
 o yılın tespitinden, ne kadarının önceki yıllardan devirle geldiğini gösterir.
 
-### 6. Tespit Etkisi sekmesi
+### 5. Tespit Etkisi sekmesi
 
 Bir tespit yalnızca girildiği dönemi değil, devir zinciri yoluyla izleyen tüm
 dönemleri etkiler. Bu sekme her tespitin katkısını **ayrı ayrı** gösterir.
@@ -220,13 +248,14 @@ Bulgular *Sonuç ve Fark* sekmesinde ve Excel'in *Özet* sayfasında listelenir.
 
 ## Yedekleme
 
-*Yedekleme* sekmesinden veritabanının kopyası alınır (`yedekler/`). Geri yükleme
-mevcut verilerin üzerine yazar.
+*Kayıtlı Çalışmalar* sekmesinden veritabanının kopyası alınır (`yedekler/`).
+Yedek yalnızca **kaydedilmiş** çalışmaları içerir; ekranda duran kaydedilmemiş
+veri yedeğe girmez. Geri yükleme, kayıtlı çalışmaların tamamının üzerine yazar.
 
 ## Veriler nerede
 
 | Klasör | İçerik |
 |---|---|
-| `veritabani/kdv.db` | Tüm mükellef, dosya, beyan ve tespit kayıtları |
+| `veritabani/kdv.db` | Yalnızca **kaydettiğiniz** çalışmalar |
 | `yedekler/` | Veritabanı yedekleri |
 | `ciktilar/` | Üretilen Excel çalışma dosyaları |
