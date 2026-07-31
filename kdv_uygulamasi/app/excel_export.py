@@ -17,8 +17,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from .satirlar import (AYLAR, AYLAR_BUYUK, BEYAN_SATIRLARI, ELESTIRI_ALANLARI,
-                       OZET_KOLONLARI, TARHIYAT_KOLONLARI)
+from .satirlar import (AYLAR, AYLAR_BUYUK, BEYAN_SATIRLARI, BEYAN_TOPLAM_TURLERI,
+                       ELESTIRI_ALANLARI, OZET_KOLONLARI, TARHIYAT_KOLONLARI,
+                       TOPLAM_TURLERI)
 
 FONT = Font(name="Calibri", size=10)
 FONT_BOLD = Font(name="Calibri", size=10, bold=True)
@@ -80,16 +81,67 @@ def _ozet_tablo(ws, satir, baslik, donemler, blok, dolgu=None, fark_mi=False):
             _yaz(ws, satir, i + 2, deger, font, SAG, dolgu)
         satir += 1
 
+    # --- Toplam satiri (bkz. satirlar.TOPLAM_TURLERI)
+    kodlar = [alan for alan, _e in OZET_KOLONLARI]
+    harfler = {alan: get_column_letter(i + 2) for i, alan in enumerate(kodlar)}
+    son_veri = satir - 1
     _yaz(ws, satir, 1, "Toplam", FONT_BOLD, SOL, DOLGU_TOPLAM)
-    for i, (alan, _etiket) in enumerate(OZET_KOLONLARI):
-        harf = get_column_letter(i + 2)
-        if alan in ("onceki_devir", "sonraki_devir"):
-            # Devir stok kalemidir; toplanmaz, donem sonu degeri gosterilir
-            formul = f"={harf}{satir - 1}" if alan == "sonraki_devir" else f"={harf}{ilk_veri}"
+    for i, alan in enumerate(kodlar):
+        harf = harfler[alan]
+        tur = TOPLAM_TURLERI.get(alan)
+        if tur == "acilis":
+            # Devir stok kalemidir; serinin acilis degeri gosterilir
+            formul = f"={harf}{ilk_veri}"
+        elif tur == "kapanis":
+            formul = f"={harf}{son_veri}"
+        elif tur == "duzeltilmis":
+            # Indirimler her donemde onceki devri de icerir; sutun oldugu gibi
+            # toplanirsa tasinan devir her ay yeniden sayilir. Acilis devri ile
+            # donemlerde dogan indirimlerin toplami yazilir.
+            onc = harfler.get("onceki_devir")
+            bu = harfler.get("bu_donem_indirim_toplam")
+            formul = (f"={onc}{ilk_veri}+SUM({bu}{ilk_veri}:{bu}{son_veri})"
+                      if onc and bu else f"=SUM({harf}{ilk_veri}:{harf}{son_veri})")
         else:
-            formul = f"=SUM({harf}{ilk_veri}:{harf}{satir - 1})"
+            formul = f"=SUM({harf}{ilk_veri}:{harf}{son_veri})"
         _yaz(ws, satir, i + 2, formul, FONT_BOLD, SAG, DOLGU_TOPLAM)
+    satir += 1
+
+    _yaz(ws, satir, 1,
+         "Toplam satırı: devir sütunları stok kalemidir, toplanmaz — önceki devir "
+         "için serinin açılış, sonraki devir için kapanış değeri yazılır. İndirimler "
+         "toplamı her dönemde önceki devri de içerdiğinden sütun toplamı taşınan "
+         "devri tekrar tekrar sayar; bu nedenle açılış devri ile dönem indirimlerinin "
+         "toplamı olarak hesaplanır.", FONT, SOL, bicim=None)
+    ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                   end_column=len(OZET_KOLONLARI) + 1)
+    ws.row_dimensions[satir].height = 28
     return satir + 2
+
+
+def _satir_toplami(alan, satir, son_harf, satir_no, turler, bu_alan, diger_alan, onc_alan):
+    """Bir satirin TOPLAM hucresine yazilacak formulu uretir.
+
+    Devir ve kumulatif satirlar toplanmaz; acilis (ilk ay) veya kapanis (son ay)
+    degeri gosterilir. Indirimler toplami her ay onceki devri de icerdiginden
+    duz toplami tasinan devri tekrar sayar; acilis devri ile donem indirimleri
+    toplanarak yazilir.
+    """
+    tur = turler.get(alan)
+    if tur == "acilis":
+        return f"=B{satir}"
+    if tur == "kapanis":
+        return f"={son_harf}{satir}"
+    if tur == "duzeltilmis":
+        onc = satir_no.get(onc_alan)
+        bu = satir_no.get(bu_alan)
+        diger = satir_no.get(diger_alan)
+        if onc and bu:
+            formul = f"=B{onc}+SUM(B{bu}:{son_harf}{bu})"
+            if diger:
+                formul += f"+SUM(B{diger}:{son_harf}{diger})"
+            return formul
+    return f"=SUM(B{satir}:{son_harf}{satir})"
 
 
 def _yil_sayfasi(wb, yil_kaydi, donemler):
@@ -124,11 +176,17 @@ def _yil_sayfasi(wb, yil_kaydi, donemler):
         ("tecil_edilecek", "Tecil Edilecek KDV"),
     ]
     yil_donemleri = [d for d in donemler if d["yil"] == yil]
+    son_harf = get_column_letter(1 + max(len(yil_donemleri), 1))
+    satir_no = {}
     for alan, etiket in elestirili_alanlar:
         _yaz(ws, satir, 1, etiket, FONT, SOL)
         for i, d in enumerate(yil_donemleri):
             _yaz(ws, satir, i + 2, d["elestirili"].get(alan, 0.0))
-        _yaz(ws, satir, 14, f"=SUM(B{satir}:M{satir})", FONT_BOLD, SAG, DOLGU_TOPLAM)
+        satir_no[alan] = satir
+        _yaz(ws, satir, 14, _satir_toplami(alan, satir, son_harf, satir_no,
+                                           TOPLAM_TURLERI, "bu_donem_indirim",
+                                           "diger_indirim", "onceki_devir"),
+             FONT_BOLD, SAG, DOLGU_TOPLAM)
         satir += 1
     satir += 1
 
@@ -157,6 +215,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler):
     _yaz(ws, satir, 14, "TOPLAM", FONT_BOLD, ORTA, DOLGU_BASLIK)
     satir += 1
     beyan = yil_kaydi.get("beyan") or {}
+    beyan_satir_no = {}
     for kod, etiket, baslik in BEYAN_SATIRLARI:
         if baslik:
             _yaz(ws, satir, 1, etiket, FONT_BOLD, SOL, DOLGU_BASLIK)
@@ -168,9 +227,21 @@ def _yil_sayfasi(wb, yil_kaydi, donemler):
         dizi = beyan.get(kod) or [0.0] * 12
         for i in range(12):
             _yaz(ws, satir, i + 2, float(dizi[i] or 0))
-        _yaz(ws, satir, 14, f"=SUM(B{satir}:M{satir})", FONT_BOLD, SAG, DOLGU_TOPLAM)
+        beyan_satir_no[kod] = satir
+        _yaz(ws, satir, 14,
+             _satir_toplami(kod, satir, "M", beyan_satir_no, BEYAN_TOPLAM_TURLERI,
+                            "bu_donem_indirilecek", "diger_indirimler_toplami",
+                            "onceki_donem_devreden"),
+             FONT_BOLD, SAG, DOLGU_TOPLAM)
         satir += 1
-    satir += 1
+    _yaz(ws, satir, 1,
+         "TOPLAM sütunu: devir ve kümülatif satırlar toplanmaz — açılış ya da "
+         "kapanış değeri yazılır. İndirimler toplamı, taşınan devri tekrar saymamak "
+         "için açılış devri ile dönem indirimlerinin toplamı olarak hesaplanır.",
+         FONT, SOL, bicim=None)
+    ws.merge_cells(start_row=satir, start_column=1, end_row=satir, end_column=14)
+    ws.row_dimensions[satir].height = 28
+    satir += 2
 
     # --- Uc ozet tablo ---
     satir = _ozet_tablo(ws, satir, "ÖZET — ELEŞTİRİLİ", yil_donemleri, "elestirili")

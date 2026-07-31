@@ -22,7 +22,7 @@ from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
 from .rapor_metni import matrah_farki_ozeti
 from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI, ELESTIRI_ALANLARI,
                        OZET_HEDEF_SECENEKLERI, OZET_KOLONLARI, TARHIYAT_KOLONLARI,
-                       VERI_KODLARI)
+                       TOPLAM_ACIKLAMALARI, TOPLAM_TURLERI, VERI_KODLARI)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -156,6 +156,8 @@ class Istekci(BaseHTTPRequestHandler):
                                             for k, e, a in AYRISTIRMA_BLOKLARI],
                     "ozet_hedefleri": [{"kod": k, "etiket": e}
                                        for k, e in OZET_HEDEF_SECENEKLERI],
+                    "toplam_turleri": TOPLAM_TURLERI,
+                    "toplam_aciklamalari": TOPLAM_ACIKLAMALARI,
                     "bu_yil": datetime.now().year,
                 })
             elif yol == "/api/calismalar":

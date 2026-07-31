@@ -181,6 +181,44 @@ OZET_HEDEF_SECENEKLERI = [
     ("sonraki_donem_devreden", "Sonraki Döneme Devreden KDV"),
 ]
 
+# Ozet tablonun toplam satirinda her kolonun nasil bulundugu.
+#
+#   toplam    : sutunun toplami (akim kalemleri)
+#   acilis    : serinin ilk doneminin acilis degeri (stok kalemi, toplanmaz)
+#   kapanis   : serinin son doneminin kapanis degeri (stok kalemi, toplanmaz)
+#   duzeltilmis: sutunun duz toplami yaniltici oldugu icin yeniden hesaplanir
+#
+# Indirimler toplami her donemde onceki donemden devreden KDV'yi de icerir.
+# Sutun oldugu gibi toplanirsa, tasinan devir her ay yeniden sayilir ve gercekte
+# olandan cok daha buyuk bir rakam cikar. Dogru toplam, serinin acilis devri ile
+# donemlerde dogan indirimlerin toplamidir.
+TOPLAM_TURLERI = {
+    "onceki_devir": "acilis",
+    "sonraki_devir": "kapanis",
+    "indirimler": "duzeltilmis",
+}
+
+# Ham beyan blogunda satir bazinda toplanmamasi gereken kalemler. Devir ve
+# kumulatif satirlar toplandiginda anlamsiz buyuk rakamlar cikar.
+BEYAN_TOPLAM_TURLERI = {
+    "onceki_donemden_indirilecek": "acilis",
+    "onceki_donem_devreden": "acilis",
+    "sonraki_donem_devreden": "kapanis",
+    "indirimler_toplami": "duzeltilmis",
+    "teslim_bedel_kumulatif": "kapanis",
+}
+
+TOPLAM_ACIKLAMALARI = {
+    "acilis": "Devir bir stok kalemidir, toplanmaz. Serinin ilk döneminin açılış "
+              "devri gösterilir.",
+    "kapanis": "Devir bir stok kalemidir, toplanmaz. Serinin son döneminin "
+               "kapanış devri gösterilir.",
+    "duzeltilmis": "Sütunun düz toplamı değildir. İndirimler toplamı her dönemde "
+                   "önceki dönemden devreden KDV'yi de içerdiğinden, sütun olduğu "
+                   "gibi toplanırsa taşınan devir her ay yeniden sayılır. Burada "
+                   "açılış devri ile dönemlerde doğan indirimlerin toplamı gösterilir.",
+}
+
 # Tarhiyat ozeti tablosunun kolon duzeni (elde kullanilan tablonun karsiligi).
 # grup : ust baslik, kod : hesap.py'deki alan adi, vurgu : renk sinifi
 TARHIYAT_KOLONLARI = [

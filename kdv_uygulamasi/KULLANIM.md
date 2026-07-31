@@ -210,6 +210,25 @@ yılları tek tabloda görebilirsiniz. Üç tablo yan yana gösterilir: **eleşt
 Fark tablosunda sıfırdan farklı hücreler kırmızı vurgulanır. Tespit girilen
 dönemler *tespit* rozetiyle işaretlenir.
 
+**Toplam satırı — üç sütun toplanmaz.** Devir bir *stok* kalemidir; ay ay
+toplanırsa aynı para tekrar tekrar sayılır. Bu yüzden:
+
+| Sütun | Toplam satırında ne yazar |
+|---|---|
+| Önc. Dön. Dev. KDV | **Açılış** — serinin ilk döneminin açılış devri |
+| Son. Dön. Dev. KDV | **Kapanış** — serinin son döneminin kapanış devri |
+| İndirimler Toplamı | Açılış devri + dönemlerde doğan indirimler |
+
+İndirimler toplamı her dönemde önceki dönemden devreden KDV'yi de içerir.
+Sütun olduğu gibi toplanırsa taşınan devir her ay yeniden sayılır ve gerçekte
+olandan çok büyük bir rakam çıkar. Örneğin bir çalışmada düz sütun toplamı
+31.228.020,60 TL iken doğru toplam 24.869.731,67 TL'dir. Bu hücrenin altı sarı
+çizgiyle işaretlidir; üzerine gelince açıklaması görünür.
+
+Aynı düzeltme Excel çıktısında da geçerlidir — yıl sayfalarındaki TOPLAM
+sütununda devir ve kümülatif satırlar toplanmaz, tablonun altına da bir
+açıklama satırı yazılır.
+
 **Bir tutarın nasıl çıktığını görmek için hücreye tıklayın.** Açılan balonda
 hesabın formülü, kullanılan kalemler ve sonuç satır satır gösterilir. Örneğin
 ödenecek KDV hücresine tıkladığınızda:

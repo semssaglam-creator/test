@@ -787,7 +787,7 @@ function eslemeSor(y, metin) {
     const tr = document.createElement("tr");
     tr.appendChild(hucre("td", t.baslik));
     const ornek = (ilk.ham_degerler || {})[t.sira];
-    const tdOrnek = hucre("td", ornek != null ? tl(ornek) : "—");
+    const tdOrnek = hucre("td", ornek != null ? tl(ornek) : "0,00");
     tdOrnek.className = "sayi";
     tr.appendChild(tdOrnek);
     const td = document.createElement("td");
@@ -1496,7 +1496,7 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
       h.className = "sayi";
       if (farkMi && Math.abs(deger || 0) > 0.005) h.classList.add("fark-var");
       else if ((deger || 0) < 0) h.classList.add("negatif");
-      h.textContent = deger ? tl(deger) : "—";
+      h.textContent = tl(deger || 0);
       aciklamaBagla(h, () => hesapAciklamasi(d, blok, k.kod), `${d.yil}/${d.ay_adi}`);
       tr.appendChild(h);
     });
@@ -1505,14 +1505,22 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
   const trT = document.createElement("tr");
   trT.className = "toplam";
   trT.appendChild(hucre("td", "Toplam"));
+  const turler = durum.tanimlar.toplam_turleri || {};
+  const aciklamalar = durum.tanimlar.toplam_aciklamalari || {};
   kolonlar.forEach((k) => {
     const h = document.createElement("td");
     h.className = "sayi";
     const deger = (toplam[blok] || {})[k.kod];
-    h.textContent = deger ? tl(deger) : "—";
-    if (k.kod === "onceki_devir" || k.kod === "sonraki_devir") {
-      h.title = "Devir stok kalemidir; toplanmaz, dönem sonu değeri gösterilir.";
+    const tur = turler[k.kod];
+    // Toplanmayan kolonlar "Toplam" gibi okunmasin diye ne olduklari yazilir
+    if (tur === "acilis" || tur === "kapanis") {
+      h.innerHTML = `<span style="font-weight:400;font-size:11px;color:#5a6b7d;">` +
+        `${tur === "acilis" ? "Açılış" : "Kapanış"}</span> ${tl(deger || 0)}`;
+    } else {
+      h.textContent = tl(deger || 0);
     }
+    if (tur === "duzeltilmis") h.style.borderBottom = "2px solid #b8860b";
+    if (aciklamalar[tur]) h.title = aciklamalar[tur];
     trT.appendChild(h);
   });
   tablo.appendChild(trT);
@@ -1638,7 +1646,7 @@ function yilUyumunuCiz() {
      ["odenecek_beyan"], ["odenecek_olmasi_gereken"], ["resen_tarhi_gereken", true],
      ["tespit_etkisi", true], ["devir_etkisi", true],
      ["devir_cikis_beyan"], ["devir_cikis"]].forEach(([kod, vurgu]) => {
-      const td = hucre("td", s[kod] ? tl(s[kod]) : "—");
+      const td = hucre("td", tl(s[kod] || 0));
       td.className = "sayi";
       if (vurgu && Math.abs(s[kod] || 0) > 0.005) td.classList.add("fark-var");
       r.appendChild(td);
@@ -1670,13 +1678,13 @@ function kaynaklariCiz() {
     r.appendChild(td0);
     ["matrah_ilave", "hesaplanan_kdv_ilave", "indirim_cikar", "devir_cikar",
      "yuklenilen_cikar"].forEach((kod) => {
-      const td = hucre("td", k[kod] ? tl(k[kod]) : "—");
+      const td = hucre("td", tl(k[kod] || 0));
       td.className = "sayi";
       r.appendChild(td);
     });
     r.appendChild(hucre("td", `${k.etkilenen_donem_sayisi} dönem`));
     r.appendChild(hucre("td", k.ilk_etki ? `${k.ilk_etki} → ${k.son_etki}` : "—"));
-    const tdE = hucre("td", k.toplam_odenecek_etkisi ? tl(k.toplam_odenecek_etkisi) : "—");
+    const tdE = hucre("td", tl(k.toplam_odenecek_etkisi || 0));
     tdE.className = "sayi";
     if (Math.abs(k.toplam_odenecek_etkisi || 0) > 0.005) tdE.classList.add("fark-var");
     r.appendChild(tdE);
@@ -1734,19 +1742,19 @@ function etkiTablosunuCiz() {
     r.appendChild(hucre("td", d.etiket));
     ka.kaynaklar.forEach((k) => {
       const v = d.paylar[k.anahtar][alan];
-      const td = hucre("td", v ? tl(v) : "—");
+      const td = hucre("td", tl(v || 0));
       td.className = "sayi";
       if (v < -0.005) td.classList.add("negatif");
       r.appendChild(td);
     });
     if (ka.etkilesim_var) {
       const v = d.etkilesim[alan];
-      const td = hucre("td", v ? tl(v) : "—");
+      const td = hucre("td", tl(v || 0));
       td.className = "sayi";
       r.appendChild(td);
     }
     const v = d.toplam[alan];
-    const tdT = hucre("td", v ? tl(v) : "—");
+    const tdT = hucre("td", tl(v || 0));
     tdT.className = "sayi";
     if (Math.abs(v || 0) > 0.005) tdT.classList.add("fark-var");
     r.appendChild(tdT);

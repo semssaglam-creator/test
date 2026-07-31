@@ -562,19 +562,34 @@ def _elestiri_var(elestiri, ay):
 def _toplam(donemler):
     """Toplam satiri.
 
-    Devir sutunlari stok niteliginde oldugu icin toplanmaz; donem sonu
-    (serinin son donemi) degeri gosterilir. Akim sutunlari toplanir.
+    Uc tur kolon vardir (bkz. satirlar.TOPLAM_TURLERI):
+
+    - Akim kalemleri (matrah, hesaplanan KDV, donem indirimi, odenecek, iade)
+      dogrudan toplanir.
+    - Devir kolonlari stok kalemidir, toplanmaz: onceki devir icin serinin ilk
+      doneminin acilis degeri, sonraki devir icin son doneminin kapanis degeri
+      gosterilir.
+    - Indirimler toplami, her donemde onceki donemden devreden KDV'yi de
+      icerir. Sutun oldugu gibi toplanirsa tasinan devir her ay yeniden
+      sayilir. Bu nedenle acilis devri ile donemlerde dogan indirimlerin
+      toplami olarak yeniden hesaplanir; boylece uc blok arasinda
+      fark = elestirili - beyan esitligi de korunur.
     """
-    akim = ["matrah", "toplam_kdv", "bu_donem_indirim_toplam", "indirimler",
-            "odenecek", "iade"]
+    akim = ["matrah", "toplam_kdv", "bu_donem_indirim_toplam", "odenecek", "iade"]
     sonuc = {"beyan": {}, "elestirili": {}, "fark": {}}
     for blok in ("beyan", "elestirili", "fark"):
         for alan in akim:
             sonuc[blok][alan] = _yuvarla(sum(d[blok].get(alan, 0.0) for d in donemler))
         son = donemler[-1][blok] if donemler else {}
         ilk = donemler[0][blok] if donemler else {}
+        acilis = _yuvarla(ilk.get("onceki_devir", 0.0))
+        sonuc[blok]["onceki_devir"] = acilis
         sonuc[blok]["sonraki_devir"] = _yuvarla(son.get("sonraki_devir", 0.0))
-        sonuc[blok]["onceki_devir"] = _yuvarla(ilk.get("onceki_devir", 0.0))
+        sonuc[blok]["indirimler"] = _yuvarla(
+            acilis + sonuc[blok]["bu_donem_indirim_toplam"])
+        # Sutunun duz toplami da bilgi olarak tasinir (Excel ile karsilastirma)
+        sonuc[blok]["indirimler_sutun_toplami"] = _yuvarla(
+            sum(d[blok].get("indirimler", 0.0) for d in donemler))
     return sonuc
 
 
