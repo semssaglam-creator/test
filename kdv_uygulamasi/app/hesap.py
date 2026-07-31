@@ -560,36 +560,34 @@ def _elestiri_var(elestiri, ay):
 
 
 def _toplam(donemler):
-    """Toplam satiri.
+    """Toplam satiri: her kolonda sutunun duz toplami.
 
-    Uc tur kolon vardir (bkz. satirlar.TOPLAM_TURLERI):
+    Toplamlar 12 aylik karsilastirmalarda kullanildigi icin (ornegin yillik
+    matrah toplaminin teslim ve hizmet bedeli toplamiyla uyumu) butun sutunlar
+    oldugu gibi toplanir.
 
-    - Akim kalemleri (matrah, hesaplanan KDV, donem indirimi, odenecek, iade)
-      dogrudan toplanir.
-    - Devir kolonlari stok kalemidir, toplanmaz: onceki devir icin serinin ilk
-      doneminin acilis degeri, sonraki devir icin son doneminin kapanis degeri
-      gosterilir.
-    - Indirimler toplami, her donemde onceki donemden devreden KDV'yi de
-      icerir. Sutun oldugu gibi toplanirsa tasinan devir her ay yeniden
-      sayilir. Bu nedenle acilis devri ile donemlerde dogan indirimlerin
-      toplami olarak yeniden hesaplanir; boylece uc blok arasinda
-      fark = elestirili - beyan esitligi de korunur.
+    Devir kolonlari ile indirimler toplami stok bileseni tasidigindan duz
+    toplamlari muhasebe anlaminda bir yil devri degildir; bu kolonlar icin
+    referans degerler ayrica tasinir (bkz. satirlar.TOPLAM_EK_BILGI):
+
+      onceki_devir_acilis   : serinin ilk doneminin acilis devri
+      sonraki_devir_kapanis : serinin son doneminin kapanis devri
+      indirimler_devirsiz   : acilis devri + donemlerde dogan indirimler
+                              (tasinan devir bir kez sayilmis hali)
     """
-    akim = ["matrah", "toplam_kdv", "bu_donem_indirim_toplam", "odenecek", "iade"]
+    kolonlar = ["matrah", "toplam_kdv", "onceki_devir", "bu_donem_indirim_toplam",
+                "indirimler", "odenecek", "sonraki_devir", "iade"]
     sonuc = {"beyan": {}, "elestirili": {}, "fark": {}}
     for blok in ("beyan", "elestirili", "fark"):
-        for alan in akim:
+        for alan in kolonlar:
             sonuc[blok][alan] = _yuvarla(sum(d[blok].get(alan, 0.0) for d in donemler))
         son = donemler[-1][blok] if donemler else {}
         ilk = donemler[0][blok] if donemler else {}
         acilis = _yuvarla(ilk.get("onceki_devir", 0.0))
-        sonuc[blok]["onceki_devir"] = acilis
-        sonuc[blok]["sonraki_devir"] = _yuvarla(son.get("sonraki_devir", 0.0))
-        sonuc[blok]["indirimler"] = _yuvarla(
+        sonuc[blok]["onceki_devir_acilis"] = acilis
+        sonuc[blok]["sonraki_devir_kapanis"] = _yuvarla(son.get("sonraki_devir", 0.0))
+        sonuc[blok]["indirimler_devirsiz"] = _yuvarla(
             acilis + sonuc[blok]["bu_donem_indirim_toplam"])
-        # Sutunun duz toplami da bilgi olarak tasinir (Excel ile karsilastirma)
-        sonuc[blok]["indirimler_sutun_toplami"] = _yuvarla(
-            sum(d[blok].get("indirimler", 0.0) for d in donemler))
     return sonuc
 
 

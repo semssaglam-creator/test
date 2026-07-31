@@ -82,6 +82,9 @@
   table.izgara tr.elestiri input { background: #fff9e6; border-color: #e8d9a8; }
   table.izgara tr.elestiri td.etiket { background: #fdf3d8; }
   table.izgara td.satir-yapistir { position: sticky; left: 300px; background: #fff; z-index: 2; }
+  table.izgara th.satir-toplam, table.izgara td.satir-toplam { position: sticky; right: 0; background: #e2efda; z-index: 2; font-weight: 600; border-left: 2px solid #9bbb8a; min-width: 104px; }
+  table.izgara th.satir-toplam { background: #cfe3c2; }
+  table.izgara tr.grup td.satir-toplam { background: #cfe3c2; }
   table.izgara button.mini { background: #e4e9ef; border: 1px solid #c3ccd6; border-radius: 3px; font-size: 11px; padding: 2px 6px; cursor: pointer; }
   table.izgara button.mini:hover { background: #d4dce5; }
   td.fark-var { background: #fdece8; color: #a33; font-weight: 600; }
@@ -884,14 +887,16 @@ function beyanIzgarasiniCiz() {
 
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">DÖNEMİ</th><th></th>' +
-    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("");
+    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("") +
+    '<th class="sag satir-toplam" title="Satırın yıllık toplamı">TOPLAM</th>';
   tablo.appendChild(baslik);
 
   durum.tanimlar.satirlar.forEach((s) => {
     const tr = document.createElement("tr");
     if (s.baslik) {
       tr.className = "grup";
-      tr.innerHTML = `<td class="etiket">${s.etiket}</td><td colspan="13"></td>`;
+      tr.innerHTML = `<td class="etiket">${s.etiket}</td><td colspan="13"></td>` +
+        '<td class="satir-toplam"></td>';
       tablo.appendChild(tr);
       return;
     }
@@ -909,6 +914,17 @@ function beyanIzgarasiniCiz() {
     tdYapistir.appendChild(dugme);
 
     tr.append(tdEtiket, tdYapistir);
+    // Satirin yillik toplami: matrah toplaminin teslim ve hizmet bedeliyle
+    // karsilastirilabilmesi icin her satirin sonunda gosterilir
+    const tdToplam = document.createElement("td");
+    tdToplam.className = "sag satir-toplam";
+    const toplamiTazele = () => {
+      const dizi = yil.beyan[s.kod] || [];
+      const t = dizi.slice(0, 12).reduce((a, b) => a + (Number(b) || 0), 0);
+      tdToplam.textContent = tl(t);
+      tdToplam.title = satirToplamAciklamasi(s, dizi, yil);
+    };
+
     const degerler = yil.beyan[s.kod] || new Array(12).fill(0);
     for (let ay = 0; ay < 12; ay++) {
       const td = document.createElement("td");
@@ -923,14 +939,39 @@ function beyanIzgarasiniCiz() {
         yil.beyan[s.kod][ay] = sayi;
         giris.value = tl(sayi);
         giris.style.color = sayi ? "" : "#9aa7b4";
+        toplamiTazele();
         isaretle();
       });
       giris.addEventListener("keydown", (e) => { if (e.key === "Enter") giris.blur(); });
       td.appendChild(giris);
       tr.appendChild(td);
     }
+    toplamiTazele();
+    tr.appendChild(tdToplam);
     tablo.appendChild(tr);
   });
+}
+
+// Devir ve kumulatif satirlarda duz toplam stok kalemini tekrar tekrar sayar;
+// toplam yine de gosterilir, ne anlama geldigi baloncukta belirtilir.
+function satirToplamAciklamasi(satir, dizi, yil) {
+  const ay = Math.max(1, Math.min(yil.ay_sayisi || 12, 12));
+  const acilis = Number(dizi[0]) || 0;
+  const kapanis = Number(dizi[ay - 1]) || 0;
+  if (satir.toplam_turu === "acilis") {
+    return `${satir.etiket}\nSütunun düz toplamı. Bu bir stok kalemidir; ` +
+      `açılış (Ocak) değeri: ${tl(acilis)} TL`;
+  }
+  if (satir.toplam_turu === "kapanis") {
+    return `${satir.etiket}\nSütunun düz toplamı. Bu bir stok/kümülatif kalemdir; ` +
+      `kapanış (${durum.tanimlar.aylar[ay - 1]}) değeri: ${tl(kapanis)} TL`;
+  }
+  if (satir.toplam_turu === "duzeltilmis") {
+    return `${satir.etiket}\nSütunun düz toplamı. İndirimler toplamı her ay ` +
+      `önceki dönemden devreden KDV'yi de içerdiğinden taşınan devir bu ` +
+      `toplamda tekrar tekrar sayılır.`;
+  }
+  return `${satir.etiket}\n${ay} aylık toplam`;
 }
 
 async function satirYapistir(yil, satir) {
@@ -1039,7 +1080,8 @@ function elestiriIzgarasiniCiz() {
   }
   const baslik = document.createElement("tr");
   baslik.innerHTML = '<th class="etiket">TESPİT</th>' +
-    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("");
+    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("") +
+    '<th class="sag satir-toplam" title="Tespitin yıllık toplamı">TOPLAM</th>';
   tablo.appendChild(baslik);
 
   durum.tanimlar.elestiri_alanlari.forEach((alan) => {
@@ -1069,6 +1111,10 @@ function elestiriIzgarasiniCiz() {
       hucre.appendChild(giris);
       tr.appendChild(hucre);
     }
+    const tdToplam = document.createElement("td");
+    tdToplam.className = "sag satir-toplam";
+    tdToplam.dataset.toplam = alan.kod;
+    tr.appendChild(tdToplam);
     tablo.appendChild(tr);
   });
 
@@ -1091,6 +1137,7 @@ function elestiriIzgarasiniCiz() {
     td.appendChild(giris);
     trOran.appendChild(td);
   }
+  trOran.appendChild(document.createElement("td")).className = "satir-toplam";
   tablo.appendChild(trOran);
 
   const trOto = document.createElement("tr");
@@ -1112,6 +1159,7 @@ function elestiriIzgarasiniCiz() {
     td.appendChild(kutu);
     trOto.appendChild(td);
   }
+  trOto.appendChild(document.createElement("td")).className = "satir-toplam";
   tablo.appendChild(trOto);
   otomatikKdvGuncelle(yil, true);
 }
@@ -1138,6 +1186,16 @@ function otomatikKdvGuncelle(yil, yalnizGorunum) {
       hedef.style.background = ""; hedef.style.color = "";
     }
   }
+  elestiriToplamlariniTazele(yil);
+}
+
+/** Tespit izgarasindaki satir sonu toplamlarini modelden tazeler. */
+function elestiriToplamlariniTazele(yil) {
+  $("elestiriIzgara").querySelectorAll("td[data-toplam]").forEach((td) => {
+    const dizi = yil.elestiri[td.dataset.toplam] || [];
+    const t = dizi.slice(0, 12).reduce((a, b) => a + (Number(b) || 0), 0);
+    td.textContent = tl(t);
+  });
 }
 
 $("devredenBaslangic").addEventListener("change", () => {
@@ -1507,19 +1565,22 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
   trT.appendChild(hucre("td", "Toplam"));
   const turler = durum.tanimlar.toplam_turleri || {};
   const aciklamalar = durum.tanimlar.toplam_aciklamalari || {};
+  const ekBilgi = durum.tanimlar.toplam_ek_bilgi || {};
   kolonlar.forEach((k) => {
     const h = document.createElement("td");
     h.className = "sayi";
-    const deger = (toplam[blok] || {})[k.kod];
+    const satirDegerleri = toplam[blok] || {};
     const tur = turler[k.kod];
-    // Toplanmayan kolonlar "Toplam" gibi okunmasin diye ne olduklari yazilir
-    if (tur === "acilis" || tur === "kapanis") {
-      h.innerHTML = `<span style="font-weight:400;font-size:11px;color:#5a6b7d;">` +
-        `${tur === "acilis" ? "Açılış" : "Kapanış"}</span> ${tl(deger || 0)}`;
-    } else {
-      h.textContent = tl(deger || 0);
+    // Butun sutunlar duz toplanir; stok bileseni tasiyan kolonlarda referans
+    // deger (acilis / kapanis / devir bir kez sayilmis hali) altta belirtilir
+    h.textContent = tl(satirDegerleri[k.kod] || 0);
+    const ek = ekBilgi[k.kod];
+    if (ek && satirDegerleri[ek.alan] !== undefined) {
+      const alt = document.createElement("div");
+      alt.style.cssText = "font-weight:400;font-size:11px;color:#5a6b7d;margin-top:2px;";
+      alt.textContent = `${ek.etiket}: ${tl(satirDegerleri[ek.alan] || 0)}`;
+      h.appendChild(alt);
     }
-    if (tur === "duzeltilmis") h.style.borderBottom = "2px solid #b8860b";
     if (aciklamalar[tur]) h.title = aciklamalar[tur];
     trT.appendChild(h);
   });

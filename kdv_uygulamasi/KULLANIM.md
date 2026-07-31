@@ -210,24 +210,28 @@ yılları tek tabloda görebilirsiniz. Üç tablo yan yana gösterilir: **eleşt
 Fark tablosunda sıfırdan farklı hücreler kırmızı vurgulanır. Tespit girilen
 dönemler *tespit* rozetiyle işaretlenir.
 
-**Toplam satırı — üç sütun toplanmaz.** Devir bir *stok* kalemidir; ay ay
-toplanırsa aynı para tekrar tekrar sayılır. Bu yüzden:
+**Toplam satırı — her sütun olduğu gibi toplanır.** 12 aylık karşılaştırmalar
+bu toplamlar üzerinden yapıldığı için sütunlar düz toplanır.
 
-| Sütun | Toplam satırında ne yazar |
+Devir sütunları ile indirimler toplamı bir *stok* bileşeni taşır: devir bir
+dönemden diğerine aktarıldığı için düz toplamda tekrar tekrar sayılır. Bu
+sütunlarda toplamın altında ayrıca bir referans değer yazar:
+
+| Sütun | Toplamın altında |
 |---|---|
 | Önc. Dön. Dev. KDV | **Açılış** — serinin ilk döneminin açılış devri |
 | Son. Dön. Dev. KDV | **Kapanış** — serinin son döneminin kapanış devri |
-| İndirimler Toplamı | Açılış devri + dönemlerde doğan indirimler |
+| İndirimler Toplamı | **Devir bir kez** — açılış devri + dönemlerde doğan indirimler |
 
-İndirimler toplamı her dönemde önceki dönemden devreden KDV'yi de içerir.
-Sütun olduğu gibi toplanırsa taşınan devir her ay yeniden sayılır ve gerçekte
-olandan çok büyük bir rakam çıkar. Örneğin bir çalışmada düz sütun toplamı
-31.228.020,60 TL iken doğru toplam 24.869.731,67 TL'dir. Bu hücrenin altı sarı
-çizgiyle işaretlidir; üzerine gelince açıklaması görünür.
+Excel çıktısında da aynı düzen vardır: Toplam satırının altına bir *Açılış /
+kapanış* satırı ile bir açıklama satırı yazılır.
 
-Aynı düzeltme Excel çıktısında da geçerlidir — yıl sayfalarındaki TOPLAM
-sütununda devir ve kümülatif satırlar toplanmaz, tablonun altına da bir
-açıklama satırı yazılır.
+**Satır sonu toplamları.** Beyan Verisi ve İnceleme Tespitleri ızgaralarında en
+sağda sabit duran bir **TOPLAM** sütunu vardır; her satırın 12 aylık toplamını
+verir. Örneğin matrah toplamının yıllık tutarını "Teslim ve hizmetlerin
+karşılığını teşkil eden bedel" satırının yıllık tutarıyla buradan
+karşılaştırabilirsiniz. Devir ve kümülatif satırlarda toplam yine gösterilir,
+ne anlama geldiği hücrenin balonunda yazar.
 
 **Bir tutarın nasıl çıktığını görmek için hücreye tıklayın.** Açılan balonda
 hesabın formülü, kullanılan kalemler ve sonuç satır satır gösterilir. Örneğin
@@ -251,6 +255,20 @@ Kapatmak için balon dışına tıklayın veya Esc'e basın.
   tablosunu; ayrıca *Tarhiyat Özeti*, *Yıl Uyumu*, *Tespit Etkisi* ve tüm
   dönemleri birleştiren *Özet* sayfalarını içerir. Aynı düğme Tarhiyat Özeti
   sekmesinde de vardır; ikisi de aynı dosyayı üretir.
+
+  **Dosya formüllerle üretilir.** Yalnızca girdiler sabit sayıdır: beyan edilen
+  değerler ve inceleme tespitleri. Eleştirili beyan, özet tablolar, fark
+  tablosu ve tarhiyat özeti Excel formülleriyle yazılır. Dosyada bir beyan
+  rakamını ya da bir tespiti değiştirdiğinizde devir zinciri izleyen bütün
+  dönemlere kendiliğinden yansır — yıl sınırını da aşar, çünkü bir yılın Ocak
+  ayı önceki yılın sayfasındaki Aralık devrine bağlıdır
+  (`='2023'!M12-B20` gibi). Böylece Excel'de de tıpkı uygulamadaki gibi
+  deneme yapabilirsiniz.
+
+  Formül taşımayan iki sayfa vardır: *Yıl Uyumu* ve *Tespit Etkisi*. Bunlar
+  serinin defalarca yeniden hesaplanmasıyla üretilen çıktılardır; Excel'de bir
+  değişiklik yaparsanız bu iki sayfayı uygulamadan yeniden dışa aktarın.
+  Sayfaların altında bu not yazılıdır.
 - **Rapor Metnini Üret** — rapora yapıştırılabilir taslak metin. İçeriği:
 
   1. **Dönemler itibarıyla tespit edilen farklar** — kendi tespitiniz bulunan

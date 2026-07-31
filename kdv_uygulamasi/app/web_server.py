@@ -20,9 +20,11 @@ from .excel_export import calisma_olustur
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
-from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI, ELESTIRI_ALANLARI,
+from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI,
+                       BEYAN_TOPLAM_TURLERI, ELESTIRI_ALANLARI,
                        OZET_HEDEF_SECENEKLERI, OZET_KOLONLARI, TARHIYAT_KOLONLARI,
-                       TOPLAM_ACIKLAMALARI, TOPLAM_TURLERI, VERI_KODLARI)
+                       TOPLAM_ACIKLAMALARI, TOPLAM_EK_BILGI, TOPLAM_TURLERI,
+                       VERI_KODLARI)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -145,7 +147,8 @@ class Istekci(BaseHTTPRequestHandler):
                                    "text/html; charset=utf-8")
             elif yol == "/api/tanimlar":
                 self._json_yanit({
-                    "satirlar": [{"kod": k, "etiket": e, "baslik": b}
+                    "satirlar": [{"kod": k, "etiket": e, "baslik": b,
+                                  "toplam_turu": BEYAN_TOPLAM_TURLERI.get(k)}
                                  for k, e, b in BEYAN_SATIRLARI],
                     "aylar": AYLAR,
                     "elestiri_alanlari": [{"kod": k, "etiket": e} for k, e in ELESTIRI_ALANLARI],
@@ -158,6 +161,8 @@ class Istekci(BaseHTTPRequestHandler):
                                        for k, e in OZET_HEDEF_SECENEKLERI],
                     "toplam_turleri": TOPLAM_TURLERI,
                     "toplam_aciklamalari": TOPLAM_ACIKLAMALARI,
+                    "toplam_ek_bilgi": {k: {"etiket": e, "alan": a}
+                                       for k, (e, a) in TOPLAM_EK_BILGI.items()},
                     "bu_yil": datetime.now().year,
                 })
             elif yol == "/api/calismalar":

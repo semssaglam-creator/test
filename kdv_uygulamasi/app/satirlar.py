@@ -181,25 +181,26 @@ OZET_HEDEF_SECENEKLERI = [
     ("sonraki_donem_devreden", "Sonraki Döneme Devreden KDV"),
 ]
 
-# Ozet tablonun toplam satirinda her kolonun nasil bulundugu.
+# Toplam satiri / TOPLAM sutunu her kolonda sutunun duz toplamidir: 12 aylik
+# karsilastirmalar (ornegin yillik matrah toplami ile teslim ve hizmet bedeli
+# toplaminin uyumu) bu sekilde yapilir.
 #
-#   toplam    : sutunun toplami (akim kalemleri)
-#   acilis    : serinin ilk doneminin acilis degeri (stok kalemi, toplanmaz)
-#   kapanis   : serinin son doneminin kapanis degeri (stok kalemi, toplanmaz)
-#   duzeltilmis: sutunun duz toplami yaniltici oldugu icin yeniden hesaplanir
+# Bununla birlikte asagidaki kolonlar stok kalemidir; duz toplamlari muhasebe
+# anlaminda bir "yil devri" degildir. Bu kolonlarda toplamin yaninda ayrica
+# referans deger de gosterilir:
 #
-# Indirimler toplami her donemde onceki donemden devreden KDV'yi de icerir.
-# Sutun oldugu gibi toplanirsa, tasinan devir her ay yeniden sayilir ve gercekte
-# olandan cok daha buyuk bir rakam cikar. Dogru toplam, serinin acilis devri ile
-# donemlerde dogan indirimlerin toplamidir.
+#   acilis      : serinin ilk doneminin acilis devri
+#   kapanis     : serinin son doneminin kapanis devri
+#   duzeltilmis : indirimler toplami her donemde onceki devri de icerdiginden
+#                 tasinan devir sutun toplaminda tekrar tekrar sayilir; devir
+#                 bir kez sayilmis hali (acilis devri + donem indirimleri)
 TOPLAM_TURLERI = {
     "onceki_devir": "acilis",
     "sonraki_devir": "kapanis",
     "indirimler": "duzeltilmis",
 }
 
-# Ham beyan blogunda satir bazinda toplanmamasi gereken kalemler. Devir ve
-# kumulatif satirlar toplandiginda anlamsiz buyuk rakamlar cikar.
+# Ham beyan blogunda ayni uyarinin gecerli oldugu satirlar
 BEYAN_TOPLAM_TURLERI = {
     "onceki_donemden_indirilecek": "acilis",
     "onceki_donem_devreden": "acilis",
@@ -208,15 +209,25 @@ BEYAN_TOPLAM_TURLERI = {
     "teslim_bedel_kumulatif": "kapanis",
 }
 
+# Toplam hucresinin altinda gosterilen referans deger: (etiket, hesap.py alani)
+TOPLAM_EK_BILGI = {
+    "onceki_devir": ("Açılış", "onceki_devir_acilis"),
+    "sonraki_devir": ("Kapanış", "sonraki_devir_kapanis"),
+    "indirimler": ("Devir bir kez", "indirimler_devirsiz"),
+}
+
 TOPLAM_ACIKLAMALARI = {
-    "acilis": "Devir bir stok kalemidir, toplanmaz. Serinin ilk döneminin açılış "
-              "devri gösterilir.",
-    "kapanis": "Devir bir stok kalemidir, toplanmaz. Serinin son döneminin "
-               "kapanış devri gösterilir.",
-    "duzeltilmis": "Sütunun düz toplamı değildir. İndirimler toplamı her dönemde "
-                   "önceki dönemden devreden KDV'yi de içerdiğinden, sütun olduğu "
-                   "gibi toplanırsa taşınan devir her ay yeniden sayılır. Burada "
-                   "açılış devri ile dönemlerde doğan indirimlerin toplamı gösterilir.",
+    "acilis": "Gösterilen tutar sütunun düz toplamıdır. Devir bir stok kalemi "
+              "olduğu için ayrıca serinin ilk döneminin açılış devri de "
+              "belirtilir.",
+    "kapanis": "Gösterilen tutar sütunun düz toplamıdır. Devir bir stok kalemi "
+               "olduğu için ayrıca serinin son döneminin kapanış devri de "
+               "belirtilir.",
+    "duzeltilmis": "Gösterilen tutar sütunun düz toplamıdır. İndirimler toplamı "
+                   "her dönemde önceki dönemden devreden KDV'yi de içerdiğinden "
+                   "taşınan devir bu toplamda her ay yeniden sayılır. Altta, "
+                   "devrin bir kez sayıldığı tutar (açılış devri + dönemlerde "
+                   "doğan indirimler) verilmiştir.",
 }
 
 # Tarhiyat ozeti tablosunun kolon duzeni (elde kullanilan tablonun karsiligi).
