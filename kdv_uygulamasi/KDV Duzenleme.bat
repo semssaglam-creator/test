@@ -12,6 +12,8 @@ rem ===========================================================
 setlocal
 cd /d "%~dp0"
 title KDV Inceleme Calismasi
+rem Turkce karakterlerin her Windows dil ayarinda dogru islenmesi icin
+set "PYTHONUTF8=1"
 
 set "PYSURUM=3.12.8"
 set "PYZIP=python-%PYSURUM%-embed-amd64.zip"
