@@ -1,0 +1,87 @@
+KDV INCELEME CALISMASI - WINDOWS
+================================
+
+KURULUM YOKTUR. Klasoru istediginiz yere kopyalayin (Masaustu, Belgeler,
+USB bellek - fark etmez) ve icindeki
+
+    KDV Duzenleme.bat
+
+dosyasina cift tiklayin. Uygulama varsayilan tarayicinizda acilir.
+
+Kapatmak icin acilan siyah pencereyi kapatin.
+
+
+ILK CALISTIRMADA NE OLUR
+------------------------
+Baslatici once bilgisayarinizda Python 3 var mi diye bakar.
+
+  * Varsa            : dogrudan onu kullanir, hicbir sey indirmez.
+  * Yoksa            : tasinabilir Python'u (yaklasik 11 MB) bu klasorun
+                       icindeki "python" alt klasorune bir kereligine
+                       indirir ve uygulamayi acar. Yaklasik yarim dakika
+                       surer, sonraki acilislar aninda olur.
+
+Bu indirme bir KURULUM DEGILDIR:
+  - Sisteme hicbir sey yazilmaz, Program Files'a dokunulmaz
+  - PATH degistirilmez, kayit defterine kayit girilmez
+  - Yonetici yetkisi istenmez
+  - Kaldirmak icin klasoru silmeniz yeterlidir
+
+Indirilen "python" klasoruyle birlikte tum klasoru kopyalarsaniz, internete
+hic baglanmayan bir bilgisayarda da dogrudan calisir.
+
+
+INDIRME ENGELLENIRSE (kurum agi)
+--------------------------------
+Baslatici indiremezse ekranda yazacagi elle cozum sudur:
+
+  1) Su dosyayi indirin (baska bir bilgisayardan da olur):
+     https://www.python.org/ftp/python/3.12.8/python-3.12.8-embed-amd64.zip
+
+  2) Zip'in ICINDEKILERI, uygulama klasorunde "python" adli yeni bir
+     klasore cikarin. Sonuc soyle gorunmeli:
+
+        ...\kdv_uygulamasi\python\python.exe
+        ...\kdv_uygulamasi\main.py
+
+  3) "KDV Duzenleme.bat" dosyasini yeniden cift tiklayin.
+
+Alternatif olarak bilgisayara normal Python 3 kurulursa da calisir:
+https://www.python.org/downloads/windows/ - kurulum ekranindaki
+"Add python.exe to PATH" kutusunu isaretlemeyi unutmayin.
+
+
+MASAUSTU KISAYOLU (istege bagli)
+--------------------------------
+"KDV Duzenleme.bat" dosyasina sag tiklayin >
+    Gonder > Masaustu (kisayol olustur)
+
+
+SIK KARSILASILAN DURUMLAR
+-------------------------
+* "Windows bilgisayarinizi korudu" uyarisi: Internetten indirilen .bat
+  dosyalarinda SmartScreen bu uyariyi verir.
+  "Ek bilgi" > "Yine de calistir" ile devam edin.
+
+* Guvenlik duvari izin sorarsa: Uygulama yalnizca kendi bilgisayarinizi
+  dinler (127.0.0.1), disaridan erisime kapalidir. Izin vermeseniz de
+  calisir.
+
+* Port dolu: Uygulama zaten aciksa 8766 kullanilir; ikinci kopya 8767,
+  8768 ... diye ilerler. Acilan siyah pencerede yazan adresi kullanin.
+
+* 32 bit Windows: Yukaridaki zip 64 bit icindir. 32 bit bir makinede
+  ...-embed-win32.zip dosyasini indirin.
+
+
+VERILERINIZ NEREDE DURUYOR
+--------------------------
+Her sey uygulamanin bulundugu klasorde kalir; disariya hicbir veri gitmez.
+
+    veritabani\kdv.db   Kaydettiginiz calismalar
+    yedekler\           Aldiginiz yedekler
+    ciktilar\           Uretilen Excel dosyalari
+
+Klasoru baska bir bilgisayara kopyalarsaniz calismalariniz da beraberinde
+gider. Ayni klasor Linux'ta da calisir (orada calistir.sh kullanilir);
+veritabani dosyasi ikisinde ortaktir.

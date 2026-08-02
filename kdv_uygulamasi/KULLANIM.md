@@ -11,9 +11,14 @@ alır; hesap mantığı birebir aynıdır.
 python3 main.py
 ```
 
-veya `calistir.sh`. Tarayıcı `http://127.0.0.1:8766/` adresinde kendiliğinden
-açılır. Kurulum gerekmez; Excel çıktısı için gereken `openpyxl` kütüphanesi
-`lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
+veya Linux'ta `calistir.sh`, Windows'ta `KDV Duzenleme.bat`. Tarayıcı
+`http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
+Excel çıktısı için gereken `openpyxl` kütüphanesi `lib/` klasöründe birlikte
+gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
+
+Windows'ta bilgisayarda Python yoksa başlatıcı, taşınabilir Python'u klasörün
+içindeki `python\` altına bir kereliğine indirir — sisteme hiçbir şey kurmaz,
+PATH'e dokunmaz, yönetici yetkisi istemez. Ayrıntı: `KURULUM_WINDOWS.txt`.
 
 ## Kayıt modeli — önce anlayın
 

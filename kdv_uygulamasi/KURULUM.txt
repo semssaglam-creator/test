@@ -1,5 +1,8 @@
-KDV İNCELEME ÇALIŞMASI — KURULUM
-=================================
+KDV İNCELEME ÇALIŞMASI — KURULUM (LINUX)
+=========================================
+
+Windows kullanıyorsanız bu dosya yerine KURULUM_WINDOWS.txt dosyasına bakın;
+orada kurulum yoktur, "KDV Duzenleme.bat" dosyasına çift tıklamanız yeterlidir.
 
 Gereken tek şey Python 3'tür. Hemen her Linux dağıtımında kurulu gelir;
 kurulu değilse aşağıdaki "Sorun giderme" bölümüne bakın.
