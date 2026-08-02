@@ -11,6 +11,8 @@ Sunucu 127.0.0.1 adresine baglanir; disaridan erisime acilmaz.
 import json
 import os
 import posixpath
+import socket
+import socketserver
 import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -296,6 +298,38 @@ class Istekci(BaseHTTPRequestHandler):
         self.wfile.write(govde)
 
 
-def sunucu_baslat(port=8766):
+class _Sunucu(ThreadingHTTPServer):
+    daemon_threads = True
+    # Windows'ta SO_REUSEADDR, portu baskasi kullaniyorken de baglanmaya izin
+    # verir; bu durumda istekler sessizce yanlis surece gidebilir. Bu yuzden
+    # Windows'ta kapali tutulur ki dolu port durustce hata versin.
+    allow_reuse_address = os.name != "nt"
+
+    def __init__(self, adres, islevci):
+        # getfqdn() kimi Windows aglarinda ters DNS icin uzun sure bekletir;
+        # yerel sunucuda bu bilgiye ihtiyac yok
+        self.server_name = adres[0]
+        self.server_port = adres[1]
+        super().__init__(adres, islevci)
+
+    def server_bind(self):
+        # HTTPServer.server_bind() yerine dogrudan TCPServer'inki: getfqdn()
+        # cagrisi atlanir
+        socketserver.TCPServer.server_bind(self)
+        self.server_name = self.server_address[0]
+        self.server_port = self.server_address[1]
+
+
+class _Sunucu6(_Sunucu):
+    address_family = socket.AF_INET6
+
+
+def sunucu_baslat(port=8766, adres="127.0.0.1"):
+    """Yerel sunucuyu baslatir.
+
+    adres: "127.0.0.1" (IPv4) ya da "::1" (IPv6). Ikisi birden dinlenirse
+    tarayici "localhost" adresini hangisine cozerse cozsun ulasir.
+    """
     db.init_db()
-    return ThreadingHTTPServer(("127.0.0.1", port), Istekci)
+    sinif = _Sunucu6 if ":" in adres else _Sunucu
+    return sinif((adres, port), Istekci)

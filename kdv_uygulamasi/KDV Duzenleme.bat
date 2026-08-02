@@ -59,15 +59,26 @@ set "PY=python\python.exe"
 :calistir
 echo.
 echo   KDV Inceleme Calismasi baslatiliyor...
-echo   Tarayici kendiliginden acilmazsa adres cubuguna sunu yazin:
-echo.
-echo       http://127.0.0.1:8766/
-echo.
-echo   Kapatmak icin bu pencereyi kapatin ya da Ctrl+C tuslarina basin.
+echo   Adres birazdan asagida yazacak.
 echo.
 
-%PY% main.py
-if errorlevel 1 goto calismaHatasi
+rem %* : TANI.bat bu dosyayi --tani ile cagirir
+%PY% main.py %*
+set "SONUC=%ERRORLEVEL%"
+
+echo.
+if "%SONUC%"=="0" goto kapandi
+echo   Uygulama hata vererek kapandi (kod %SONUC%).
+echo   Ayrinti icin ayni klasordeki  baslatma_kaydi.txt  dosyasina bakin
+echo   ya da  TANI.bat  dosyasini calistirip ciktisini bildirin.
+echo.
+pause
+exit /b %SONUC%
+
+:kapandi
+echo   Uygulama kapandi.
+echo.
+pause
 goto son
 
 :indirmeHatasi
@@ -86,13 +97,6 @@ echo.
 echo   Alternatif: bilgisayara normal Python 3 kurarsaniz da calisir.
 echo     https://www.python.org/downloads/windows/
 echo     ^(kurulumda "Add python.exe to PATH" kutusunu isaretleyin^)
-echo.
-pause
-exit /b 1
-
-:calismaHatasi
-echo.
-echo   Uygulama beklenmedik bicimde kapandi. Yukaridaki mesaji okuyun.
 echo.
 pause
 exit /b 1

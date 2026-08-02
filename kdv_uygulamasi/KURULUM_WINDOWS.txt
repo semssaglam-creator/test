@@ -57,18 +57,49 @@ MASAUSTU KISAYOLU (istege bagli)
     Gonder > Masaustu (kisayol olustur)
 
 
-SIK KARSILASILAN DURUMLAR
--------------------------
+SORUN GIDERME
+-------------
+Once sunu bilin: siyah pencere artik kendiliginden KAPANMAZ. Bir aksilik
+olursa mesaji orada okuyabilirsiniz. Ayrica her acilista klasore
+
+    baslatma_kaydi.txt
+
+diye bir kayit dosyasi yazilir.
+
+Bir sey ters giderse klasordeki
+
+    TANI.bat
+
+dosyasina cift tiklayin. Ekrana ve ayni kayit dosyasina ayrintili bir rapor
+yazar (Python surumu, moduller, dinlenen adresler, erisim denemeleri).
+Bu raporu bildirmeniz sorunun bulunmasi icin yeterlidir.
+
+
+* "Sayfaya ulasilamiyor" / "Bu siteye ulasilamiyor"
+
+  En sik nedeni kurum bilgisayarlarindaki vekil sunucu (proxy) ayaridir.
+  Yaygin ayar "nokta icermeyen adresler icin vekil kullanma" seklindedir;
+  bu durumda http://localhost:8766/ dogrudan gider ama 127.0.0.1 vekile
+  yonlendirilir ve ulasilamaz.
+
+  Uygulama bu yuzden artik tarayiciyi localhost adresiyle acar ve acmadan
+  once kendi kendine erisebildigini sinar. Yine de olmazsa siyah pencerede
+  yazan IKI adresi de deneyin:
+
+      http://localhost:8766/
+      http://127.0.0.1:8766/
+
+  Ikisi de olmuyorsa TANI.bat ciktisini bildirin.
+
 * "Windows bilgisayarinizi korudu" uyarisi: Internetten indirilen .bat
   dosyalarinda SmartScreen bu uyariyi verir.
   "Ek bilgi" > "Yine de calistir" ile devam edin.
 
 * Guvenlik duvari izin sorarsa: Uygulama yalnizca kendi bilgisayarinizi
-  dinler (127.0.0.1), disaridan erisime kapalidir. Izin vermeseniz de
-  calisir.
+  dinler, disaridan erisime kapalidir. Izin vermeseniz de calisir.
 
 * Port dolu: Uygulama zaten aciksa 8766 kullanilir; ikinci kopya 8767,
-  8768 ... diye ilerler. Acilan siyah pencerede yazan adresi kullanin.
+  8768 ... diye ilerler. Siyah pencerede yazan adresi kullanin.
 
 * 32 bit Windows: Yukaridaki zip 64 bit icindir. 32 bit bir makinede
   ...-embed-win32.zip dosyasini indirin.

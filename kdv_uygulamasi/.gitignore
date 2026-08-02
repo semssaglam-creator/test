@@ -3,3 +3,4 @@ ciktilar/*.xlsx
 yedekler/*.db
 __pycache__/
 *.pyc
+baslatma_kaydi.txt
