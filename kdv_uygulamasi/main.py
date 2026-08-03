@@ -19,6 +19,7 @@ import os
 import socket
 import sys
 import threading
+import time
 import traceback
 import webbrowser
 
@@ -34,14 +35,16 @@ _kayit_satirlari = []
 def yaz(metin=""):
     """Ekrana ve baslatma kaydina birlikte yazar."""
     _kayit_satirlari.append(metin)
+    # Masaustu kisayolundan acildiginda (Terminal=false) stdout kapali
+    # olabilir; yazamamak uygulamayi durdurmamali
     try:
         print(metin)
-    except Exception:                                     # konsol kodlamasi
-        print(metin.encode("ascii", "replace").decode("ascii"))
-    try:
         sys.stdout.flush()
     except Exception:
-        pass
+        try:
+            print(metin.encode("ascii", "replace").decode("ascii"))
+        except Exception:
+            pass
 
 
 def kaydi_yaz():
@@ -232,10 +235,17 @@ def main():
         except Exception as exc:                          # tarayici yoksa sorun degil
             yaz("(Tarayici acilamadi: %s - adresi elle yazin.)" % exc)
 
-    threading.Timer(0.5, tarayiciyi_ac).start()
+    # daemon: tarayiciyi acan cagri (xdg-open vb.) takilirsa Ctrl+C ile
+    # kapanmayi engellememeli
+    zamanlayici = threading.Timer(0.5, tarayiciyi_ac)
+    zamanlayici.daemon = True
+    zamanlayici.start()
     try:
+        # Kisa araliklarla uyumak Ctrl+C'nin (SIGINT) her seferinde ana is
+        # parcaciginda yakalanmasini saglar; uzun bir kilit bekleyisinde
+        # sinyal gozden kacabiliyor
         while True:
-            threading.Event().wait(3600)
+            time.sleep(0.5)
     except KeyboardInterrupt:
         yaz("")
         yaz("Kapatiliyor...")
