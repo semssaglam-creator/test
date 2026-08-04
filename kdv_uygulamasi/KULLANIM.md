@@ -11,7 +11,7 @@ alır; hesap mantığı birebir aynıdır.
 python3 main.py
 ```
 
-veya kurulum sonrası menüdeki / masaüstündeki kısayoldan. Tarayıcı
+ya da klasördeki **KDV Uygulamasini Baslat** dosyasına çift tıklayarak. Tarayıcı
 `http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
 Excel çıktısı için `openpyxl`, beyanname PDF'leri için `pypdf` kütüphanesi
 `lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
@@ -86,10 +86,14 @@ bildirim şeridinde görünür.
 Uygulama hiç açılmıyorsa önce şunu bilin: çoğu Linux masaüstünde bir `.sh`
 dosyasına **çift tıklamak onu çalıştırmaz** — dosya yöneticisi ya metin
 düzenleyicide açar ya da hiçbir şey yapmaz. Ekranda hiçbir belirti olmadığı
-için uygulama bozuk sanılır. Klasörde "Terminalde Aç" deyip `bash kur.sh`
-çalıştırın; kısayol kurulur ve uygulama açılır.
+için uygulama bozuk sanılır.
 
-Yine de açılmıyorsa terminalde `python3 main.py` çalıştırın; hata varsa
+Bunun yerine klasördeki **KDV Uygulamasini Baslat** dosyasına çift tıklayın.
+İlk seferde bir şey olmazsa dosyaya sağ tıklayıp "Çalıştırmaya İzin Ver"
+deyin (ya da Özellikler > İzinler > "program olarak çalışmasına izin ver"),
+sonra yeniden çift tıklayın. Bu izin bir kez verilir.
+
+Terminal kullanabiliyorsanız `python3 main.py` çalıştırın; hata varsa
 ekrana yazar.
 
 Beyanname PDF'i okunamazsa yalnızca o ekran hata verir. Uygulamanın geri

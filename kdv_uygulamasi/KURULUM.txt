@@ -12,47 +12,55 @@ yere koyabilirsiniz (örneğin Belgeler içine). Uygulama bulunduğu yerden
 çalışır, sisteme dosya kopyalamaz.
 
 
-2. KURULUMU ÇALIŞTIRIN  (bir kereye mahsus, terminalden)
---------------------------------------------------------
-Klasörün içinde boş bir yere SAĞ TIKLAYIN, "Terminalde Aç" deyin ve şunu
-yazıp Enter'a basın:
+2. BAŞLATIN  (terminal gerekmez)
+---------------------------------
+Klasörün içindeki
+
+    KDV Uygulamasini Baslat
+
+dosyasına ÇİFT TIKLAYIN. Uygulama açılır, tarayıcınızda kendiliğinden bir
+sekme gelir. Kurulum yok, terminal yok.
+
+Çift tıklayınca bir şey olmazsa bir kereye mahsus şunu yapın:
+  a) Dosyaya SAĞ tıklayın.
+  b) "Çalıştırmaya İzin Ver" / "Allow Launching" varsa tıklayın.
+     Yoksa: Özellikler > İzinler > "Dosyanın program olarak çalışmasına
+     izin ver" kutusunu işaretleyin, pencereyi kapatın.
+  c) Yeniden çift tıklayın.
+
+Bu izin bir kez verilir; sonrasında her zaman çift tıklayarak açılır.
+
+NOT: calistir.sh dosyasına çift tıklamak çoğu masaüstünde İŞE YARAMAZ.
+Dosya yöneticisi .sh betiklerini çalıştırmaz; ya metin düzenleyicide açar
+ya da hiçbir şey yapmaz. Ekranda hiçbir belirti çıkmadığı için uygulama
+bozuk sanılır. Bunun yerine yukarıdaki başlatıcıyı kullanın.
+
+
+3. İSTERSENİZ MENÜYE EKLEYİN  (isteğe bağlı, terminal ister)
+-------------------------------------------------------------
+Uygulamanın menüde ve masaüstünde görünmesini isterseniz, klasörde
+"Terminalde Aç" deyip şunu çalıştırın:
 
     bash kur.sh
 
-Kurulum birkaç saniye sürer, yönetici parolası istemez. Biter bitmez
-uygulama kendiliğinden açılır.
-
-ÖNEMLİ — NEDEN TERMİNAL:
-Çoğu Linux masaüstünde (GNOME/Nautilus başta olmak üzere) bir .sh
-dosyasına ÇİFT TIKLAMAK onu ÇALIŞTIRMAZ. Dosya yöneticisi ya metin
-düzenleyicide açar ya da hiçbir şey yapmaz — ekranda hiçbir belirti
-olmadığı için "uygulama açılmıyor" gibi görünür. Bu yüzden kurulum bir
-kez terminalden yapılır; sonrasında menü kısayolu kullanılır ve bir daha
-terminale ihtiyacınız olmaz.
+Terminal kullanamıyorsanız buna hiç gerek yok; 2. adımdaki başlatıcı tek
+başına yeterlidir.
 
 
-3. ÇALIŞTIRIN
--------------
-Kurulumdan SONRA uygulamayı şu iki yoldan biriyle başlatın:
+YENİ SÜRÜME GEÇERKEN
+--------------------
+En kolayı: yeni sürümü, ESKİ klasörün ÜZERİNE kopyalamaktır. Yeni klasörün
+içindekilerin tümünü seçip eski klasöre sürükleyin, sorulunca "Değiştir" /
+"Birleştir" deyin.
 
-  * Uygulamalar menüsünde "KDV İnceleme Çalışması"
-  * Masaüstündeki kısayola çift tıklayarak
+Böylece kayıtlı çalışmalarınız yerinde kalır: veritabanı  veritabani/
+klasöründe durur ve pakette o dosya olmadığı için silinmez. Menü kısayolu
+kullanıyorsanız o da aynı klasörü göstermeye devam eder.
 
-Klasördeki calistir.sh dosyasına çift tıklamayı beklemeyin; yukarıda
-anlatılan nedenle çoğu masaüstünde çalışmaz.
-
-Uygulama açılınca tarayıcınızda kendiliğinden bir sekme açılır.
-Kapatmak için açılan siyah terminal penceresini kapatın.
-
-Menüde hemen görünmezse oturumu kapatıp açın.
-
-
-YENİ SÜRÜM KURARKEN DİKKAT
---------------------------
-Kısayol, kurulumu yaptığınız ANDAKİ klasörü açar. Yeni sürümü BAŞKA bir
-klasöre çıkarırsanız eski kısayol hâlâ ESKİ klasörü başlatır; güncelleme
-yapmışsınız gibi görünmez. Yeni klasörde  bash kur.sh  komutunu yeniden
-çalıştırın — kısayol yeni klasörü gösterecek biçimde güncellenir.
+Yeni sürümü AYRI bir klasöre çıkarırsanız iki kopya birden durur; menü
+kısayolu eskisini açmaya devam eder ve güncelleme yapmamışsınız gibi
+görünür. Bu durumda ya yeni klasörde  bash kur.sh  çalıştırın ya da yeni
+klasördeki başlatıcıya çift tıklayın.
 
 
 KULLANIM

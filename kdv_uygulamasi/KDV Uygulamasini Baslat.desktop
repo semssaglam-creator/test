@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=KDV İnceleme Çalışması
+GenericName=KDV beyan kontrolü
+Comment=Çift tıklayarak başlatın; tarayıcıda kendiliğinden açılır
+Exec=python3 -c "import os,sys,urllib.parse as u;p=u.unquote(sys.argv[1]);p=p[7:] if p.startswith('file://') else p;os.chdir(os.path.dirname(os.path.abspath(p)));os.execvp('python3',['python3','main.py'])" %k
+Icon=x-office-spreadsheet
+Terminal=false
+Categories=Office;Finance;Spreadsheet;
+Keywords=KDV;vergi;beyanname;inceleme;matrah;devir;
+StartupNotify=true
