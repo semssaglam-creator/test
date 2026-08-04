@@ -15,6 +15,15 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(BASE_DIR, "lib"))
 sys.path.insert(0, BASE_DIR)
+# lib_ek SONA eklenir, basa degil.
+#
+# Icinde yalnizca baska paketlerin de kullandigi ortak bir modul durur
+# (typing_extensions). Basa eklenirse bilgisayarda kurulu surumu golgeler ve
+# ona guvenen paketleri bozar: bir kez, sistemdeki Pillow bizim surumumuzu
+# yukleyip AttributeError firlatmis, openpyxl bunu ImportError beklediginden
+# yakalayamamis ve uygulama hic acilmamisti. Sona eklenince sistemdeki surum
+# varsa o kullanilir, yoksa bizimki yedek olarak devreye girer.
+sys.path.append(os.path.join(BASE_DIR, "lib_ek"))
 
 PORT = 8766
 HATA_DOSYASI = "KDV HATA - BUNU GONDERIN.txt"
@@ -64,7 +73,27 @@ except BaseException:
     raise
 
 
+def _baslaticiyi_onar():
+    """calistir.sh'in "calistirilabilir" isaretini gerekiyorsa geri koyar.
+
+    Uygulama yeni bir surumle guncellenirken dosyalar kopyalanip yapistirilinca
+    bu isaret kaybolabiliyor. Kisayol calistir.sh'i calistiramiyor, ekranda
+    hicbir sey olmuyor ve uygulama "hic acilmiyor" gorunuyor. Uygulama bir kez
+    calistiysa bunu kendisi duzeltir.
+
+    Basarisiz olmasi onemsizdir; acilisi hicbir kosulda engellemez.
+    """
+    try:
+        yol = os.path.join(BASE_DIR, "calistir.sh")
+        if os.path.isfile(yol) and not os.access(yol, os.X_OK):
+            os.chmod(yol, os.stat(yol).st_mode | 0o111)
+            print("Baslatici onarildi: calistir.sh calistirilabilir yapildi.")
+    except OSError:
+        pass
+
+
 def main():
+    _baslaticiyi_onar()
     port = PORT
     sunucu = None
     # Port doluysa (ornegin uygulama zaten acik) sonraki portlari dene

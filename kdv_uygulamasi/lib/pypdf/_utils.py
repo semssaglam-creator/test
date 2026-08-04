@@ -38,13 +38,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import DEFAULT_BUFFER_SIZE
 from os import SEEK_CUR
-from re import Pattern
 from typing import (
     IO,
     Any,
-    NoReturn,
+    Dict,
+    List,
     Optional,
+    Pattern,
+    Tuple,
     Union,
+    overload,
 )
 
 if sys.version_info[:2] >= (3, 10):
@@ -61,25 +64,23 @@ else:
 from .errors import (
     STREAM_TRUNCATED_PREMATURELY,
     DeprecationError,
-    LimitReachedError,
     PdfStreamError,
 )
 
-TransformationMatrixType: TypeAlias = tuple[
-    tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]
+TransformationMatrixType: TypeAlias = Tuple[
+    Tuple[float, float, float], Tuple[float, float, float], Tuple[float, float, float]
 ]
-CompressedTransformationMatrix: TypeAlias = tuple[
+CompressedTransformationMatrix: TypeAlias = Tuple[
     float, float, float, float, float, float
 ]
 
 StreamType = IO[Any]
-BinaryStreamType = IO[bytes]
 StrByteType = Union[str, StreamType]
 
 
 def parse_iso8824_date(text: Optional[str]) -> Optional[datetime]:
     orgtext = text
-    if not text:
+    if text is None:
         return None
     if text[0].isdigit():
         text = "D:" + text
@@ -183,7 +184,7 @@ def read_until_whitespace(stream: StreamType, maxchars: Optional[int] = None) ->
     return txt
 
 
-def read_non_whitespace(stream: BinaryStreamType) -> bytes:
+def read_non_whitespace(stream: StreamType) -> bytes:
     """
     Find and read the next non-whitespace character (ignores whitespace).
 
@@ -244,54 +245,33 @@ def skip_over_comment(stream: StreamType) -> None:
                 raise PdfStreamError("File ended unexpectedly.")
 
 
-def read_until_regex(*, stream: StreamType, regex: Pattern[bytes], length: int = sys.maxsize) -> bytes:
+def read_until_regex(stream: StreamType, regex: Pattern[bytes]) -> bytes:
     """
     Read until the regular expression pattern matched (ignore the match).
     Treats EOF on the underlying stream as the end of the token to be matched.
 
     Args:
-        stream: The stream to read from.
-        regex: The pattern to search for.
-        length: The (approximated) maximum number of bytes to read before raising an exception.
+        regex: re.Pattern
 
     Returns:
         The read bytes.
 
     """
-    parts: list[bytes] = []
-    total_length = 0
-    tail = b""
-    chunk_size = 16
+    name = b""
     while True:
-        token = stream.read(chunk_size)
-        if not token:
-            return b"".join(parts)
-        token_length = len(token)
-        if (current_length := total_length + token_length) >= length:
-            raise LimitReachedError(
-                f"Read stream length of {current_length} exceeds maximum allowed length of {length}."
-            )
-
-        # Search overlap of previous tail + new chunk to catch
-        # multi-byte regex matches spanning chunk boundaries.
-        current_buffer = tail + token
-        search_match = regex.search(current_buffer)
-        parts.append(token)
-        if search_match is not None:
-            overlap = len(tail)
-            actual_start = total_length - overlap + search_match.start()
-            stream.seek(actual_start - total_length - token_length, 1)
-            return b"".join(parts)[:actual_start]
-        total_length += token_length
-
-        # Fixed overlap: 16 bytes is sufficient for the short
-        # delimiter patterns used in PDF parsing.
-        tail = token[-16:]
-        if chunk_size < 8192:
-            chunk_size <<= 1
+        tok = stream.read(16)
+        if not tok:
+            return name
+        m = regex.search(name + tok)
+        if m is not None:
+            stream.seek(m.start() - (len(name) + len(tok)), 1)
+            name = (name + tok)[: m.start()]
+            break
+        name += tok
+    return name
 
 
-def read_block_backwards(stream: BinaryStreamType, to_read: int) -> bytes:
+def read_block_backwards(stream: StreamType, to_read: int) -> bytes:
     """
     Given a stream at position X, read a block of size to_read ending at position X.
 
@@ -395,11 +375,32 @@ def mark_location(stream: StreamType) -> None:
     stream.seek(-radius, 1)
 
 
+@overload
+def ord_(b: str) -> int:
+    ...
+
+
+@overload
+def ord_(b: bytes) -> bytes:
+    ...
+
+
+@overload
+def ord_(b: int) -> int:
+    ...
+
+
+def ord_(b: Union[int, str, bytes]) -> Union[int, bytes]:
+    if isinstance(b, str):
+        return ord(b)
+    return b
+
+
 def deprecate(msg: str, stacklevel: int = 3) -> None:
     warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel)
 
 
-def deprecation(msg: str) -> NoReturn:
+def deprecation(msg: str) -> None:
     raise DeprecationError(msg)
 
 
@@ -411,7 +412,7 @@ def deprecate_with_replacement(old_name: str, new_name: str, removed_in: str) ->
     )
 
 
-def deprecation_with_replacement(old_name: str, new_name: str, removed_in: str) -> NoReturn:
+def deprecation_with_replacement(old_name: str, new_name: str, removed_in: str) -> None:
     """Raise an exception that a feature was already removed, but has a replacement."""
     deprecation(
         f"{old_name} is deprecated and was removed in pypdf {removed_in}. Use {new_name} instead."
@@ -423,12 +424,12 @@ def deprecate_no_replacement(name: str, removed_in: str) -> None:
     deprecate(f"{name} is deprecated and will be removed in pypdf {removed_in}.", 4)
 
 
-def deprecation_no_replacement(name: str, removed_in: str) -> NoReturn:
+def deprecation_no_replacement(name: str, removed_in: str) -> None:
     """Raise an exception that a feature was already removed without replacement."""
     deprecation(f"{name} is deprecated and was removed in pypdf {removed_in}.")
 
 
-def logger_error(message: str, *, source: str, **values: Any) -> None:
+def logger_error(msg: str, src: str) -> None:
     """
     Use this instead of logger.error directly.
 
@@ -437,13 +438,10 @@ def logger_error(message: str, *, source: str, **values: Any) -> None:
     See the docs on when to use which:
     https://pypdf.readthedocs.io/en/latest/user/suppress-warnings.html
     """
-    if values:
-        logging.getLogger(source).error(message, values)
-    else:
-        logging.getLogger(source).error(message)
+    logging.getLogger(src).error(msg)
 
 
-def logger_warning(message: str, *, source: str, **values: Any) -> None:
+def logger_warning(msg: str, src: str) -> None:
     """
     Use this instead of logger.warning directly.
 
@@ -459,17 +457,11 @@ def logger_warning(message: str, *, source: str, **values: Any) -> None:
       pypdf could apply a robustness fix to still read it. This applies mainly
       to strict=False mode.
     """
-    if values:
-        logging.getLogger(source).warning(message, values)
-    else:
-        # Keep parity with logger_error and support plain warning messages.
-        # Passing an empty dict to logging is not equivalent to passing no args:
-        # plain messages would fail while being formatted.
-        logging.getLogger(source).warning(message)
+    logging.getLogger(src).warning(msg)
 
 
 def rename_kwargs(
-    func_name: str, kwargs: dict[str, Any], aliases: dict[str, str], fail: bool = False
+    func_name: str, kwargs: Dict[str, Any], aliases: Dict[str, str], fail: bool = False
 ) -> None:
     """
     Helper function to deprecate arguments.
@@ -597,7 +589,7 @@ class Version:
         self.version_str = version_str
         self.components = self._parse_version(version_str)
 
-    def _parse_version(self, version_str: str) -> list[tuple[int, str]]:
+    def _parse_version(self, version_str: str) -> List[Tuple[int, str]]:
         components = version_str.split(".")
         parsed_components = []
         for component in components:

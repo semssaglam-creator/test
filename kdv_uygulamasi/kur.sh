@@ -34,6 +34,13 @@ mkdir -p "$IKON_DIR"
 cp -f "$UYG_DIZIN/ikon.png" "$IKON_DIR/$KISAYOL_ADI.png"
 
 # --- Masaustu girdisini olustur ---------------------------------------------
+#
+# Kisayol calistir.sh'i degil dogrudan "python3 main.py" komutunu calistirir.
+# Sebep: dosyalar kopyalanip yapistirilarak guncellendiginde calistir.sh'in
+# "calistirilabilir" isareti kaybolabiliyor; kisayol o zaman betigi
+# calistiramiyor ve ekranda hicbir sey olmuyor. main.py'nin boyle bir isarete
+# ihtiyaci yok, python3 zaten PATH uzerinde. Path= satiri calisma klasorunu
+# belirledigi icin goreli komut yeterlidir.
 mkdir -p "$UYG_DIR"
 MASAUSTU_GIRDI="$UYG_DIR/$KISAYOL_ADI.desktop"
 cat > "$MASAUSTU_GIRDI" <<GIRDI
@@ -43,7 +50,7 @@ Version=1.0
 Name=KDV İnceleme Çalışması
 GenericName=KDV beyan kontrolü
 Comment=KDV beyannamelerini kontrol eder, matrah ve indirim eleştirilerini dönemler arası devir zinciriyle hesaplar
-Exec="$UYG_DIZIN/calistir.sh"
+Exec=python3 main.py
 Path=$UYG_DIZIN
 Icon=$KISAYOL_ADI
 Terminal=false

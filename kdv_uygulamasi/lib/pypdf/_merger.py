@@ -1,4 +1,4 @@
-# Copyright (c) 2023, exiledkingcc
+# Copyright (c) 2006, Mathieu Fenniak
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,13 +26,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 
-class CryptBase:
-    def encrypt(self, data: bytes) -> bytes:  # pragma: no cover
-        return data
-
-    def decrypt(self, data: bytes) -> bytes:  # pragma: no cover
-        return data
+from ._utils import (
+    deprecation_with_replacement,
+)
 
 
-class CryptIdentity(CryptBase):
-    pass
+class PdfMerger:
+    """
+    Use :class:`PdfWriter` instead.
+
+    .. deprecated:: 5.0.0
+    """
+
+    def __init__(self) -> None:
+        deprecation_with_replacement("PdfMerger", "PdfWriter", "5.0.0")

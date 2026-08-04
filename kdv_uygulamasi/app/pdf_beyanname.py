@@ -30,6 +30,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LIB_DIR = os.path.join(BASE_DIR, "lib")
 if LIB_DIR not in sys.path:
     sys.path.insert(0, LIB_DIR)
+# pypdf, Python 3.11'den eskisinde typing_extensions'a ihtiyac duyar.
+# Sona eklenir; gerekcesi main.py'de aciklanmistir (kurulu surumu golgelememek).
+EK_LIB_DIR = os.path.join(BASE_DIR, "lib_ek")
+if EK_LIB_DIR not in sys.path:
+    sys.path.append(EK_LIB_DIR)
 
 AYLAR_PDF = {
     "OCAK": 1, "SUBAT": 2, "MART": 3, "NISAN": 4, "MAYIS": 5, "HAZIRAN": 6,
