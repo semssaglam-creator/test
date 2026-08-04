@@ -125,6 +125,7 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_response(kod)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(govde)))
+        self._onbellek_kapali()
         self.end_headers()
         self.wfile.write(govde)
 
@@ -150,6 +151,11 @@ class Istekci(BaseHTTPRequestHandler):
             if yol in ("/", "/index.html"):
                 self._dosya_gonder(os.path.join(WEB_DIR, "index.html"),
                                    "text/html; charset=utf-8")
+            elif yol in ("/favicon.ico", "/ikon.png"):
+                # Yoksa tarayici konsoluna her acilista 404 dusuyordu; gercek
+                # hatalari ararken yanilticiydi
+                self._dosya_gonder(os.path.join(BASE_DIR, "ikon.png"),
+                                   "image/png", onbellek_kapali=False)
             elif yol == "/api/tanimlar":
                 self._json_yanit({
                     "satirlar": [{"kod": k, "etiket": e, "baslik": b,
@@ -347,7 +353,19 @@ class Istekci(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(govde)
 
-    def _dosya_gonder(self, dosya_yolu, icerik_turu):
+    def _onbellek_kapali(self):
+        """Tarayici hicbir seyi saklamasin.
+
+        Uygulama guncellendiginde tarayicinin sakladigi eski arayuz yeni
+        sunucuyla birlikte calisirsa, sayfa acilir ama beklenmedik bicimde
+        bozuk davranir ve ekranda bir hata gorunmez. Yerel bir uygulamada
+        onbellegin kazanci yok, riski var.
+        """
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+
+    def _dosya_gonder(self, dosya_yolu, icerik_turu, onbellek_kapali=True):
         if not os.path.isfile(dosya_yolu):
             self._hata("Dosya bulunamadı", 404)
             return
@@ -356,6 +374,8 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", icerik_turu)
         self.send_header("Content-Length", str(len(govde)))
+        if onbellek_kapali:
+            self._onbellek_kapali()
         self.end_headers()
         self.wfile.write(govde)
 

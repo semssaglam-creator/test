@@ -65,6 +65,25 @@ karşılaştırabilirsiniz.
 Yüklenen beyannameler çalışmayla birlikte kaydedilir; çalışmayı yeniden
 açtığınızda tablolar olduğu gibi gelir.
 
+
+## Bir şey ters giderse
+
+Uygulama sessizce bozulmaz: yakalanmamış her hata sayfanın en üstünde kırmızı
+bir bantta görünür ve **Kopyala** düğmesiyle metni alabilirsiniz.
+
+Sağ üstteki **Tanı** düğmesi tarayıcı tarafındaki durumu tek metin halinde
+toplar: tanımlar yüklendi mi, kaç yıl / kaç beyanname var, API çağrılarının
+durum kodları ve süreleri, tarayıcının gerekli özellikleri destekleyip
+desteklemediği. Bir aksilikte bu metni bildirmeniz sorunun bulunması için
+yeterlidir.
+
+Sunucu tarafı için `python3 main.py --tani` (Windows'ta `TANI.bat`) çalıştırın;
+Python sürümü, kütüphaneler, dinlenen adresler ve erişim denemeleri raporlanır.
+
+Sayfa hiçbir zaman tarayıcı önbelleğine alınmaz. Uygulamayı güncellediğinizde
+tarayıcının sakladığı eski arayüz yeni sunucuyla karşılaşmaz; bu durum "açılıyor
+ama çalışmıyor" gibi görünüp ekranda hiçbir hata vermeyebiliyordu.
+
 ## Kayıt modeli — önce anlayın
 
 Uygulama, üzerinde çalıştığınız veriyi **kendiliğinden saklamaz**. Yapıştırdığınız
