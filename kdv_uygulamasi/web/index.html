@@ -99,6 +99,10 @@
   table.izgara button.mini { background: #e4e9ef; border: 1px solid #c3ccd6; border-radius: 3px; font-size: 11px; padding: 2px 6px; cursor: pointer; }
   table.izgara button.mini:hover { background: #d4dce5; }
   td.fark-var { background: #fdece8; color: #a33; font-weight: 600; }
+  td.sessiz { color: #8a97a5; font-style: italic; }
+  td.duzeltme-satir { padding-left: 18px; }
+  tr.donem-basi td { border-top: 2px solid #c3ccd6; }
+  td.gerekce { max-width: 320px; white-space: normal; font-size: 12px; color: #4a5a6a; }
   td.negatif { color: #a33; }
   tr.toplam td { background: #e2efda; font-weight: 700; }
   tr.yil-ayirac td { background: #dbe4ee; font-weight: 600; }
@@ -334,7 +338,9 @@
   <div class="kart" id="beyannameKart" style="display:none;">
     <h2>Genel Bakış</h2>
     <div class="yardim" style="margin-bottom:10px;">
-      Her dönem için kaç beyanname verildiği ve ilk beyandan son hale ne değiştiği.
+      Her beyanname ayrı satırda: kanuni süresinde verilen beyan ve ardından
+      her düzeltme. Farklar bir önceki beyannameye göredir. Hiçbir tutarı
+      değiştirmeyen düzeltmeler de listelenir; o satırda "değişiklik yok" yazar.
     </div>
     <div class="kaydir"><table class="tablo" id="bnGenelTablo"></table></div>
   </div>
@@ -2232,44 +2238,65 @@ function yuklenenleriCiz() {
 function bnGenelCiz() {
   const tablo = $("bnGenelTablo");
   tablo.innerHTML = "";
-  const basliklar = ["Dönem", "Beyanname", "Değişen satır", "Matrah (ilk)",
-                     "Matrah (son)", "Matrah farkı", "Ödenecek (ilk)",
-                     "Ödenecek (son)", "Ödenecek farkı", "Devir (ilk)",
-                     "Devir (son)"];
+  // Her beyanname kendi satirinda: donem basina tek satir yok. Bir donemde
+  // kac beyanname varsa o kadar satir olur; fark cikmayan duzeltmeler de
+  // yazilir, farklari sifir gorunur.
+  const basliklar = ["Dönem", "Beyanname", "Tarih", "Değişen satır", "Matrah",
+                     "Matrah farkı", "Ödenecek KDV", "Ödenecek farkı",
+                     "Devreden KDV", "Devir farkı", "Düzeltme gerekçesi"];
   const tr = document.createElement("tr");
   basliklar.forEach((b, i) => {
     const th = hucre("th", b);
-    if (i > 0) th.className = "sag";
+    if (i > 3) th.className = "sag";
     tr.appendChild(th);
   });
   tablo.appendChild(tr);
 
+  let oncekiDonem = null;
   durum.bnOzet.genel_bakis.forEach((g) => {
     const satir = document.createElement("tr");
-    const ad = hucre("td", g.etiket);
-    ad.style.cursor = "pointer";
-    ad.title = "Dönem detayına git";
-    ad.addEventListener("click", () => {
-      durum.bnDonem = g.anahtar; bnDetayCiz();
-      $("beyannameDetayKart").scrollIntoView({ behavior: "smooth" });
-    });
+    // Ayni donemin ikinci ve sonraki beyannamelerinde donem adi tekrarlanmaz;
+    // boylece bir donemin kac beyannamesi oldugu bir bakista gorunur.
+    const yeniDonem = g.anahtar !== oncekiDonem;
+    if (yeniDonem && oncekiDonem !== null) satir.classList.add("donem-basi");
+    const ad = hucre("td", yeniDonem ? g.etiket : "");
+    if (yeniDonem) {
+      ad.style.cursor = "pointer";
+      ad.title = "Dönem detayına git";
+      ad.addEventListener("click", () => {
+        durum.bnDonem = g.anahtar; bnDetayCiz();
+        $("beyannameDetayKart").scrollIntoView({ behavior: "smooth" });
+      });
+    }
     satir.appendChild(ad);
+    oncekiDonem = g.anahtar;
+
+    const surum = hucre("td", g.surum_etiketi);
+    if (g.tur === "duzeltme") surum.classList.add("duzeltme-satir");
+    satir.appendChild(surum);
+    satir.appendChild(hucre("td", g.tarih || "—"));
+
+    const degisen = hucre("td", g.ilk_mi ? "—"
+                          : (g.degisen_satir ? String(g.degisen_satir) : "değişiklik yok"));
+    degisen.className = "sag";
+    if (!g.ilk_mi && !g.degisen_satir) degisen.classList.add("sessiz");
+    satir.appendChild(degisen);
+
     const sayilar = [
-      [g.surum_sayisi + (g.duzeltme_sayisi ? ` (${g.duzeltme_sayisi} düzeltme)` : ""), false],
-      [g.degisen_satir, false],
-      [tl(g.matrah_ilk), false], [tl(g.matrah_son), false], [tl(g.matrah_fark), true],
-      [tl(g.odenecek_ilk), false], [tl(g.odenecek_son), false], [tl(g.odenecek_fark), true],
-      [tl(g.devir_ilk), false], [tl(g.devir_son), false],
+      [g.matrah, false], [g.matrah_fark, true],
+      [g.odenecek, false], [g.odenecek_fark, true],
+      [g.devir, false], [g.devir_fark, true],
     ];
-    sayilar.forEach(([deger, farkMi], i) => {
-      const td = hucre("td", String(deger));
+    sayilar.forEach(([deger, farkMi]) => {
+      const td = hucre("td", farkMi && g.ilk_mi ? "—" : tl(deger));
       td.className = "sayi";
-      if (farkMi && Math.abs(parseFloat(String(deger).replace(/\./g, "").replace(",", ".")) || 0) > 0.005) {
-        td.classList.add("fark-var");
-      }
-      if (i < 2) td.className = "sag";
+      if (farkMi && !g.ilk_mi && Math.abs(deger) > 0.005) td.classList.add("fark-var");
       satir.appendChild(td);
     });
+
+    const gerekce = hucre("td", g.gerekce || "");
+    gerekce.className = "gerekce";
+    satir.appendChild(gerekce);
     tablo.appendChild(satir);
   });
 }

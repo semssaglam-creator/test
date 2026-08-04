@@ -41,7 +41,7 @@ yanında uyarı rozeti çıkar.
 
 | Bölüm | Ne gösterir |
 |---|---|
-| Genel Bakış | Her dönem için kaç beyanname verildiği, ilk beyandan son hale matrah / ödenecek / devir farkı |
+| Genel Bakış | **Her beyanname ayrı satırda**: kanuni beyan ve ardından her düzeltme. Tutarlar o beyannamenin kendi rakamları, farklar bir önceki beyannameye göre. Hiçbir tutarı değiştirmeyen düzeltmeler de listelenir ("değişiklik yok") |
 | Dönem Detayı | Satır satır tablo: **İlk beyan · 1. düzeltme · 2. düzeltme … · Fark (son − ilk)**. Değişen hücreler vurgulanır; istenirse yalnızca değişen satırlar gösterilir |
 | Her düzeltmede ne değişti | Her düzeltmenin bir öncekine göre neyi, hangi tutardan hangi tutara taşıdığı |
 

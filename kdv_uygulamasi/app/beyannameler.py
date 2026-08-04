@@ -36,10 +36,25 @@ def _surum_etiketi(tur, sira):
 
 
 def _ayni_mi(a, b):
-    """Iki beyannamenin ayni olup olmadigi (mukerrer yukleme denetimi)."""
+    """Iki kaydin ayni beyanname olup olmadigi (mukerrer yukleme denetimi).
+
+    Olcut, ayni BEYANNAMENIN iki kez yuklenmis olmasidir; rakamlarin ayni
+    olmasi degil. Bir duzeltme beyannamesi onceki beyanla birebir ayni
+    tutarlari tasiyor olabilir (ornegin yalnizca bir bilgi alani duzeltilmis
+    olabilir); bu yine de ayri bir beyannamedir ve listede ayri satir olarak
+    gorunmelidir. Once rakamlara bakan eski olcut boyle beyannameleri
+    sessizce eliyordu.
+    """
     if a.get("onay_ts") and a.get("onay_ts") == b.get("onay_ts"):
         return True
-    return a.get("degerler") == b.get("degerler")
+    if a.get("kaynak") and a.get("kaynak") == b.get("kaynak"):
+        return True
+    # Ikisinde de onay damgasi ve kaynak adi yoksa elde ayirt edici bir sey
+    # kalmaz; o zaman rakamlara bakilir.
+    if not (a.get("onay_ts") or b.get("onay_ts")
+            or a.get("kaynak") or b.get("kaynak")):
+        return a.get("degerler") == b.get("degerler")
+    return False
 
 
 def duzenle(beyannameler):
@@ -78,8 +93,9 @@ def duzenle(beyannameler):
             ikiz = next((v for v in benzersiz if _ayni_mi(v, b)), None)
             if ikiz:
                 uyarilar.append(
-                    "%s ile %s aynı beyanname görünüyor; ikincisi kullanılmadı."
-                    % (ikiz.get("kaynak") or "?", b.get("kaynak") or "?"))
+                    "%s ile %s aynı beyanname (aynı onay zamanı/dosya); ikincisi "
+                    "kullanılmadı." % (ikiz.get("kaynak") or "?",
+                                       b.get("kaynak") or "?"))
                 continue
             benzersiz.append(b)
 
@@ -315,6 +331,10 @@ def duzeltme_tablosu(duzen):
     beyanname bu tabloya girmez. Bir donemde birden cok duzeltme varsa her
     biri ayri satirdir. Tutarlar o duzeltme beyannamesinin kendi rakamlaridir.
 
+    Siralama once DONEME, sonra donem icinde ONAY ZAMANINA goredir: aylar
+    takvim sirasinda akar, bir donemin duzeltmeleri de kendi icinde verilis
+    sirasiyla dizilir. Onay damgasi okunamayanlar donemin sonuna alinir.
+
     Doner: [{"yil", "satirlar": [{kod: deger}]}] — yil yil ayrilmis, cunku
     tablonun basligi "Dönemi <yil>" bicimindedir.
     """
@@ -329,39 +349,64 @@ def duzeltme_tablosu(duzen):
                 "gerekce": surum["duzeltme_nedeni"] or "",
                 "sira": surum["sira"],
                 "kaynak": surum["kaynak"],
+                # Siralama icin; arayuze gosterilmez
+                "onay_ts": surum["onay_ts"] or "",
+                "ay": d["ay"],
             }
             for kod in DUZELTME_TUTAR_KODLARI:
                 satir[kod] = round(surum["degerler"].get(kod) or 0.0, 2)
             yillar.setdefault(d["yil"], []).append(satir)
 
+    for satirlar in yillar.values():
+        # Once donem, sonra donem icinde onay zamani; damgasi olmayanlar sona
+        satirlar.sort(key=lambda s: (s["ay"], s["onay_ts"] or "9999", s["sira"]))
+
     return [{"yil": yil, "satirlar": yillar[yil]} for yil in sorted(yillar)]
 
 
 def genel_bakis(duzen):
-    """Donem donem ozet: kac surum var, ilk ve son halde sonuc hesaplari."""
+    """Her beyanname surumu icin bir satir.
+
+    Donem basina tek satir verilmez: bir donemde kac beyanname varsa o kadar
+    satir olur (kanuni beyan ve ardindan her duzeltme ayri ayri). Boylece
+    araya giren duzeltmeler gorunur kalir; yalnizca ilk ve son hal
+    karsilastirilinca ortadaki adimlar kayboluyordu.
+
+    Bir duzeltme hicbir rakami degistirmemis olsa da satiri yine yazilir;
+    farklar sifir gorunur. "Degisiklik yok" bilgisinin kendisi de bir
+    bulgudur ve beyannamenin verilmis olmasi gizlenmemelidir.
+
+    Her satirdaki farklar BIR ONCEKI surume goredir; ilk beyanda fark yoktur.
+    """
+    def al(kaynak, kod):
+        return round(kaynak.get(kod) or 0.0, 2)
+
     satirlar = []
     for d in duzen["donemler"]:
-        ilk, son = d["ilk"]["degerler"], d["son"]["degerler"]
-
-        def al(kaynak, kod):
-            return round(kaynak.get(kod) or 0.0, 2)
-
-        satirlar.append({
-            "anahtar": d["anahtar"],
-            "etiket": d["etiket"],
-            "surum_sayisi": d["surum_sayisi"],
-            "duzeltme_sayisi": d["surum_sayisi"] - 1,
-            "degisen_satir": len(d["degisen"]),
-            "matrah_ilk": al(ilk, "matrah_toplami"),
-            "matrah_son": al(son, "matrah_toplami"),
-            "matrah_fark": round(al(son, "matrah_toplami") - al(ilk, "matrah_toplami"), 2),
-            "odenecek_ilk": al(ilk, "odenmesi_gereken_kdv"),
-            "odenecek_son": al(son, "odenmesi_gereken_kdv"),
-            "odenecek_fark": round(al(son, "odenmesi_gereken_kdv")
-                                   - al(ilk, "odenmesi_gereken_kdv"), 2),
-            "devir_ilk": al(ilk, "sonraki_donem_devreden"),
-            "devir_son": al(son, "sonraki_donem_devreden"),
-            "devir_fark": round(al(son, "sonraki_donem_devreden")
-                                - al(ilk, "sonraki_donem_devreden"), 2),
-        })
+        onceki_surum = None
+        for s in d["surumler"]:
+            simdiki = s["degerler"]
+            ilk_mi = onceki_surum is None
+            onceki = {} if ilk_mi else onceki_surum["degerler"]
+            fark = (lambda kod: 0.0 if ilk_mi
+                    else round(al(simdiki, kod) - al(onceki, kod), 2))
+            satirlar.append({
+                "anahtar": d["anahtar"],
+                "etiket": d["etiket"],
+                "sira": s["sira"],
+                "tur": s["tur"],
+                "surum_etiketi": s["etiket"],
+                "tarih": _tarih(s["onay_zamani"]),
+                "ilk_mi": ilk_mi,
+                "gerekce": s["duzeltme_nedeni"] or "",
+                # Bu surumde bir onceki surume gore degisen satir sayisi
+                "degisen_satir": 0 if ilk_mi else len(_degisenler(onceki_surum, s)),
+                "matrah": al(simdiki, "matrah_toplami"),
+                "matrah_fark": fark("matrah_toplami"),
+                "odenecek": al(simdiki, "odenmesi_gereken_kdv"),
+                "odenecek_fark": fark("odenmesi_gereken_kdv"),
+                "devir": al(simdiki, "sonraki_donem_devreden"),
+                "devir_fark": fark("sonraki_donem_devreden"),
+            })
+            onceki_surum = s
     return satirlar
