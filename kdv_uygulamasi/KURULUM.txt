@@ -1,8 +1,5 @@
-KDV İNCELEME ÇALIŞMASI — KURULUM (LINUX)
-=========================================
-
-Windows kullanıyorsanız bu dosya yerine KURULUM_WINDOWS.txt dosyasına bakın;
-orada kurulum yoktur, "KDV Duzenleme.bat" dosyasına çift tıklamanız yeterlidir.
+KDV İNCELEME ÇALIŞMASI — KURULUM
+=================================
 
 Gereken tek şey Python 3'tür. Hemen her Linux dağıtımında kurulu gelir;
 kurulu değilse aşağıdaki "Sorun giderme" bölümüne bakın.
@@ -85,26 +82,3 @@ Tarayıcı açılmıyor:
 
 Uygulama zaten açıkken tekrar başlatırsanız sıradaki boş port kullanılır
 (8766-8775); terminal penceresinde hangi adreste çalıştığı yazar.
-
-
-HİÇ AÇILMIYORSA
----------------
-1) Klasördeki  TANI.sh  dosyasına çift tıklayın ("Çalıştır" deyin) ya da
-   terminalde şunu çalıştırın:
-
-       ./calistir.sh --tani
-
-   Ekrana ve klasördeki  baslatma_kaydi.txt  dosyasına ayrıntılı bir rapor
-   yazar. Bu dosyayı göndermeniz sorunun bulunması için yeterlidir.
-
-2) MASAÜSTÜ KISAYOLU ESKİ KOPYAYI AÇIYOR OLABİLİR. Kurulum, kısayola o
-   andaki klasör yolunu yazar. Yeni sürümü başka bir klasöre açtıysanız
-   kısayol hâlâ eskisini başlatır ve güncelleme yapmışsınız gibi görünmez.
-
-   Uygulama açıldığında başlıkta "sürüm YYYY.AA.GG" yazar; üzerine
-   geldiğinizde çalışan klasörü gösterir. Beklediğiniz sürüm değilse yeni
-   klasörde  kur.sh  dosyasını yeniden çalıştırın (kısayol güncellenir) ya da
-   doğrudan yeni klasördeki  calistir.sh  ile açın.
-
-3) Uygulama açılıp da arayüz boş/çalışmaz görünüyorsa tarayıcıda
-   Ctrl+Shift+R yapın, sonra sağ üstteki "Tanı" düğmesine basın.

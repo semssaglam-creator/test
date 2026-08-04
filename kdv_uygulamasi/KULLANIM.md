@@ -11,14 +11,10 @@ alır; hesap mantığı birebir aynıdır.
 python3 main.py
 ```
 
-veya Linux'ta `calistir.sh`, Windows'ta `KDV Duzenleme.bat`. Tarayıcı
+veya klasördeki `calistir.sh` dosyasına çift tıklayın. Tarayıcı
 `http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
 Excel çıktısı için `openpyxl`, beyanname PDF'leri için `pypdf` kütüphanesi
 `lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
-
-Windows'ta bilgisayarda Python yoksa başlatıcı, taşınabilir Python'u klasörün
-içindeki `python\` altına bir kereliğine indirir — sisteme hiçbir şey kurmaz,
-PATH'e dokunmaz, yönetici yetkisi istemez. Ayrıntı: `KURULUM_WINDOWS.txt`.
 
 
 ## Beyannameler — kanuni beyan, düzeltmeler ve son hal
@@ -84,30 +80,15 @@ açtığınızda tablolar olduğu gibi gelir.
 
 ## Bir şey ters giderse
 
-Uygulama sessizce bozulmaz: yakalanmamış her hata sayfanın en üstünde kırmızı
-bir bantta görünür ve **Kopyala** düğmesiyle metni alabilirsiniz.
+Uygulama sessizce bozulmaz: yakalanmamış bir hata olursa ekranın altındaki
+bildirim şeridinde görünür.
 
-Sağ üstteki **Tanı** düğmesi tarayıcı tarafındaki durumu tek metin halinde
-toplar: tanımlar yüklendi mi, kaç yıl / kaç beyanname var, API çağrılarının
-durum kodları ve süreleri, tarayıcının gerekli özellikleri destekleyip
-desteklemediği. Bir aksilikte bu metni bildirmeniz sorunun bulunması için
-yeterlidir.
+Uygulama hiç açılmıyorsa terminalde `python3 main.py` çalıştırın; hata varsa
+ekrana yazar.
 
-Sunucu tarafı için `TANI.sh` (Windows'ta `TANI.bat`) çalıştırın; Python sürümü,
-kütüphaneler, dinlenen adresler ve erişim denemeleri raporlanır.
-
-Her şey `baslatma_kaydi.txt` dosyasında toplanır: başlatıcının yazdıkları,
-uygulamanın açılış kaydı, tarayıcı tanısı ve tarayıcıda oluşan hatalar. Bir
-aksilikte **tek bu dosyayı** göndermeniz yeter.
-
-Başlıkta çalışan **sürüm** yazar; üzerine gelince çalışan klasörü gösterir.
-Masaüstü kısayolu kurulum anındaki klasörü açtığı için, yeni sürümü başka bir
-klasöre açtıysanız kısayol eski kopyayı başlatmaya devam eder — bu damga onu
-bir bakışta ele verir.
-
-Sayfa hiçbir zaman tarayıcı önbelleğine alınmaz. Uygulamayı güncellediğinizde
-tarayıcının sakladığı eski arayüz yeni sunucuyla karşılaşmaz; bu durum "açılıyor
-ama çalışmıyor" gibi görünüp ekranda hiçbir hata vermeyebiliyordu.
+Beyanname PDF'i okunamazsa yalnızca o ekran hata verir. Uygulamanın geri
+kalanı — yapıştırarak veri girme, hesap, Excel çıktısı — etkilenmez; PDF
+okuyucu ancak beyanname yüklendiğinde devreye girer.
 
 ## Kayıt modeli — önce anlayın
 

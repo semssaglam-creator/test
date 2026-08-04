@@ -1,3 +1,0 @@
-# Windows baslaticilarinin satir sonlari CRLF kalmali
-*.bat text eol=crlf
-KURULUM_WINDOWS.txt text eol=crlf

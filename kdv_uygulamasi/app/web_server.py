@@ -17,10 +17,8 @@ import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import beyannameler, db, hesap
+from . import db, hesap
 from .excel_export import calisma_olustur
-from .pdf_beyanname import PdfHata, beyanname_oku
-from .surum import surum_bilgisi
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
@@ -37,6 +35,19 @@ CIKTI_DIR = os.path.join(BASE_DIR, "ciktilar")
 
 class ApiHata(Exception):
     """Kullaniciya gosterilecek hata mesaji."""
+
+
+def _beyanname_modulu():
+    """Beyanname okuma modullerini ilk ihtiyac aninda yukler.
+
+    Bilerek modul basinda degil burada yuklenir: beyanname okuma pypdf'e
+    dayanir ve pypdf uygulamanin geri kalaninin calismasi icin gerekli
+    degildir. Bu yuzden oradaki bir aksilik yalnizca beyanname yukleme
+    ekraninda bir hata mesajina donusur; uygulamanin acilisini ya da
+    yapistirarak calisma yontemini hicbir bicimde etkilemez.
+    """
+    from . import beyannameler
+    return beyannameler
 
 
 # --------------------------------------------------------------------- yardimci
@@ -112,22 +123,6 @@ def _inceleme_bilgisi(calisma):
     }
 
 
-def _gunluge_yaz(metin, baslik):
-    """Tarayicidan gelen tani/hata metnini baslatma kaydina ekler.
-
-    Boylece bir aksilikte kullanicidan tek bir dosya istemek yeterli olur.
-    """
-    yol = os.path.join(BASE_DIR, "baslatma_kaydi.txt")
-    try:
-        with open(yol, "a", encoding="utf-8") as f:
-            f.write("\n\n===== %s — %s =====\n%s\n"
-                    % (baslik, datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
-                       str(metin)[:20000]))
-        return True
-    except OSError:
-        return False
-
-
 class Istekci(BaseHTTPRequestHandler):
     server_version = "KDVIncelemeSunucu/2.0"
 
@@ -188,7 +183,6 @@ class Istekci(BaseHTTPRequestHandler):
                     "toplam_ek_bilgi": {k: {"etiket": e, "alan": a}
                                        for k, (e, a) in TOPLAM_EK_BILGI.items()},
                     "bu_yil": datetime.now().year,
-                    "surum": surum_bilgisi(),
                 })
             elif yol == "/api/calismalar":
                 self._json_yanit({"calismalar": db.calismalari_listele()})
@@ -245,9 +239,6 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
                 self._json_yanit(self._beyanname_uygula(veri))
-            elif yol == "/api/gunluk":
-                self._json_yanit({"tamam": _gunluge_yaz(veri.get("metin") or "",
-                                                        veri.get("baslik") or "tarayıcı")})
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
@@ -301,6 +292,7 @@ class Istekci(BaseHTTPRequestHandler):
         dosyalar = veri.get("dosyalar") or []
         if not dosyalar:
             raise ApiHata("Okunacak dosya gelmedi.")
+        from .pdf_beyanname import PdfHata, beyanname_oku
         okunanlar, hatalar = [], []
         for dosya in dosyalar:
             ad = dosya.get("ad") or "beyanname.pdf"
@@ -330,6 +322,7 @@ class Istekci(BaseHTTPRequestHandler):
         return {"beyannameler": okunanlar, "hatalar": hatalar}
 
     def _beyanname_ozet(self, veri):
+        beyannameler = _beyanname_modulu()
         duzen = beyannameler.duzenle(veri.get("beyannameler") or [])
         yalniz = veri.get("yalniz_degisen")
         yalniz = True if yalniz is None else bool(yalniz)
@@ -346,6 +339,7 @@ class Istekci(BaseHTTPRequestHandler):
         }
 
     def _beyanname_uygula(self, veri):
+        beyannameler = _beyanname_modulu()
         duzen = beyannameler.duzenle(veri.get("beyannameler") or [])
         if not duzen["donemler"]:
             raise ApiHata("Önce beyanname PDF'i yükleyin.")
@@ -361,9 +355,18 @@ class Istekci(BaseHTTPRequestHandler):
                           if c.isalnum() or c in " -_").strip() or "kdv"
         dosya_adi = f"KDV_calisma_{guvenli}.xlsx".replace(" ", "_")
         dosya_yolu = os.path.join(CIKTI_DIR, dosya_adi)
-        duzen = beyannameler.duzenle(calisma.get("beyannameler") or [])
+        # Duzeltme sayfasi yalnizca beyanname yuklendiyse eklenir; eklenemezse
+        # Excel ciktisinin geri kalani yine de uretilir.
+        duzeltmeler = None
+        if calisma.get("beyannameler"):
+            try:
+                beyannameler = _beyanname_modulu()
+                duzeltmeler = beyannameler.duzeltme_tablosu(
+                    beyannameler.duzenle(calisma["beyannameler"]))
+            except Exception:
+                duzeltmeler = None
         calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular,
-                        beyannameler.duzeltme_tablosu(duzen))
+                        duzeltmeler)
         with open(dosya_yolu, "rb") as f:
             govde = f.read()
         self.send_response(200)
