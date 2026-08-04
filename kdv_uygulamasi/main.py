@@ -111,7 +111,11 @@ def main():
     adres = f"http://127.0.0.1:{port}/"
     print("KDV Inceleme Calismasi calisiyor:", adres)
     print("Kapatmak icin bu pencerede Ctrl+C tusuna basin.")
-    threading.Timer(0.5, lambda: webbrowser.open(adres)).start()
+    # daemon: tarayiciyi acan cagri takilirsa (ornegin masaustu olmayan bir
+    # makinede ya da SSH oturumunda) Ctrl+C ile kapanmayi engellemesin
+    zamanlayici = threading.Timer(0.5, lambda: webbrowser.open(adres))
+    zamanlayici.daemon = True
+    zamanlayici.start()
     try:
         sunucu.serve_forever()
     except KeyboardInterrupt:

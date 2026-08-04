@@ -63,6 +63,16 @@ görünür. Bu durumda ya yeni klasörde  bash kur.sh  çalıştırın ya da yen
 klasördeki başlatıcıya çift tıklayın.
 
 
+TERMİNALDEN ÇALIŞTIRMAK
+-----------------------
+Terminal kullanabiliyorsanız kurulum hiç gerekmez:
+
+    python3 main.py
+
+Ayrıntı (kaynağı git ile alma, veri klasörleri, sorun giderme) için
+klasördeki TERMINAL.md dosyasına bakın.
+
+
 KULLANIM
 --------
 Ayrıntılı kullanım için klasördeki KULLANIM.md dosyasına bakın.
