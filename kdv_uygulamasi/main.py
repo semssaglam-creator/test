@@ -3,7 +3,8 @@
 
 Yerel bir web sunucusu baslatir ve varsayilan tarayicida arayuzu acar.
 Kurulum gerektirmez; yalnizca Python 3 standart kutuphanesi yeterlidir
-(Excel ciktisi icin gereken openpyxl lib/ klasorunde birlikte gelir).
+(Excel ciktisi icin openpyxl, beyanname PDF'leri icin pypdf lib/
+klasorunde birlikte gelir).
 
 Sunucu hem 127.0.0.1 (IPv4) hem de mumkunse ::1 (IPv6) uzerinde dinler.
 Boylece tarayici "localhost" adresini hangisine cozerse cozsun ulasir. Bu
@@ -63,7 +64,8 @@ def ortam_bilgisi():
     yaz("Calisma diz.: %s" % os.getcwd())
     for ad, yol in (("web/index.html", os.path.join(BASE_DIR, "web", "index.html")),
                     ("app/web_server.py", os.path.join(BASE_DIR, "app", "web_server.py")),
-                    ("lib/openpyxl", os.path.join(BASE_DIR, "lib", "openpyxl"))):
+                    ("lib/openpyxl", os.path.join(BASE_DIR, "lib", "openpyxl")),
+                    ("lib/pypdf", os.path.join(BASE_DIR, "lib", "pypdf"))):
         yaz("  %-18s %s" % (ad, "var" if os.path.exists(yol) else "YOK"))
 
 
@@ -82,6 +84,13 @@ def modulleri_dene():
         yaz("  %-18s tamam (%s)" % ("openpyxl", openpyxl.__version__))
     except Exception as exc:
         yaz("  %-18s HATA: %s  (Excel ciktisi calismaz)" % ("openpyxl", exc))
+    try:
+        from app.pdf_beyanname import _kripto_saglayicisini_ele
+        _kripto_saglayicisini_ele()
+        import pypdf
+        yaz("  %-18s tamam (%s)" % ("pypdf", pypdf.__version__))
+    except Exception as exc:
+        yaz("  %-18s HATA: %s  (beyanname PDF okunamaz)" % ("pypdf", exc))
     return tamam
 
 

@@ -22,7 +22,7 @@ set "PYURL=https://www.python.org/ftp/python/%PYSURUM%/%PYZIP%"
 rem --- 1) Daha once indirilmis tasinabilir Python var mi?
 if exist "python\python.exe" goto tasinabilir
 
-rem --- 2) Sistemde kurulu Python 3.8+ var mi? (varsa indirmeye gerek yok)
+rem --- 2) Sistemde kurulu Python 3.9+ var mi? (varsa indirmeye gerek yok)
 set "PY="
 where py >nul 2>&1
 if not errorlevel 1 set "PY=py -3"
@@ -33,7 +33,7 @@ if not errorlevel 1 set "PY=python"
 if not defined PY goto indir
 
 :surumDenetimi
-%PY% -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)" >nul 2>&1
+%PY% -c "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
 if not errorlevel 1 goto calistir
 set "PY="
 goto indir

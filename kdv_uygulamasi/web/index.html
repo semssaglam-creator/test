@@ -82,6 +82,15 @@
   table.izgara tr.elestiri input { background: #fff9e6; border-color: #e8d9a8; }
   table.izgara tr.elestiri td.etiket { background: #fdf3d8; }
   table.izgara td.satir-yapistir { position: sticky; left: 300px; background: #fff; z-index: 2; }
+  .uyari-satir { background: #fdecea; border: 1px solid #f5c6cb; color: #8a1f2b; border-radius: 5px; padding: 7px 10px; margin: 6px 0; font-size: 13px; }
+  .birakma { border: 2px dashed #c3ccd6; border-radius: 8px; padding: 22px; text-align: center; cursor: pointer; color: #5a6b7d; background: #fafbfc; }
+  .birakma:hover, .birakma.uzerinde { border-color: #1f3a5f; background: #eef2f6; color: #1f3a5f; }
+  .yuklu-liste { margin-top: 10px; }
+  .oge { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid #dde3ea; border-radius: 6px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
+  .rozet.kanuni { background: #d9e1f2; color: #1f3a5f; }
+  .rozet.duzeltme { background: #fff2cc; color: #8a6d1b; }
+  td.degisti { background: #fff6e5; font-weight: 600; }
+  tr.onemli td { background: #f2f7ff; }
   table.izgara th.satir-toplam, table.izgara td.satir-toplam { position: sticky; right: 0; background: #e2efda; z-index: 2; font-weight: 600; border-left: 2px solid #9bbb8a; min-width: 104px; }
   table.izgara th.satir-toplam { background: #cfe3c2; }
   table.izgara tr.grup td.satir-toplam { background: #cfe3c2; }
@@ -132,6 +141,7 @@
   </div>
 </header>
 <nav>
+  <button data-sekme="beyanname">Beyannameler</button>
   <button data-sekme="beyan" class="aktif">Beyan Verisi</button>
   <button data-sekme="elestiri">İnceleme Tespitleri</button>
   <button data-sekme="sonuc">Sonuç ve Fark</button>
@@ -296,6 +306,73 @@
   </div>
 </section>
 
+
+<!-- -------------------------------------------------------- BEYANNAMELER -->
+<section class="sekme" id="sekme-beyanname">
+  <div class="kart">
+    <h2>Beyanname PDF'lerini Yükleyin</h2>
+    <div id="pdfBirakma" class="birakma">
+      <div style="font-size:26px;">📄</div>
+      <div><strong>PDF dosyalarını buraya sürükleyin</strong> ya da seçmek için tıklayın</div>
+      <div class="yardim" style="margin:6px 0 0;">
+        Kanuni süresinde verilen beyannameler ve düzeltme beyannameleri birlikte
+        yüklenebilir. Hangisinin ne olduğu, beyannamenin üzerindeki
+        <em>Düzeltme Nedeni</em> satırı ve <em>Onay Zamanı</em> damgasından
+        anlaşılır; sırayla yüklemeniz gerekmez.
+      </div>
+      <input type="file" id="pdfSecici" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+    <div id="pdfDurum"></div>
+    <div id="pdfListe" class="yuklu-liste"></div>
+    <div class="satir" style="margin-top:10px;">
+      <button class="btn tehlike" id="pdfTemizle" style="display:none;">Yüklenenleri temizle</button>
+    </div>
+  </div>
+
+  <div class="kart" id="beyannameKart" style="display:none;">
+    <h2>Genel Bakış</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Her dönem için kaç beyanname verildiği ve ilk beyandan son hale ne değiştiği.
+    </div>
+    <div class="kaydir"><table class="tablo" id="bnGenelTablo"></table></div>
+  </div>
+
+  <div class="kart" id="beyannameDetayKart" style="display:none;">
+    <h2>Dönem Detayı — İlk Beyan / Düzeltmeler / Son Hal</h2>
+    <div class="yil-sekmeler" id="bnDonemSekme"></div>
+    <div class="satir" style="margin:8px 0;">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;">
+        <input type="checkbox" id="bnYalnizDegisen" checked style="width:auto;">
+        Yalnızca değişen satırları göster
+      </label>
+    </div>
+    <div id="bnSurumBilgi"></div>
+    <div class="kaydir"><table class="tablo" id="bnDetayTablo"></table></div>
+    <div id="bnAdimlar"></div>
+  </div>
+
+  <div class="kart" id="beyannameSecimKart" style="display:none;">
+    <h2>İnceleme Hangi Beyan Üzerinden Yapılsın?</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Seçtiğiniz beyannameler <strong>Beyan Verisi</strong> sekmesine asıl veri olarak
+      yazılır; inceleme tespitleriniz bunun üzerine uygulanır.
+    </div>
+    <div class="satir">
+      <div class="dar">
+        <label>Kullanılacak beyan</label>
+        <select id="bnMod">
+          <option value="ilk">Kanuni süresinde verilen ilk beyan</option>
+          <option value="son" selected>Son hal (düzeltmeler dahil)</option>
+          <option value="elle">Dönem dönem seçeyim</option>
+        </select>
+      </div>
+      <div><button class="btn" id="bnUygula">Asıl veri olarak kullan</button></div>
+    </div>
+    <div id="bnElleSecim" style="display:none;"></div>
+    <div id="bnSecimOzet"></div>
+  </div>
+</section>
+
 <!-- ---------------------------------------------------------- KAYITLAR -->
 <section class="sekme" id="sekme-kayitlar">
   <div class="kart">
@@ -392,6 +469,10 @@ const durum = {
   sonucYil: "tumu",
   tarhiyatYil: "tumu",
   kayitlar: [],
+  // Beyannameler sekmesi (beyannameler calismanin icinde tutulur)
+  bnOzet: null,         // sunucudan gelen duzen + karsilastirma
+  bnDonem: null,        // detayda gosterilen donem anahtari
+  bnSecimler: {},       // elle secimde donem -> surum sirasi
 };
 
 const $ = (id) => document.getElementById(id);
@@ -402,6 +483,7 @@ function bosCalisma() {
     mukellef: { ad_unvan: "", vkn_tckn: "", vergi_dairesi: "" },
     devreden_baslangic: null,
     yillar: [],
+    beyannameler: [],     // PDF'ten okunan beyanname surumleri
   };
 }
 
@@ -1947,6 +2029,7 @@ async function calismaAc(id) {
         elestiri: Object.assign(bosElestiri(yk.yil), yk.elestiri || {}),
         kaynaklar: yk.kaynaklar || [],
       })),
+      beyannameler: c.beyannameler || [],
     };
     // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
     if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
@@ -1956,6 +2039,7 @@ async function calismaAc(id) {
     }
     durum.kayitliId = id;
     durum.degisti = false;
+    durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
     $("cAd").value = durum.calisma.ad;
@@ -1975,6 +2059,359 @@ async function calismaSil(id, ad) {
     mesaj("Kayıt silindi.");
   } catch (hata) { mesaj(hata.message, "hata"); }
 }
+
+
+// ======================================================== BEYANNAMELER (PDF)
+//
+// Bir donem icin kanuni suresinde verilen beyanname ve ardindan verilen
+// duzeltme beyannameleri ayri ayri tutulur. Duzeltme beyannamesi onceki beyani
+// tumuyle yeniler; bu yuzden her surum kendi basina eksiksiz bir beyandir ve
+// inceleme istenen surum uzerinden yurutulebilir.
+
+function pdfKutusunuKur() {
+  const kutu = $("pdfBirakma");
+  const secici = $("pdfSecici");
+  kutu.addEventListener("click", () => secici.click());
+  secici.addEventListener("change", () => {
+    pdfYukle(Array.from(secici.files));
+    secici.value = "";
+  });
+  ["dragenter", "dragover"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.add("uzerinde");
+  }));
+  ["dragleave", "drop"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.remove("uzerinde");
+  }));
+  kutu.addEventListener("drop", (e) => {
+    const dosyalar = Array.from(e.dataTransfer.files || [])
+      .filter((f) => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+    if (!dosyalar.length) { mesaj("PDF dosyası bulunamadı.", "hata"); return; }
+    pdfYukle(dosyalar);
+  });
+}
+
+function dosyayiOku(dosya) {
+  return new Promise((coz, red) => {
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => coz(String(okuyucu.result).split(",")[1] || "");
+    okuyucu.onerror = () => red(new Error(dosya.name + " okunamadı."));
+    okuyucu.readAsDataURL(dosya);
+  });
+}
+
+async function pdfYukle(dosyalar) {
+  if (!dosyalar.length) return;
+  $("pdfDurum").innerHTML =
+    `<div class="yardim">${dosyalar.length} dosya okunuyor...</div>`;
+  try {
+    const yuk = [];
+    for (const d of dosyalar) yuk.push({ ad: d.name, veri: await dosyayiOku(d) });
+    const y = await api("/api/pdf_oku", { dosyalar: yuk });
+    durum.calisma.beyannameler = durum.calisma.beyannameler.concat(y.beyannameler || []);
+    const hatalar = (y.hatalar || []).map((h) =>
+      `<div class="uyari-satir">${h.ad}: ${h.mesaj}</div>`).join("");
+    $("pdfDurum").innerHTML = hatalar;
+    if (y.beyannameler.length) {
+      mesaj(`${y.beyannameler.length} beyanname okundu.`);
+      mukellefiTazele(y.beyannameler);
+    }
+    await beyannameleriTazele();
+  } catch (hata) {
+    $("pdfDurum").innerHTML = `<div class="uyari-satir">${hata.message}</div>`;
+    mesaj(hata.message, "hata");
+  }
+}
+
+/** Calismada mukellef bilgisi bos ise beyannameden doldurulur. */
+function mukellefiTazele(yeniler) {
+  const m = durum.calisma.mukellef;
+  const ilk = yeniler.find((b) => b.vkn || b.unvan);
+  if (!ilk) return;
+  if (!m.vkn_tckn && ilk.vkn) m.vkn_tckn = ilk.vkn;
+  if (!m.ad_unvan && ilk.unvan) m.ad_unvan = ilk.unvan;
+  if (!m.vergi_dairesi && ilk.vergi_dairesi) m.vergi_dairesi = ilk.vergi_dairesi;
+}
+
+async function beyannameleriTazele() {
+  const kartlar = ["beyannameKart", "beyannameDetayKart", "beyannameSecimKart"];
+  if (!durum.calisma.beyannameler.length) {
+    durum.bnOzet = null;
+    kartlar.forEach((k) => { $(k).style.display = "none"; });
+    $("pdfListe").innerHTML = "";
+    $("pdfTemizle").style.display = "none";
+    return;
+  }
+  durum.bnOzet = await api("/api/beyanname_ozet", {
+    beyannameler: durum.calisma.beyannameler,
+    secim: { mod: $("bnMod").value, secimler: durum.bnSecimler },
+    yalniz_degisen: $("bnYalnizDegisen").checked,
+  });
+  kartlar.forEach((k) => { $(k).style.display = ""; });
+  $("pdfTemizle").style.display = "";
+  const donemler = durum.bnOzet.duzen.donemler;
+  if (!durum.bnDonem || !donemler.some((d) => d.anahtar === durum.bnDonem)) {
+    durum.bnDonem = donemler.length ? donemler[0].anahtar : null;
+  }
+  yuklenenleriCiz();
+  bnGenelCiz();
+  bnDetayCiz();
+  bnSecimCiz();
+}
+
+function yuklenenleriCiz() {
+  const kap = $("pdfListe");
+  kap.innerHTML = "";
+  const uyarilar = durum.bnOzet.duzen.uyarilar || [];
+  uyarilar.forEach((u) => {
+    const d = document.createElement("div");
+    d.className = "uyari-satir";
+    d.textContent = u;
+    kap.appendChild(d);
+  });
+  durum.calisma.beyannameler.forEach((b, i) => {
+    const oge = document.createElement("div");
+    oge.className = "oge";
+    const rozet = b.tur === "duzeltme" ? "duzeltme" : "kanuni";
+    const etiket = b.tur === "duzeltme" ? "düzeltme" : "kanuni süresinde";
+    oge.innerHTML =
+      `<span class="rozet ${rozet}">${etiket}</span>` +
+      `<strong>${b.yil}/${durum.tanimlar.aylar[b.ay - 1]}</strong>` +
+      `<span style="color:#5a6b7d;">${b.onay_zamani || "onay zamanı yok"}</span>` +
+      `<span style="color:#8899aa;flex:1;overflow:hidden;text-overflow:ellipsis;` +
+      `white-space:nowrap;" title="${b.kaynak}">${b.kaynak}</span>`;
+    if ((b.uyarilar || []).length) {
+      const u = document.createElement("span");
+      u.className = "rozet uyari";
+      u.textContent = b.uyarilar.length + " uyarı";
+      u.title = b.uyarilar.join("\n");
+      oge.appendChild(u);
+    }
+    const sil = document.createElement("button");
+    sil.className = "mini";
+    sil.textContent = "×";
+    sil.title = "Bu beyannameyi çıkar";
+    sil.addEventListener("click", async () => {
+      durum.calisma.beyannameler.splice(i, 1);
+      await beyannameleriTazele();
+    });
+    oge.appendChild(sil);
+    kap.appendChild(oge);
+  });
+}
+
+function bnGenelCiz() {
+  const tablo = $("bnGenelTablo");
+  tablo.innerHTML = "";
+  const basliklar = ["Dönem", "Beyanname", "Değişen satır", "Matrah (ilk)",
+                     "Matrah (son)", "Matrah farkı", "Ödenecek (ilk)",
+                     "Ödenecek (son)", "Ödenecek farkı", "Devir (ilk)",
+                     "Devir (son)"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b, i) => {
+    const th = hucre("th", b);
+    if (i > 0) th.className = "sag";
+    tr.appendChild(th);
+  });
+  tablo.appendChild(tr);
+
+  durum.bnOzet.genel_bakis.forEach((g) => {
+    const satir = document.createElement("tr");
+    const ad = hucre("td", g.etiket);
+    ad.style.cursor = "pointer";
+    ad.title = "Dönem detayına git";
+    ad.addEventListener("click", () => {
+      durum.bnDonem = g.anahtar; bnDetayCiz();
+      $("beyannameDetayKart").scrollIntoView({ behavior: "smooth" });
+    });
+    satir.appendChild(ad);
+    const sayilar = [
+      [g.surum_sayisi + (g.duzeltme_sayisi ? ` (${g.duzeltme_sayisi} düzeltme)` : ""), false],
+      [g.degisen_satir, false],
+      [tl(g.matrah_ilk), false], [tl(g.matrah_son), false], [tl(g.matrah_fark), true],
+      [tl(g.odenecek_ilk), false], [tl(g.odenecek_son), false], [tl(g.odenecek_fark), true],
+      [tl(g.devir_ilk), false], [tl(g.devir_son), false],
+    ];
+    sayilar.forEach(([deger, farkMi], i) => {
+      const td = hucre("td", String(deger));
+      td.className = "sayi";
+      if (farkMi && Math.abs(parseFloat(String(deger).replace(/\./g, "").replace(",", ".")) || 0) > 0.005) {
+        td.classList.add("fark-var");
+      }
+      if (i < 2) td.className = "sag";
+      satir.appendChild(td);
+    });
+    tablo.appendChild(satir);
+  });
+}
+
+function bnDetayCiz() {
+  const donemler = durum.bnOzet.duzen.donemler;
+  const kap = $("bnDonemSekme");
+  kap.innerHTML = "";
+  donemler.forEach((d) => {
+    const dugme = document.createElement("button");
+    dugme.className = "yil-sekme" + (d.anahtar === durum.bnDonem ? " aktif" : "");
+    dugme.textContent = d.etiket + (d.surum_sayisi > 1 ? ` (${d.surum_sayisi})` : "");
+    dugme.addEventListener("click", () => { durum.bnDonem = d.anahtar; bnDetayCiz(); });
+    kap.appendChild(dugme);
+  });
+
+  const donem = donemler.find((d) => d.anahtar === durum.bnDonem);
+  const tablo = $("bnDetayTablo");
+  const bilgi = $("bnSurumBilgi");
+  const adimKap = $("bnAdimlar");
+  tablo.innerHTML = ""; bilgi.innerHTML = ""; adimKap.innerHTML = "";
+  if (!donem) return;
+
+  bilgi.innerHTML = donem.surumler.map((s) =>
+    `<div class="oge"><span class="rozet ${s.tur === "duzeltme" ? "duzeltme" : "kanuni"}">` +
+    `${s.etiket}</span><span>${s.onay_zamani || "onay zamanı yok"}</span>` +
+    (s.duzeltme_nedeni ? `<span style="color:#8a6d1b;">${s.duzeltme_nedeni}</span>` : "") +
+    `<span style="color:#8899aa;flex:1;">${s.kaynak}</span></div>`).join("");
+
+  const satirlar = durum.bnOzet.tablolar[donem.anahtar] || [];
+  const basliklar = ["Beyanname satırı"].concat(donem.surumler.map((s) => s.etiket));
+  if (donem.surum_sayisi > 1) basliklar.push("Fark (son − ilk)");
+  const tr = document.createElement("tr");
+  basliklar.forEach((b, i) => {
+    const th = hucre("th", b);
+    if (i > 0) th.className = "sag";
+    tr.appendChild(th);
+  });
+  tablo.appendChild(tr);
+
+  if (!satirlar.length) {
+    const bos = document.createElement("tr");
+    bos.appendChild(hucre("td", $("bnYalnizDegisen").checked
+      ? "Sürümler arasında değişen satır yok."
+      : "Gösterilecek satır yok.", { colSpan: basliklar.length }));
+    bos.firstChild.className = "bos-durum";
+    tablo.appendChild(bos);
+  }
+
+  satirlar.forEach((s) => {
+    const satir = document.createElement("tr");
+    if (s.onemli) satir.className = "onemli";
+    satir.appendChild(hucre("td", s.etiket));
+    s.degerler.forEach((deger, i) => {
+      const td = hucre("td", tl(deger));
+      td.className = "sayi";
+      if (i > 0 && Math.abs(deger - s.degerler[i - 1]) > 0.005) td.classList.add("degisti");
+      satir.appendChild(td);
+    });
+    if (donem.surum_sayisi > 1) {
+      const td = hucre("td", tl(s.fark));
+      td.className = "sayi";
+      if (Math.abs(s.fark) > 0.005) td.classList.add("fark-var");
+      satir.appendChild(td);
+    }
+    tablo.appendChild(satir);
+  });
+
+  if ((donem.adim_adim || []).length) {
+    adimKap.innerHTML = "<h3>Her düzeltmede ne değişti</h3>" +
+      donem.adim_adim.map((a) => {
+        const liste = a.degisen.length
+          ? a.degisen.map((x) =>
+              `<li>${x.etiket}: ${tl(x.ilk)} → <strong>${tl(x.son)}</strong> ` +
+              `(${x.fark > 0 ? "+" : ""}${tl(x.fark)})</li>`).join("")
+          : "<li>Tutarlarda değişiklik yok.</li>";
+        return `<div style="margin-bottom:12px;"><div><strong>${a.etiket}</strong> ` +
+               `<span style="color:#5a6b7d;">${a.onay_zamani}</span>` +
+               (a.duzeltme_nedeni ? ` — <em>${a.duzeltme_nedeni}</em>` : "") +
+               `</div><ul style="margin:4px 0 0 18px;font-size:13px;">${liste}</ul></div>`;
+      }).join("");
+  }
+}
+
+function bnSecimCiz() {
+  const elle = $("bnMod").value === "elle";
+  const kap = $("bnElleSecim");
+  kap.style.display = elle ? "" : "none";
+  kap.innerHTML = "";
+  if (elle) {
+    durum.bnOzet.duzen.donemler.forEach((d) => {
+      const kutu = document.createElement("div");
+      kutu.className = "oge";
+      const etiket = document.createElement("strong");
+      etiket.textContent = d.etiket;
+      etiket.style.minWidth = "120px";
+      const sec = document.createElement("select");
+      sec.style.maxWidth = "320px";
+      d.surumler.forEach((s) => {
+        const o = document.createElement("option");
+        o.value = String(s.sira);
+        o.textContent = `${s.etiket}${s.onay_zamani ? " · " + s.onay_zamani : ""}`;
+        sec.appendChild(o);
+      });
+      const secili = durum.bnSecimler[d.anahtar];
+      sec.value = String(secili === undefined ? d.surum_sayisi - 1 : secili);
+      durum.bnSecimler[d.anahtar] = Number(sec.value);
+      sec.addEventListener("change", () => {
+        durum.bnSecimler[d.anahtar] = Number(sec.value);
+      });
+      kutu.append(etiket, sec);
+      kap.appendChild(kutu);
+    });
+  }
+  $("bnSecimOzet").innerHTML = "";
+}
+
+async function beyannameyiUygula() {
+  try {
+    const y = await api("/api/beyanname_uygula", {
+      beyannameler: durum.calisma.beyannameler,
+      secim: { mod: $("bnMod").value, secimler: durum.bnSecimler },
+    });
+    if (!y.yillar.length) { mesaj("Uygulanacak beyanname yok.", "hata"); return; }
+
+    const dokunulan = [];
+    y.yillar.forEach((yeni) => {
+      let kayit = yilBul(yeni.yil);
+      if (!kayit) {
+        kayit = { yil: yeni.yil, ay_sayisi: yeni.ay_sayisi, devir_baslangic: null,
+                  beyan: bosBeyan(), elestiri: bosElestiri(yeni.yil), kaynaklar: [] };
+        durum.calisma.yillar.push(kayit);
+      }
+      // Yalnizca beyannamesi yuklenen aylar yazilir; digerleri korunur
+      Object.keys(yeni.beyan).forEach((kod) => {
+        if (!kayit.beyan[kod]) kayit.beyan[kod] = new Array(12).fill(0);
+        yeni.dolu_aylar.forEach((ay) => {
+          kayit.beyan[kod][ay - 1] = yeni.beyan[kod][ay - 1];
+        });
+      });
+      kayit.ay_sayisi = Math.max(kayit.ay_sayisi || 0, yeni.ay_sayisi);
+      (kayit.kaynaklar = kayit.kaynaklar || []).push({
+        vergi_dairesi: "beyanname PDF",
+        rapor_tarihi: new Date().toLocaleDateString("tr-TR"),
+        aylar: yeni.dolu_aylar.slice(),
+      });
+      dokunulan.push(yeni.yil);
+      if (durum.aktifYil == null) durum.aktifYil = yeni.yil;
+    });
+
+    $("bnSecimOzet").innerHTML =
+      '<div class="yardim" style="margin-top:10px;"><strong>Beyan verisine yazıldı:</strong><ul style="margin:4px 0 0 18px;">' +
+      y.kullanilan.map((k) => `<li>${k.donem} — ${k.surum}` +
+        (k.onay_zamani ? ` (${k.onay_zamani})` : "") + `</li>`).join("") +
+      "</ul></div>";
+    isaretle();
+    mesaj(`${y.kullanilan.length} dönem beyan verisine yazıldı.`);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("bnMod").addEventListener("change", () => { bnSecimCiz(); });
+$("bnYalnizDegisen").addEventListener("change", () => { beyannameleriTazele(); });
+$("bnUygula").addEventListener("click", beyannameyiUygula);
+$("pdfTemizle").addEventListener("click", async () => {
+  if (!confirm("Yüklenen bütün beyannameler listeden çıkarılacak. " +
+               "Beyan Verisine yazdıklarınız kalır. Onaylıyor musunuz?")) return;
+  durum.calisma.beyannameler = [];
+  durum.bnSecimler = {};
+  await beyannameleriTazele();
+  $("pdfDurum").innerHTML = "";
+  mesaj("Beyanname listesi temizlendi.");
+});
 
 function kayitlariCiz() {
   const liste = $("kayitListe");
@@ -2060,6 +2497,9 @@ $("yedekAl").addEventListener("click", async () => {
 // ------------------------------------------------------------------- cizim
 function ekraniCiz() {
   rozetiTazele();
+  if (durum.calisma && (durum.calisma.beyannameler || []).length && !durum.bnOzet) {
+    beyannameleriTazele();          // kayitli calismadan gelen beyannameler
+  }
   yilSecimListesiniCiz();
   yilKulaklariniCiz("beyanYilSekme", durum.aktifYil, (y) => {
     durum.aktifYil = Number(y); ekraniCiz();
@@ -2090,6 +2530,7 @@ function ekraniCiz() {
     const k = await api("/api/calismalar");
     durum.kayitlar = k.calismalar;
     await yedekleriYukle();
+    pdfKutusunuKur();
     ekraniCiz();
     $("beyanMetin").focus();
   } catch (hata) { mesaj("Başlatma hatası: " + hata.message, "hata"); }

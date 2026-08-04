@@ -13,12 +13,57 @@ python3 main.py
 
 veya Linux'ta `calistir.sh`, Windows'ta `KDV Duzenleme.bat`. Tarayıcı
 `http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
-Excel çıktısı için gereken `openpyxl` kütüphanesi `lib/` klasöründe birlikte
-gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
+Excel çıktısı için `openpyxl`, beyanname PDF'leri için `pypdf` kütüphanesi
+`lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
 
 Windows'ta bilgisayarda Python yoksa başlatıcı, taşınabilir Python'u klasörün
 içindeki `python\` altına bir kereliğine indirir — sisteme hiçbir şey kurmaz,
 PATH'e dokunmaz, yönetici yetkisi istemez. Ayrıntı: `KURULUM_WINDOWS.txt`.
+
+
+## Beyannameler — kanuni beyan, düzeltmeler ve son hal
+
+Bir dönem için birden çok beyanname verilmiş olabilir: kanuni süresinde verilen
+ilk beyanname ve ardından bir ya da daha çok düzeltme beyannamesi. Düzeltme
+beyannamesi önceki beyanı **tümüyle yeniler**; değişen satırları değil, beyanın
+bütününü yeniden beyan eder. Bu yüzden her sürüm kendi başına eksiksiz bir
+beyandır ve inceleme istediğiniz sürüm üzerinden yürütülebilir.
+
+**PDF yükleme.** *Beyannameler* sekmesindeki kutuya beyanname PDF'lerini
+sürükleyin (ya da tıklayıp seçin). GİB'in "Katma Değer Vergisi Beyannamesi
+(Gerçek Usulde Vergilendirilen Mükellefler İçin)" çıktısı okunur. Kanuni
+beyanname ile düzeltme beyannamesini ayırt etmek için sıraya dikkat etmeniz
+gerekmez: beyannamenin üzerindeki **Düzeltme Nedeni** satırı ve **Onay Zamanı**
+damgası kullanılır. Dosyaları hangi sırayla yüklerseniz yükleyin, sürümler onay
+zamanına göre sıralanır.
+
+Okuma sırasında beyannamenin kendi aritmetiği de denetlenir (Toplam KDV,
+indirimler toplamı, ödenecek/devreden). Tutmayan bir şey varsa o beyannamenin
+yanında uyarı rozeti çıkar.
+
+**Üç görünüm.**
+
+| Bölüm | Ne gösterir |
+|---|---|
+| Genel Bakış | Her dönem için kaç beyanname verildiği, ilk beyandan son hale matrah / ödenecek / devir farkı |
+| Dönem Detayı | Satır satır tablo: **İlk beyan · 1. düzeltme · 2. düzeltme … · Fark (son − ilk)**. Değişen hücreler vurgulanır; istenirse yalnızca değişen satırlar gösterilir |
+| Her düzeltmede ne değişti | Her düzeltmenin bir öncekine göre neyi, hangi tutardan hangi tutara taşıdığı |
+
+**İnceleme hangi beyan üzerinden yapılsın.** Alttaki kutudan seçersiniz:
+
+- **Kanuni süresinde verilen ilk beyan** — bütün dönemlerde ilk beyan esas alınır
+- **Son hal (düzeltmeler dahil)** — her dönemde en son beyanname esas alınır
+- **Dönem dönem seçeyim** — her dönem için ayrı ayrı sürüm seçersiniz
+
+*Asıl veri olarak kullan* dediğinizde seçtikleriniz **Beyan Verisi** sekmesine
+yazılır ve inceleme tespitleriniz bunun üzerine uygulanır. Yalnızca beyannamesi
+yüklenen aylara dokunulur; diğer ayları elle girdiyseniz ya da sistem
+sorgusundan yapıştırdıysanız korunur. Seçimi değiştirip yeniden uygulayarak
+aynı çalışma içinde "ilk beyana göre" ve "son hale göre" sonuçları
+karşılaştırabilirsiniz.
+
+Yüklenen beyannameler çalışmayla birlikte kaydedilir; çalışmayı yeniden
+açtığınızda tablolar olduğu gibi gelir.
 
 ## Kayıt modeli — önce anlayın
 

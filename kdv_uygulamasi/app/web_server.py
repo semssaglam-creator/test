@@ -8,6 +8,8 @@ gerceklesir.
 Yalnizca Python standart kutuphanesi kullanilir (http.server, json).
 Sunucu 127.0.0.1 adresine baglanir; disaridan erisime acilmaz.
 """
+import base64
+import binascii
 import json
 import os
 import posixpath
@@ -17,8 +19,9 @@ import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import db, hesap
+from . import beyannameler, db, hesap
 from .excel_export import calisma_olustur
+from .pdf_beyanname import PdfHata, beyanname_oku
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
@@ -216,6 +219,12 @@ class Istekci(BaseHTTPRequestHandler):
                     raise ApiHata("Önce beyan bloğunu yapıştırın.")
                 self._json_yanit({"metin": matrah_farki_ozeti(
                     _inceleme_bilgisi(calisma), sonuc, bulgular)})
+            elif yol == "/api/pdf_oku":
+                self._json_yanit(self._pdf_oku(veri))
+            elif yol == "/api/beyanname_ozet":
+                self._json_yanit(self._beyanname_ozet(veri))
+            elif yol == "/api/beyanname_uygula":
+                self._json_yanit(self._beyanname_uygula(veri))
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
@@ -262,6 +271,59 @@ class Istekci(BaseHTTPRequestHandler):
         return {"tur": "beyan", "degerler": sonuc["degerler"], "uyarilar": sonuc["uyarilar"],
                 "ay_sayisi": sonuc["ay_sayisi"], "kunye": sonuc.get("kunye") or {},
                 "dolu_aylar": sonuc.get("dolu_aylar") or []}
+
+    # ------------------------------------------------------- beyanname PDF
+    def _pdf_oku(self, veri):
+        """Yuklenen PDF'leri okur. Bir dosyadaki hata digerlerini durdurmaz."""
+        dosyalar = veri.get("dosyalar") or []
+        if not dosyalar:
+            raise ApiHata("Okunacak dosya gelmedi.")
+        okunanlar, hatalar = [], []
+        for dosya in dosyalar:
+            ad = dosya.get("ad") or "beyanname.pdf"
+            try:
+                ham = base64.b64decode(dosya.get("veri") or "", validate=True)
+            except (binascii.Error, ValueError):
+                hatalar.append({"ad": ad, "mesaj": "Dosya içeriği çözülemedi."})
+                continue
+            if not ham.startswith(b"%PDF"):
+                hatalar.append({"ad": ad, "mesaj": "Bu bir PDF dosyası değil."})
+                continue
+            gecici = os.path.join(CIKTI_DIR, "_yuklenen.pdf")
+            try:
+                os.makedirs(CIKTI_DIR, exist_ok=True)
+                with open(gecici, "wb") as f:
+                    f.write(ham)
+                okunanlar.append(beyanname_oku(gecici, ad))
+            except PdfHata as exc:
+                hatalar.append({"ad": ad, "mesaj": str(exc)})
+            except Exception as exc:                      # beklenmedik bicim
+                hatalar.append({"ad": ad, "mesaj": "Okunamadı: %s" % exc})
+            finally:
+                try:
+                    os.remove(gecici)
+                except OSError:
+                    pass
+        return {"beyannameler": okunanlar, "hatalar": hatalar}
+
+    def _beyanname_ozet(self, veri):
+        duzen = beyannameler.duzenle(veri.get("beyannameler") or [])
+        yalniz = veri.get("yalniz_degisen")
+        yalniz = True if yalniz is None else bool(yalniz)
+        return {
+            "duzen": duzen,
+            "genel_bakis": beyannameler.genel_bakis(duzen),
+            "tablolar": {d["anahtar"]: beyannameler.karsilastirma_tablosu(d, yalniz)
+                         for d in duzen["donemler"]},
+            "secilen": {a: s["sira"] for a, s in
+                        beyannameler.secimi_coz(duzen, veri.get("secim")).items()},
+        }
+
+    def _beyanname_uygula(self, veri):
+        duzen = beyannameler.duzenle(veri.get("beyannameler") or [])
+        if not duzen["donemler"]:
+            raise ApiHata("Önce beyanname PDF'i yükleyin.")
+        return beyannameler.beyana_cevir(duzen, veri.get("secim"))
 
     def _excel_gonder(self, veri):
         calisma = veri.get("calisma") or {}
