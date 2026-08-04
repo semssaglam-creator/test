@@ -11,7 +11,7 @@ alır; hesap mantığı birebir aynıdır.
 python3 main.py
 ```
 
-veya klasördeki `calistir.sh` dosyasına çift tıklayın. Tarayıcı
+veya kurulum sonrası menüdeki / masaüstündeki kısayoldan. Tarayıcı
 `http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
 Excel çıktısı için `openpyxl`, beyanname PDF'leri için `pypdf` kütüphanesi
 `lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
@@ -83,7 +83,13 @@ açtığınızda tablolar olduğu gibi gelir.
 Uygulama sessizce bozulmaz: yakalanmamış bir hata olursa ekranın altındaki
 bildirim şeridinde görünür.
 
-Uygulama hiç açılmıyorsa terminalde `python3 main.py` çalıştırın; hata varsa
+Uygulama hiç açılmıyorsa önce şunu bilin: çoğu Linux masaüstünde bir `.sh`
+dosyasına **çift tıklamak onu çalıştırmaz** — dosya yöneticisi ya metin
+düzenleyicide açar ya da hiçbir şey yapmaz. Ekranda hiçbir belirti olmadığı
+için uygulama bozuk sanılır. Klasörde "Terminalde Aç" deyip `bash kur.sh`
+çalıştırın; kısayol kurulur ve uygulama açılır.
+
+Yine de açılmıyorsa terminalde `python3 main.py` çalıştırın; hata varsa
 ekrana yazar.
 
 Beyanname PDF'i okunamazsa yalnızca o ekran hata verir. Uygulamanın geri

@@ -12,32 +12,47 @@ yere koyabilirsiniz (örneğin Belgeler içine). Uygulama bulunduğu yerden
 çalışır, sisteme dosya kopyalamaz.
 
 
-2. KURULUMU ÇALIŞTIRIN
-----------------------
-Klasörün içindeki  kur.sh  dosyasına ÇİFT TIKLAYIN.
-Çıkan pencerede "Çalıştır" / "Execute" / "Run in Terminal" seçeneğini seçin.
+2. KURULUMU ÇALIŞTIRIN  (bir kereye mahsus, terminalden)
+--------------------------------------------------------
+Klasörün içinde boş bir yere SAĞ TIKLAYIN, "Terminalde Aç" deyin ve şunu
+yazıp Enter'a basın:
 
-Çift tıklayınca dosya metin düzenleyicide açılıyorsa (GNOME masaüstünde
-olur), bunun yerine klasörde boş bir yere sağ tıklayıp "Terminalde Aç"
-deyin ve şunu yazın:
+    bash kur.sh
 
-    ./kur.sh
+Kurulum birkaç saniye sürer, yönetici parolası istemez. Biter bitmez
+uygulama kendiliğinden açılır.
 
-Kurulum birkaç saniye sürer, yönetici parolası istemez.
+ÖNEMLİ — NEDEN TERMİNAL:
+Çoğu Linux masaüstünde (GNOME/Nautilus başta olmak üzere) bir .sh
+dosyasına ÇİFT TIKLAMAK onu ÇALIŞTIRMAZ. Dosya yöneticisi ya metin
+düzenleyicide açar ya da hiçbir şey yapmaz — ekranda hiçbir belirti
+olmadığı için "uygulama açılmıyor" gibi görünür. Bu yüzden kurulum bir
+kez terminalden yapılır; sonrasında menü kısayolu kullanılır ve bir daha
+terminale ihtiyacınız olmaz.
 
 
 3. ÇALIŞTIRIN
 -------------
-Kurulumdan sonra uygulamayı şu üç yoldan biriyle başlatabilirsiniz:
+Kurulumdan SONRA uygulamayı şu iki yoldan biriyle başlatın:
 
   * Uygulamalar menüsünde "KDV İnceleme Çalışması"
   * Masaüstündeki kısayola çift tıklayarak
-  * Klasördeki calistir.sh dosyasına çift tıklayarak
+
+Klasördeki calistir.sh dosyasına çift tıklamayı beklemeyin; yukarıda
+anlatılan nedenle çoğu masaüstünde çalışmaz.
 
 Uygulama açılınca tarayıcınızda kendiliğinden bir sekme açılır.
 Kapatmak için açılan siyah terminal penceresini kapatın.
 
 Menüde hemen görünmezse oturumu kapatıp açın.
+
+
+YENİ SÜRÜM KURARKEN DİKKAT
+--------------------------
+Kısayol, kurulumu yaptığınız ANDAKİ klasörü açar. Yeni sürümü BAŞKA bir
+klasöre çıkarırsanız eski kısayol hâlâ ESKİ klasörü başlatır; güncelleme
+yapmışsınız gibi görünmez. Yeni klasörde  bash kur.sh  komutunu yeniden
+çalıştırın — kısayol yeni klasörü gösterecek biçimde güncellenir.
 
 
 KULLANIM

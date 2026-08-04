@@ -86,7 +86,20 @@ echo ""
 echo "Uygulamayi su yollardan baslatabilirsiniz:"
 echo "  - Uygulamalar menusunde \"KDV Inceleme Calismasi\""
 [ -n "$MASAUSTU_DIZIN" ] && echo "  - Masaustundeki kisayola cift tiklayarak"
-echo "  - Bu klasordeki calistir.sh dosyasina cift tiklayarak"
+echo ""
+echo "NOT: Cogu masaustunde calistir.sh dosyasina CIFT TIKLAMAK ise yaramaz;"
+echo "dosya yoneticisi betikleri calistirmaz, metin duzenleyicide acar ya da"
+echo "hicbir sey yapmaz. Bu yuzden kisayol kullanin."
 echo ""
 echo "Menude gorunmezse oturumu kapatip acin."
 echo "Kaldirmak icin: ./kaldir.sh"
+
+# --- Kurulumdan sonra uygulamayi hemen ac -----------------------------------
+#
+# Boylece tek bir komut hem kurar hem acar; kullanicinin ayrica bir sey
+# tiklamasi gerekmez ve kurulumun ise yarayip yaramadigi aninda gorunur.
+# set -e devrede oldugu icin basarisizlik kurulumu gecersiz kilmasin diye
+# ayri bir kabukta ve korumali calistirilir.
+echo ""
+echo "Uygulama baslatiliyor..."
+exec "$UYG_DIZIN/calistir.sh"
