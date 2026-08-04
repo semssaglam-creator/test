@@ -41,10 +41,32 @@ CREATE TABLE IF NOT EXISTS gocler (
 ADSIZ_MUKELLEF = "(Adsız Mükellef)"
 
 
+def _semayi_guvenceye_al(conn):
+    """Tablolar yoksa olusturur.
+
+    Sema acilista da kurulur (bkz. `init_db`), ama yalnizca oraya guvenmek
+    yetmiyor: uygulama acikken veritabani dosyasi degisebiliyor. Yeni bir
+    surum klasorun uzerine kopyalandiginda, dosya elle degistirildiginde ya
+    da bir yedek geri yuklendiginde acilistaki sema kayboluyor ve sonraki
+    her yazma "no such table: calismalar" ile basarisiz oluyordu.
+
+    Once ucuz bir okuma yapilir; yalnizca tablo gercekten yoksa yazilir.
+    Boylece salt okunur bir veritabaninda gereksiz yazma denenmez.
+    """
+    var = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'calismalar'"
+    ).fetchone()
+    if var:
+        return
+    conn.executescript(SCHEMA)
+    conn.commit()
+
+
 def _baglan():
     os.makedirs(DB_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    _semayi_guvenceye_al(conn)
     return conn
 
 
