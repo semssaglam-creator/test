@@ -77,8 +77,17 @@ durum kodları ve süreleri, tarayıcının gerekli özellikleri destekleyip
 desteklemediği. Bir aksilikte bu metni bildirmeniz sorunun bulunması için
 yeterlidir.
 
-Sunucu tarafı için `python3 main.py --tani` (Windows'ta `TANI.bat`) çalıştırın;
-Python sürümü, kütüphaneler, dinlenen adresler ve erişim denemeleri raporlanır.
+Sunucu tarafı için `TANI.sh` (Windows'ta `TANI.bat`) çalıştırın; Python sürümü,
+kütüphaneler, dinlenen adresler ve erişim denemeleri raporlanır.
+
+Her şey `baslatma_kaydi.txt` dosyasında toplanır: başlatıcının yazdıkları,
+uygulamanın açılış kaydı, tarayıcı tanısı ve tarayıcıda oluşan hatalar. Bir
+aksilikte **tek bu dosyayı** göndermeniz yeter.
+
+Başlıkta çalışan **sürüm** yazar; üzerine gelince çalışan klasörü gösterir.
+Masaüstü kısayolu kurulum anındaki klasörü açtığı için, yeni sürümü başka bir
+klasöre açtıysanız kısayol eski kopyayı başlatmaya devam eder — bu damga onu
+bir bakışta ele verir.
 
 Sayfa hiçbir zaman tarayıcı önbelleğine alınmaz. Uygulamayı güncellediğinizde
 tarayıcının sakladığı eski arayüz yeni sunucuyla karşılaşmaz; bu durum "açılıyor

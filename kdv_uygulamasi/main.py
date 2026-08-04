@@ -49,8 +49,19 @@ def yaz(metin=""):
 
 
 def kaydi_yaz():
+    """Baslatma kaydini dosyaya EKLER.
+
+    Uzerine yazilmaz: baslatici betik de ayni dosyaya yaziyor (klasor, Python
+    surumu) ve tarayici tarafindaki tani buraya ekleniyor. Boylece tek bir
+    dosya butun hikayeyi tasiyor. Dosya asiri buyumesin diye basi kirpilir.
+    """
     try:
+        eski = ""
+        if os.path.exists(KAYIT_YOLU):
+            with open(KAYIT_YOLU, encoding="utf-8", errors="replace") as f:
+                eski = f.read()[-200000:]
         with open(KAYIT_YOLU, "w", encoding="utf-8") as f:
+            f.write(eski)
             f.write("\n".join(_kayit_satirlari) + "\n")
     except OSError:
         pass

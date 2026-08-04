@@ -20,6 +20,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import beyannameler, db, hesap
+from .surum import surum_bilgisi
 from .excel_export import calisma_olustur
 from .pdf_beyanname import PdfHata, beyanname_oku
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
@@ -113,6 +114,23 @@ def _inceleme_bilgisi(calisma):
     }
 
 
+def _gunluge_yaz(metin, baslik):
+    """Tarayicidan gelen tani/hata metnini baslatma kaydina ekler.
+
+    Uzaktan tespit edilemeyen arizalarda kullanicidan tek bir dosya istemek
+    yeterli olsun diye sunucu ve tarayici tarafi ayni dosyada toplanir.
+    """
+    yol = os.path.join(BASE_DIR, "baslatma_kaydi.txt")
+    try:
+        with open(yol, "a", encoding="utf-8") as f:
+            f.write("\n\n===== %s — %s =====\n%s\n"
+                    % (baslik, datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
+                       str(metin)[:20000]))
+        return True
+    except OSError:
+        return False
+
+
 class Istekci(BaseHTTPRequestHandler):
     server_version = "KDVIncelemeSunucu/2.0"
 
@@ -175,6 +193,7 @@ class Istekci(BaseHTTPRequestHandler):
                     "toplam_ek_bilgi": {k: {"etiket": e, "alan": a}
                                        for k, (e, a) in TOPLAM_EK_BILGI.items()},
                     "bu_yil": datetime.now().year,
+                    "surum": surum_bilgisi(),
                 })
             elif yol == "/api/calismalar":
                 self._json_yanit({"calismalar": db.calismalari_listele()})
@@ -225,6 +244,9 @@ class Istekci(BaseHTTPRequestHandler):
                     raise ApiHata("Önce beyan bloğunu yapıştırın.")
                 self._json_yanit({"metin": matrah_farki_ozeti(
                     _inceleme_bilgisi(calisma), sonuc, bulgular)})
+            elif yol == "/api/gunluk":
+                self._json_yanit({"tamam": _gunluge_yaz(veri.get("metin") or "",
+                                                        veri.get("baslik") or "tarayıcı")})
             elif yol == "/api/pdf_oku":
                 self._json_yanit(self._pdf_oku(veri))
             elif yol == "/api/beyanname_ozet":

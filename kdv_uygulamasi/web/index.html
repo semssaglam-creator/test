@@ -82,6 +82,7 @@
   table.izgara tr.elestiri input { background: #fff9e6; border-color: #e8d9a8; }
   table.izgara tr.elestiri td.etiket { background: #fdf3d8; }
   table.izgara td.satir-yapistir { position: sticky; left: 300px; background: #fff; z-index: 2; }
+  #surumDamga { font-size: 11px; font-weight: 400; color: #9fb3c8; margin-left: 8px; }
   #hataBandi { display: none; background: #8a1f2b; color: #fff; padding: 12px 16px; font-size: 14px; line-height: 1.5; }
   #hataBandi.acik { display: block; }
   #hataBandi pre { margin: 6px 0 0; white-space: pre-wrap; font-size: 12px; opacity: .9; max-height: 160px; overflow: auto; }
@@ -134,7 +135,7 @@
 <body>
 <div id="hataBandi" role="alert"></div>
 <header>
-  <h1>KDV İnceleme Çalışması</h1>
+  <h1>KDV İnceleme Çalışması <span id="surumDamga" title="Çalışan sürüm ve klasör"></span></h1>
   <div class="durum-bilgi">
     <span id="calismaAdi">Yeni çalışma</span>
     <span class="kayit-rozeti" id="kayitRozeti">boş</span>
@@ -561,12 +562,22 @@ function hataGoster(baslik, ayrinti) {
 }
 
 window.addEventListener("error", (e) => {
-  hataGoster(e.message || "bilinmeyen hata",
-             `${e.filename || ""}:${e.lineno || "?"}\n` + ((e.error && e.error.stack) || ""));
+  const ayrinti = `${e.filename || ""}:${e.lineno || "?"}\n` + ((e.error && e.error.stack) || "");
+  hataGoster(e.message || "bilinmeyen hata", ayrinti);
+  gunlugeYaz("tarayıcı hatası", (e.message || "") + "\n" + ayrinti);
 });
+
+/** Hatayi sunucudaki kayda da yazar; basarisiz olursa sessizce gecer. */
+function gunlugeYaz(baslik, metin) {
+  try {
+    fetch("/api/gunluk", { method: "POST", headers: { "Content-Type": "application/json" },
+                           body: JSON.stringify({ baslik, metin }) }).catch(() => {});
+  } catch (e) { /* olsun */ }
+}
 window.addEventListener("unhandledrejection", (e) => {
   const s = e.reason;
   hataGoster((s && s.message) || String(s), (s && s.stack) || "");
+  gunlugeYaz("tarayıcı hatası (promise)", ((s && s.message) || String(s)) + "\n" + ((s && s.stack) || ""));
 });
 
 async function api(yol, govde) {
@@ -2121,6 +2132,9 @@ async function taniRaporu() {
   const ekle = (a, d) => satirlar.push(a.padEnd(24) + ": " + d);
   ekle("Zaman", new Date().toLocaleString("tr-TR"));
   ekle("Adres", location.href);
+  const sur = (durum.tanimlar && durum.tanimlar.surum) || {};
+  ekle("Sürüm", sur.surum || "bilinmiyor");
+  ekle("Çalışan klasör", sur.klasor || "bilinmiyor");
   ekle("Tarayıcı", navigator.userAgent);
   ekle("Dil / platform", navigator.language + " / " + (navigator.platform || "?"));
   ekle("Tanımlar yüklendi", durum.tanimlar ? "evet (" + durum.tanimlar.satirlar.length + " satır)" : "HAYIR");
@@ -2155,7 +2169,11 @@ async function taniRaporu() {
     clipboard: !!(navigator.clipboard && navigator.clipboard.writeText),
   };
   Object.keys(ozellikler).forEach((k) => ekle("Tarayıcı: " + k, ozellikler[k] ? "var" : "YOK"));
-  return satirlar.join("\n");
+  const metin = satirlar.join("\n");
+  // Kullanicidan tek bir dosya istemek yeterli olsun diye sunucudaki
+  // baslatma_kaydi.txt dosyasina da eklenir
+  try { await api("/api/gunluk", { baslik: "tarayıcı tanı", metin }); } catch (e) { /* olsun */ }
+  return metin;
 }
 
 $("hTani").addEventListener("click", async () => {
@@ -2631,6 +2649,14 @@ function ekraniCiz() {
 (async function baslat() {
   try {
     durum.tanimlar = await api("/api/tanimlar");
+    const sur = durum.tanimlar.surum || {};
+    if (sur.surum) {
+      // Hangi kopyanin calistigi gorunsun: masaustu kisayolu kurulum anindaki
+      // klasoru baslattigi icin guncelleme baska bir klasore acilirsa eski
+      // surum calismaya devam edebiliyor
+      $("surumDamga").textContent = "sürüm " + sur.surum;
+      $("surumDamga").title = "Çalışan klasör: " + (sur.klasor || "?");
+    }
     durum.calisma = bosCalisma();
     const k = await api("/api/calismalar");
     durum.kayitlar = k.calismalar;
