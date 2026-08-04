@@ -4,3 +4,4 @@ yedekler/*.db
 __pycache__/
 *.pyc
 baslatma_kaydi.txt
+baslatma_hatasi.txt

@@ -64,37 +64,55 @@ fi
 
 # --- Tani modu: TANI.sh buraya --tani ile gelir -----------------------------
 if [ "$1" = "--tani" ]; then
-    "$PY" main.py --tani
+    "$PY" -u main.py --tani
     printf '\nRapor: %s\n' "$KAYIT"
     printf 'Kapatmak icin Enter tusuna basin.\n'
     read -r _ 2>/dev/null || true
     exit 0
 fi
 
-# --- Uygulamayi calistir; ciktiyi hem ekrana hem kayda ver ------------------
+# --- Uygulamayi calistir ----------------------------------------------------
+#
+# Cikti bir boru hattina verilmez: boru hatti hem tamponlama hem sinyal
+# davranisini degistirir. Python dogrudan calistirilir; ekrana yazdiklari
+# oldugu gibi gorunur, Ctrl+C beklendigi gibi isler.
+#
+# Yalnizca hata akisi (stderr) bir dosyaya alinir. Masaustu kisayolundan
+# acildiginda (Terminal=false) ekrana yazilanlar hicbir yere gitmiyor; Python
+# bir hatayla kapanirsa ekranda hicbir sey olmuyor ve "hic acilmiyor" gibi
+# gorunuyordu. Artik gerekce hem dosyada duruyor hem pencereyle bildiriliyor.
+HATA_DOSYASI="$UYG_DIZIN/baslatma_hatasi.txt"
 {
     printf '===== baslatma: %s =====\n' "$(date '+%d.%m.%Y %H:%M:%S')"
     printf 'Klasor : %s\n' "$UYG_DIZIN"
     printf 'Python : %s (%s)\n' "$("$PY" -V 2>&1)" "$(command -v "$PY")"
-} >> "$KAYIT" 2>/dev/null
+} > "$HATA_DOSYASI" 2>/dev/null
+cat "$HATA_DOSYASI" >> "$KAYIT" 2>/dev/null
 
-# Cikti hem ekrana akar hem kayda yazilir. Komut ikamesi ($(...)) kullanilmaz:
-# o, surec bitene kadar butun ciktiyi bekletir ve uygulama calisirken ekranda
-# adres bile gorunmez. Cikis kodu ayri bir dosyayla tasinir (boru hattinda
-# PIPESTATUS POSIX degildir).
-DURUM_DOSYASI=$(mktemp 2>/dev/null || echo "$UYG_DIZIN/.cikis_kodu")
-( "$PY" main.py 2>&1; echo $? > "$DURUM_DOSYASI" ) | tee -a "$KAYIT"
-SONUC=$(cat "$DURUM_DOSYASI" 2>/dev/null || echo 1)
-rm -f "$DURUM_DOSYASI"
-
-if [ "$SONUC" -ne 0 ]; then
-    bildir "KDV Inceleme - baslatilamadi" "Uygulama baslatilamadi (cikis kodu $SONUC).
+# On denetim: uygulama modulleri yuklenebiliyor mu.
+#
+# "Hic acilmiyor" durumlarinin hemen hepsi yukleme aninda olusan bir hatadir.
+# Uygulamayi exec ile calistirdigimizda (asagida) kabuk yerini Python'a
+# birakir; sonrasinda hata penceresi acacak kimse kalmaz. Bu yuzden once
+# ucuz bir yukleme denemesi yapilir ve hata varsa kullaniciya bildirilir.
+if ! "$PY" -c "import sys, os
+sys.path.insert(0, os.path.join('$UYG_DIZIN', 'lib'))
+sys.path.insert(0, '$UYG_DIZIN')
+import app.web_server" >> "$HATA_DOSYASI" 2>&1; then
+    cat "$HATA_DOSYASI" >> "$KAYIT" 2>/dev/null
+    bildir "KDV Inceleme - baslatilamadi" "Uygulama yuklenemedi.
 
 Klasor: $UYG_DIZIN
 Python: $("$PY" -V 2>&1)
 
-$(tail -n 25 "$KAYIT" 2>/dev/null)
+$(tail -n 20 "$HATA_DOSYASI" 2>/dev/null)
 
-Ayrinti: $KAYIT"
-    exit "$SONUC"
+Ayrinti: $HATA_DOSYASI"
+    exit 1
 fi
+
+# Uygulamayi calistir. exec kullanilir: kabuk yerini Python'a birakir, boylece
+# Ctrl+C ve pencere kapatma dogrudan uygulamaya ulasir (calisan surumdeki
+# davranis). Hata akisi yine de dosyaya alinir ki beklenmedik bir cokme kayda
+# gecsin.
+exec "$PY" -u main.py 2>> "$HATA_DOSYASI"

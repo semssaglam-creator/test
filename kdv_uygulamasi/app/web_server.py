@@ -13,16 +13,14 @@ import binascii
 import json
 import os
 import posixpath
-import socket
-import socketserver
 import urllib.parse
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import beyannameler, db, hesap
-from .surum import surum_bilgisi
 from .excel_export import calisma_olustur
 from .pdf_beyanname import PdfHata, beyanname_oku
+from .surum import surum_bilgisi
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
@@ -117,8 +115,7 @@ def _inceleme_bilgisi(calisma):
 def _gunluge_yaz(metin, baslik):
     """Tarayicidan gelen tani/hata metnini baslatma kaydina ekler.
 
-    Uzaktan tespit edilemeyen arizalarda kullanicidan tek bir dosya istemek
-    yeterli olsun diye sunucu ve tarayici tarafi ayni dosyada toplanir.
+    Boylece bir aksilikte kullanicidan tek bir dosya istemek yeterli olur.
     """
     yol = os.path.join(BASE_DIR, "baslatma_kaydi.txt")
     try:
@@ -170,8 +167,6 @@ class Istekci(BaseHTTPRequestHandler):
                 self._dosya_gonder(os.path.join(WEB_DIR, "index.html"),
                                    "text/html; charset=utf-8")
             elif yol in ("/favicon.ico", "/ikon.png"):
-                # Yoksa tarayici konsoluna her acilista 404 dusuyordu; gercek
-                # hatalari ararken yanilticiydi
                 self._dosya_gonder(os.path.join(BASE_DIR, "ikon.png"),
                                    "image/png", onbellek_kapali=False)
             elif yol == "/api/tanimlar":
@@ -244,15 +239,15 @@ class Istekci(BaseHTTPRequestHandler):
                     raise ApiHata("Önce beyan bloğunu yapıştırın.")
                 self._json_yanit({"metin": matrah_farki_ozeti(
                     _inceleme_bilgisi(calisma), sonuc, bulgular)})
-            elif yol == "/api/gunluk":
-                self._json_yanit({"tamam": _gunluge_yaz(veri.get("metin") or "",
-                                                        veri.get("baslik") or "tarayıcı")})
             elif yol == "/api/pdf_oku":
                 self._json_yanit(self._pdf_oku(veri))
             elif yol == "/api/beyanname_ozet":
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
                 self._json_yanit(self._beyanname_uygula(veri))
+            elif yol == "/api/gunluk":
+                self._json_yanit({"tamam": _gunluge_yaz(veri.get("metin") or "",
+                                                        veri.get("baslik") or "tarayıcı")})
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
@@ -376,12 +371,12 @@ class Istekci(BaseHTTPRequestHandler):
         self.wfile.write(govde)
 
     def _onbellek_kapali(self):
-        """Tarayici hicbir seyi saklamasin.
+        """Tarayici sayfayi saklamasin.
 
         Uygulama guncellendiginde tarayicinin sakladigi eski arayuz yeni
-        sunucuyla birlikte calisirsa, sayfa acilir ama beklenmedik bicimde
-        bozuk davranir ve ekranda bir hata gorunmez. Yerel bir uygulamada
-        onbellegin kazanci yok, riski var.
+        sunucuyla birlikte calisirsa sayfa acilir ama bozuk davranir ve
+        ekranda hicbir hata gorunmez. Yerel bir uygulamada onbellegin
+        kazanci yok.
         """
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.send_header("Pragma", "no-cache")
@@ -402,38 +397,6 @@ class Istekci(BaseHTTPRequestHandler):
         self.wfile.write(govde)
 
 
-class _Sunucu(ThreadingHTTPServer):
-    daemon_threads = True
-    # Windows'ta SO_REUSEADDR, portu baskasi kullaniyorken de baglanmaya izin
-    # verir; bu durumda istekler sessizce yanlis surece gidebilir. Bu yuzden
-    # Windows'ta kapali tutulur ki dolu port durustce hata versin.
-    allow_reuse_address = os.name != "nt"
-
-    def __init__(self, adres, islevci):
-        # getfqdn() kimi Windows aglarinda ters DNS icin uzun sure bekletir;
-        # yerel sunucuda bu bilgiye ihtiyac yok
-        self.server_name = adres[0]
-        self.server_port = adres[1]
-        super().__init__(adres, islevci)
-
-    def server_bind(self):
-        # HTTPServer.server_bind() yerine dogrudan TCPServer'inki: getfqdn()
-        # cagrisi atlanir
-        socketserver.TCPServer.server_bind(self)
-        self.server_name = self.server_address[0]
-        self.server_port = self.server_address[1]
-
-
-class _Sunucu6(_Sunucu):
-    address_family = socket.AF_INET6
-
-
-def sunucu_baslat(port=8766, adres="127.0.0.1"):
-    """Yerel sunucuyu baslatir.
-
-    adres: "127.0.0.1" (IPv4) ya da "::1" (IPv6). Ikisi birden dinlenirse
-    tarayici "localhost" adresini hangisine cozerse cozsun ulasir.
-    """
+def sunucu_baslat(port=8766):
     db.init_db()
-    sinif = _Sunucu6 if ":" in adres else _Sunucu
-    return sinif((adres, port), Istekci)
+    return ThreadingHTTPServer(("127.0.0.1", port), Istekci)
