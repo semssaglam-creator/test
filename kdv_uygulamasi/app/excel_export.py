@@ -638,7 +638,59 @@ def _etki_sayfasi(wb, sonuc):
     return ws
 
 
-def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None):
+def _duzeltme_sayfasi(wb, duzeltme_bloklari):
+    """Rapora yapistirilan duzeltme beyannameleri tablosu.
+
+    Elde kullanilan tablonun birebir karsiligidir: yalnizca duzeltme
+    beyannameleri, kendi rakamlariyla ve duzeltme gerekcesiyle. Basligi
+    "Dönemi <yil>" oldugu icin her yil ayri bir tablodur.
+    """
+    from .beyannameler import DUZELTME_KOLONLARI
+
+    if not duzeltme_bloklari:
+        return None
+    ws = wb.create_sheet("Düzeltme Beyannameleri")
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 15
+    for i in range(3, len(DUZELTME_KOLONLARI)):
+        ws.column_dimensions[get_column_letter(i)].width = 17
+    ws.column_dimensions[get_column_letter(len(DUZELTME_KOLONLARI))].width = 46
+
+    metin_kodlari = {"donem", "tarih", "gerekce"}
+    satir = 1
+    for blok in duzeltme_bloklari:
+        _yaz(ws, satir, 1, "MÜKELLEFİN VERDİĞİ DÜZELTME BEYANNAMELERİ",
+             FONT_BASLIK, SOL, DOLGU_BASLIK, bicim=None)
+        ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                       end_column=len(DUZELTME_KOLONLARI))
+        satir += 1
+
+        for i, (kod, etiket) in enumerate(DUZELTME_KOLONLARI):
+            baslik = "Dönemi\n%s" % blok["yil"] if kod == "donem" else etiket
+            h = _yaz(ws, satir, i + 1, baslik, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+            h.alignment = Alignment(horizontal="center", vertical="center",
+                                    wrap_text=True)
+        ws.row_dimensions[satir].height = 30
+        satir += 1
+
+        for kayit in blok["satirlar"]:
+            for i, (kod, _etiket) in enumerate(DUZELTME_KOLONLARI):
+                deger = kayit.get(kod)
+                if kod in metin_kodlari:
+                    hiza = SOL if kod == "gerekce" else ORTA
+                    h = _yaz(ws, satir, i + 1, deger or "", FONT, hiza, bicim=None)
+                    if kod == "gerekce":
+                        h.alignment = SOL
+                else:
+                    _yaz(ws, satir, i + 1, float(deger or 0.0), FONT, SAG)
+            ws.row_dimensions[satir].height = 30
+            satir += 1
+        satir += 1
+    return ws
+
+
+def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
+                    duzeltme_bloklari=None):
     """Excel calisma dosyasini uretir ve yola yazar."""
     wb = Workbook()
     wb.remove(wb.active)
@@ -647,6 +699,7 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None):
     for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
         duzen = _yil_sayfasi(wb, yil_kaydi, sonuc["donemler"], onceki)
         onceki = (duzen["yil"], duzen["ay_sayisi"])
+    _duzeltme_sayfasi(wb, duzeltme_bloklari or [])
     _etki_sayfasi(wb, sonuc)
     _yil_uyum_sayfasi(wb, sonuc)
     if duzen:

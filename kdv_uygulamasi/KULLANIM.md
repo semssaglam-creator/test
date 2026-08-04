@@ -49,6 +49,22 @@ yanında uyarı rozeti çıkar.
 | Dönem Detayı | Satır satır tablo: **İlk beyan · 1. düzeltme · 2. düzeltme … · Fark (son − ilk)**. Değişen hücreler vurgulanır; istenirse yalnızca değişen satırlar gösterilir |
 | Her düzeltmede ne değişti | Her düzeltmenin bir öncekine göre neyi, hangi tutardan hangi tutara taşıdığı |
 
+**Düzeltme beyannameleri — rapor tablosu.** Rapora yapıştırılan biçimde ayrı
+bir tablo üretilir:
+
+| Dönemi *(yıl)* | Düzeltme Tarihi | KDV Matrahı | Hspl. KDV | Önc. Dön. Dev. KDV | Bu Dön. İndl. KDV | İndirimler Toplamı | Öden. KDV | Son. Dön. Dev. KDV | Düzeltme Gerekçesi |
+|---|---|---|---|---|---|---|---|---|---|
+
+Yalnızca düzeltme beyannameleri yer alır; kanuni süresinde verilen ilk beyanname
+bu tabloya girmez. Bir dönemde birden çok düzeltme varsa her biri ayrı satırdır.
+Tutarlar o düzeltme beyannamesinin kendi rakamlarıdır, gerekçe beyannamedeki
+*Düzeltme Nedeni* alanından gelir. Başlık "Dönemi *yıl*" olduğu için her yıl
+ayrı bir tablodur.
+
+**Tabloyu kopyala** düğmesi sekmeyle ayrılmış olarak panoya alır; Word ya da
+Excel'e doğrudan yapıştırılır. Aynı tablo Excel çıktısında *Düzeltme
+Beyannameleri* sayfasında da yer alır.
+
 **İnceleme hangi beyan üzerinden yapılsın.** Alttaki kutudan seçersiniz:
 
 - **Kanuni süresinde verilen ilk beyan** — bütün dönemlerde ilk beyan esas alınır

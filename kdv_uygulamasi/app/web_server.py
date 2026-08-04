@@ -340,6 +340,9 @@ class Istekci(BaseHTTPRequestHandler):
                          for d in duzen["donemler"]},
             "secilen": {a: s["sira"] for a, s in
                         beyannameler.secimi_coz(duzen, veri.get("secim")).items()},
+            "duzeltme_tablosu": beyannameler.duzeltme_tablosu(duzen),
+            "duzeltme_kolonlari": [{"kod": k, "etiket": e}
+                                   for k, e in beyannameler.DUZELTME_KOLONLARI],
         }
 
     def _beyanname_uygula(self, veri):
@@ -358,7 +361,9 @@ class Istekci(BaseHTTPRequestHandler):
                           if c.isalnum() or c in " -_").strip() or "kdv"
         dosya_adi = f"KDV_calisma_{guvenli}.xlsx".replace(" ", "_")
         dosya_yolu = os.path.join(CIKTI_DIR, dosya_adi)
-        calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular)
+        duzen = beyannameler.duzenle(calisma.get("beyannameler") or [])
+        calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular,
+                        beyannameler.duzeltme_tablosu(duzen))
         with open(dosya_yolu, "rb") as f:
             govde = f.read()
         self.send_response(200)

@@ -94,6 +94,8 @@
   .oge { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid #dde3ea; border-radius: 6px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
   .rozet.kanuni { background: #d9e1f2; color: #1f3a5f; }
   .rozet.duzeltme { background: #fff2cc; color: #8a6d1b; }
+  table.duzeltme-tablo td.gerekce { max-width: 320px; white-space: normal; font-size: 11px; line-height: 1.35; }
+  table.duzeltme-tablo th { vertical-align: middle; }
   td.degisti { background: #fff6e5; font-weight: 600; }
   tr.onemli td { background: #f2f7ff; }
   table.izgara th.satir-toplam, table.izgara td.satir-toplam { position: sticky; right: 0; background: #e2efda; z-index: 2; font-weight: 600; border-left: 2px solid #9bbb8a; min-width: 104px; }
@@ -356,6 +358,20 @@
     <div id="bnSurumBilgi"></div>
     <div class="kaydir"><table class="tablo" id="bnDetayTablo"></table></div>
     <div id="bnAdimlar"></div>
+  </div>
+
+  <div class="kart" id="duzeltmeKart" style="display:none;">
+    <h2>Düzeltme Beyannameleri — Rapor Tablosu</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Rapora yapıştırmak için. Yalnızca düzeltme beyannameleri yer alır; kanuni
+      süresinde verilen ilk beyanname bu tabloya girmez. Tutarlar o düzeltme
+      beyannamesinin kendi rakamlarıdır.
+    </div>
+    <div class="satir" style="margin-bottom:10px;">
+      <div><button class="btn" id="duzeltmeKopyala">Tabloyu kopyala</button></div>
+      <div><button class="btn ikincil" id="duzeltmeExcel">Excel'e aktar</button></div>
+    </div>
+    <div id="duzeltmeTablolar"></div>
   </div>
 
   <div class="kart" id="beyannameSecimKart" style="display:none;">
@@ -2257,6 +2273,7 @@ function mukellefiTazele(yeniler) {
 
 async function beyannameleriTazele() {
   const kartlar = ["beyannameKart", "beyannameDetayKart", "beyannameSecimKart"];
+  if (!durum.calisma.beyannameler.length) $("duzeltmeKart").style.display = "none";
   if (!durum.calisma.beyannameler.length) {
     durum.bnOzet = null;
     kartlar.forEach((k) => { $(k).style.display = "none"; });
@@ -2278,6 +2295,7 @@ async function beyannameleriTazele() {
   yuklenenleriCiz();
   bnGenelCiz();
   bnDetayCiz();
+  duzeltmeTablosunuCiz();
   bnSecimCiz();
 }
 
@@ -2446,6 +2464,86 @@ function bnDetayCiz() {
       }).join("");
   }
 }
+
+/**
+ * Duzeltme beyannameleri tablosu (rapora yapistirilan bicim).
+ *
+ * Basligi "Dönemi <yil>" oldugu icin her yil ayri bir tablo olarak cizilir;
+ * elde kullanilan tablonun duzeni budur.
+ */
+function duzeltmeTablosunuCiz() {
+  const kap = $("duzeltmeTablolar");
+  const kolonlar = durum.bnOzet.duzeltme_kolonlari || [];
+  const bloklar = durum.bnOzet.duzeltme_tablosu || [];
+  kap.innerHTML = "";
+  $("duzeltmeKart").style.display = bloklar.length ? "" : "none";
+  if (!bloklar.length) return;
+
+  bloklar.forEach((blok) => {
+    const sar = document.createElement("div");
+    sar.className = "kaydir";
+    sar.style.marginBottom = "14px";
+    const tablo = document.createElement("table");
+    tablo.className = "tablo duzeltme-tablo";
+
+    const bas = document.createElement("tr");
+    kolonlar.forEach((k) => {
+      const th = hucre("th", k.kod === "donem" ? `Dönemi\n${blok.yil}` : k.etiket);
+      if (k.kod === "donem") th.style.whiteSpace = "pre-line";
+      if (!["donem", "tarih", "gerekce"].includes(k.kod)) th.className = "sag";
+      bas.appendChild(th);
+    });
+    tablo.appendChild(bas);
+
+    blok.satirlar.forEach((satir) => {
+      const tr = document.createElement("tr");
+      kolonlar.forEach((k) => {
+        const deger = satir[k.kod];
+        if (k.kod === "gerekce") {
+          const td = hucre("td", deger || "—");
+          td.className = "gerekce";
+          tr.appendChild(td);
+        } else if (typeof deger === "number") {
+          const td = hucre("td", tl(deger));
+          td.className = "sayi";
+          tr.appendChild(td);
+        } else {
+          tr.appendChild(hucre("td", String(deger || "")));
+        }
+      });
+      tablo.appendChild(tr);
+    });
+    sar.appendChild(tablo);
+    kap.appendChild(sar);
+  });
+}
+
+/** Tabloyu panoya sekmeyle ayrilmis olarak kopyalar (Word/Excel'e yapistirilir). */
+function duzeltmeMetni() {
+  const kolonlar = durum.bnOzet.duzeltme_kolonlari || [];
+  const satirlar = [];
+  (durum.bnOzet.duzeltme_tablosu || []).forEach((blok) => {
+    satirlar.push(kolonlar.map((k) => k.kod === "donem"
+      ? `Dönemi ${blok.yil}` : k.etiket).join("\t"));
+    blok.satirlar.forEach((s) => {
+      satirlar.push(kolonlar.map((k) => {
+        const d = s[k.kod];
+        return typeof d === "number" ? tl(d) : String(d || "");
+      }).join("\t"));
+    });
+    satirlar.push("");
+  });
+  return satirlar.join("\n").trim();
+}
+
+$("duzeltmeKopyala").addEventListener("click", () => {
+  const metin = duzeltmeMetni();
+  navigator.clipboard.writeText(metin).then(
+    () => mesaj("Tablo panoya kopyalandı; rapora yapıştırabilirsiniz."),
+    () => mesaj("Kopyalanamadı. Tabloyu seçip Ctrl+C ile alabilirsiniz.", "hata"));
+});
+
+$("duzeltmeExcel").addEventListener("click", () => excelIndir());
 
 function bnSecimCiz() {
   const elle = $("bnMod").value === "elle";

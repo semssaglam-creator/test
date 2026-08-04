@@ -283,6 +283,60 @@ def beyana_cevir(duzen, secim):
     return {"yillar": liste, "kullanilan": kullanilan}
 
 
+# Rapora yapistirilan "duzeltme beyannameleri" tablosunun kolon duzeni.
+# Elde kullanilan tablonun birebir karsiligidir.
+DUZELTME_KOLONLARI = [
+    ("donem", "Dönemi"),
+    ("tarih", "Düzeltme Tarihi"),
+    ("matrah_toplami", "KDV Matrahı"),
+    ("hesaplanan_kdv", "Hspl. KDV"),
+    ("onceki_donem_devreden", "Önc. Dön. Dev. KDV"),
+    ("bu_donem_indirilecek", "Bu Dön. İndl. KDV"),
+    ("indirimler_toplami", "İndirimler Toplamı"),
+    ("odenmesi_gereken_kdv", "Öden. KDV"),
+    ("sonraki_donem_devreden", "Son. Dön. Dev. KDV"),
+    ("gerekce", "Düzeltme Gerekçesi"),
+]
+
+# Tutar tasiyan kolonlar (metin kolonlarindan ayirmak icin)
+DUZELTME_TUTAR_KODLARI = [kod for kod, _e in DUZELTME_KOLONLARI
+                          if kod not in ("donem", "tarih", "gerekce")]
+
+
+def _tarih(onay_zamani):
+    """'27.04.2025 - 17:03:28' -> '27.04.2025'"""
+    return (onay_zamani or "").split("-")[0].strip()
+
+
+def duzeltme_tablosu(duzen):
+    """Rapora yapistirilan duzeltme beyannameleri tablosu.
+
+    Yalnizca duzeltme beyannameleri yer alir; kanuni suresinde verilen ilk
+    beyanname bu tabloya girmez. Bir donemde birden cok duzeltme varsa her
+    biri ayri satirdir. Tutarlar o duzeltme beyannamesinin kendi rakamlaridir.
+
+    Doner: [{"yil", "satirlar": [{kod: deger}]}] — yil yil ayrilmis, cunku
+    tablonun basligi "Dönemi <yil>" bicimindedir.
+    """
+    yillar = {}
+    for d in duzen["donemler"]:
+        for surum in d["surumler"]:
+            if surum["tur"] != "duzeltme":
+                continue
+            satir = {
+                "donem": d["ay_adi"],
+                "tarih": _tarih(surum["onay_zamani"]),
+                "gerekce": surum["duzeltme_nedeni"] or "",
+                "sira": surum["sira"],
+                "kaynak": surum["kaynak"],
+            }
+            for kod in DUZELTME_TUTAR_KODLARI:
+                satir[kod] = round(surum["degerler"].get(kod) or 0.0, 2)
+            yillar.setdefault(d["yil"], []).append(satir)
+
+    return [{"yil": yil, "satirlar": yillar[yil]} for yil in sorted(yillar)]
+
+
 def genel_bakis(duzen):
     """Donem donem ozet: kac surum var, ilk ve son halde sonuc hesaplari."""
     satirlar = []
