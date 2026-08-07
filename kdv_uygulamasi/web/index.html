@@ -339,9 +339,12 @@
     <h2>Genel Bakış</h2>
     <div class="yardim" style="margin-bottom:10px;">
       Her beyanname ayrı satırda: kanuni süresinde verilen beyan ve ardından
-      her düzeltme. Farklar bir önceki beyannameye göredir. Hiçbir tutarı
-      değiştirmeyen düzeltmeler de listelenir; o satırda "değişiklik yok" yazar.
+      her düzeltme. Sütunlar Sonuç ve Fark sekmesindekilerle aynıdır; tutarlar
+      o beyannamenin kendi rakamlarıdır. Bir önceki beyannameye göre değişen
+      hücreler vurgulanır. Hiçbir tutarı değiştirmeyen düzeltmeler de
+      listelenir; o satırda "değişiklik yok" yazar.
     </div>
+    <div class="yil-sekmeler" id="bnGenelYilSekme"></div>
     <div class="kaydir"><table class="tablo" id="bnGenelTablo"></table></div>
   </div>
 
@@ -494,6 +497,7 @@ const durum = {
   // Beyannameler sekmesi (beyannameler calismanin icinde tutulur)
   bnOzet: null,         // sunucudan gelen duzen + karsilastirma
   bnDonem: null,        // detayda gosterilen donem anahtari
+  bnGenelYil: "tumu",   // Genel Bakis'ta secili yil ("tumu" ya da yil)
   bnSecimler: {},       // elle secimde donem -> surum sirasi
 };
 
@@ -2236,30 +2240,56 @@ function yuklenenleriCiz() {
 }
 
 function bnGenelCiz() {
+  // Yil sekmeleri: beyanname yuklenen yillar. Sonuc ve Fark sekmesindeki
+  // mantikla ayni; "Tümü" butun yillari tek tabloda gosterir.
+  const tumSatirlar = durum.bnOzet.genel_bakis;
+  const yilListesi = [];
+  tumSatirlar.forEach((g) => { if (!yilListesi.includes(g.yil)) yilListesi.push(g.yil); });
+  yilListesi.sort((a, b) => a - b);
+  if (durum.bnGenelYil !== "tumu" && !yilListesi.includes(durum.bnGenelYil)) {
+    durum.bnGenelYil = yilListesi.length > 1 ? "tumu" : (yilListesi[0] ?? "tumu");
+  }
+  const sekmeKap = $("bnGenelYilSekme");
+  sekmeKap.innerHTML = "";
+  sekmeKap.style.display = yilListesi.length > 1 ? "" : "none";
+  if (yilListesi.length > 1) {
+    [["tumu", "Tümü"]].concat(yilListesi.map((y) => [y, String(y)]))
+      .forEach(([deger, ad]) => {
+        const d = document.createElement("button");
+        d.className = "yil-sekme" + (String(durum.bnGenelYil) === String(deger) ? " aktif" : "");
+        d.textContent = ad;
+        d.addEventListener("click", () => { durum.bnGenelYil = deger; bnGenelCiz(); });
+        sekmeKap.appendChild(d);
+      });
+  }
+  const satirlar = String(durum.bnGenelYil) === "tumu"
+    ? tumSatirlar
+    : tumSatirlar.filter((g) => String(g.yil) === String(durum.bnGenelYil));
+
   const tablo = $("bnGenelTablo");
   tablo.innerHTML = "";
-  // Her beyanname kendi satirinda: donem basina tek satir yok. Bir donemde
-  // kac beyanname varsa o kadar satir olur; fark cikmayan duzeltmeler de
-  // yazilir, farklari sifir gorunur.
-  const basliklar = ["Dönem", "Beyanname", "Tarih", "Değişen satır", "Matrah",
-                     "Matrah farkı", "Ödenecek KDV", "Ödenecek farkı",
-                     "Devreden KDV", "Devir farkı", "Düzeltme gerekçesi"];
+  // Tutar kolonlari Sonuc ve Fark sekmesiyle ayni tanimdan gelir.
+  const kolonlar = durum.tanimlar.ozet_kolonlari;
+  const basliklar = ["Dönem", "Beyanname", "Tarih", "Değişen satır"];
   const tr = document.createElement("tr");
-  basliklar.forEach((b, i) => {
-    const th = hucre("th", b);
-    if (i > 3) th.className = "sag";
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  kolonlar.forEach((k) => {
+    const th = hucre("th", k.etiket);
+    th.className = "sag";
     tr.appendChild(th);
   });
+  tr.appendChild(hucre("th", "Düzeltme gerekçesi"));
   tablo.appendChild(tr);
 
+  const cokYil = String(durum.bnGenelYil) === "tumu" && yilListesi.length > 1;
   let oncekiDonem = null;
-  durum.bnOzet.genel_bakis.forEach((g) => {
+  satirlar.forEach((g) => {
     const satir = document.createElement("tr");
     // Ayni donemin ikinci ve sonraki beyannamelerinde donem adi tekrarlanmaz;
     // boylece bir donemin kac beyannamesi oldugu bir bakista gorunur.
     const yeniDonem = g.anahtar !== oncekiDonem;
     if (yeniDonem && oncekiDonem !== null) satir.classList.add("donem-basi");
-    const ad = hucre("td", yeniDonem ? g.etiket : "");
+    const ad = hucre("td", yeniDonem ? (cokYil ? g.etiket : g.ay_adi) : "");
     if (yeniDonem) {
       ad.style.cursor = "pointer";
       ad.title = "Dönem detayına git";
@@ -2278,19 +2308,15 @@ function bnGenelCiz() {
 
     const degisen = hucre("td", g.ilk_mi ? "—"
                           : (g.degisen_satir ? String(g.degisen_satir) : "değişiklik yok"));
-    degisen.className = "sag";
     if (!g.ilk_mi && !g.degisen_satir) degisen.classList.add("sessiz");
     satir.appendChild(degisen);
 
-    const sayilar = [
-      [g.matrah, false], [g.matrah_fark, true],
-      [g.odenecek, false], [g.odenecek_fark, true],
-      [g.devir, false], [g.devir_fark, true],
-    ];
-    sayilar.forEach(([deger, farkMi]) => {
-      const td = hucre("td", farkMi && g.ilk_mi ? "—" : tl(deger));
+    kolonlar.forEach((k) => {
+      const td = hucre("td", tl(g.ozet[k.kod] || 0));
       td.className = "sayi";
-      if (farkMi && !g.ilk_mi && Math.abs(deger) > 0.005) td.classList.add("fark-var");
+      // Bir onceki beyannameye gore degisen hucreler vurgulanir
+      if (g.ozet_degisen.includes(k.kod)) td.classList.add("fark-var");
+      else if ((g.ozet[k.kod] || 0) < 0) td.classList.add("negatif");
       satir.appendChild(td);
     });
 

@@ -41,7 +41,7 @@ yanında uyarı rozeti çıkar.
 
 | Bölüm | Ne gösterir |
 |---|---|
-| Genel Bakış | **Her beyanname ayrı satırda**: kanuni beyan ve ardından her düzeltme. Tutarlar o beyannamenin kendi rakamları, farklar bir önceki beyannameye göre. Hiçbir tutarı değiştirmeyen düzeltmeler de listelenir ("değişiklik yok") |
+| Genel Bakış | **Her beyanname ayrı satırda**: kanuni beyan ve ardından her düzeltme. Sütunlar **Sonuç ve Fark sekmesindekilerle aynı**; tutarlar o beyannamenin kendi rakamları. Bir önceki beyannameye göre değişen hücreler vurgulanır. Hiçbir tutarı değiştirmeyen düzeltmeler de listelenir ("değişiklik yok"). Birden çok yıl varsa yıl sekmeleri çıkar |
 | Dönem Detayı | Satır satır tablo: **İlk beyan · 1. düzeltme · 2. düzeltme … · Fark (son − ilk)**. Değişen hücreler vurgulanır; istenirse yalnızca değişen satırlar gösterilir |
 | Her düzeltmede ne değişti | Her düzeltmenin bir öncekine göre neyi, hangi tutardan hangi tutara taşıdığı |
 

@@ -13,7 +13,22 @@ Bu modul:
   - secilen kombinasyonu (hepsi ilk beyan / hepsi son hal / donem donem secim)
     incelemede kullanilacak beyan verisine cevirir.
 """
-from .satirlar import AYLAR, BEYAN_SATIRLARI, ETIKETLER, VERI_KODLARI
+from .satirlar import (AYLAR, BEYAN_SATIRLARI, ETIKETLER, OZET_KOLONLARI,
+                       VERI_KODLARI)
+
+# Genel Bakis tablosu, Sonuc ve Fark sekmesindeki ozet tabloyla ayni kolonlari
+# kullanir; iki ekran yan yana okunabilsin diye. Asagidaki esleme, ozet
+# kolonunun beyannamedeki hangi satirdan geldigini soyler.
+OZET_ESLEMESI = {
+    "matrah": "matrah_toplami",
+    "toplam_kdv": "toplam_kdv",
+    "onceki_devir": "onceki_donem_devreden",
+    "bu_donem_indirim_toplam": "bu_donem_indirilecek",
+    "indirimler": "indirimler_toplami",
+    "odenecek": "odenmesi_gereken_kdv",
+    "sonraki_devir": "sonraki_donem_devreden",
+    "iade": "iade_edilmesi_gereken_kdv",
+}
 
 # Karsilastirma tablosunda one cikarilan satirlar (sonuc hesaplari ve ana
 # buyuklukler); digerleri "tum satirlar" secildiginde gorunur.
@@ -376,7 +391,12 @@ def genel_bakis(duzen):
     farklar sifir gorunur. "Degisiklik yok" bilgisinin kendisi de bir
     bulgudur ve beyannamenin verilmis olmasi gizlenmemelidir.
 
-    Her satirdaki farklar BIR ONCEKI surume goredir; ilk beyanda fark yoktur.
+    Tutar kolonlari Sonuc ve Fark sekmesindeki ozet tabloyla aynidir
+    (`OZET_KOLONLARI`); hangi beyanname satirindan geldikleri
+    `OZET_ESLEMESI` ile belirlenir. Boylece iki ekran yan yana okunabilir.
+
+    "ozet_degisen", bu beyannamede BIR ONCEKI beyannameye gore degismis olan
+    kolonlarin listesidir; arayuz o hucreleri vurgular.
     """
     def al(kaynak, kod):
         return round(kaynak.get(kod) or 0.0, 2)
@@ -388,10 +408,18 @@ def genel_bakis(duzen):
             simdiki = s["degerler"]
             ilk_mi = onceki_surum is None
             onceki = {} if ilk_mi else onceki_surum["degerler"]
-            fark = (lambda kod: 0.0 if ilk_mi
-                    else round(al(simdiki, kod) - al(onceki, kod), 2))
+            ozet, degisen = {}, []
+            for ozet_kod, _etiket in OZET_KOLONLARI:
+                beyan_kod = OZET_ESLEMESI.get(ozet_kod)
+                deger = al(simdiki, beyan_kod) if beyan_kod else 0.0
+                ozet[ozet_kod] = deger
+                if not ilk_mi and beyan_kod \
+                        and abs(deger - al(onceki, beyan_kod)) > 0.005:
+                    degisen.append(ozet_kod)
             satirlar.append({
                 "anahtar": d["anahtar"],
+                "yil": d["yil"],
+                "ay_adi": d["ay_adi"],
                 "etiket": d["etiket"],
                 "sira": s["sira"],
                 "tur": s["tur"],
@@ -401,12 +429,8 @@ def genel_bakis(duzen):
                 "gerekce": s["duzeltme_nedeni"] or "",
                 # Bu surumde bir onceki surume gore degisen satir sayisi
                 "degisen_satir": 0 if ilk_mi else len(_degisenler(onceki_surum, s)),
-                "matrah": al(simdiki, "matrah_toplami"),
-                "matrah_fark": fark("matrah_toplami"),
-                "odenecek": al(simdiki, "odenmesi_gereken_kdv"),
-                "odenecek_fark": fark("odenmesi_gereken_kdv"),
-                "devir": al(simdiki, "sonraki_donem_devreden"),
-                "devir_fark": fark("sonraki_donem_devreden"),
+                "ozet": ozet,
+                "ozet_degisen": degisen,
             })
             onceki_surum = s
     return satirlar
