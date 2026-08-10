@@ -57,6 +57,15 @@ oturumda buradan devam edilir.
       düzenlemeler o çıktılar üzerinden yapılacak. Bildirim geldikçe buraya
       not düşülür.
 
+- [x] **vergi-inceleme-raporu skill'i güncellendi.** Uygulamayı geliştirirken
+      çıkarılan gerçek biçim ve kurallar skill'e taşındı: I–V bölüm düzeni,
+      tutanağın numaralı madde düzeni, sonucu değiştiren dört ayrım
+      (kurum/gerçek kişi · bilerek/bilmeden · düzeltmeyle çıkarılmış satıcı ·
+      re'sen takdir nedeni), oran hesabı, ceza paylaştırması, VUK mük. 355
+      hesabı, kırmızı yer tutucu kuralı, dokunulmayacaklar listesi
+      (mükellef ifadeleri, muhasebe verisi, mülga TCK atfı).
+      Konum: ~/.claude/skills/vergi-inceleme-raporu/
+
 <!-- Yeni notlar buraya eklenir -->
 
 ---
