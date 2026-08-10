@@ -32,6 +32,11 @@ KENAR_BOSLUGU = 1134                       # 2 cm
 YAZI_ALANI = A4_GENISLIK - 2 * KENAR_BOSLUGU
 
 BASLIK_DOLGUSU = "D9D9D9"                  # tablo baslik satirinin gri zemini
+TOPLAM_DOLGUSU = "EDEDED"                  # toplam satirinin daha acik zemini
+
+# Cok sutunlu tutar tablolarinda kullanilan punto. Govde 12 punto; sekiz
+# sutunlu bir tabloda 12 punto sigmaz, basliklar bolunur ve rakamlar taser.
+TABLO_PUNTOSU = 9
 
 _XML_BASI = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
 
@@ -132,13 +137,17 @@ class Belge:
 
     # ------------------------------------------------------------------ tablo
     def tablo(self, basliklar, satirlar, hizalar=None, oranlar=None,
-              baslik_tekrari=True):
+              baslik_tekrari=True, buyukluk=None, toplam_satiri=False):
         """Tam sayfa genisliginde, cerceveli bir tablo ekler.
 
-        basliklar : baslik hucrelerinin metinleri
-        satirlar  : her biri baslik sayisi kadar hucre tasiyan diziler
-        hizalar   : kolon basina "sol" / "orta" / "sag" (tutarlar icin "sag")
-        oranlar   : kolon genislik agirliklari; verilmezse esit bolusulur
+        basliklar    : baslik hucrelerinin metinleri
+        satirlar     : her biri baslik sayisi kadar hucre tasiyan diziler
+        hizalar      : kolon basina "sol" / "orta" / "sag" (tutarlar icin "sag")
+        oranlar      : kolon genislik agirliklari; verilmezse esit bolusulur
+        buyukluk     : hucre yazi buyuklugu (punto). Cok sutunlu tutar
+                       tablolari 12 puntoda sigmaz; basliklar satir ortasindan
+                       bolunur ve rakamlar alt satira taser.
+        toplam_satiri: son satir kalin yazilir ve zemini griler
         """
         kolon_sayisi = len(basliklar)
         if not kolon_sayisi:
@@ -164,11 +173,16 @@ class Belge:
 
         parcalar.append(self._satir_xml(basliklar, genislikler, hizalar,
                                         kalin=True, dolgu=BASLIK_DOLGUSU,
-                                        baslik_satiri=baslik_tekrari))
-        for satir in satirlar:
+                                        baslik_satiri=baslik_tekrari,
+                                        buyukluk=buyukluk))
+        son = len(satirlar) - 1
+        for i, satir in enumerate(satirlar):
             hucreler = list(satir) + [""] * (kolon_sayisi - len(satir))
-            parcalar.append(self._satir_xml(hucreler[:kolon_sayisi], genislikler,
-                                            hizalar))
+            vurgulu = toplam_satiri and i == son
+            parcalar.append(self._satir_xml(
+                hucreler[:kolon_sayisi], genislikler, hizalar,
+                kalin=vurgulu, dolgu=TOPLAM_DOLGUSU if vurgulu else None,
+                buyukluk=buyukluk))
         parcalar.append("</w:tbl>")
         self._govde.append("".join(parcalar))
         # Word, tablodan hemen sonra bir paragraf bekler; tablolar art arda
@@ -179,7 +193,7 @@ class Belge:
         return self
 
     def _satir_xml(self, hucreler, genislikler, hizalar, kalin=False,
-                   dolgu=None, baslik_satiri=False):
+                   dolgu=None, baslik_satiri=False, buyukluk=None):
         parcalar = ["<w:tr>"]
         if baslik_satiri:
             parcalar.append("<w:trPr><w:tblHeader/></w:trPr>")
@@ -194,7 +208,7 @@ class Belge:
                 '<w:p><w:pPr><w:spacing w:before="40" w:after="40" w:line="240" '
                 'w:lineRule="auto"/><w:jc w:val="%s"/></w:pPr>%s</w:p></w:tc>'
                 % ("".join(ozellikler), _HIZA_KODLARI.get(hizalar[i], "left"),
-                   _kosular(hucre, kalin=kalin)))
+                   _kosular(hucre, kalin=kalin, buyukluk=buyukluk)))
         parcalar.append("</w:tr>")
         return "".join(parcalar)
 

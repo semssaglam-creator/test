@@ -36,6 +36,10 @@ oturumda buradan devam edilir.
 - [x] 2026-08-10 — Sahte belge kullanma raporu taslağı; bilerek/bilmeden
       ayrımına göre ceza dağılımı
 - [x] 2026-08-10 — Excel çıktısına Faturalar sayfası; kılavuz güncellemeleri
+- [x] 2026-08-10 — Hesap incelemeleri tablosu: eksik olan *Önc. Dön. Dev. KDV*
+      sütunu eklendi, punto 9'a düşürüldü, yıl başlığa taşındı, satırlarda
+      yalnızca ay adı, "Toplam:" satırı vurgulandı. Diğer geniş tablolar da
+      aynı puntoya çekildi. — *kullanıcı bildirimi, ekran görüntüsüyle*
 
 ---
 

@@ -18,7 +18,7 @@ from datetime import datetime
 
 from . import inceleme_kunyesi as ik
 from . import turkce
-from .belge_docx import Belge
+from .belge_docx import TABLO_PUNTOSU, Belge
 from .satirlar import AYLAR, ELESTIRI_ALANLARI
 
 _tl = turkce.tl
@@ -201,27 +201,49 @@ def _usul_bolumu(b, kunye, bulgular, donemler):
         b.madde_listesi([x["mesaj"] for x in uyumsuz])
 
 
+# Beyan dokum tablosunun sutunlari. Uygulamadaki duzeltme beyannameleri
+# tablosuyla ayni sutunlar ve ayni kisaltmalar kullanilir; ikisi yan yana
+# okundugunda karsilastirilabilsin diye.
+BEYAN_DOKUM_KOLONLARI = [
+    ("matrah", "KDV Matrahı"),
+    ("hesaplanan", "Hspl. KDV"),
+    ("onceki_devir", "Önc. Dön. Dev. KDV"),
+    ("bu_donem_indirim_toplam", "Bu Dön. İndl. KDV"),
+    ("indirimler", "İndirimler Toplamı"),
+    ("odenecek", "Ödenecek KDV"),
+    ("sonraki_devir", "Son. Dön. Dev. KDV"),
+]
+
+
+def beyan_dokum_tablosu(b, donemler, blok="beyan"):
+    """Beyannameye iliskin dokumu yil yil tabloya doker.
+
+    Basligin ilk hucresi "Dönemi <yil>" oldugundan her yil ayri bir tablodur;
+    satirlarda yalnizca ay adi yazar. Punto kucultulur: yedi tutar sutunu 12
+    puntoda sigmaz, basliklar satir ortasindan bolunur ve rakamlar alt satira
+    taser.
+    """
+    for yil in sorted({d["yil"] for d in donemler}):
+        alt = [d for d in donemler if d["yil"] == yil]
+        satirlar = []
+        for d in alt:
+            satirlar.append([d["ay_adi"]]
+                            + [_tl(d[blok].get(kod)) for kod, _e in BEYAN_DOKUM_KOLONLARI])
+        satirlar.append(["Toplam:"] + [
+            _tl(sum(d[blok].get(kod, 0.0) for d in alt))
+            for kod, _e in BEYAN_DOKUM_KOLONLARI])
+        b.tablo(["Dönemi\n%s" % yil] + [e for _k, e in BEYAN_DOKUM_KOLONLARI],
+                satirlar,
+                hizalar=["sol"] + ["sag"] * len(BEYAN_DOKUM_KOLONLARI),
+                oranlar=[1.0] + [1.15] * len(BEYAN_DOKUM_KOLONLARI),
+                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+
 def _beyan_dokumu(b, donemler):
     b.baslik("4. Beyan Edilen Tutarlar", 2)
     b.paragraf("İncelenen döneme ait katma değer vergisi beyannamelerinde yer alan "
                "tutarlar aşağıda gösterilmiştir.", girinti=1)
-    satirlar = []
-    for d in donemler:
-        y = d["beyan"]
-        satirlar.append([_donem_adi(d), _tl(y["matrah"]), _tl(y["toplam_kdv"]),
-                         _tl(y["indirimler"]), _tl(y["odenecek"]),
-                         _tl(y["sonraki_devir"])])
-    toplam = _kolon_toplami(donemler, "beyan")
-    satirlar.append(["TOPLAM", _tl(toplam["matrah"]), _tl(toplam["toplam_kdv"]),
-                     _tl(toplam["indirimler"]), _tl(toplam["odenecek"]), "-"])
-    b.tablo(["Dönem", "KDV Matrahı", "Toplam KDV", "İndirimler Toplamı",
-             "Ödenecek KDV", "Son. Dön. Devreden"], satirlar,
-            hizalar=["sol"] + ["sag"] * 5, oranlar=[1.2, 1, 1, 1, 1, 1])
-
-
-def _kolon_toplami(donemler, blok):
-    alanlar = ("matrah", "toplam_kdv", "indirimler", "odenecek", "sonraki_devir")
-    return {a: sum(d[blok].get(a, 0.0) for d in donemler) for a in alanlar}
+    beyan_dokum_tablosu(b, donemler)
 
 
 def _duzeltme_bolumu(b, duzeltme, sira):
@@ -251,10 +273,12 @@ def _duzeltme_bolumu(b, duzeltme, sira):
             ])
         b.paragraf("Dönemi: %s" % yil_blogu["yil"], kalin=True, hiza="sol",
                    aralik_once=120, aralik_sonra=60)
-        b.tablo(["Dönem", "Düzeltme Tarihi", "KDV Matrahı", "Hspl. KDV",
-                 "Öden. KDV", "Son. Dön. Dev. KDV", "Düzeltme Gerekçesi"], tablo,
+        b.tablo(["Dönemi\n%s" % yil_blogu["yil"], "Düzeltme Tarihi",
+                 "KDV Matrahı", "Hspl. KDV", "Öden. KDV", "Son. Dön. Dev. KDV",
+                 "Düzeltme Gerekçesi"], tablo,
                 hizalar=["sol", "sol", "sag", "sag", "sag", "sag", "sol"],
-                oranlar=[1, 1.1, 1.2, 1, 1, 1.2, 1.6])
+                oranlar=[1, 1.1, 1.2, 1, 1, 1.2, 1.6],
+                buyukluk=TABLO_PUNTOSU)
     return sira + 1
 
 
@@ -293,7 +317,7 @@ def _tespit_bolumu(b, yillar, donemler, sira):
                  "Devirden Çıkarılan", "İndirimden Çıkarılan",
                  "Yüklenilenden Çıkarılan"], tablo,
                 hizalar=["sol"] + ["sag"] * len(ELESTIRI_ALANLARI),
-                oranlar=[1.1, 1, 1, 1, 1, 1])
+                oranlar=[1.1, 1, 1, 1, 1, 1], buyukluk=TABLO_PUNTOSU)
 
 
 def tarhiyat_toplami(tarhiyatli):
@@ -333,7 +357,8 @@ def _tarhiyat_bolumu(b, sonuc, donemler, kunye, sira):
                   _tl(toplam.get("toplam_fark"))])
     b.tablo(["Dönem", "Ödenecek KDV (Beyan)", "Ödenecek KDV (Olması Gereken)",
              "Re'sen Tarhı Gereken", "Aranması Gereken", "Toplam Fark"], tablo,
-            hizalar=["sol"] + ["sag"] * 5, oranlar=[1.1, 1, 1.1, 1, 1, 1])
+            hizalar=["sol"] + ["sag"] * 5, oranlar=[1.1, 1, 1.1, 1, 1, 1],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
     b.paragraf("Yukarıda gösterildiği üzere, incelenen dönemler itibarıyla toplam "
                "%s TL katma değer vergisinin re'sen tarh edilmesi gerektiği "

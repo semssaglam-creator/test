@@ -20,8 +20,9 @@ from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
 from .belge_docx import Belge
+from .belge_docx import TABLO_PUNTOSU
 from .tutanak import (_kapsam, _yillar_metni, belgeye_giren_bulgular,
-                      dolu_donemler, tarhiyat_toplami)
+                      beyan_dokum_tablosu, dolu_donemler, tarhiyat_toplami)
 
 _tl = turkce.tl
 
@@ -160,23 +161,7 @@ def _hesap(b, donemler):
     b.paragraf("Mükellefin incelenen döneme ilişkin katma değer vergisi "
                "beyannameleri ve eki tablolar incelenmiş olup beyannameye "
                "ilişkin döküm aşağıda yer almaktadır.", girinti=1)
-    satirlar = []
-    for d in donemler:
-        y = d["beyan"]
-        satirlar.append([_donem_adi(d), _tl(y["matrah"]), _tl(y["toplam_kdv"]),
-                         _tl(y["bu_donem_indirim_toplam"]), _tl(y["indirimler"]),
-                         _tl(y["odenecek"]), _tl(y["sonraki_devir"])])
-    if donemler:
-        satirlar.append([
-            "TOPLAM",
-            _tl(sum(d["beyan"]["matrah"] for d in donemler)),
-            _tl(sum(d["beyan"]["toplam_kdv"] for d in donemler)),
-            _tl(sum(d["beyan"]["bu_donem_indirim_toplam"] for d in donemler)),
-            _tl(sum(d["beyan"]["indirimler"] for d in donemler)),
-            _tl(sum(d["beyan"]["odenecek"] for d in donemler)), "-"])
-    b.tablo(["Dönem", "KDV Matrahı", "Hesaplanan KDV", "Bu Dön. İndirilecek",
-             "İndirimler Toplamı", "Ödenecek KDV", "Devreden KDV"], satirlar,
-            hizalar=["sol"] + ["sag"] * 6, oranlar=[1.1, 1.2, 1.1, 1.1, 1.1, 1, 1])
+    beyan_dokum_tablosu(b, donemler)
 
 
 # ------------------------------------------------------------------ 4. tespit
@@ -241,7 +226,8 @@ def _tespit(b, kunye, liste, satici_satirlari, donemler):
     b.tablo(["Düzenleyici Unvanı", "VKN", "VTR No", "Fatura", "Matrah", "KDV",
              "Kullanma Durumu"], satici_tablo,
             hizalar=["sol", "sol", "sol", "sag", "sag", "sag", "sol"],
-            oranlar=[2, 1.2, 1, 0.7, 1.2, 1.2, 1.3])
+            oranlar=[2, 1.2, 1, 0.7, 1.2, 1.2, 1.3],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
     for s in satici_satirlari:
         parcalar = []
@@ -279,7 +265,8 @@ def _tespit(b, kunye, liste, satici_satirlari, donemler):
     b.tablo(["Satıcı VKN", "Fatura No", "Fatura Tarihi", "Kayıt Dönemi",
              "Matrah", "KDV", "Genel Toplam"], fatura_tablo,
             hizalar=["sol", "sol", "sol", "sol", "sag", "sag", "sag"],
-            oranlar=[1.2, 1.5, 1.1, 1, 1.2, 1.1, 1.2])
+            oranlar=[1.2, 1.5, 1.1, 1, 1.2, 1.1, 1.2],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
 def _mevzuat_bolumu(b, kunye):
@@ -381,7 +368,8 @@ def _sonuc(b, kunye, sonuc, donemler, ceza):
     b.baslik("5.1. Tarhiyat Özeti", 2)
     b.tablo(["Dönem", "Ödenecek KDV (Beyan)", "Ödenecek KDV (Olması Gereken)",
              "Re'sen Tarhı Gereken", "Aranması Gereken", "Toplam Fark"], tablo,
-            hizalar=["sol"] + ["sag"] * 5, oranlar=[1.1, 1, 1.1, 1, 1, 1])
+            hizalar=["sol"] + ["sag"] * 5, oranlar=[1.1, 1, 1.1, 1, 1, 1],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
     if ceza["satirlar"]:
         b.baslik("5.2. Vergi Ziyaı Cezası", 2)
@@ -409,7 +397,8 @@ def _sonuc(b, kunye, sonuc, donemler, ceza):
         b.tablo(["Dönem", "Tarh Edilecek KDV", "Bilerek Pay", "Ceza (3 kat)",
                  "Bilmeden Pay", "Ceza (1 kat)", "Ceza Toplamı"], ceza_tablo,
                 hizalar=["sol"] + ["sag"] * 6,
-                oranlar=[1, 1.2, 1.1, 1.1, 1.1, 1.1, 1.2])
+                oranlar=[1, 1.2, 1.1, 1.1, 1.1, 1.1, 1.2],
+                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
     b.baslik("5.3. Sonuç ve Öneri", 2)
     b.paragraf(
