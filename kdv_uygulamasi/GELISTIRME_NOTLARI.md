@@ -42,8 +42,17 @@ oturumda buradan devam edilir.
       listesi kullanıcıya sunuldu (DEGISIKLIK_LISTESI.md)
 - [x] Tutanak üreticisi daire biçimine getirildi; her sahteci satıcı için
       ayrı numaralı madde açılıyor
+- [x] Değişiklik listesindeki bütün maddeler kapandı. A1–A5 uygulandı,
+      B2–B3 öneri olarak uygulandı, B1 (yevmiye tarihleri) ve B5 (mükellef
+      ifadeleri) bilinçli olarak değiştirilmedi, B4 (VKN) kullanıcı
+      bildirimiyle kapandı — örnek belgelerde VKN uyumuna dikkat edilmemiş.
 
 ### Diğer
+
+- [~] **Çıktı üzerinden ince ayar.** Kullanıcı üretilen tutanak ve raporları
+      gerçek çalışmalarında kullanıp gördüğü aksaklıkları bildirecek;
+      düzenlemeler o çıktılar üzerinden yapılacak. Bildirim geldikçe buraya
+      not düşülür.
 
 <!-- Yeni notlar buraya eklenir -->
 
