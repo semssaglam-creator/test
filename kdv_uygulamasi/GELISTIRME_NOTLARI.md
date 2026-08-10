@@ -101,6 +101,14 @@ oturumda buradan devam edilir.
       sütunu eklendi, punto 9'a düşürüldü, yıl başlığa taşındı, satırlarda
       yalnızca ay adı, "Toplam:" satırı vurgulandı. Diğer geniş tablolar da
       aynı puntoya çekildi. — *kullanıcı bildirimi, ekran görüntüsüyle*
+- [x] 2026-08-10 — Tutanakta satıcı maddeleri veri/soru çifti hâlinde sürüyor:
+      6. madde satıcının Ba-Bs tespiti ve fatura dökümü, 7. madde o faturalara
+      ilişkin mükellefe sorulan hususlar ve cevabı; ikinci satıcıda 8/9,
+      üçüncüde 10/11 diye devam ediyor. Soru maddesi veri maddesine numarasıyla
+      atıf yapıyor. Satıcı kartına "Mükellefin bu satıcıya ilişkin beyanı"
+      alanı eklendi; boş bırakılırsa künyedeki genel beyan kullanılıyor.
+- [x] 2026-08-10 — Belgelerin sonundaki "Bu belge ... taslak olarak
+      üretilmiştir" satırı kaldırıldı (hem tutanak hem rapor).
 
 ---
 

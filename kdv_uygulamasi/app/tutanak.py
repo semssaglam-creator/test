@@ -14,8 +14,6 @@ Girdi:
     bulgular  : hesap.beyan_tutarlilik_kontrol ciktisi (istege bagli)
     duzeltme  : beyannameler.duzeltme_tablosu ciktisi (istege bagli)
 """
-from datetime import datetime
-
 from . import inceleme_kunyesi as ik
 from . import turkce
 from .belge_docx import TABLO_PUNTOSU, Belge
@@ -67,10 +65,6 @@ def _yillar_metni(donemler):
     if len(yillar) == 1:
         return "%d yılına" % yillar[0]
     return "%s yıllarına" % turkce.liste(yillar)
-
-
-def _bugun():
-    return datetime.now().strftime("%d.%m.%Y")
 
 
 def _donem_coz(metin):
@@ -183,9 +177,11 @@ class _Sayac:
 
 
 def _madde(b, sayac, metin):
-    """Kalin, numarali tutanak maddesi."""
-    b.paragraf("%d- %s" % (sayac(), metin), kalin=True, aralik_once=140,
+    """Kalin, numarali tutanak maddesi. Kullanilan numarayi dondurur."""
+    no = sayac()
+    b.paragraf("%d- %s" % (no, metin), kalin=True, aralik_once=140,
                aralik_sonra=80)
+    return no
 
 
 def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
@@ -276,28 +272,44 @@ def _kdv_beyani_maddesi(b, kunye, sayac, donemler):
 
 
 def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
-    """Ba-Bs tespiti ve satici basina fatura dokumu."""
+    """Satici basina VERI maddesi ve hemen ardindan SORU maddesi.
+
+    Duzen tutanagin kendi mantigina uyar: once o saticiya ait ba-bs tespiti ve
+    fatura dokumu, hemen ardindan mukellefe o faturalara iliskin sorulan
+    hususlar ve alinan cevap. Birden cok satici varsa cift cift surer:
+    6 veri / 7 soru, 8 veri / 9 soru, 10 veri / 11 soru...
+
+    Cevap satici bazinda girilebilir; girilmemisse kunyedeki genel beyan
+    kullanilir.
+    """
     from . import faturalar as F
 
     if not satici_satirlari:
         return
     M = ik.mukellef_sozu
+    sorular = ik.satirlar(kunye, "sorular")
+    genel_cevap = " ".join(ik.satirlar(kunye, "mukellef_beyani"))
+
     for s in satici_satirlari:
         kendi = [f for f in liste
                  if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]]
         if not kendi:
             continue
-        _madde(b, sayac,
-               "%s Ba-Bs analizi sorgulamasında %s %s vergi kimlik numaralı "
-               "mükellefi %s’den %d belge ile KDV hariç %s TL tutarında alış "
-               "bildiriminde bulunduğu tespit edilmiştir. Mükellef tarafından "
-               "müfettişliğimize ibraz edilen faturalara ait ayrıntılı bilgiler "
-               "ile defter kayıtları aşağıdaki gibidir. (Ek-2: %d adet fatura "
-               "fotokopisi)"
-               % (M(kunye, buyuk=True, ek="in"),
-                  s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
-                  s["vkn"] or "[VKN]", s["unvan"] or "[unvan girilmedi]",
-                  len(kendi), _tl(s["matrah"]), len(kendi)))
+
+        # --- VERI maddesi
+        veri_no = _madde(
+            b, sayac,
+            "%s Ba-Bs analizi sorgulamasında %s %s vergi kimlik numaralı "
+            "mükellefi %s’den %d belge ile KDV hariç %s TL tutarında alış "
+            "bildiriminde bulunduğu tespit edilmiştir. Mükellef tarafından "
+            "müfettişliğimize ibraz edilen faturalara ait ayrıntılı bilgiler "
+            "ile defter kayıtları aşağıdaki gibidir. (Ek-2: %d adet fatura "
+            "fotokopisi)"
+            % (M(kunye, buyuk=True, ek="in"),
+               s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
+               s["vkn"] or "[VKN]", s["unvan"] or "[unvan girilmedi]",
+               len(kendi), _tl(s["matrah"]), len(kendi)))
+
         tablo = []
         for f in kendi:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
@@ -313,8 +325,30 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
                 oranlar=[1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
-    for satir in ik.satirlar(kunye, "muhasebe_kaydi"):
-        b.paragraf(satir, girinti=1)
+        for satir in ik.satirlar(kunye, "muhasebe_kaydi"):
+            b.paragraf(satir, girinti=1)
+
+        # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
+        cevap = (s.get("cevap") or "").strip() or genel_cevap
+        _madde(b, sayac, _soru_metni(veri_no, s, sorular, cevap))
+
+
+def _soru_metni(veri_no, s, sorular, cevap):
+    """Bir saticinin faturalarina iliskin soru maddesinin metni."""
+    if sorular:
+        hususlar = turkce.liste([x.rstrip("?").strip() for x in sorular])
+    else:
+        hususlar = ("söz konusu sahte faturaları düzenleyen mükellefi tanıyıp "
+                    "tanımadığı, bu mükelleften faturalar içeriğinde yer alan "
+                    "emtiayı alıp almadığı, mal sevklerinin kim tarafından "
+                    "yerine getirildiği ve fatura ödemelerinin ne şekilde "
+                    "yapıldığı")
+    return ("Mükellefe, tutanağın %d. maddesinde bilgileri yer alan ve %s "
+            "tarafından düzenlenen faturaların sahte faturalar olduğunun tespit "
+            "edildiği hususu izah edilmiş ve %s hususları sorulmuş olup, "
+            "mükellef cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
+            % (veri_no, s["unvan"] or "[unvan girilmedi]", hususlar,
+               cevap or "[mükellefin beyanı]"))
 
 
 def _tespit_maddesi(b, kunye, sayac, yillar, donemler):
@@ -471,10 +505,12 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
         _madde(b, sayac, "Mükellef tarafından verilen düzeltme beyannameleri "
                          "aşağıdaki gibidir.")
         _duzeltme_tablosu(b, duzeltme)
+    # Satici varsa veri/soru ciftleri _fatura_maddesi icinde uretilir; ayrica
+    # genel bir soru maddesi acilmaz.
     _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste)
     if not satici_satirlari:
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)
-    _sorular_maddesi(b, kunye, sayac, satici_satirlari)
+        _sorular_maddesi(b, kunye, sayac, satici_satirlari)
     _standart_maddeler(b, kunye, sayac, donemler)
 
     uyumsuz = belgeye_giren_bulgular(bulgular, donemler)
@@ -484,10 +520,6 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
         b.madde_listesi([x["mesaj"] for x in uyumsuz], numarali=False)
 
     _kapanis(b, kunye)
-    b.bos_satir()
-    b.paragraf("Bu belge %s tarihinde KDV İnceleme Çalışması uygulamasıyla "
-               "taslak olarak üretilmiştir; imzaya hazır nihai belge değildir."
-               % _bugun(), italik=True, hiza="orta", buyukluk=9)
     return b
 
 

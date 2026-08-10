@@ -60,6 +60,10 @@ SATICI_ALANLARI = [
      "tur": "uzun",
      "ipucu": "Düzeltmenin tarihi ve hangi dönemleri kapsadığı. Belgeye olduğu "
               "gibi girer."},
+    {"kod": "cevap", "etiket": "Mükellefin bu satıcıya ilişkin beyanı", "tur": "uzun",
+     "ipucu": "Tutanakta bu satıcının fatura dökümünden hemen sonra gelen soru "
+              "maddesinde tırnak içinde yazılır. Boş bırakılırsa künyedeki genel "
+              "beyan kullanılır."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
 ]
 
@@ -203,6 +207,7 @@ def satici_ozeti(faturalar, saticilar=None):
             "vtr_tarihi": bilgi.get("vtr_tarihi") or "",
             "ozel_esaslar": bilgi.get("ozel_esaslar") or "",
             "not": bilgi.get("not") or "",
+            "cevap": bilgi.get("cevap") or "",
             "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
             "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
             "matrah": round(grup["matrah"], 2),

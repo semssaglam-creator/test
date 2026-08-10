@@ -20,8 +20,6 @@ kapsami. Bu yuzden ayrim tek bir yerde cozulur ve butun bolumler ondan okur.
 
 Uretilen belge TASLAKTIR; nitelendirme inceleme elemanina aittir.
 """
-from datetime import datetime
-
 from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
@@ -38,10 +36,6 @@ def _var(deger, esik=0.005):
 
 def _donem_adi(d):
     return "%s/%s" % (d["yil"], d["ay_adi"])
-
-
-def _bugun():
-    return datetime.now().strftime("%d.%m.%Y")
 
 
 def _donem_ifadesi(kunye, donemler, hal="yalin"):
@@ -822,11 +816,6 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
               saticilar, inceleme)
     _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)
-
-    b.bos_satir()
-    b.paragraf("Bu belge %s tarihinde KDV İnceleme Çalışması uygulamasıyla "
-               "taslak olarak üretilmiştir; imzaya hazır nihai belge değildir."
-               % _bugun(), italik=True, hiza="orta", buyukluk=9)
     return b
 
 
