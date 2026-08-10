@@ -290,6 +290,27 @@ def gelir_vergisi_adi(kunye):
     return "kurumlar vergisi" if kurum_mu(kunye) else "gelir vergisi"
 
 
+# Sirketlerde donem "hesap donemi", gercek kisilerde "takvim yili" diye anilir.
+# Ikisi ayni eki almadigi icin (donemine / yilina) cekimli halleri hazir tutulur.
+_DONEM_ADLARI = {
+    # (kurum_mu, cogul_mu): {hal: sozcuk}
+    (True, False): {"yalin": "hesap dönemi", "yonelme": "hesap dönemine",
+                    "bulunma": "hesap döneminde", "ilgi": "hesap döneminin"},
+    (True, True): {"yalin": "hesap dönemleri", "yonelme": "hesap dönemlerine",
+                   "bulunma": "hesap dönemlerinde", "ilgi": "hesap dönemlerinin"},
+    (False, False): {"yalin": "takvim yılı", "yonelme": "takvim yılına",
+                     "bulunma": "takvim yılında", "ilgi": "takvim yılının"},
+    (False, True): {"yalin": "takvim yılları", "yonelme": "takvim yıllarına",
+                    "bulunma": "takvim yıllarında", "ilgi": "takvim yıllarının"},
+}
+
+
+def donem_adi(kunye, cogul=False, hal="yalin"):
+    """"hesap dönemi" / "takvim yılı" ve cekimli halleri."""
+    return _DONEM_ADLARI[(kurum_mu(kunye), bool(cogul))].get(
+        hal, _DONEM_ADLARI[(kurum_mu(kunye), bool(cogul))]["yalin"])
+
+
 def resen_madde_kodu(kunye):
     """Secilen re'sen takdir nedeninden madde numarasini ayiklar (orn '30/6')."""
     secim = str((kunye or {}).get("resen_madde") or "")
