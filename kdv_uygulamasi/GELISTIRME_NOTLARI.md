@@ -42,7 +42,10 @@ oturumda buradan devam edilir.
       listesi kullanıcıya sunuldu (DEGISIKLIK_LISTESI.md)
 - [x] Tutanak üreticisi daire biçimine getirildi; her sahteci satıcı için
       ayrı numaralı madde açılıyor
-- [x] Değişiklik listesindeki bütün maddeler kapandı. A1–A5 uygulandı,
+- [x] **A1 geri alındı** — kullanıcı bildirimi: örnek raporun mükellefi
+      şirkettir. "mükellef kurum" ve Kurumlar Vergisi bölümü korundu, belge
+      yeniden üretildi; diğer düzeltmeler yerinde.
+- [x] Değişiklik listesindeki bütün maddeler kapandı. A2–A5 uygulandı,
       B2–B3 öneri olarak uygulandı, B1 (yevmiye tarihleri) ve B5 (mükellef
       ifadeleri) bilinçli olarak değiştirilmedi, B4 (VKN) kullanıcı
       bildirimiyle kapandı — örnek belgelerde VKN uyumuna dikkat edilmemiş.
