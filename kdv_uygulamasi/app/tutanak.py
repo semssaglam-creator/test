@@ -237,10 +237,25 @@ def _donem_ifadesi(kunye, donemler, hal="yalin"):
                       ik.donem_adi(kunye, len(yillar) > 1, hal))
 
 
-def _defter_maddesi(b, kunye, sayac):
-    satirlar = ik.cizgili_satirlar(kunye, "defter_bilgileri", 4)
+DEFTER_TUTUCULARI = ["yıl", "defterin türü", "tasdik tarihi ve numarası",
+                     "tasdik makamı"]
+
+
+def _defter_maddesi(b, kunye, sayac, donemler):
+    """Ibraz edilen defterlerin tablosu.
+
+    Kunyede hic satir yoksa madde atlanmaz: incelenen her yil icin bir satir
+    acilir ve hucreler kirmizi tutucularla birakilir. Defter bilgisi tasdik
+    serhinden okunup taslak uzerinde doldurulacagindan, tablonun belgede hazir
+    durmasi elle satir eklemekten kolaydir.
+    """
+    satirlar = ik.cizgili_satirlar(kunye, "defter_bilgileri", 4,
+                                   DEFTER_TUTUCULARI)
     if not satirlar:
-        return
+        yillar = sorted({d["yil"] for d in donemler}) or [None]
+        satirlar = [[str(y) if y else "[yıl]"]
+                    + ["[%s]" % ad for ad in DEFTER_TUTUCULARI[1:]]
+                    for y in yillar]
     _madde(b, sayac, "Mükellef tarafından incelemeye ibraz edilen yasal "
                      "defterlere ilişkin bilgiler aşağıdaki tabloda "
                      "gösterildiği gibidir.")
@@ -314,7 +329,7 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
         for f in kendi:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
             tablo.append([f.get("tarih") or "", f.get("fatura_no") or "",
-                          f.get("mal_cinsi") or "", _tl(f.get("matrah")),
+                          F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])
         tablo.append(["TOPLAM", "", "", _tl(s["matrah"]), _tl(s["kdv"]),
@@ -498,7 +513,7 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
     else:
         _madde(b, sayac, "İnceleme %s yapılmıştır."
                % ik.deger(kunye, "inceleme_yeri").lower())
-    _defter_maddesi(b, kunye, sayac)
+    _defter_maddesi(b, kunye, sayac, donemler)
     _vergi_beyani_maddesi(b, kunye, sayac, donemler)
     _kdv_beyani_maddesi(b, kunye, sayac, donemler)
     if duzeltme:

@@ -109,6 +109,11 @@ oturumda buradan devam edilir.
       alanı eklendi; boş bırakılırsa künyedeki genel beyan kullanılıyor.
 - [x] 2026-08-10 — Belgelerin sonundaki "Bu belge ... taslak olarak
       üretilmiştir" satırı kaldırıldı (hem tutanak hem rapor).
+- [x] 2026-08-10 — Boş "Malın Cinsi" hücreleri artık kırmızı `[malın cinsi]`
+      tutucusu; defter bilgileri tablosu künyede boş bırakılsa bile açılıyor,
+      incelenen her yıl için bir satır kuruluyor ve tür / tasdik tarih-no /
+      tasdik makamı kırmızı tutucu olarak bırakılıyor. Taslak üzerinde
+      doldurulacak yerler belgede görünür duruyor. — *kullanıcı isteği*
 
 ---
 

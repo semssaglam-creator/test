@@ -80,6 +80,16 @@ def yevmiye_hucreleri(f):
             f.get("yevmiye_no") or "[yevmiye no]")
 
 
+def mal_cinsi_hucresi(f):
+    """Fatura tablosunun "Malin Cinsi" hucresi.
+
+    Portal dokumlerinde mal cinsi cogu zaman bos gelir; yevmiye hucrelerinde
+    oldugu gibi kose parantezli tutucu yazilir ki belgede kirmizi gorunsun ve
+    taslak uzerinde doldurulacagi anlasilsin.
+    """
+    return (f.get("mal_cinsi") or "").strip() or "[malın cinsi]"
+
+
 def duzeltilmis_mi(satici_vkn, saticilar):
     """Bu saticinin faturalari duzeltme beyannamesiyle cikarilmis mi."""
     bilgi = (saticilar or {}).get(satici_vkn or "") or {}

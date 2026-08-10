@@ -300,17 +300,25 @@ def is_emirleri(kunye):
     return satirlar
 
 
-def cizgili_satirlar(kunye, kod, alan_sayisi):
+def cizgili_satirlar(kunye, kod, alan_sayisi, tutucular=None):
     """Dikey cizgiyle ayrilmis cok satirli alani tabloya cevirir.
 
     Eksik alanlar bos birakilir; fazlasi son alana eklenmez, atilir. Sekme
     karakteri de ayirac sayilir (Excel'den yapistirma kolaylasir).
+
+    `tutucular` verilirse bos kalan hucrelere o sutunun adi koseli parantez
+    icinde yazilir; belge yazicisi bunlari kirmizi gosterdiginden taslakta
+    doldurulacak yer goze carpar.
     """
     tablo = []
     for ham in satirlar_al(kunye, kod):
         parcalar = [p.strip() for p in ham.replace("\t", "|").split("|")]
         parcalar += [""] * (alan_sayisi - len(parcalar))
-        tablo.append(parcalar[:alan_sayisi])
+        parcalar = parcalar[:alan_sayisi]
+        for i, ad in enumerate(tutucular or []):
+            if i < len(parcalar) and not parcalar[i]:
+                parcalar[i] = "[%s]" % ad
+        tablo.append(parcalar)
     return tablo
 
 
