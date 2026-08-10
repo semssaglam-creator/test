@@ -15,11 +15,31 @@ oturumda buradan devam edilir.
 
 ### Belge biçimi
 
-- [ ] **Örnek rapor ve tutanak alınacak.** Şu anki iskelet genel GİB
-      düzenidir (beş bölüm, standart cümle kalıpları). Dairenin fiilen
-      kullandığı formatla hizalanacak: bölüm sıralaması, başlık
-      numaralandırması, tablo sütunları, imza bloğu düzeni, alışıldık cümle
-      kalıpları. — *Kullanıcı gönderecek*
+- [~] **Belge biçimi dairenin formatına getirilecek.** Örnek tutanak ve rapor
+      alındı (tek görevlendirmeli / tek sahteci; bilmeyerek kullanma).
+      Çıkarılan format:
+      - Times New Roman 12 punto, A4, kenar boşlukları 2,5 cm
+      - **Tutanak:** başlıksız iki giriş paragrafı + kalın numaralı 1–12
+        maddeler (ispat vasıtası / inceleme yeri / defter tablosu / gelir
+        vergisi özeti / KDV beyan tablosu / ba-bs + fatura tablosu + muhasebe
+        kaydı / sorular / RDK dinlenme / taslak tutanak / TÖU / özelge /
+        başkaca itiraz) + kapanış + 2x3 imza tablosu
+      - **Rapor:** I- GİRİŞ, II- USUL İNCELEMELERİ (A- Genel Usulsüzlük),
+        III- HESAP İNCELEMELERİ (A- Mükellefin Beyanları: kanuni beyan /
+        düzeltme / son hal tabloları), IV- TENKİT EDİLEN HUSUSLAR
+        (A- Re'sen Takdir Nedeni, B- Re'sen Takdir Verileri + satıcı başına
+        B1/B2…, C- Yasal Düzenlemeler ve Değerlendirme + "İndirilecek KDV
+        Hesabından Çıkarılacak Tutar" tablosu, D- Tarh Edilecek KDV ile
+        Kesilecek Cezalar + düzeltilmiş beyan tablosu + tarhiyat tablosu,
+        E- Gelir/Kurumlar Vergisi Yönünden Yapılacak İşlem, F- VUK 359
+        Değerlendirmesi), V- SONUÇ (numaralı maddeler + tarhiyat tablosu)
+      - Kurum adlarında kesme işareti **kullanılmıyor**: "Müdürlüğünün"
+      - Beyan tablosunda **İade Edil. KDV** sütunu da var (9 sütun)
+      - Tarhiyat tablosu iki satırlı birleşik başlık taşıyor
+      - Fatura tablosu = "Kopya Fatura Dökümü" biçimi
+      — *Üreticiye uygulanacak (sıradaki iş)*
+- [x] Örnek belgelerdeki mantık ve yazım hataları düzeltildi; değişiklik
+      listesi kullanıcıya sunuldu (DEGISIKLIK_LISTESI.md)
 
 ### Diğer
 
