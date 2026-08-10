@@ -149,6 +149,12 @@ MADDELER.update({
         "varılan mükellefler adına vergi suçu raporu düzenlenmemesi ve "
         "haklarında cumhuriyet savcılıklarına suç duyurusunda bulunulmaması "
         "gerekir."),
+    "tck_21": (
+        "5237 sayılı Türk Ceza Kanunu md. 21 — Kast",
+        "Suçun oluşması kastın varlığına bağlıdır. Kast, suçun kanuni "
+        "tanımındaki unsurların bilerek ve istenerek gerçekleştirilmesidir. "
+        "Kişinin, suçun kanuni tanımındaki unsurların gerçekleşebileceğini "
+        "öngörmesine rağmen, fiili işlemesi hâlinde olası kast vardır."),
     "danistay_indirim": (
         "Danıştay Kararları — Sahte Belgeye Dayalı KDV İndirimi",
         "Danıştay Vergi Dava Daireleri Genel Kurulu ile Danıştay 3., 4., 7., 9. "

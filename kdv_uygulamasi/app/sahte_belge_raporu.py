@@ -600,9 +600,9 @@ def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran):
              "Değerlendirilmesi"
              % ("Kurumlar Vergisi" if ik.kurum_mu(kunye) else "Gelir Vergisi"), 2)
 
-    baslik, metin = mevzuat.madde("vuk_teblig_306")
-    b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
-    b.paragraf("“%s”" % metin, girinti=1, italik=True)
+    for baslik, metin in mevzuat.maddeler(["vuk_teblig_306", "tck_21"]):
+        b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
+        b.paragraf("“%s”" % metin, girinti=1, italik=True)
     b.paragraf(
         "Buna göre failin, fiilin oluşturduğu suçtan sorumlu tutulabilmesi için "
         "kastın mevcudiyeti gerekmekte; kasten hareket edilmiş sayılabilmesi "

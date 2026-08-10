@@ -58,6 +58,8 @@ oturumda buradan devam edilir.
 - [x] 2026-08-10 — Sahte belge kullanma raporu taslağı; bilerek/bilmeden
       ayrımına göre ceza dağılımı
 - [x] 2026-08-10 — Excel çıktısına Faturalar sayfası; kılavuz güncellemeleri
+- [x] 2026-08-10 — Kasıt değerlendirmesine 5237 sayılı TCK md. 21 eklendi
+      (mülga 765 sayılı Kanuna dayanan kalıp yerine)
 - [x] 2026-08-10 — Elle doldurulacak yer tutucular belgede kırmızı yazılıyor
 - [x] 2026-08-10 — Gelir / Kurumlar Vergisi beyannamesi PDF'inden özet okuma
       (türü tanınmayan dosyada okuma durduruluyor)
