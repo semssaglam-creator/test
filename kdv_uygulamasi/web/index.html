@@ -493,6 +493,23 @@
     </div>
     <div id="kunyeEksik"></div>
   </div>
+
+  <div class="kart">
+    <h2>Gelir / Kurumlar Vergisi Beyannamesinden Okut</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Tutanaktaki <strong>beyanname özeti</strong> tablosunu elle girmek yerine
+      yıllık Gelir veya Kurumlar Vergisi beyannamesinin PDF'ini yükleyin.
+      Okunan kalemler önce burada gösterilir; onaylarsanız künyedeki alana
+      yazılır. Uygulama beyannameyi kendiliğinden tutanağa işlemez.
+      <input type="file" id="vbSecici" accept="application/pdf,.pdf" hidden>
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="vbSec">Beyanname PDF'i Seç</button></div>
+      <div class="otomatik"><button class="btn birincil" id="vbAktar" style="display:none;">Künyeye Aktar</button></div>
+    </div>
+    <div id="vbDurum"></div>
+  </div>
+
   <div id="kunyeFormu"></div>
 </section>
 
@@ -3118,6 +3135,46 @@ $("fatTemizle").addEventListener("click", async () => {
   isaretle(false);
   faturaEkraniniCiz();
   mesaj("Fatura listesi temizlendi.");
+});
+
+// ------------------------- gelir / kurumlar vergisi beyannamesinden okuma
+let vbOkunan = null;
+
+$("vbSec").addEventListener("click", () => $("vbSecici").click());
+$("vbSecici").addEventListener("change", async () => {
+  const dosya = $("vbSecici").files[0];
+  $("vbSecici").value = "";
+  if (!dosya) return;
+  $("vbDurum").innerHTML = '<div class="yardim">Okunuyor...</div>';
+  $("vbAktar").style.display = "none";
+  vbOkunan = null;
+  try {
+    const y = await api("/api/vergi_beyani_oku",
+                        { dosyalar: [{ ad: dosya.name, veri: await dosyayiOku(dosya) }] });
+    vbOkunan = y;
+    const bilgi = [y.tur || "türü anlaşılamadı", y.yil ? y.yil + " dönemi" : ""]
+      .filter(Boolean).join(" · ");
+    $("vbDurum").innerHTML =
+      `<div class="yardim" style="margin-bottom:8px;">${dosya.name} — ${bilgi}; ` +
+      `${y.kalemler.length} kalem okundu.</div>` +
+      '<table class="tablo"><tr><th>Açıklama</th><th>Tutar</th></tr>' +
+      y.kalemler.map((k) =>
+        `<tr><td>${k.etiket}</td><td class="sag">${tl(k.tutar)}</td></tr>`).join("") +
+      "</table>" +
+      (y.uyarilar || []).map((u) => `<div class="uyari-satir">${u}</div>`).join("");
+    $("vbAktar").style.display = "";
+  } catch (hata) {
+    $("vbDurum").innerHTML = `<div class="uyari-satir">${hata.message}</div>`;
+  }
+});
+
+$("vbAktar").addEventListener("click", () => {
+  if (!vbOkunan) return;
+  durum.calisma.kunye.vergi_beyan_ozeti = vbOkunan.metin;
+  const girdi = $("k_vergi_beyan_ozeti");
+  if (girdi) girdi.value = vbOkunan.metin;
+  isaretle(false);
+  mesaj("Beyanname özeti künyeye aktarıldı.");
 });
 
 // --------------------------------------------------- inceleme kunyesi formu

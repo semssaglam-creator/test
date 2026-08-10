@@ -273,6 +273,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
                 self._json_yanit(self._beyanname_uygula(veri))
+            elif yol == "/api/vergi_beyani_oku":
+                self._json_yanit(self._vergi_beyani_oku(veri))
             elif yol == "/api/fatura_oku":
                 self._json_yanit(self._fatura_oku(veri))
             elif yol == "/api/fatura_ozet":
@@ -390,6 +392,44 @@ class Istekci(BaseHTTPRequestHandler):
         if not duzen["donemler"]:
             raise ApiHata("Önce beyanname PDF'i yükleyin.")
         return beyannameler.beyana_cevir(duzen, veri.get("secim"))
+
+    def _vergi_beyani_oku(self, veri):
+        """Yillik Gelir / Kurumlar Vergisi beyannamesinden ozet okur.
+
+        Okunan kalemler dogrudan kunyeye yazilmaz; kullaniciya gosterilir,
+        onaylayan kullanici kunyeye aktarir.
+        """
+        dosyalar = veri.get("dosyalar") or []
+        if not dosyalar:
+            raise ApiHata("Okunacak dosya gelmedi.")
+        from .pdf_beyanname import PdfHata
+        from . import vergi_beyannamesi
+
+        dosya = dosyalar[0]
+        ad = dosya.get("ad") or "beyanname.pdf"
+        try:
+            ham = base64.b64decode(dosya.get("veri") or "", validate=True)
+        except (binascii.Error, ValueError):
+            raise ApiHata("Dosya içeriği çözülemedi.")
+        if not ham.startswith(b"%PDF"):
+            raise ApiHata("Bu bir PDF dosyası değil.")
+        gecici = os.path.join(CIKTI_DIR, "_yuklenen_vergi.pdf")
+        try:
+            os.makedirs(CIKTI_DIR, exist_ok=True)
+            with open(gecici, "wb") as f:
+                f.write(ham)
+            ozet = vergi_beyannamesi.ozet_oku(gecici, ad)
+        except PdfHata as exc:
+            raise ApiHata(str(exc))
+        except Exception as exc:                              # beklenmedik bicim
+            raise ApiHata("Okunamadı: %s" % exc)
+        finally:
+            try:
+                os.remove(gecici)
+            except OSError:
+                pass
+        ozet["metin"] = vergi_beyannamesi.kunye_metnine_cevir(ozet)
+        return ozet
 
     # ---------------------------------------------------------------- fatura
     def _fatura_oku(self, veri):

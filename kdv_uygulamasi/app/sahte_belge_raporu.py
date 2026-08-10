@@ -771,6 +771,15 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     if tarhiyatli:
         _tarhiyat_tablosu(b, tarhiyatli)
 
+    # Inceleme elemaninin kendi tespit notu. Girilmediginde kirmizi yer tutucu
+    # kalir; belgeyi okuyan burasinin doldurulacagini gorur.
+    notlar = ik.satirlar(kunye, "sonuc_notu")
+    if notlar:
+        for satir in notlar:
+            b.paragraf(satir, girinti=1)
+    else:
+        b.paragraf("[Sonuç bölümüne eklenecek tespit notu]", girinti=1)
+
     b.paragraf("Sonucuna varılmıştır.", girinti=1, aralik_once=120)
     b.bos_satir()
     b.imza_bloklari([(ik.deger(kunye, "eleman_unvan", "unvan"),

@@ -199,6 +199,9 @@ BOLUMLER = [
             {"kod": "temsilci_tckn", "etiket": "Kanuni temsilci T.C. kimlik no",
              "tur": "metin",
              "ipucu": "Bilerek kullanmada suç duyurusu paragrafında geçer."},
+            {"kod": "sonuc_notu", "etiket": "Sonuç bölümü tespit notu", "tur": "uzun",
+             "ipucu": "V- SONUÇ bölümünün sonuna, numaralı maddelerden sonra "
+                      "girer. Boş bırakılırsa belgede kırmızı yer tutucu kalır."},
             {"kod": "bilerek_gerekce", "etiket": "Bilerek kullanma değerlendirmesi",
              "tur": "uzun",
              "ipucu": "Orana ek olarak yazılacak gerekçe. Oran uygulamaca "

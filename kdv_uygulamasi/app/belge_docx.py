@@ -21,6 +21,7 @@ Kullanim:
 Uretilen belge A4, Times New Roman 12 punto, 1,5 satir araliklidir.
 """
 import io
+import re
 import zipfile
 
 # Word olcu birimleri
@@ -39,6 +40,11 @@ TOPLAM_DOLGUSU = "EDEDED"                  # toplam satirinin daha acik zemini
 TABLO_PUNTOSU = 9
 
 _XML_BASI = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+
+# Doldurulmamis alanlarin yer tutuculari kirmizi yazilir; belgeyi okuyan
+# nereleri elle dolduracagini bir bakista gorsun.
+YER_TUTUCU_RENGI = "C00000"
+_YER_TUTUCU = re.compile(r"(\[[^\[\]]*\])")
 
 _HIZA_KODLARI = {"sol": "left", "orta": "center", "sag": "right", "iki": "both"}
 
@@ -62,27 +68,43 @@ def _kacir(metin):
                  .replace('"', "&quot;"))
 
 
-def _kosular(metin, kalin=False, italik=False, buyukluk=None):
-    """Bir paragrafin ic parcalarini (w:r) uretir; satir sonlarini korur."""
+def _rpr(kalin, italik, buyukluk, renk=None):
+    """Kosu bicim blogu. Ogelerin sirasi Word semasinin bekledigi siradir."""
     ozellikler = []
     if kalin:
         ozellikler.append("<w:b/>")
     if italik:
         ozellikler.append("<w:i/>")
+    if renk:
+        ozellikler.append('<w:color w:val="%s"/>' % renk)
     if buyukluk:
         ozellikler.append('<w:sz w:val="%d"/><w:szCs w:val="%d"/>'
                           % (buyukluk * 2, buyukluk * 2))
-    rpr = "<w:rPr>%s</w:rPr>" % "".join(ozellikler) if ozellikler else ""
+    return "<w:rPr>%s</w:rPr>" % "".join(ozellikler) if ozellikler else ""
+
+
+def _kosular(metin, kalin=False, italik=False, buyukluk=None):
+    """Bir paragrafin ic parcalarini (w:r) uretir; satir sonlarini korur.
+
+    Kose parantezli parcalar kirmizi yazilir. Bu parcalar, kunyede
+    doldurulmamis alanlarin yerine konan tutuculardir; belgeyi okuyanin
+    "burayi elle dolduracagim" diyebilmesi icin goze carpmalari gerekir.
+    """
+    duz = _rpr(kalin, italik, buyukluk)
+    kirmizi = _rpr(kalin, italik, buyukluk, YER_TUTUCU_RENGI)
     parcalar = []
     satirlar = str(metin or "").split("\n")
     for i, satir in enumerate(satirlar):
         if i:
-            parcalar.append("<w:r>%s<w:br/></w:r>" % rpr)
-        if satir:
+            parcalar.append("<w:r>%s<w:br/></w:r>" % duz)
+        for parca in _YER_TUTUCU.split(satir):
+            if not parca:
+                continue
+            rpr = kirmizi if _YER_TUTUCU.match(parca) else duz
             parcalar.append('<w:r>%s<w:t xml:space="preserve">%s</w:t></w:r>'
-                            % (rpr, _kacir(satir)))
+                            % (rpr, _kacir(parca)))
     if not parcalar:
-        parcalar.append("<w:r>%s</w:r>" % rpr)
+        parcalar.append("<w:r>%s</w:r>" % duz)
     return "".join(parcalar)
 
 
