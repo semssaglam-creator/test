@@ -37,6 +37,19 @@ class ApiHata(Exception):
     """Kullaniciya gosterilecek hata mesaji."""
 
 
+def _dosya_basligi(dosya_adi):
+    """Content-Disposition basligini Turkce karakterlerle birlikte kurar.
+
+    Yalnizca `filename="..."` kullanip icine yuzde kodlamasi koymak ise
+    yaramiyor: tarayici o metni cozmez, dosyayi "download" adiyla kaydeder.
+    Dogrusu, ASCII'ye indirgenmis bir yedek ad ile birlikte RFC 5987
+    bicimindeki `filename*` alanini vermektir.
+    """
+    yedek = dosya_adi.encode("ascii", "replace").decode("ascii").replace("?", "_")
+    return ('attachment; filename="%s"; filename*=UTF-8\'\'%s'
+            % (yedek, urllib.parse.quote(dosya_adi)))
+
+
 def _beyanname_modulu():
     """Beyanname okuma modullerini ilk ihtiyac aninda yukler.
 
@@ -48,6 +61,16 @@ def _beyanname_modulu():
     """
     from . import beyannameler
     return beyannameler
+
+
+def _belge_modulleri():
+    """Tutanak/rapor uretimini ilk ihtiyac aninda yukler.
+
+    Ayni gerekce: bu modullerdeki bir aksilik uygulamanin acilisini degil,
+    yalnizca belge uretme dugmesini etkilesin.
+    """
+    from . import inceleme_kunyesi, tutanak
+    return inceleme_kunyesi, tutanak
 
 
 # --------------------------------------------------------------------- yardimci
@@ -120,6 +143,7 @@ def _inceleme_bilgisi(calisma):
         "ad_unvan": mukellef.get("ad_unvan") or db.ADSIZ_MUKELLEF,
         "vkn_tckn": mukellef.get("vkn_tckn") or "",
         "vergi_dairesi": mukellef.get("vergi_dairesi") or "",
+        "adres": mukellef.get("adres") or "",
     }
 
 
@@ -183,6 +207,7 @@ class Istekci(BaseHTTPRequestHandler):
                     "toplam_ek_bilgi": {k: {"etiket": e, "alan": a}
                                        for k, (e, a) in TOPLAM_EK_BILGI.items()},
                     "bu_yil": datetime.now().year,
+                    "kunye_bolumleri": _belge_modulleri()[0].BOLUMLER,
                 })
             elif yol == "/api/calismalar":
                 self._json_yanit({"calismalar": db.calismalari_listele()})
@@ -239,6 +264,10 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
                 self._json_yanit(self._beyanname_uygula(veri))
+            elif yol == "/api/tutanak":
+                self._tutanak_gonder(veri)
+            elif yol == "/api/tutanak_onizleme":
+                self._json_yanit(self._tutanak_onizleme(veri))
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
@@ -345,6 +374,59 @@ class Istekci(BaseHTTPRequestHandler):
             raise ApiHata("Önce beyanname PDF'i yükleyin.")
         return beyannameler.beyana_cevir(duzen, veri.get("secim"))
 
+    # ------------------------------------------------------- belge taslaklari
+    def _tutanak_hazirla(self, veri):
+        """Tutanak taslagini uretir; hem indirme hem onizleme bunu kullanir."""
+        _ik, tutanak = _belge_modulleri()
+        calisma = veri.get("calisma") or {}
+        sonuc, bulgular = _hesapla(calisma)
+        yillar = _yillari_coz(calisma)
+        # Duzeltme dokumu yalnizca beyanname yuklendiyse eklenir; okunamazsa
+        # tutanagin geri kalani yine de uretilir.
+        duzeltme = None
+        if calisma.get("beyannameler"):
+            try:
+                beyannameler = _beyanname_modulu()
+                duzeltme = beyannameler.duzeltme_tablosu(
+                    beyannameler.duzenle(calisma["beyannameler"]))
+            except Exception:                             # noqa: BLE001
+                duzeltme = None
+        inceleme = _inceleme_bilgisi(calisma)
+        belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
+                                     bulgular, duzeltme)
+        return belge, inceleme
+
+    def _tutanak_onizleme(self, veri):
+        ik, _tutanak = _belge_modulleri()
+        belge, _inceleme = self._tutanak_hazirla(veri)
+        kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
+        return {"metin": belge.duz_metin(), "eksikler": ik.eksik_alanlar(kunye)}
+
+    def _tutanak_gonder(self, veri):
+        _ik, tutanak = _belge_modulleri()
+        belge, inceleme = self._tutanak_hazirla(veri)
+        govde = belge.bayt()
+        dosya_adi = tutanak.dosya_adi(inceleme)
+        # Excel ciktisinda oldugu gibi bir kopya klasorde de birakilir; evde
+        # terminalden calisirken tarayici indirmesine bagli kalinmasin.
+        try:
+            os.makedirs(CIKTI_DIR, exist_ok=True)
+            with open(os.path.join(CIKTI_DIR, dosya_adi), "wb") as f:
+                f.write(govde)
+        except OSError:
+            pass
+        self._belge_gonder(govde, dosya_adi,
+                           "application/vnd.openxmlformats-officedocument."
+                           "wordprocessingml.document")
+
+    def _belge_gonder(self, govde, dosya_adi, icerik_turu):
+        self.send_response(200)
+        self.send_header("Content-Type", icerik_turu)
+        self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
+        self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
     def _excel_gonder(self, veri):
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
@@ -372,8 +454,7 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type",
                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        self.send_header("Content-Disposition",
-                         f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
+        self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
         self.send_header("Content-Length", str(len(govde)))
         self.end_headers()
         self.wfile.write(govde)

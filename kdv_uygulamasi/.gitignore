@@ -1,5 +1,6 @@
 veritabani/
 ciktilar/*.xlsx
+ciktilar/*.docx
 yedekler/*.db
 __pycache__/
 *.pyc

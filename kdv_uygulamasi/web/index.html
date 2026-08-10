@@ -130,6 +130,10 @@
   .balon .bnot { color: #9fb3c8; margin-top: 8px; font-size: 11.5px; }
   .balon .bkapat { position: absolute; top: 6px; right: 9px; cursor: pointer; color: #7f8fa0; font-size: 15px; }
   .balon .bkapat:hover { color: #fff; }
+  .kunye-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px 14px; }
+  .kunye-izgara .genis { grid-column: 1 / -1; }
+  .kunye-izgara textarea { font-family: inherit; font-size: 13px; line-height: 1.5; }
+  .kunye-izgara .yardim { margin-top: 3px; }
   .kaynak-etiket { display: inline-block; background: #eef2f6; border: 1px solid #dde3ea; border-radius: 4px; padding: 2px 8px; font-size: 11.5px; margin: 2px 4px 2px 0; color: #5a6b7d; }
 </style>
 </head>
@@ -153,6 +157,7 @@
   <button data-sekme="sonuc">Sonuç ve Fark</button>
   <button data-sekme="tarhiyat">Tarhiyat Özeti</button>
   <button data-sekme="etki">Tespit Etkisi</button>
+  <button data-sekme="kunye">İnceleme Bilgileri</button>
   <button data-sekme="kayitlar">Kayıtlı Çalışmalar</button>
 </nav>
 <main>
@@ -399,6 +404,26 @@
 </section>
 
 <!-- ---------------------------------------------------------- KAYITLAR -->
+<!-- --------------------------------------------------------- INCELEME BILGILERI -->
+<section class="sekme" id="sekme-kunye">
+  <div class="kart">
+    <h2>Taslak Belgeler</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Aşağıdaki bilgiler, uygulamadaki beyan ve tespit verisiyle birleştirilerek
+      <strong>taslak</strong> belge üretmekte kullanılır. Üretilen belge imzaya hazır
+      nihai belge değildir; hukuki nitelendirme ve değerlendirme size aittir.
+      Doldurulmayan alanlar belgede <em>[köşeli parantez]</em> içinde bırakılır ki
+      gözden kaçmasın. Bu bilgiler çalışmayla birlikte kaydedilir.
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn birincil" id="tutanakIndir">Tutanak Taslağı (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="tutanakOnizle">Önizle</button></div>
+    </div>
+    <div id="kunyeEksik"></div>
+  </div>
+  <div id="kunyeFormu"></div>
+</section>
+
 <section class="sekme" id="sekme-kayitlar">
   <div class="kart">
     <h2>Kayıtlı Çalışmalar</h2>
@@ -419,6 +444,9 @@
     </div>
     <div class="satir">
       <div><label>Vergi dairesi</label><input type="text" id="cVergiDairesi"></div>
+    </div>
+    <div class="satir">
+      <div><label>Adres</label><input type="text" id="cAdres" placeholder="tutanak ve rapor taslaklarında kullanılır"></div>
     </div>
   </div>
   <div class="kart">
@@ -469,7 +497,7 @@
 
 <div class="modal-arka" id="raporModal">
   <div class="modal">
-    <h2>Rapor Metni Taslağı</h2>
+    <h2 id="raporBaslik">Rapor Metni Taslağı</h2>
     <pre class="rapor" id="raporMetin"></pre>
     <div class="satir" style="margin-top:12px;">
       <div class="otomatik"><button class="btn" id="raporKopyala">Panoya Kopyala</button></div>
@@ -506,10 +534,11 @@ const $ = (id) => document.getElementById(id);
 function bosCalisma() {
   return {
     ad: "",
-    mukellef: { ad_unvan: "", vkn_tckn: "", vergi_dairesi: "" },
+    mukellef: { ad_unvan: "", vkn_tckn: "", vergi_dairesi: "", adres: "" },
     devreden_baslangic: null,
     yillar: [],
     beyannameler: [],     // PDF'ten okunan beyanname surumleri
+    kunye: {},            // Inceleme kunyesi (tutanak / rapor taslaklari icin)
   };
 }
 
@@ -1999,10 +2028,56 @@ $("raporGoster").addEventListener("click", async () => {
   if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
   try {
     const y = await api("/api/rapor_metni", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Rapor Metni Taslağı";
     $("raporMetin").textContent = y.metin;
     $("raporModal").classList.add("acik");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
+// --------------------------------------------------------- taslak belgeler
+/** Sunucudan bir belge indirir ve tarayiciya kaydettirir. */
+async function belgeIndir(yol, varsayilanAd, basarili) {
+  const yanit = await fetch(yol, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ calisma: durum.calisma }),
+  });
+  if (!yanit.ok) {
+    const h = await yanit.json().catch(() => ({}));
+    throw new Error(h.hata || "Belge üretilemedi");
+  }
+  const blob = await yanit.blob();
+  const bag = document.createElement("a");
+  bag.href = URL.createObjectURL(blob);
+  bag.download = varsayilanAd;
+  document.body.appendChild(bag);
+  bag.click();
+  document.body.removeChild(bag);
+  URL.revokeObjectURL(bag.href);
+  mesaj(basarili);
+}
+
+function belgeDosyaAdi(on) {
+  const ad = (durum.calisma.mukellef.ad_unvan || durum.calisma.ad || "taslak")
+    .replace(/[^\wğüşıöçĞÜŞİÖÇ -]/g, "").trim() || "taslak";
+  return `${on}_${ad}.docx`.replace(/\s+/g, "_");
+}
+
+$("tutanakIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/tutanak", belgeDosyaAdi("Tutanak_taslagi"),
+                     "Tutanak taslağı indirildi. Bir kopyası ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("tutanakOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/tutanak_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Tutanak Taslağı — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+    eksikleriCiz(y.eksikler || []);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
 $("raporKapat").addEventListener("click", () => $("raporModal").classList.remove("acik"));
 $("raporKopyala").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("raporMetin").textContent); mesaj("Panoya kopyalandı."); }
@@ -2057,7 +2132,8 @@ async function calismaAc(id) {
     const c = y.calisma;
     durum.calisma = {
       ad: c.ad || "",
-      mukellef: Object.assign({ ad_unvan: "", vkn_tckn: "", vergi_dairesi: "" }, c.mukellef || {}),
+      mukellef: Object.assign({ ad_unvan: "", vkn_tckn: "", vergi_dairesi: "", adres: "" },
+                              c.mukellef || {}),
       devreden_baslangic: c.devreden_baslangic ?? null,
       yillar: (c.yillar || []).map((yk) => ({
         yil: yk.yil,
@@ -2068,6 +2144,7 @@ async function calismaAc(id) {
         kaynaklar: yk.kaynaklar || [],
       })),
       beyannameler: c.beyannameler || [],
+      kunye: c.kunye || {},
     };
     // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
     if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
@@ -2607,15 +2684,117 @@ function kayitlariCiz() {
   });
 }
 
-["cAd", "cMukellefAd", "cVkn", "cVergiDairesi"].forEach((id) => {
+["cAd", "cMukellefAd", "cVkn", "cVergiDairesi", "cAdres"].forEach((id) => {
   $(id).addEventListener("change", () => {
     if (id === "cAd") durum.calisma.ad = $(id).value.trim();
     if (id === "cMukellefAd") durum.calisma.mukellef.ad_unvan = $(id).value.trim();
     if (id === "cVkn") durum.calisma.mukellef.vkn_tckn = $(id).value.trim();
     if (id === "cVergiDairesi") durum.calisma.mukellef.vergi_dairesi = $(id).value.trim();
+    if (id === "cAdres") durum.calisma.mukellef.adres = $(id).value.trim();
     isaretle(false);
   });
 });
+
+// --------------------------------------------------- inceleme kunyesi formu
+// Not: yukaridaki "kunyeKarti", sistem sorgusundan okunan mukellef kunyesidir.
+// Buradaki kunye, tutanak ve rapor taslaklarinin gerektirdigi INCELEME
+// kunyesidir; alan tanimlari sunucudan (app/inceleme_kunyesi.py) gelir.
+function kunyeAlaniKur(alan) {
+  const sar = document.createElement("div");
+  if (alan.tur === "uzun") sar.className = "genis";
+  const etiket = document.createElement("label");
+  etiket.textContent = alan.etiket;
+  etiket.htmlFor = "k_" + alan.kod;
+
+  let girdi;
+  if (alan.tur === "secim") {
+    girdi = document.createElement("select");
+    (alan.secenekler || []).forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      girdi.appendChild(o);
+    });
+  } else if (alan.tur === "uzun") {
+    girdi = document.createElement("textarea");
+    girdi.rows = 3;
+  } else {
+    girdi = document.createElement("input");
+    girdi.type = alan.tur === "sayi" ? "number" : "text";
+    if (alan.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+  }
+  girdi.id = "k_" + alan.kod;
+  girdi.addEventListener("change", () => {
+    durum.calisma.kunye[alan.kod] = girdi.value;
+    isaretle(false);
+    eksikleriCiz();
+  });
+
+  sar.append(etiket, girdi);
+  if (alan.ipucu) {
+    const y = document.createElement("div");
+    y.className = "yardim";
+    y.textContent = alan.ipucu;
+    sar.appendChild(y);
+  }
+  return sar;
+}
+
+function kunyeFormunuKur() {
+  const kap = $("kunyeFormu");
+  if (kap.dataset.kurulu === "1") return;
+  (durum.tanimlar.kunye_bolumleri || []).forEach((bolum) => {
+    const kart = document.createElement("div");
+    kart.className = "kart";
+    const baslik = document.createElement("h2");
+    baslik.textContent = bolum.baslik;
+    const izgara = document.createElement("div");
+    izgara.className = "kunye-izgara";
+    bolum.alanlar.forEach((a) => izgara.appendChild(kunyeAlaniKur(a)));
+    kart.append(baslik, izgara);
+    kap.appendChild(kart);
+  });
+  kap.dataset.kurulu = "1";
+}
+
+/** Form alanlarina calismadaki degerleri yazar (yazilan alana dokunmadan). */
+function kunyeFormunuCiz() {
+  if (!durum.tanimlar || !durum.tanimlar.kunye_bolumleri) return;
+  kunyeFormunuKur();
+  const kunye = durum.calisma.kunye || (durum.calisma.kunye = {});
+  durum.tanimlar.kunye_bolumleri.forEach((bolum) => {
+    bolum.alanlar.forEach((a) => {
+      const girdi = $("k_" + a.kod);
+      if (!girdi || girdi === document.activeElement) return;
+      const deger = kunye[a.kod];
+      girdi.value = deger === undefined || deger === null
+        ? (a.varsayilan === undefined ? "" : a.varsayilan)
+        : deger;
+    });
+  });
+  eksikleriCiz();
+}
+
+/** Belge taslagini eksik birakacak alanlari kullaniciya onceden gosterir. */
+function eksikleriCiz(eksikler) {
+  const kap = $("kunyeEksik");
+  if (!kap) return;
+  if (eksikler === undefined) {
+    // Sunucuya gitmeden, ONEMLI_ALANLAR ile ayni olcutu yerelde uygular
+    const kunye = durum.calisma.kunye || {};
+    const onemli = ["gorevlendirme_no", "gorevlendirme_tarihi", "inceleme_turu",
+      "inceleme_gerekce", "nezdinde_ad", "eleman_ad", "tutanak_tarihi",
+      "tutanak_yeri", "faaliyet_konusu"];
+    const etiketler = {};
+    (durum.tanimlar.kunye_bolumleri || []).forEach((b) =>
+      b.alanlar.forEach((a) => { etiketler[a.kod] = a.etiket; }));
+    eksikler = onemli.filter((k) => !String(kunye[k] || "").trim())
+                     .map((k) => etiketler[k] || k);
+  }
+  if (!eksikler.length) { kap.innerHTML = ""; return; }
+  kap.innerHTML = '<div class="bulgu"><strong>Doldurulmamış alanlar:</strong> ' +
+    eksikler.map((e) => e.replace(/[<>&]/g, "")).join(", ") +
+    '. Belge yine üretilir; bu alanlar köşeli parantez içinde bırakılır.</div>';
+}
 
 // ----------------------------------------------------------------- yedekler
 async function yedekleriYukle() {
@@ -2676,6 +2855,8 @@ function ekraniCiz() {
   $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
   $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
   $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
+  $("cAdres").value = durum.calisma.mukellef.adres || "";
+  kunyeFormunuCiz();
   sonucuCiz();
   tarhiyatiCiz();
   yilUyumunuCiz();
