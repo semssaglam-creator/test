@@ -73,6 +73,12 @@ def _belge_modulleri():
     return inceleme_kunyesi, tutanak
 
 
+def _fatura_modulu():
+    """Fatura modelini ilk ihtiyac aninda yukler."""
+    from . import faturalar
+    return faturalar
+
+
 # --------------------------------------------------------------------- yardimci
 def _yillari_coz(calisma):
     """Istemciden gelen calismayi hesap motorunun bekledigi bicime getirir."""
@@ -208,6 +214,9 @@ class Istekci(BaseHTTPRequestHandler):
                                        for k, (e, a) in TOPLAM_EK_BILGI.items()},
                     "bu_yil": datetime.now().year,
                     "kunye_bolumleri": _belge_modulleri()[0].BOLUMLER,
+                    "satici_alanlari": _fatura_modulu().SATICI_ALANLARI,
+                    "fatura_yonleri": [{"kod": k, "etiket": e} for k, e in
+                                       _fatura_modulu().YON_ETIKETLERI.items()],
                 })
             elif yol == "/api/calismalar":
                 self._json_yanit({"calismalar": db.calismalari_listele()})
@@ -264,6 +273,10 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
                 self._json_yanit(self._beyanname_uygula(veri))
+            elif yol == "/api/fatura_oku":
+                self._json_yanit(self._fatura_oku(veri))
+            elif yol == "/api/fatura_ozet":
+                self._json_yanit(self._fatura_ozet(veri))
             elif yol == "/api/tutanak":
                 self._tutanak_gonder(veri)
             elif yol == "/api/tutanak_onizleme":
@@ -373,6 +386,80 @@ class Istekci(BaseHTTPRequestHandler):
         if not duzen["donemler"]:
             raise ApiHata("Önce beyanname PDF'i yükleyin.")
         return beyannameler.beyana_cevir(duzen, veri.get("secim"))
+
+    # ---------------------------------------------------------------- fatura
+    def _fatura_oku(self, veri):
+        """Yuklenen Excel dokumlerini okur. Bir dosyadaki hata digerlerini durdurmaz."""
+        dosyalar = veri.get("dosyalar") or []
+        if not dosyalar:
+            raise ApiHata("Okunacak dosya gelmedi.")
+        from .fatura_oku import FaturaHata, dosya_oku
+        faturalar = _fatura_modulu()
+
+        okunanlar, hatalar, sayfalar, uyarilar = [], [], [], []
+        for dosya in dosyalar:
+            ad = dosya.get("ad") or "fatura.xlsx"
+            try:
+                ham = base64.b64decode(dosya.get("veri") or "", validate=True)
+            except (binascii.Error, ValueError):
+                hatalar.append({"ad": ad, "mesaj": "Dosya içeriği çözülemedi."})
+                continue
+            if not ham.startswith(b"PK"):
+                hatalar.append({"ad": ad, "mesaj": "Bu bir .xlsx dosyası değil."})
+                continue
+            gecici = os.path.join(CIKTI_DIR, "_yuklenen_fatura.xlsx")
+            try:
+                os.makedirs(CIKTI_DIR, exist_ok=True)
+                with open(gecici, "wb") as f:
+                    f.write(ham)
+                sonuc = dosya_oku(gecici, ad)
+                okunanlar.extend(sonuc["faturalar"])
+                sayfalar.extend({"dosya": ad, **s} for s in sonuc["sayfalar"])
+                uyarilar.extend("%s: %s" % (ad, u) for u in sonuc["uyarilar"])
+            except FaturaHata as exc:
+                hatalar.append({"ad": ad, "mesaj": str(exc)})
+            except Exception as exc:                          # beklenmedik bicim
+                hatalar.append({"ad": ad, "mesaj": "Okunamadı: %s" % exc})
+            finally:
+                try:
+                    os.remove(gecici)
+                except OSError:
+                    pass
+
+        # VKN tasimayan dokumlerde (elle hazirlanan fatura listesi) saticiyi
+        # kullanici yukleme sirasinda bildirir; yalnizca bos olanlara yazilir.
+        satici_vkn = "".join(ch for ch in str(veri.get("satici_vkn") or "")
+                             if ch.isdigit())
+        if satici_vkn:
+            for f in okunanlar:
+                if not f.get("duzenleyen_vkn") and not f.get("alici_vkn"):
+                    f["duzenleyen_vkn"] = satici_vkn
+                    f["alici_vkn"] = "".join(
+                        ch for ch in str(veri.get("mukellef_vkn") or "")
+                        if ch.isdigit())
+
+        mukellef_vkn = (veri.get("calisma") or {}).get("mukellef", {}).get("vkn_tckn")
+        return {"faturalar": faturalar.normalize(okunanlar, mukellef_vkn),
+                "hatalar": hatalar, "sayfalar": sayfalar, "uyarilar": uyarilar}
+
+    def _fatura_ozet(self, veri):
+        """Calismadaki fatura listesini ozetler; hicbir sey saklanmaz."""
+        faturalar = _fatura_modulu()
+        calisma = veri.get("calisma") or {}
+        mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+        liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+        saticilar = calisma.get("saticilar") or {}
+        yillar = calisma.get("yillar") or []
+        return {
+            "faturalar": liste,
+            "saticilar": faturalar.satici_ozeti(liste, saticilar),
+            "toplamlar": faturalar.toplamlar(liste),
+            "donem_ozeti": {str(y): a for y, a in faturalar.donem_ozeti(liste).items()},
+            "indirim_dizileri": {str(y): d
+                                 for y, d in faturalar.indirim_dizileri(liste).items()},
+            "uygulama_farki": faturalar.uygulama_farki(liste, yillar),
+            "bulgular": faturalar.bulgular(liste, yillar, saticilar),
+        }
 
     # ------------------------------------------------------- belge taslaklari
     def _tutanak_hazirla(self, veri):

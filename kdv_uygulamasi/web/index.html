@@ -157,6 +157,7 @@
   <button data-sekme="sonuc">Sonuç ve Fark</button>
   <button data-sekme="tarhiyat">Tarhiyat Özeti</button>
   <button data-sekme="etki">Tespit Etkisi</button>
+  <button data-sekme="fatura">Sahte Belge / Faturalar</button>
   <button data-sekme="kunye">İnceleme Bilgileri</button>
   <button data-sekme="kayitlar">Kayıtlı Çalışmalar</button>
 </nav>
@@ -404,6 +405,75 @@
 </section>
 
 <!-- ---------------------------------------------------------- KAYITLAR -->
+<!-- ------------------------------------------------------ SAHTE BELGE / FATURA -->
+<section class="sekme" id="sekme-fatura">
+  <div class="kart">
+    <h2>Fatura Dökümlerini Yükleyin</h2>
+    <div id="fatBirakma" class="birakma">
+      <div style="font-size:26px;">📊</div>
+      <div><strong>Excel dökümlerini buraya sürükleyin</strong> ya da seçmek için tıklayın</div>
+      <div class="yardim" style="margin:6px 0 0;">
+        e-Arşiv portal dökümü, e-Fatura portal dökümü ve elle hazırlanan fatura
+        listesi tanınır; hangisi olduğu kendiliğinden anlaşılır, sırayla
+        yüklemeniz gerekmez. İptal/itiraz sayfaları da okunur ve orada geçen
+        faturalar işaretlenir.
+      </div>
+      <input type="file" id="fatSecici" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden>
+    </div>
+    <div class="satir" style="margin-top:10px;">
+      <div><label>VKN taşımayan dökümler için satıcı VKN'si</label>
+        <input type="text" id="fatSaticiVkn" placeholder="elle hazırlanan listelerde kullanılır"></div>
+      <div class="otomatik"><button class="btn tehlike" id="fatTemizle" style="display:none;">Yüklenenleri temizle</button></div>
+    </div>
+    <div id="fatDurum"></div>
+  </div>
+
+  <div class="kart" id="fatOzetKart" style="display:none;">
+    <h2>Satıcı Dökümü</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Portal dökümü satıcının yalnızca VKN'sini taşır; dökümdeki unvan alanı
+      <em>alıcının</em> unvanıdır. Satıcı unvanını ve hakkındaki tespiti siz
+      girersiniz. <strong>Bilerek / bilmeden kullanma</strong> seçimi sonucu
+      bütünüyle değiştirir: vergi ziyaı cezası bilmeden kullanmada 1 kat,
+      bilerek kullanmada VUK 359 kapsamında 3 kat uygulanır ve suç duyurusu
+      gerekir. Bu yüzden varsayılanı yoktur.
+    </div>
+    <div class="kaydir"><table class="tablo" id="fatSaticiTablo"></table></div>
+    <div id="fatSaticiDetay"></div>
+  </div>
+
+  <div class="kart" id="fatListeKart" style="display:none;">
+    <h2>Fatura Listesi</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      <strong>Kayıt dönemi</strong>, tarhiyatın yazılacağı dönemdir; yevmiye
+      tarihi varsa oradan, yoksa fatura tarihinden alınır ve elle
+      değiştirilebilir. <strong>Dahil</strong> işareti kaldırılan satır
+      toplamlara ve tarhiyata girmez.
+    </div>
+    <div id="fatToplam"></div>
+    <div class="kaydir"><table class="tablo" id="fatListeTablo"></table></div>
+  </div>
+
+  <div class="kart" id="fatAktarKart" style="display:none;">
+    <h2>Tespitlere Aktar</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Dahil edilen faturaların KDV'si dönem dönem toplanıp
+      <strong>İndirilecek KDV'den çıkarılacak</strong> satırına yazılır. Böylece
+      rapordaki fatura tablosu ile tarhiyat özeti aynı veriden gelir. Elle
+      girilmiş bir tutar varsa aşağıda gösterilir; aktarım onu değiştirir.
+    </div>
+    <div id="fatFark"></div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn birincil" id="fatAktar">İndirim Reddine Aktar</button></div>
+    </div>
+  </div>
+
+  <div class="kart" id="fatBulguKart" style="display:none;">
+    <h2>Dikkat Edilecek Noktalar</h2>
+    <div id="fatBulgular"></div>
+  </div>
+</section>
+
 <!-- --------------------------------------------------------- INCELEME BILGILERI -->
 <section class="sekme" id="sekme-kunye">
   <div class="kart">
@@ -527,6 +597,9 @@ const durum = {
   bnDonem: null,        // detayda gosterilen donem anahtari
   bnGenelYil: "tumu",   // Genel Bakis'ta secili yil ("tumu" ya da yil)
   bnSecimler: {},       // elle secimde donem -> surum sirasi
+  // Sahte belge / fatura sekmesi
+  fatOzet: null,        // sunucudan gelen satici, toplam, bulgu ozeti
+  fatSatici: null,      // detay panelinde acik olan satici VKN'si
 };
 
 const $ = (id) => document.getElementById(id);
@@ -539,6 +612,8 @@ function bosCalisma() {
     yillar: [],
     beyannameler: [],     // PDF'ten okunan beyanname surumleri
     kunye: {},            // Inceleme kunyesi (tutanak / rapor taslaklari icin)
+    faturalar: [],        // Excel dokumlerinden okunan fatura satirlari
+    saticilar: {},        // VKN -> {unvan, kullanma, vtr_no, ...}
   };
 }
 
@@ -2119,7 +2194,11 @@ $("hYeni").addEventListener("click", () => {
   durum.aktifYil = null;
   durum.sonuc = null; durum.bulgular = [];
   durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
+  durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
+  durum.fatOzet = null; durum.fatSatici = null;
   $("cAd").value = ""; $("kunyeKarti").style.display = "none";
+  $("fatDurum").innerHTML = "";
+  faturaEkraniniCiz();
   ekraniCiz();
   mesaj("Yeni boş çalışma açıldı.");
 });
@@ -2145,6 +2224,8 @@ async function calismaAc(id) {
       })),
       beyannameler: c.beyannameler || [],
       kunye: c.kunye || {},
+      faturalar: c.faturalar || [],
+      saticilar: c.saticilar || {},
     };
     // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
     if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
@@ -2155,6 +2236,7 @@ async function calismaAc(id) {
     durum.kayitliId = id;
     durum.degisti = false;
     durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
+    durum.fatOzet = null; durum.fatSatici = null;
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
     $("cAd").value = durum.calisma.ad;
@@ -2695,6 +2777,315 @@ function kayitlariCiz() {
   });
 });
 
+// ------------------------------------------------- sahte belge / faturalar
+function faturaKutusunuKur() {
+  const kutu = $("fatBirakma");
+  const secici = $("fatSecici");
+  kutu.addEventListener("click", () => secici.click());
+  secici.addEventListener("change", () => {
+    faturaYukle(Array.from(secici.files));
+    secici.value = "";
+  });
+  ["dragenter", "dragover"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.add("uzerinde");
+  }));
+  ["dragleave", "drop"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.remove("uzerinde");
+  }));
+  kutu.addEventListener("drop", (e) => {
+    const dosyalar = Array.from(e.dataTransfer.files || [])
+      .filter((f) => /\.xlsx$/i.test(f.name));
+    if (!dosyalar.length) { mesaj("Excel (.xlsx) dosyası bulunamadı.", "hata"); return; }
+    faturaYukle(dosyalar);
+  });
+}
+
+async function faturaYukle(dosyalar) {
+  if (!dosyalar.length) return;
+  $("fatDurum").innerHTML = `<div class="yardim">${dosyalar.length} dosya okunuyor...</div>`;
+  try {
+    const yuk = [];
+    for (const d of dosyalar) yuk.push({ ad: d.name, veri: await dosyayiOku(d) });
+    const y = await api("/api/fatura_oku", {
+      dosyalar: yuk,
+      satici_vkn: $("fatSaticiVkn").value.trim(),
+      mukellef_vkn: durum.calisma.mukellef.vkn_tckn || "",
+      calisma: durum.calisma,
+    });
+    durum.calisma.faturalar = (durum.calisma.faturalar || []).concat(y.faturalar || []);
+    const satirlar = (y.sayfalar || []).map((s) =>
+      `<div class="yardim">${s.dosya} · ${s.ad}: ${s.adet} satır (${s.durum})</div>`);
+    (y.uyarilar || []).forEach((u) => satirlar.push(`<div class="uyari-satir">${u}</div>`));
+    (y.hatalar || []).forEach((h) =>
+      satirlar.push(`<div class="uyari-satir">${h.ad}: ${h.mesaj}</div>`));
+    $("fatDurum").innerHTML = satirlar.join("");
+    if ((y.faturalar || []).length) {
+      mesaj(`${y.faturalar.length} fatura okundu.`);
+      isaretle(false);
+    }
+    await faturalariTazele();
+  } catch (hata) {
+    $("fatDurum").innerHTML = "";
+    mesaj(hata.message, "hata");
+  }
+}
+
+/** Fatura ozetini sunucudan alir ve ekrani yeniden cizer. */
+async function faturalariTazele() {
+  if (!(durum.calisma.faturalar || []).length) {
+    durum.fatOzet = null;
+    faturaEkraniniCiz();
+    return;
+  }
+  try {
+    durum.fatOzet = await api("/api/fatura_ozet", { calisma: durum.calisma });
+    // Sunucu yonu ve kayit donemini turetmis olabilir; calismaya geri yaz ki
+    // kaydedildiginde de ayni bilgi dursun.
+    durum.calisma.faturalar = durum.fatOzet.faturalar;
+  } catch (hata) { mesaj(hata.message, "hata"); }
+  faturaEkraniniCiz();
+}
+
+function faturaEkraniniCiz() {
+  const varMi = !!(durum.fatOzet && durum.calisma.faturalar.length);
+  ["fatOzetKart", "fatListeKart", "fatAktarKart", "fatBulguKart"].forEach((id) => {
+    $(id).style.display = varMi ? "" : "none";
+  });
+  $("fatTemizle").style.display = (durum.calisma.faturalar || []).length ? "" : "none";
+  if (!varMi) return;
+  faturaSaticiTablosunuCiz();
+  faturaListesiniCiz();
+  faturaAktarimiCiz();
+  faturaBulgulariniCiz();
+}
+
+function faturaSaticiTablosunuCiz() {
+  const tablo = $("fatSaticiTablo");
+  tablo.innerHTML = "";
+  const bas = ["VKN", "Unvan", "Kullanma Durumu", "Fatura", "Matrah", "KDV",
+               "Dönem Aralığı", ""];
+  const ust = document.createElement("tr");
+  bas.forEach((b) => ust.appendChild(hucre("th", b)));
+  tablo.appendChild(ust);
+
+  durum.fatOzet.saticilar.forEach((s) => {
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", s.vkn || "—"));
+    tr.appendChild(hucre("td", s.unvan || "—", { className: s.unvan ? "" : "sessiz" }));
+    const durumHucre = hucre("td", s.kullanma,
+      { className: s.kullanma === "Belirlenmedi" ? "fark-var" : "" });
+    tr.appendChild(durumHucre);
+    tr.appendChild(hucre("td", String(s.adet), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(s.matrah), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(s.kdv), { className: "sag" }));
+    tr.appendChild(hucre("td", s.ilk_donem === s.son_donem
+      ? s.ilk_donem : `${s.ilk_donem} – ${s.son_donem}`));
+    const tdD = document.createElement("td");
+    const dugme = document.createElement("button");
+    dugme.className = "btn ikincil";
+    dugme.style.cssText = "padding:3px 9px;font-size:12px;";
+    dugme.textContent = durum.fatSatici === s.vkn ? "Kapat" : "Düzenle";
+    dugme.addEventListener("click", () => {
+      durum.fatSatici = durum.fatSatici === s.vkn ? null : s.vkn;
+      faturaEkraniniCiz();
+    });
+    tdD.appendChild(dugme);
+    tr.appendChild(tdD);
+    tablo.appendChild(tr);
+  });
+  faturaSaticiDetayiniCiz();
+}
+
+function faturaSaticiDetayiniCiz() {
+  const kap = $("fatSaticiDetay");
+  kap.innerHTML = "";
+  if (!durum.fatSatici) return;
+  const vkn = durum.fatSatici;
+  const bilgi = durum.calisma.saticilar[vkn] || (durum.calisma.saticilar[vkn] = {});
+
+  const baslik = document.createElement("h3");
+  baslik.textContent = `${vkn} VKN'li satıcı`;
+  const izgara = document.createElement("div");
+  izgara.className = "kunye-izgara";
+  (durum.tanimlar.satici_alanlari || []).forEach((alan) => {
+    const sar = document.createElement("div");
+    if (alan.tur === "uzun") sar.className = "genis";
+    const etiket = document.createElement("label");
+    etiket.textContent = alan.etiket;
+    let girdi;
+    if (alan.tur === "secim") {
+      girdi = document.createElement("select");
+      (alan.secenekler || []).forEach((s) => {
+        const o = document.createElement("option");
+        o.value = s; o.textContent = s;
+        girdi.appendChild(o);
+      });
+    } else if (alan.tur === "uzun") {
+      girdi = document.createElement("textarea");
+      girdi.rows = 3;
+    } else {
+      girdi = document.createElement("input");
+      girdi.type = "text";
+      if (alan.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+    }
+    girdi.value = bilgi[alan.kod] || alan.varsayilan || "";
+    girdi.addEventListener("change", async () => {
+      bilgi[alan.kod] = girdi.value;
+      isaretle(false);
+      await faturalariTazele();
+    });
+    sar.append(etiket, girdi);
+    izgara.appendChild(sar);
+  });
+  kap.append(baslik, izgara);
+}
+
+function faturaListesiniCiz() {
+  const t = durum.fatOzet.toplamlar;
+  $("fatToplam").innerHTML =
+    `<div class="yardim" style="margin-bottom:8px;">Toplam ${t.toplam_satir} satır; ` +
+    `<strong>${t.adet}</strong> tanesi tarhiyata dahil. ` +
+    `Matrah <strong>${tl(t.matrah)}</strong> TL, ` +
+    `KDV <strong>${tl(t.kdv)}</strong> TL.</div>`;
+
+  const tablo = $("fatListeTablo");
+  tablo.innerHTML = "";
+  const ust = document.createElement("tr");
+  ["Dahil", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
+   "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
+    ust.appendChild(hucre("th", b)));
+  tablo.appendChild(ust);
+
+  durum.calisma.faturalar.forEach((f, i) => {
+    const tr = document.createElement("tr");
+
+    const tdDahil = document.createElement("td");
+    const kutu = document.createElement("input");
+    kutu.type = "checkbox"; kutu.checked = !!f.dahil; kutu.style.width = "auto";
+    kutu.addEventListener("change", async () => {
+      f.dahil = kutu.checked; isaretle(false); await faturalariTazele();
+    });
+    tdDahil.appendChild(kutu);
+    tr.appendChild(tdDahil);
+
+    tr.appendChild(hucre("td", f.fatura_no || "—"));
+    tr.appendChild(hucre("td", f.tarih || "—"));
+    tr.appendChild(hucre("td", f.satici_vkn || "—", { className: f.satici_vkn ? "" : "sessiz" }));
+
+    const tdYon = document.createElement("td");
+    const secYon = document.createElement("select");
+    (durum.tanimlar.fatura_yonleri || []).forEach((y) => {
+      const o = document.createElement("option");
+      o.value = y.kod; o.textContent = y.etiket;
+      secYon.appendChild(o);
+    });
+    secYon.value = f.yon;
+    secYon.addEventListener("change", async () => {
+      f.yon = secYon.value; isaretle(false); await faturalariTazele();
+    });
+    tdYon.appendChild(secYon);
+    tr.appendChild(tdYon);
+
+    const tdDonem = document.createElement("td");
+    const girdiDonem = document.createElement("input");
+    girdiDonem.type = "text";
+    girdiDonem.style.cssText = "width:96px;padding:3px 6px;font-size:12px;";
+    girdiDonem.placeholder = "yyyy/aa";
+    girdiDonem.value = (f.kayit_yil && f.kayit_ay)
+      ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+    girdiDonem.addEventListener("change", async () => {
+      const e = /^(\d{4})[\/.-](\d{1,2})$/.exec(girdiDonem.value.trim());
+      if (!e) {
+        mesaj("Kayıt dönemini yyyy/aa biçiminde yazın (örn 2023/06).", "hata");
+        girdiDonem.value = (f.kayit_yil && f.kayit_ay)
+          ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+        return;
+      }
+      f.kayit_yil = Number(e[1]); f.kayit_ay = Number(e[2]);
+      isaretle(false); await faturalariTazele();
+    });
+    tdDonem.appendChild(girdiDonem);
+    tr.appendChild(tdDonem);
+
+    tr.appendChild(hucre("td", tl(f.matrah), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(f.kdv), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(f.toplam), { className: "sag" }));
+    const oran = f.matrah ? (f.kdv / f.matrah * 100) : null;
+    tr.appendChild(hucre("td", oran === null ? "—" : "%" + oran.toFixed(1), { className: "sag" }));
+
+    const notlar = [];
+    if (f.iptal) notlar.push("iptal/itiraz");
+    if (f.mal_cinsi) notlar.push(f.mal_cinsi);
+    if (f.yevmiye_no) notlar.push("yev. " + f.yevmiye_no);
+    tr.appendChild(hucre("td", notlar.join(" · ") || "", { className: f.iptal ? "fark-var" : "sessiz" }));
+
+    if (!f.dahil) tr.style.opacity = "0.55";
+    tablo.appendChild(tr);
+  });
+}
+
+function faturaAktarimiCiz() {
+  const farklar = durum.fatOzet.uygulama_farki || [];
+  const kap = $("fatFark");
+  if (!farklar.length) {
+    kap.innerHTML = '<div class="yardim">Fatura toplamları, tespitlerde girili ' +
+      'indirim reddi tutarlarıyla birebir aynı. Aktarmaya gerek yok.</div>';
+    return;
+  }
+  const eksikYil = farklar.some((f) => !f.yil_var);
+  kap.innerHTML =
+    '<table class="tablo"><tr><th>Dönem</th><th>Fatura Toplamı</th>' +
+    '<th>Tespitlerde Girili</th><th>Fark</th></tr>' +
+    farklar.map((f) =>
+      `<tr><td>${f.yil}/${f.ay_adi}</td><td class="sag">${tl(f.fatura)}</td>` +
+      `<td class="sag">${tl(f.mevcut)}</td>` +
+      `<td class="sag fark-var">${tl(f.fark)}</td></tr>`).join("") +
+    "</table>" +
+    (eksikYil ? '<div class="uyari-satir" style="margin-top:8px;">Bazı ' +
+      'faturaların kayıt dönemi, beyan verisi yüklenmemiş bir yıla ait. O ' +
+      'yıllar aktarılamaz; önce beyannameyi yükleyin.</div>' : "");
+}
+
+function faturaBulgulariniCiz() {
+  const bulgular = durum.fatOzet.bulgular || [];
+  $("fatBulguKart").style.display = bulgular.length ? "" : "none";
+  $("fatBulgular").innerHTML = bulgular.map((b) =>
+    `<div class="bulgu">${b.mesaj.replace(/[<>]/g, "")}</div>`).join("");
+}
+
+$("fatAktar").addEventListener("click", async () => {
+  const diziler = (durum.fatOzet && durum.fatOzet.indirim_dizileri) || {};
+  const yillar = Object.keys(diziler);
+  if (!yillar.length) { mesaj("Aktarılacak fatura yok.", "hata"); return; }
+  let yazilan = 0, atlanan = [];
+  yillar.forEach((y) => {
+    const kayit = durum.calisma.yillar.find((k) => Number(k.yil) === Number(y));
+    if (!kayit) { atlanan.push(y); return; }
+    kayit.elestiri.indirim_cikar = diziler[y].slice();
+    yazilan += 1;
+  });
+  if (!yazilan) {
+    mesaj(`Beyan verisi yüklenmemiş yıl: ${atlanan.join(", ")}. Önce beyannameyi yükleyin.`, "hata");
+    return;
+  }
+  isaretle(false);
+  await hesapla();
+  await faturalariTazele();
+  mesaj(atlanan.length
+    ? `${yazilan} yıl aktarıldı; ${atlanan.join(", ")} yılı beyan verisi olmadığı için atlandı.`
+    : `${yazilan} yılın indirim reddi fatura toplamlarından yazıldı.`);
+});
+
+$("fatTemizle").addEventListener("click", async () => {
+  if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;
+  durum.calisma.faturalar = [];
+  durum.fatOzet = null; durum.fatSatici = null;
+  $("fatDurum").innerHTML = "";
+  isaretle(false);
+  faturaEkraniniCiz();
+  mesaj("Fatura listesi temizlendi.");
+});
+
 // --------------------------------------------------- inceleme kunyesi formu
 // Not: yukaridaki "kunyeKarti", sistem sorgusundan okunan mukellef kunyesidir.
 // Buradaki kunye, tutanak ve rapor taslaklarinin gerektirdigi INCELEME
@@ -2842,6 +3233,9 @@ function ekraniCiz() {
   if (durum.calisma && (durum.calisma.beyannameler || []).length && !durum.bnOzet) {
     beyannameleriTazele();          // kayitli calismadan gelen beyannameler
   }
+  if (durum.calisma && (durum.calisma.faturalar || []).length && !durum.fatOzet) {
+    faturalariTazele();             // kayitli calismadan gelen faturalar
+  }
   yilSecimListesiniCiz();
   yilKulaklariniCiz("beyanYilSekme", durum.aktifYil, (y) => {
     durum.aktifYil = Number(y); ekraniCiz();
@@ -2875,6 +3269,7 @@ function ekraniCiz() {
     durum.kayitlar = k.calismalar;
     await yedekleriYukle();
     pdfKutusunuKur();
+    faturaKutusunuKur();
     ekraniCiz();
     $("beyanMetin").focus();
   } catch (hata) {
