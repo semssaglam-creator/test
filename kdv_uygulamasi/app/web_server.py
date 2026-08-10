@@ -446,6 +446,51 @@ class Istekci(BaseHTTPRequestHandler):
         return {"faturalar": faturalar.normalize(okunanlar, mukellef_vkn),
                 "hatalar": hatalar, "sayfalar": sayfalar, "uyarilar": uyarilar}
 
+    def _fatura_bloku(self, calisma):
+        """Excel'in Faturalar sayfasi icin duzlestirilmis satirlar.
+
+        Satici unvani ve kullanma durumu fatura satirinda tutulmaz; rapordaki
+        tabloyla ayni bilgi gorunsun diye satici kaydindan buraya tasinir.
+        Fatura okuma modullerindeki bir aksilik Excel ciktisinin geri kalanini
+        engellemesin diye cagrisi korumalidir.
+        """
+        if not calisma.get("faturalar"):
+            return None
+        try:
+            faturalar = _fatura_modulu()
+            mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+            liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+            saticilar = calisma.get("saticilar") or {}
+            satirlar = []
+            for f in liste:
+                if not f.get("dahil"):
+                    continue
+                bilgi = saticilar.get(f.get("satici_vkn") or "") or {}
+                yevmiye = " / ".join(p for p in (f.get("yevmiye_tarih"),
+                                                 f.get("yevmiye_no")) if p)
+                satirlar.append({
+                    "satici_vkn": f.get("satici_vkn") or "",
+                    "satici_unvan": bilgi.get("unvan") or "",
+                    "kullanma": bilgi.get("kullanma") or "Belirlenmedi",
+                    "fatura_no": f.get("fatura_no") or "",
+                    "tarih": f.get("tarih") or "",
+                    "kayit_donemi": ("%s/%02d" % (f["kayit_yil"], f["kayit_ay"])
+                                     if f.get("kayit_yil") and f.get("kayit_ay") else ""),
+                    "matrah": f.get("matrah") or 0.0,
+                    "kdv": f.get("kdv") or 0.0,
+                    "toplam": f.get("toplam") or 0.0,
+                    "mal_cinsi": f.get("mal_cinsi") or "",
+                    "yevmiye": yevmiye,
+                    "kaynak": f.get("kaynak") or "",
+                })
+            if not satirlar:
+                return None
+            satirlar.sort(key=lambda s: (s["satici_vkn"], s["kayit_donemi"],
+                                         s["fatura_no"]))
+            return {"faturalar": satirlar, "toplam": faturalar.toplamlar(liste)}
+        except Exception:                                     # noqa: BLE001
+            return None
+
     def _fatura_ozet(self, veri):
         """Calismadaki fatura listesini ozetler; hicbir sey saklanmaz."""
         faturalar = _fatura_modulu()
@@ -571,7 +616,7 @@ class Istekci(BaseHTTPRequestHandler):
             except Exception:
                 duzeltmeler = None
         calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular,
-                        duzeltmeler)
+                        duzeltmeler, self._fatura_bloku(calisma))
         with open(dosya_yolu, "rb") as f:
             govde = f.read()
         self.send_response(200)

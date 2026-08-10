@@ -73,7 +73,7 @@ klasöre taşırsanız `bash kur.sh` komutunu orada yeniden çalıştırın.
 |---------------|-----------------------------------------------------|
 | `veritabani/` | `kdv.db` — kaydettiğiniz bütün çalışmalar           |
 | `yedekler/`   | Arayüzdeki **Yedek Al** ile alınan yedekler         |
-| `ciktilar/`   | Üretilen Excel dosyaları                            |
+| `ciktilar/`   | Üretilen Excel dosyaları ve Word belge taslakları    |
 
 Hepsi uygulama klasörünün içindedir. Başka bir bilgisayara taşırken bu
 klasörleri de kopyalayın. Depoya gönderilmezler (`.gitignore` içinde).
@@ -95,7 +95,13 @@ oluşur; başarılı açılışta böyle bir dosya olmaz.
 
 Beyanname PDF'leri okunamıyorsa yalnızca o ekran hata verir; uygulamanın
 geri kalanı etkilenmez. PDF okuyucu ancak beyanname yüklendiğinde devreye
-girer.
+girer. Aynısı fatura dökümü okuma ve belge (tutanak / rapor) üretme için de
+geçerlidir: bu modüller ilk kullanıldıklarında yüklenir, açılışa
+karışmazlar.
+
+Word belgeleri ek bir kütüphane olmadan üretilir. `.docx` aslında zip
+içinde XML olduğundan belge standart kütüphaneyle yazılır; `python-docx`
+ve onun bağlı olduğu `lxml` kurulu olmasa da çalışır.
 
 Kütüphane sürümleri Python 3.8 gözetilerek seçilmiştir
 (`pypdf` 5.9.0, `typing_extensions` 4.13.2). `lib_ek/` klasörü arama

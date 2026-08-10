@@ -418,6 +418,94 @@ etkilerinin toplamı, hepsi birlikte uygulandığındaki farkı her zaman tam
 vermez. Aradaki bakiye kaynaklara dağıtılmaz; "Etkileşim" sütununda ayrıca
 gösterilir. Bu sütun yalnızca gerçekten bakiye oluştuğunda görünür.
 
+### 6. Sahte Belge / Faturalar sekmesi
+
+Sahte belge kullanma incelemesinde, düzenleyicilerden alınan faturaların
+dökümü buraya yüklenir; KDV'leri dönem dönem toplanıp indirim reddine
+aktarılır.
+
+**Üç Excel biçimi tanınır**, hangisi olduğu kendiliğinden anlaşılır:
+
+| Biçim | Ayırt edici |
+|---|---|
+| e-Arşiv portal dökümü | ONAYLI / ONAYSIZ / iptal-itiraz sayfaları, *Onay Durumu* sütunu |
+| e-Fatura portal dökümü | *Fatura Tipi* sütunu |
+| Elle hazırlanan fatura dökümü | *Malın Cinsi*, *Yevmiye Tarih/No* sütunları |
+
+Başlık satırının kaçıncı satırda olduğu önemli değil; portal çıktısının
+başına açıklama satırı eklenmiş olsa da okunur. **İptal/itiraz sayfaları da
+okunur** ve orada geçen faturalar işaretlenir, böylece iptal edilmiş bir belge
+sessizce tarhiyata girmez.
+
+**Yön kendiliğinden belirlenir.** Her satırın VKN'leri, *Kayıtlı Çalışmalar*
+sekmesine girdiğiniz mükellef VKN'siyle karşılaştırılır: alıcı mükellefse
+**alış** (sahte belge kullanmaya konu olan budur), düzenleyen mükellefse
+**satış**. Karşıt inceleme dökümü düzenleyicinin portalından alındığı için
+mükellefiniz orada alıcı olarak geçer. Yön yanlış anlaşılmışsa satır bazında
+değiştirebilirsiniz.
+
+Elle hazırlanan dökümler VKN taşımaz. Bu durumda yükleme kutusunun altındaki
+**satıcı VKN'si** alanını doldurun; yalnızca VKN'si olmayan satırlara yazılır.
+
+**Kayıt dönemi, tarhiyatın yazılacağı dönemdir.** Yevmiye tarihi varsa oradan,
+yoksa fatura tarihinden alınır; `yyyy/aa` biçiminde elle değiştirilebilir.
+*Dahil* işareti kaldırılan satır ne toplamlara ne de tarhiyata girer.
+
+**Satıcı unvanını siz girersiniz.** Portal dökümündeki unvan alanı satıcının
+değil, *alıcının* unvanıdır — döküm satıcının kendi portalından alınmıştır.
+Satıcı tablosundaki *Düzenle* düğmesiyle unvan, VTR tarih/no, özel esaslara
+alınma tarihi ve satıcı hakkındaki tespiti girersiniz.
+
+> **Bilerek / bilmeden kullanma seçiminin varsayılanı yoktur.** Bu seçim sonucu
+> bütünüyle değiştirir: vergi ziyaı cezası bilmeden kullanmada 1 kat, bilerek
+> kullanmada VUK 359 kapsamında 3 kat uygulanır ve suç duyurusu gerekir.
+> Seçilmediği sürece uyarı verilir; belge yine üretilir ama ceza 1 kat alınır
+> ve raporda bu durum açıkça yazılır.
+
+**İndirim reddine aktarım.** Dahil edilen faturaların KDV'si dönem dönem
+toplanıp *İnceleme Tespitleri* sekmesindeki **İndirilecek KDV'den çıkarılacak**
+satırına yazılır. Böylece rapordaki fatura tablosu ile tarhiyat özeti aynı
+veriden gelir ve birbirini tutmak zorunda kalır. Aktarımdan önce, elle girilmiş
+tutarla arasındaki fark dönem dönem gösterilir. Beyan verisi yüklenmemiş bir
+yıla aktarım yapılmaz.
+
+**Uyarılar.** Yevmiye tarihi fatura tarihinden önceyse, KDV oranı bilinen
+oranlardan (%0, %1, %8, %10, %18, %20) biri değilse, aynı fatura numarası
+birden çok kez geçiyorsa ya da kayıt dönemi çözülemiyorsa bildirilir.
+
+### 7. İnceleme Bilgileri sekmesi — taslak belgeler
+
+Uygulamadaki beyan ve tespit verisi, tutanak ve rapor için gereken künye
+bilgisiyle birleştirilerek iki **taslak** Word belgesi üretir:
+
+- **Vergi inceleme tutanağı** (VUK 141) — fatura verisi gerektirmez
+- **Sahte belge kullanma raporu** — beş bölümlü vergi inceleme raporu düzeni
+
+Künye alanları altı bölümde toplanmıştır: görevlendirme ve inceleme, mükellefe
+ilişkin ek bilgiler, taraflar, usul bulguları, tutanağa özgü bilgiler ve rapora
+ilişkin tercihler. Bu bilgiler çalışmayla birlikte kaydedilir.
+
+**Doldurulmayan alanlar belgede köşeli parantez içinde bırakılır** — sessizce
+boş kalmaz, gözden kaçmaz. Doldurulması önerilen alanlardan boş olanlar ayrıca
+sekmenin üstünde listelenir.
+
+*Önizle* düğmesi belgenin düz metin karşılığını gösterir; oradan panoya
+kopyalayabilirsiniz. *Word* düğmesi `.docx` indirir ve bir kopyasını
+`ciktilar/` klasörüne bırakır. Belge A4, Times New Roman 12 punto, 1,5 satır
+aralıklıdır ve ek bir kütüphane kurulumu gerektirmez.
+
+> Üretilen belgeler **taslaktır**, imzaya hazır nihai belge değildir. Hukuki
+> nitelendirme, ceza uygulaması ve değerlendirme incelemeyi yapana aittir.
+
+**Raporda ceza nasıl dağıtılır.** Bir dönemde birden çok satıcının faturası
+olabilir ve bunların bir kısmı bilerek, bir kısmı bilmeden kullanma
+sayılabilir. Ayrıca reddedilen KDV ile tarh edilen vergi her zaman eşit
+değildir: devir zinciri reddin bir kısmını soğurabilir, ya da tarhiyatın bir
+kısmı matrah ilavesi gibi başka tespitlerden gelebilir. Bu yüzden önce tarh
+edilen tutarın sahte belgeye atfedilebilecek kısmı ayrılır (reddedilen KDV'yi
+aşamaz), sonra bu kısım kategorilerin reddedilen KDV'leri oranında bölünür.
+Kalan tutar "diğer tespitler" olarak ayrı gösterilir.
+
 ## Devir zinciri
 
 Bir dönemde yapılan eleştiri, o dönemin *sonraki döneme devreden KDV*
@@ -454,4 +542,12 @@ veri yedeğe girmez. Geri yükleme, kayıtlı çalışmaların tamamının üzer
 |---|---|
 | `veritabani/kdv.db` | Yalnızca **kaydettiğiniz** çalışmalar |
 | `yedekler/` | Veritabanı yedekleri |
-| `ciktilar/` | Üretilen Excel çalışma dosyaları |
+| `ciktilar/` | Üretilen Excel çalışma dosyaları ve Word belge taslakları |
+
+Yüklediğiniz PDF ve Excel dökümleri bilgisayarda saklanmaz; okunup içerikleri
+çalışmanın içine alınır, geçici dosya hemen silinir. Kaydettiğiniz çalışma
+beyan verisini, tespitleri, beyanname sürümlerini, fatura listesini, satıcı
+bilgilerini ve inceleme künyesini birlikte taşır.
+
+Hiçbir veri bu bilgisayardan çıkmaz. Sunucu yalnızca `127.0.0.1` adresine
+bağlanır; dışarıdan erişime açılmaz.

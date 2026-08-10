@@ -689,8 +689,75 @@ def _duzeltme_sayfasi(wb, duzeltme_bloklari):
     return ws
 
 
+FATURA_KOLONLARI = [
+    ("satici_vkn", "Satıcı VKN", 15, "metin"),
+    ("satici_unvan", "Satıcı Unvanı", 32, "metin"),
+    ("kullanma", "Kullanma Durumu", 18, "metin"),
+    ("fatura_no", "Fatura No", 22, "metin"),
+    ("tarih", "Fatura Tarihi", 14, "metin"),
+    ("kayit_donemi", "Kayıt Dönemi", 13, "metin"),
+    ("matrah", "Matrah", 16, "tutar"),
+    ("kdv", "KDV", 15, "tutar"),
+    ("toplam", "Genel Toplam", 16, "tutar"),
+    ("mal_cinsi", "Malın Cinsi", 20, "metin"),
+    ("yevmiye", "Yevmiye Tarih / No", 20, "metin"),
+    ("kaynak", "Kaynak Dosya", 34, "metin"),
+]
+
+
+def _fatura_sayfasi(wb, fatura_bloku):
+    """Sahte belge kullanmaya konu fatura dokumu.
+
+    Yalnizca tarhiyata dahil edilen alis faturalari yazilir; boylece sayfanin
+    toplami, tespitlerdeki indirim reddi ve rapordaki fatura tablosuyla ayni
+    kumeye dayanir.
+    """
+    if not fatura_bloku or not fatura_bloku.get("faturalar"):
+        return None
+    ws = wb.create_sheet("Faturalar")
+    for i, (_kod, _etiket, genislik, _tur) in enumerate(FATURA_KOLONLARI, 1):
+        ws.column_dimensions[get_column_letter(i)].width = genislik
+
+    _yaz(ws, 1, 1, "SAHTE BELGE KULLANMAYA KONU FATURALAR",
+         FONT_BASLIK, SOL, DOLGU_BASLIK, bicim=None)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1,
+                   end_column=len(FATURA_KOLONLARI))
+    for i, (_kod, etiket, _g, _t) in enumerate(FATURA_KOLONLARI, 1):
+        _yaz(ws, 2, i, etiket, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+    ws.row_dimensions[2].height = 28
+
+    satir = 3
+    for f in fatura_bloku["faturalar"]:
+        for i, (kod, _e, _g, tur) in enumerate(FATURA_KOLONLARI, 1):
+            deger = f.get(kod)
+            if tur == "tutar":
+                _yaz(ws, satir, i, float(deger or 0.0), FONT, SAG)
+            else:
+                _yaz(ws, satir, i, deger or "", FONT,
+                     SOL if kod in ("satici_unvan", "mal_cinsi", "kaynak") else ORTA,
+                     bicim=None)
+        satir += 1
+
+    _yaz(ws, satir, 1, "TOPLAM", FONT_BOLD, SOL, DOLGU_TOPLAM, bicim=None)
+    for i, (kod, _e, _g, tur) in enumerate(FATURA_KOLONLARI, 1):
+        if i == 1:
+            continue
+        deger = fatura_bloku["toplam"].get(kod) if tur == "tutar" else ""
+        _yaz(ws, satir, i, float(deger or 0.0) if tur == "tutar" else "",
+             FONT_BOLD, SAG if tur == "tutar" else ORTA,
+             DOLGU_TOPLAM, bicim=SAYI_BICIMI if tur == "tutar" else None)
+
+    satir += 2
+    _yaz(ws, satir, 1, "Tabloda yalnızca tarhiyata dahil edilen alış faturaları "
+         "yer alır; dahil işareti kaldırılan satırlar yazılmaz.",
+         FONT_NOT, SOL, bicim=None)
+    ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                   end_column=len(FATURA_KOLONLARI))
+    return ws
+
+
 def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
-                    duzeltme_bloklari=None):
+                    duzeltme_bloklari=None, fatura_bloku=None):
     """Excel calisma dosyasini uretir ve yola yazar."""
     wb = Workbook()
     wb.remove(wb.active)
@@ -700,6 +767,7 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
         duzen = _yil_sayfasi(wb, yil_kaydi, sonuc["donemler"], onceki)
         onceki = (duzen["yil"], duzen["ay_sayisi"])
     _duzeltme_sayfasi(wb, duzeltme_bloklari or [])
+    _fatura_sayfasi(wb, fatura_bloku)
     _etki_sayfasi(wb, sonuc)
     _yil_uyum_sayfasi(wb, sonuc)
     if duzen:
