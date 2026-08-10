@@ -40,10 +40,8 @@ oturumda buradan devam edilir.
       — *Rapora uygulandı; tutanak üreticisi henüz eski düzende (sıradaki iş)*
 - [x] Örnek belgelerdeki mantık ve yazım hataları düzeltildi; değişiklik
       listesi kullanıcıya sunuldu (DEGISIKLIK_LISTESI.md)
-- [ ] **Tutanak üreticisi de daire biçimine getirilecek**: iki giriş paragrafı
-      + kalın numaralı 1–12 madde düzeni, defter tablosu, gelir/kurumlar
-      vergisi beyan özeti, ba-bs + fatura tablosu, RDK dinlenme / taslak
-      tutanak / TÖU / özelge maddeleri, 2x3 imza tablosu.
+- [x] Tutanak üreticisi daire biçimine getirildi; her sahteci satıcı için
+      ayrı numaralı madde açılıyor
 
 ### Diğer
 
@@ -60,6 +58,11 @@ oturumda buradan devam edilir.
 - [x] 2026-08-10 — Sahte belge kullanma raporu taslağı; bilerek/bilmeden
       ayrımına göre ceza dağılımı
 - [x] 2026-08-10 — Excel çıktısına Faturalar sayfası; kılavuz güncellemeleri
+- [x] 2026-08-10 — Tutanak dairenin biçimine getirildi: iki giriş paragrafı +
+      kalın numaralı maddeler, defter tablosu, gelir/kurumlar vergisi beyan
+      özeti, satıcı başına ayrı ba-bs + fatura maddesi, RDK / taslak tutanak /
+      TÖU / özelge / başkaca itiraz maddeleri, 2x3 imza tablosu
+- [x] 2026-08-10 — Şirkette "hesap dönemi", gerçek kişide "takvim yılı"
 - [x] 2026-08-10 — Rapor, dairenin biçimine getirildi (I–V, A/B/C/D/Ç);
       bilerek kullanma kolu, oran hesabı, VUK mük. 355 özel usulsüzlük,
       "İndirilecek KDV'den Çıkarılacak Tutar" tablosu, düzeltme beyannamesiyle

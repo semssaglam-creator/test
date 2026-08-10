@@ -139,6 +139,37 @@ BOLUMLER = [
              "tur": "uzun",
              "ipucu": "Her satır belgede ayrı bir madde olarak numaralanır."},
             {"kod": "mukellef_beyani", "etiket": "Mükellefin beyanı / itirazı", "tur": "uzun"},
+            {"kod": "tutanak_sayfa", "etiket": "Tutanak sayfa sayısı", "tur": "sayi",
+             "varsayilan": 3},
+            {"kod": "calisma_adresi", "etiket": "Müfettişliğin çalışma adresi",
+             "tur": "metin",
+             "ipucu": "Tutanakta “İnceleme, Müfettişliğimizin ... çalışma "
+                      "adresinde yapılmıştır.” cümlesinde geçer."},
+            {"kod": "defter_bilgileri", "etiket": "İbraz edilen defterler", "tur": "uzun",
+             "ipucu": "Her satıra bir defter; alanları dikey çizgiyle ayırın: "
+                      "yıl | defterin türü | tasdik tarihi ve numarası | tasdik makamı. "
+                      "Örn: 2023 | Yevmiye Defteri | 25.12.2022 - 55555 | Mersin 17. Noterliği"},
+            {"kod": "vergi_beyan_ozeti",
+             "etiket": "Gelir / Kurumlar Vergisi beyanname özeti", "tur": "uzun",
+             "ipucu": "Her satıra bir kalem: açıklama | tutar. Örn: "
+                      "Ticari Kazançlar | 13.019,63"},
+            {"kod": "muhasebe_kaydi", "etiket": "Faturaların muhasebe kaydı", "tur": "uzun",
+             "ipucu": "Fatura tablosunun altına girer. Örn: alışların 153-Ticari "
+                      "Mallar ile 191-İndirilecek KDV hesaplarına borç, 320-Satıcılar "
+                      "hesabına alacak kaydedildiği."},
+            {"kod": "rdk_dinlenme", "etiket": "Rapor Değerlendirme Komisyonunda dinlenme",
+             "tur": "secim",
+             "secenekler": ["Dinlenme talebi yoktur.", "Dinlenme talebi vardır."],
+             "varsayilan": "Dinlenme talebi yoktur."},
+            {"kod": "taslak_tutanak", "etiket": "Taslak tutanak talebi", "tur": "secim",
+             "secenekler": ["Taslak tutanak talebim bulunmamaktadır.",
+                            "Taslak tutanak talep ediyorum."],
+             "varsayilan": "Taslak tutanak talebim bulunmamaktadır."},
+            {"kod": "ozelge_cevabi", "etiket": "Özelge bulunup bulunmadığı", "tur": "secim",
+             "secenekler": ["Yoktur.", "Vardır."], "varsayilan": "Yoktur."},
+            {"kod": "baskaca_itiraz", "etiket": "Başkaca itiraz ve mülahaza",
+             "tur": "secim", "secenekler": ["Yoktur.", "Vardır."],
+             "varsayilan": "Yoktur."},
         ],
     },
     {
@@ -264,6 +295,20 @@ def is_emirleri(kunye):
         satirlar.append({"tarih": parcalar[0], "sayi": parcalar[1],
                          "donem": parcalar[2], "konu": parcalar[3] or "Sahte Belge Kullanma"})
     return satirlar
+
+
+def cizgili_satirlar(kunye, kod, alan_sayisi):
+    """Dikey cizgiyle ayrilmis cok satirli alani tabloya cevirir.
+
+    Eksik alanlar bos birakilir; fazlasi son alana eklenmez, atilir. Sekme
+    karakteri de ayirac sayilir (Excel'den yapistirma kolaylasir).
+    """
+    tablo = []
+    for ham in satirlar_al(kunye, kod):
+        parcalar = [p.strip() for p in ham.replace("\t", "|").split("|")]
+        parcalar += [""] * (alan_sayisi - len(parcalar))
+        tablo.append(parcalar[:alan_sayisi])
+    return tablo
 
 
 def kurum_mu(kunye):

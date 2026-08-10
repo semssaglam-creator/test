@@ -527,7 +527,7 @@ class Istekci(BaseHTTPRequestHandler):
         duzeltme = self._duzeltme_dokumu(calisma)
         inceleme = _inceleme_bilgisi(calisma)
         belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
-                                     bulgular, duzeltme)
+                                     bulgular, duzeltme, calisma)
         return belge, inceleme
 
     def _rapor_hazirla(self, veri):
