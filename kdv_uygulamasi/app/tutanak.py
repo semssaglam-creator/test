@@ -277,6 +277,8 @@ def _kdv_beyani_maddesi(b, kunye, sayac, donemler):
 
 def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
     """Ba-Bs tespiti ve satici basina fatura dokumu."""
+    from . import faturalar as F
+
     if not satici_satirlari:
         return
     M = ik.mukellef_sozu
@@ -298,10 +300,11 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
                   len(kendi), _tl(s["matrah"]), len(kendi)))
         tablo = []
         for f in kendi:
+            yev_tarih, yev_no = F.yevmiye_hucreleri(f)
             tablo.append([f.get("tarih") or "", f.get("fatura_no") or "",
                           f.get("mal_cinsi") or "", _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
-                          f.get("yevmiye_tarih") or "", f.get("yevmiye_no") or ""])
+                          yev_tarih, yev_no])
         tablo.append(["TOPLAM", "", "", _tl(s["matrah"]), _tl(s["kdv"]),
                       _tl(s["toplam"]), "", ""])
         b.tablo(["Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar", "KDV",

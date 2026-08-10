@@ -64,6 +64,18 @@ SATICI_ALANLARI = [
 ]
 
 
+def yevmiye_hucreleri(f):
+    """Fatura tablosunun son iki hucresi: yevmiye tarihi ve numarasi.
+
+    Portal dokumleri (e-Arsiv / e-Fatura) yevmiye bilgisi tasimaz; bu alanlar
+    defter kaydindan elle girilir. Bos birakmak yerine kose parantezli tutucu
+    yazilir: belge yazicisi bunlari kirmizi gosterdiginden, doldurulacak yer
+    belgede goze carpar.
+    """
+    return (f.get("yevmiye_tarih") or "[yevmiye tarihi]",
+            f.get("yevmiye_no") or "[yevmiye no]")
+
+
 def duzeltilmis_mi(satici_vkn, saticilar):
     """Bu saticinin faturalari duzeltme beyannamesiyle cikarilmis mi."""
     bilgi = (saticilar or {}).get(satici_vkn or "") or {}
