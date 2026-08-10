@@ -281,6 +281,10 @@ class Istekci(BaseHTTPRequestHandler):
                 self._tutanak_gonder(veri)
             elif yol == "/api/tutanak_onizleme":
                 self._json_yanit(self._tutanak_onizleme(veri))
+            elif yol == "/api/sahte_belge_raporu":
+                self._rapor_gonder(veri)
+            elif yol == "/api/sahte_belge_onizleme":
+                self._json_yanit(self._rapor_onizleme(veri))
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/yedek_al":
@@ -482,6 +486,38 @@ class Istekci(BaseHTTPRequestHandler):
         belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
                                      bulgular, duzeltme)
         return belge, inceleme
+
+    def _rapor_hazirla(self, veri):
+        """Sahte belge kullanma raporu taslagini uretir."""
+        from . import sahte_belge_raporu
+        calisma = veri.get("calisma") or {}
+        sonuc, bulgular = _hesapla(calisma)
+        yillar = _yillari_coz(calisma)
+        inceleme = _inceleme_bilgisi(calisma)
+        belge = sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
+                                              yillar, sonuc, calisma, bulgular)
+        return belge, inceleme
+
+    def _rapor_onizleme(self, veri):
+        ik, _tutanak = _belge_modulleri()
+        belge, _inceleme = self._rapor_hazirla(veri)
+        kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
+        return {"metin": belge.duz_metin(), "eksikler": ik.eksik_alanlar(kunye)}
+
+    def _rapor_gonder(self, veri):
+        from . import sahte_belge_raporu
+        belge, inceleme = self._rapor_hazirla(veri)
+        govde = belge.bayt()
+        dosya_adi = sahte_belge_raporu.dosya_adi(inceleme)
+        try:
+            os.makedirs(CIKTI_DIR, exist_ok=True)
+            with open(os.path.join(CIKTI_DIR, dosya_adi), "wb") as f:
+                f.write(govde)
+        except OSError:
+            pass
+        self._belge_gonder(govde, dosya_adi,
+                           "application/vnd.openxmlformats-officedocument."
+                           "wordprocessingml.document")
 
     def _tutanak_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()

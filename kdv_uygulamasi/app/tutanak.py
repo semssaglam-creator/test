@@ -296,10 +296,24 @@ def _tespit_bolumu(b, yillar, donemler, sira):
                 oranlar=[1.1, 1, 1, 1, 1, 1])
 
 
+def tarhiyat_toplami(tarhiyatli):
+    """Gosterilen satirlarin toplami.
+
+    Bilerek `sonuc["tarhiyat_toplami"]` kullanilmaz: o, farkin sifir oldugu
+    donemleri de icerir. Tabloya yalnizca farki olan donemler alindigindan
+    genel toplam kullanilirsa TOPLAM satiri, ustundeki sutunun toplami
+    olmaz ve tablo kendi icinde tutmaz.
+    """
+    alanlar = ("odenecek_beyan", "odenecek_olmasi_gereken", "resen_tarhi_gereken",
+               "aranmasi_gereken", "haksiz_iade", "toplam_fark")
+    return {a: round(sum(d["tarhiyat"].get(a, 0.0) for d in tarhiyatli), 2)
+            for a in alanlar}
+
+
 def _tarhiyat_bolumu(b, sonuc, donemler, kunye, sira):
     b.baslik("%d. Tarhiyat Özeti" % sira, 2)
     tarhiyatli = [d for d in donemler if _var(d["tarhiyat"]["toplam_fark"])]
-    toplam = sonuc.get("tarhiyat_toplami") or {}
+    toplam = tarhiyat_toplami(tarhiyatli)
 
     if not tarhiyatli:
         b.paragraf("Yapılan inceleme sonucunda re'sen tarhı gereken bir vergi farkı "

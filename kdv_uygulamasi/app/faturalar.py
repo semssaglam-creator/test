@@ -306,6 +306,89 @@ def bulgular(faturalar, yillar=None, saticilar=None):
     return sonuc
 
 
+def _kategori(satici_vkn, saticilar):
+    secim = (saticilar.get(satici_vkn) or {}).get("kullanma") or "Belirlenmedi"
+    if secim == "Bilerek kullanma":
+        return "bilerek"
+    if secim == "Bilmeden kullanma":
+        return "bilmeden"
+    return "belirsiz"
+
+
+# Vergi ziyai cezasi katsayilari (VUK 344): 359'daki fiillerle ziyaa sebebiyet
+# verilirse uc kat, diger hallerde bir kat.
+CEZA_KATI = {"bilerek": 3, "bilmeden": 1, "belirsiz": 1}
+
+
+def ceza_dagilimi(faturalar, saticilar, sonuc):
+    """Donem donem tarh edilen vergiyi satici kategorilerine paylastirir.
+
+    Neden paylastirma gerekiyor: bir donemde birden cok saticinin faturasi
+    olabilir ve bunlarin bir kismi bilerek, bir kismi bilmeden kullanma
+    sayilabilir; ceza kati ikisinde farklidir. Ayrica reddedilen KDV ile
+    tarh edilen vergi her zaman esit degildir - devir zinciri reddin bir
+    kismini sogurabilir, ya da tarhiyatin bir kismi matrah ilavesi gibi baska
+    tespitlerden gelebilir.
+
+    Bu yuzden once tarh edilen tutarin sahte belgeye atfedilebilecek kismi
+    ayrilir (reddedilen KDV'yi asamaz), sonra bu kisim kategorilerin reddedilen
+    KDV'leri oraninda bolunur. Kalan tutar "diger tespitler" olarak ayri
+    gosterilir; cezasi bu raporun konusu degildir.
+    """
+    saticilar = saticilar or {}
+    # Donem -> kategori -> reddedilen KDV
+    red = {}
+    for f in faturalar or []:
+        if not f.get("dahil"):
+            continue
+        yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
+        if not yil or not ay:
+            continue
+        hucre = red.setdefault((int(yil), int(ay)),
+                               {"bilerek": 0.0, "bilmeden": 0.0, "belirsiz": 0.0})
+        hucre[_kategori(f.get("satici_vkn") or "", saticilar)] += float(f.get("kdv") or 0.0)
+
+    satirlar = []
+    for d in (sonuc.get("donemler") or []):
+        anahtar = (d["yil"], d["ay"])
+        tarh = float(d["tarhiyat"].get("resen_toplam") or 0.0)
+        kategoriler = red.get(anahtar) or {}
+        red_toplam = sum(kategoriler.values())
+        if tarh <= 0.005 and red_toplam <= 0.005:
+            continue
+
+        sahte_pay = min(tarh, red_toplam)
+        paylar, ceza = {}, {}
+        for kategori in ("bilerek", "bilmeden", "belirsiz"):
+            tutar = kategoriler.get(kategori, 0.0)
+            pay = (sahte_pay * tutar / red_toplam) if red_toplam > 0.005 else 0.0
+            paylar[kategori] = round(pay, 2)
+            ceza[kategori] = round(pay * CEZA_KATI[kategori], 2)
+
+        satirlar.append({
+            "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
+            "red_bilerek": round(kategoriler.get("bilerek", 0.0), 2),
+            "red_bilmeden": round(kategoriler.get("bilmeden", 0.0), 2),
+            "red_belirsiz": round(kategoriler.get("belirsiz", 0.0), 2),
+            "red_toplam": round(red_toplam, 2),
+            "tarh": round(tarh, 2),
+            "tarh_sahte": round(sahte_pay, 2),
+            "tarh_diger": round(tarh - sahte_pay, 2),
+            "pay_bilerek": paylar["bilerek"],
+            "pay_bilmeden": paylar["bilmeden"],
+            "pay_belirsiz": paylar["belirsiz"],
+            "ceza_bilerek": ceza["bilerek"],
+            "ceza_bilmeden": ceza["bilmeden"],
+            "ceza_belirsiz": ceza["belirsiz"],
+            "ceza_toplam": round(sum(ceza.values()), 2),
+        })
+
+    alanlar = [k for k in (satirlar[0] if satirlar else {})
+               if k not in ("yil", "ay", "ay_adi")]
+    toplam = {a: round(sum(s[a] for s in satirlar), 2) for a in alanlar}
+    return {"satirlar": satirlar, "toplam": toplam}
+
+
 def toplamlar(faturalar):
     """Dahil edilen alis faturalarinin genel toplami."""
     dahil = [f for f in (faturalar or []) if f.get("dahil")]

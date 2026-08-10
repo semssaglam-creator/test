@@ -488,6 +488,8 @@
     <div class="satir">
       <div class="otomatik"><button class="btn birincil" id="tutanakIndir">Tutanak Taslağı (Word)</button></div>
       <div class="otomatik"><button class="btn ikincil" id="tutanakOnizle">Önizle</button></div>
+      <div class="otomatik"><button class="btn birincil" id="raporIndir">Sahte Belge Raporu Taslağı (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="raporOnizle">Önizle</button></div>
     </div>
     <div id="kunyeEksik"></div>
   </div>
@@ -2147,6 +2149,23 @@ $("tutanakOnizle").addEventListener("click", async () => {
   try {
     const y = await api("/api/tutanak_onizleme", { calisma: durum.calisma });
     $("raporBaslik").textContent = "Tutanak Taslağı — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+    eksikleriCiz(y.eksikler || []);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("raporIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/sahte_belge_raporu", belgeDosyaAdi("Sahte_belge_raporu"),
+                     "Rapor taslağı indirildi. Bir kopyası ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("raporOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/sahte_belge_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Sahte Belge Kullanma Raporu — Önizleme";
     $("raporMetin").textContent = y.metin;
     $("raporModal").classList.add("acik");
     eksikleriCiz(y.eksikler || []);
