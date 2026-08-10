@@ -368,11 +368,13 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni=""):
            s["vkn"] or "[VKN]", unvan),
         girinti=1)
 
-    if s["vtr_no"] or s["vtr_tarihi"]:
-        b.paragraf(
-            "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği "
-            "Raporu tanzim edilmiştir."
-            % (s["vtr_tarihi"] or "[tarih]", s["vtr_no"] or "[sayı]"), girinti=1)
+    # Vergi Tekniği Raporu cumlesi girilmemis olsa da yazilir: eksik tarih ve
+    # sayi kirmizi yer tutucu olarak kalir ve doldurulmasi gerektigi gorunur.
+    b.paragraf(
+        "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
+        "tanzim edilmiştir."
+        % (s["vtr_tarihi"] or "[VTR tarihi]", s["vtr_no"] or "[VTR no]"),
+        girinti=1)
     if s["ozel_esaslar"]:
         b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
                    "kapsamına alınmıştır." % s["ozel_esaslar"], girinti=1)
