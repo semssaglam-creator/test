@@ -149,6 +149,34 @@ MADDELER.update({
         "varılan mükellefler adına vergi suçu raporu düzenlenmemesi ve "
         "haklarında cumhuriyet savcılıklarına suç duyurusunda bulunulmaması "
         "gerekir."),
+    "gvk_37": (
+        "193 sayılı GVK md. 37 — Ticari Kazanç",
+        "Her türlü ticari ve sınai faaliyetlerden doğan kazançlar ticari "
+        "kazançtır. Ticari kazanç, Vergi Usul Kanunu hükümlerine ve bu "
+        "Kanunda yazılı gerçek (bilanço veya işletme hesabı esası) veya "
+        "basit usullere göre tespit edilir."),
+    "gvk_40": (
+        "193 sayılı GVK md. 40 — İndirilecek Giderler",
+        "Safi kazancın tespit edilmesi için, aşağıdaki giderlerin indirilmesi "
+        "kabul edilir: 1. Ticari kazancın elde edilmesi ve idame ettirilmesi "
+        "için yapılan genel giderler…"),
+    "gvk_mk120": (
+        "193 sayılı GVK mükerrer md. 120 — Geçici Vergi",
+        "Ticari kazanç sahipleri ile serbest meslek erbabı, cari vergilendirme "
+        "döneminin gelir vergisine mahsup edilmek üzere, bu Kanunun ticari veya "
+        "mesleki kazancın tespitine ilişkin hükümlerine göre belirlenen ilgili "
+        "hesap döneminin üçer aylık kazançları üzerinden geçici vergi öderler."),
+    "kvk_6": (
+        "5520 sayılı KVK md. 6 — Safi Kurum Kazancı",
+        "Kurumlar vergisi, mükelleflerin bir hesap dönemi içinde elde "
+        "ettikleri safi kurum kazancı üzerinden hesaplanır. Safi kurum "
+        "kazancının tespitinde, Gelir Vergisi Kanununun ticari kazanç "
+        "hakkındaki hükümleri uygulanır."),
+    "kvk_11": (
+        "5520 sayılı KVK md. 11 — Kabul Edilmeyen İndirimler",
+        "Kurum kazancının tespitinde, belgesiz giderler ile bu Kanunda ve "
+        "Gelir Vergisi Kanununda sayılan diğer indirimlerin yapılması kabul "
+        "edilmez."),
     "tck_21": (
         "5237 sayılı Türk Ceza Kanunu md. 21 — Kast",
         "Suçun oluşması kastın varlığına bağlıdır. Kast, suçun kanuni "

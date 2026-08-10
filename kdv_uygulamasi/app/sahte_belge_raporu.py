@@ -271,7 +271,7 @@ def _hesap(b, kunye, donemler, duzeltme, bulgular):
 
 # ------------------------------------------------------------- IV. elestiri
 def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar=None):
+              saticilar=None, inceleme=None):
     b.baslik("IV- ELEŞTİRİLEN HUSUSLAR", 1)
     M = ik.mukellef_sozu
     kod = ik.resen_madde_kodu(kunye)
@@ -323,7 +323,7 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
              "Değerlendirilmesi", 2)
     _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza)
     _ceza_degerlendirmesi(b, kunye, satici_satirlari, ceza)
-    _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran)
+    _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran, inceleme)
 
     # ---- Ç: tarhiyat oncesi uzlasma
     _uzlasma(b, kunye, satici_satirlari)
@@ -592,14 +592,15 @@ def _ceza_degerlendirmesi(b, kunye, satici_satirlari, ceza):
                 "gerekir.]", girinti=1, italik=True)
 
 
-def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran):
+def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran, inceleme):
     if not satici_satirlari:
         return
     M = ik.mukellef_sozu
     bilerek = _bilerek_mi(satici_satirlari)
-    b.baslik("3- Sahte Belge Kullanımının %s ve Kaçakçılık Suçu Yönünden "
+    b.baslik("3- Sahte Belge Kullanımının %s, %s ve Kaçakçılık Suçu Yönünden "
              "Değerlendirilmesi"
-             % ("Kurumlar Vergisi" if ik.kurum_mu(kunye) else "Gelir Vergisi"), 2)
+             % (ik.gelir_vergisi_adi(kunye).title(),
+                ik.gecici_vergi_adi(kunye).title()), 2)
 
     for baslik, metin in mevzuat.maddeler(["vuk_teblig_306", "tck_21"]):
         b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
@@ -629,18 +630,17 @@ def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran):
         b.paragraf(satir, girinti=1)
 
     if bilerek:
-        temsilci = ik.deger(kunye, "kanuni_temsilci", "kanuni temsilci")
-        tckn = ik.deger(kunye, "temsilci_tckn", "T.C. kimlik no")
         b.paragraf(
             "Yukarıda yapılan açıklamalar 213 sayılı Vergi Usul Kanunu ve 306 "
             "Sıra No’lu Genel Tebliği kapsamında değerlendirildiğinde, %s "
             "kullanmış olduğu sahte faturaları bilerek kullandığı ve vergi "
             "ziyaına sebebiyet vermede kastının bulunduğu sonucuna varılmıştır. "
             "Bu nedenle %s hakkında 213 sayılı Vergi Usul Kanunu’nun 359. "
-            "maddesi uyarınca vergi suçu raporu düzenlenmesi ve %s T.C. kimlik "
-            "numaralı %s hakkında Cumhuriyet Başsavcılığına suç duyurusunda "
-            "bulunulması gerekmektedir."
-            % (M(kunye, ek="in"), M(kunye), tckn, temsilci), girinti=1)
+            "maddesi uyarınca vergi suçu raporu düzenlenmesi ve %s hakkında "
+            "Cumhuriyet Başsavcılığına suç duyurusunda bulunulması "
+            "gerekmektedir."
+            % (M(kunye, ek="in"), M(kunye),
+               ik.suc_duyurusu_hedefi(kunye, inceleme)), girinti=1)
     else:
         b.paragraf(
             "Sahte faturalarda yer alan alımların yapıldığının kabul edilmesi, "
@@ -650,13 +650,19 @@ def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran):
             "kanaatine varılmış olup, 213 sayılı Vergi Usul Kanunu’nun 359. "
             "maddesi gereği vergi suçu raporu düzenlenmesine ve suç duyurusunda "
             "bulunulmasına gerek görülmemiştir." % M(kunye, ek="in"), girinti=1)
+        for baslik, metin in mevzuat.maddeler(ik.kazanc_maddeleri(kunye)):
+            b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120,
+                       aralik_sonra=40)
+            b.paragraf("“%s”" % metin, girinti=1, italik=True)
         b.paragraf(
-            "Ayrıca söz konusu faturalarla belgelendirilen alımların %s "
-            "faaliyet konusuyla ilgili olduğu ve gerçekten yapıldığı kanaati "
+            "Söz konusu faturalarla belgelendirilen alımların %s faaliyet "
+            "konusuyla ilgili olduğu ve gerçekten yapıldığı kanaati "
             "oluştuğundan, faturaların katma değer vergisi hariç tutarının "
-            "maliyet unsuru olarak kabul edilmesi ve %s yönünden eleştiriyi "
-            "gerektirir bir husus bulunmadığı sonucuna varılmıştır."
-            % (M(kunye, ek="in"), ik.gelir_vergisi_adi(kunye)), girinti=1)
+            "yukarıdaki hükümler çerçevesinde maliyet unsuru olarak kabul "
+            "edilmesi ve %s ile %s yönünden eleştiriyi gerektirir bir husus "
+            "bulunmadığı sonucuna varılmıştır."
+            % (M(kunye, ek="in"), ik.gelir_vergisi_adi(kunye),
+               ik.gecici_vergi_adi(kunye)), girinti=1)
 
 
 def _uzlasma(b, kunye, satici_satirlari):
@@ -740,12 +746,11 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
             "%d- Raporun IV/D.3 bölümünde açıklandığı üzere, %s sahte olduğu "
             "Vergi Tekniği Raporlarıyla tespit edilen faturaları bilerek "
             "kullandığı, bu fiil nedeniyle 213 sayılı Vergi Usul Kanunu’nun "
-            "359. maddesi uyarınca vergi suçu raporu düzenlenmesi ve %s T.C. "
-            "kimlik numaralı %s hakkında Cumhuriyet Başsavcılığına suç "
-            "duyurusunda bulunulması gerektiği,"
+            "359. maddesi uyarınca vergi suçu raporu düzenlenmesi ve %s "
+            "hakkında Cumhuriyet Başsavcılığına suç duyurusunda bulunulması "
+            "gerektiği,"
             % (sira, M(kunye, ek="in"),
-               ik.deger(kunye, "temsilci_tckn", "T.C. kimlik no"),
-               ik.deger(kunye, "kanuni_temsilci", "kanuni temsilci")))
+               ik.suc_duyurusu_hedefi(kunye, inceleme)))
         sira += 1
         maddeler.append(
             "%d- Raporun IV/Ç bölümünde açıklandığı üzere, tarh edilecek vergi "
@@ -819,7 +824,7 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     _hesap(b, kunye, donemler, duzeltme,
            belgeye_giren_bulgular(bulgular, donemler))
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar)
+              saticilar, inceleme)
     _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)
 
     b.bos_satir()

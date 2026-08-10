@@ -80,6 +80,9 @@ oturumda buradan devam edilir.
       kalın numaralı maddeler, defter tablosu, gelir/kurumlar vergisi beyan
       özeti, satıcı başına ayrı ba-bs + fatura maddesi, RDK / taslak tutanak /
       TÖU / özelge / başkaca itiraz maddeleri, 2x3 imza tablosu
+- [x] 2026-08-10 — Gerçek kişi mükellef kolu tamamlandı: suç duyurusu hedefi
+      (kurumda kanuni temsilci, gerçek kişide mükellefin kendisi), kazanç
+      mevzuatı (KVK 6/11 - GVK 37/40/mük.120), geçici vergi adlandırması
 - [x] 2026-08-10 — Şirkette "hesap dönemi", gerçek kişide "takvim yılı"
 - [x] 2026-08-10 — Rapor, dairenin biçimine getirildi (I–V, A/B/C/D/Ç);
       bilerek kullanma kolu, oran hesabı, VUK mük. 355 özel usulsüzlük,

@@ -338,6 +338,43 @@ def gelir_vergisi_adi(kunye):
     return "kurumlar vergisi" if kurum_mu(kunye) else "gelir vergisi"
 
 
+def gecici_vergi_adi(kunye):
+    """Kurumda "kurum geçici vergisi", gercek kiside "geçici vergi"."""
+    return "kurum geçici vergisi" if kurum_mu(kunye) else "geçici vergi"
+
+
+def kazanc_maddeleri(kunye):
+    """Kazanc tespitine iliskin mevzuat anahtarlari.
+
+    Kurumda 5520 sayili Kanun, gercek kiside 193 sayili Kanun esas alinir;
+    sahte belgeyle belgelenen alimin maliyet/gider kabulu bu maddelere
+    dayandirilir.
+    """
+    if kurum_mu(kunye):
+        return ["kvk_6", "kvk_11"]
+    return ["gvk_37", "gvk_40", "gvk_mk120"]
+
+
+def suc_duyurusu_hedefi(kunye, inceleme=None):
+    """Suc duyurusunun kim hakkinda yapilacagini yazar.
+
+    Kurumda fiil kanuni temsilciye isnat edilir ve onun T.C. kimlik numarasi
+    yazilir. Gercek kisi mukellefte ayri bir temsilci yoktur; duyuru
+    mukellefin kendisi hakkindadir ve kimlik numarasi kunyeden degil
+    mukellef bilgisinden gelir.
+    """
+    inceleme = inceleme or {}
+    if kurum_mu(kunye):
+        return "%s T.C. kimlik numaralı kanuni temsilci %s" % (
+            deger(kunye, "temsilci_tckn", "T.C. kimlik no"),
+            deger(kunye, "kanuni_temsilci", "kanuni temsilci"))
+    kimlik = (str(kunye.get("nezdinde_tckn") or "").strip()
+              or str(inceleme.get("vkn_tckn") or "").strip()
+              or "[T.C. kimlik no]")
+    ad = inceleme.get("ad_unvan") or "[Mükellef adı]"
+    return "%s T.C. kimlik numaralı %s" % (kimlik, ad)
+
+
 # Sirketlerde donem "hesap donemi", gercek kisilerde "takvim yili" diye anilir.
 # Ikisi ayni eki almadigi icin (donemine / yilina) cekimli halleri hazir tutulur.
 _DONEM_ADLARI = {
