@@ -2882,7 +2882,7 @@ function faturaSaticiTablosunuCiz() {
   const tablo = $("fatSaticiTablo");
   tablo.innerHTML = "";
   const bas = ["VKN", "Unvan", "Kullanma Durumu", "Fatura", "Matrah", "KDV",
-               "Dönem Aralığı", ""];
+               "Dönem Aralığı", "Tarhiyat", ""];
   const ust = document.createElement("tr");
   bas.forEach((b) => ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
@@ -2899,6 +2899,9 @@ function faturaSaticiTablosunuCiz() {
     tr.appendChild(hucre("td", tl(s.kdv), { className: "sag" }));
     tr.appendChild(hucre("td", s.ilk_donem === s.son_donem
       ? s.ilk_donem : `${s.ilk_donem} – ${s.son_donem}`));
+    tr.appendChild(hucre("td",
+      s.duzeltme_ile_cikarildi === "Evet" ? "düzeltme ile çıkarılmış" : "tarhiyata dahil",
+      { className: s.duzeltme_ile_cikarildi === "Evet" ? "sessiz" : "" }));
     const tdD = document.createElement("td");
     const dugme = document.createElement("button");
     dugme.className = "btn ikincil";
@@ -2970,7 +2973,7 @@ function faturaListesiniCiz() {
   const tablo = $("fatListeTablo");
   tablo.innerHTML = "";
   const ust = document.createElement("tr");
-  ["Dahil", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
+  ["Dahil", "Tevsik\nyok", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
    "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
@@ -2986,6 +2989,18 @@ function faturaListesiniCiz() {
     });
     tdDahil.appendChild(kutu);
     tr.appendChild(tdDahil);
+
+    // Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş faturalar:
+    // VUK mükerrer 355 özel usulsüzlük cezasının matrahını oluşturur.
+    const tdTevsik = document.createElement("td");
+    const tevsik = document.createElement("input");
+    tevsik.type = "checkbox"; tevsik.checked = !!f.tevsik_yok; tevsik.style.width = "auto";
+    tevsik.title = "Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş";
+    tevsik.addEventListener("change", async () => {
+      f.tevsik_yok = tevsik.checked; isaretle(false); await faturalariTazele();
+    });
+    tdTevsik.appendChild(tevsik);
+    tr.appendChild(tdTevsik);
 
     tr.appendChild(hucre("td", f.fatura_no || "—"));
     tr.appendChild(hucre("td", f.tarih || "—"));

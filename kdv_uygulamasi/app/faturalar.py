@@ -42,13 +42,46 @@ KULLANMA_SECENEKLERI = ["Belirlenmedi", "Bilmeden kullanma", "Bilerek kullanma"]
 
 SATICI_ALANLARI = [
     {"kod": "unvan", "etiket": "Satıcı unvanı", "tur": "metin"},
+    {"kod": "vergi_dairesi", "etiket": "Satıcının vergi dairesi", "tur": "metin",
+     "ipucu": "Belgede “... Vergi Dairesi Müdürlüğünün VKN vergi kimlik "
+              "numaralı mükellefi ...” biçiminde geçer."},
     {"kod": "kullanma", "etiket": "Kullanma durumu", "tur": "secim",
      "secenekler": KULLANMA_SECENEKLERI, "varsayilan": "Belirlenmedi"},
     {"kod": "vtr_no", "etiket": "VTR no", "tur": "metin"},
     {"kod": "vtr_tarihi", "etiket": "VTR tarihi", "tur": "tarih"},
     {"kod": "ozel_esaslar", "etiket": "Özel esaslara alınma tarihi", "tur": "tarih"},
+    {"kod": "duzeltme_ile_cikarildi",
+     "etiket": "Faturaları düzeltme beyannamesiyle çıkarılmış", "tur": "secim",
+     "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
+     "ipucu": "Mükellef bu satıcının faturalarını kendi düzeltme beyannamesiyle "
+              "kayıtlarından çıkardıysa “Evet” seçin. O faturalar tarhiyata "
+              "girmez; belgede neden dahil edilmediği açıklanır."},
+    {"kod": "duzeltme_aciklama", "etiket": "Düzeltme beyannamesi açıklaması",
+     "tur": "uzun",
+     "ipucu": "Düzeltmenin tarihi ve hangi dönemleri kapsadığı. Belgeye olduğu "
+              "gibi girer."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
 ]
+
+
+def duzeltilmis_mi(satici_vkn, saticilar):
+    """Bu saticinin faturalari duzeltme beyannamesiyle cikarilmis mi."""
+    bilgi = (saticilar or {}).get(satici_vkn or "") or {}
+    return str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+
+
+def sayilir(f, saticilar=None):
+    """Fatura tarhiyata giriyor mu.
+
+    Iki kosul birlikte aranir: kullanici satiri "dahil" birakmis olmali ve
+    faturayi duzenleyen satici, faturalari duzeltme beyannamesiyle
+    kayitlardan cikarilmis olarak isaretlenmemis olmali. Ikincisi onemlidir:
+    mukellef o KDV'yi kendi duzeltmesiyle zaten indirimlerinden cikardiysa
+    ayni tutari bir de rapor uzerinden tarh etmek mukerrer tarhiyat olur.
+    """
+    if not f.get("dahil"):
+        return False
+    return not duzeltilmis_mi(f.get("satici_vkn"), saticilar)
 
 
 def _tarihi_coz(metin):
@@ -100,6 +133,8 @@ def normalize(ham_faturalar, mukellef_vkn=None):
             else:
                 f["kayit_yil"], f["kayit_ay"] = None, None
 
+        f["tevsik_yok"] = bool(f.get("tevsik_yok"))
+
         if "dahil" not in f:
             # Iptal edilmis ve alis olmayan belgeler bastan disarida kalir;
             # kullanici isterse geri alir.
@@ -128,6 +163,8 @@ def satici_ozeti(faturalar, saticilar=None):
     saticilar = saticilar or {}
     gruplar = {}
     for f in faturalar or []:
+        # Duzeltme ile cikarilmis saticinin faturalari da ozette yer alir;
+        # belgede tablosu gosterilip neden tarhiyata girmedigi yazilir.
         if not f.get("dahil"):
             continue
         vkn = f.get("satici_vkn") or ""
@@ -148,11 +185,14 @@ def satici_ozeti(faturalar, saticilar=None):
         donemler = sorted(grup.pop("donemler"))
         grup.update({
             "unvan": bilgi.get("unvan") or "",
+            "vergi_dairesi": bilgi.get("vergi_dairesi") or "",
             "kullanma": bilgi.get("kullanma") or "Belirlenmedi",
             "vtr_no": bilgi.get("vtr_no") or "",
             "vtr_tarihi": bilgi.get("vtr_tarihi") or "",
             "ozel_esaslar": bilgi.get("ozel_esaslar") or "",
             "not": bilgi.get("not") or "",
+            "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
+            "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
             "matrah": round(grup["matrah"], 2),
             "kdv": round(grup["kdv"], 2),
             "toplam": round(grup["toplam"], 2),
@@ -167,14 +207,14 @@ def satici_ozeti(faturalar, saticilar=None):
     return satirlar
 
 
-def donem_ozeti(faturalar):
-    """Dahil edilen alis faturalarinin donem donem toplami.
+def donem_ozeti(faturalar, saticilar=None):
+    """Tarhiyata giren alis faturalarinin donem donem toplami.
 
     Doner: {yil: {ay(1-12): {"adet", "matrah", "kdv"}}}
     """
     ozet = {}
     for f in faturalar or []:
-        if not f.get("dahil"):
+        if not sayilir(f, saticilar):
             continue
         yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
         if not yil or not ay or not (1 <= int(ay) <= 12):
@@ -191,9 +231,9 @@ def donem_ozeti(faturalar):
     return ozet
 
 
-def indirim_dizileri(faturalar):
+def indirim_dizileri(faturalar, saticilar=None):
     """Her yil icin 12 elemanli "indirilecek KDV'den cikarilacak" dizisi."""
-    ozet = donem_ozeti(faturalar)
+    ozet = donem_ozeti(faturalar, saticilar)
     diziler = {}
     for yil, aylar in ozet.items():
         dizi = [0.0] * 12
@@ -203,14 +243,14 @@ def indirim_dizileri(faturalar):
     return diziler
 
 
-def uygulama_farki(faturalar, yillar):
+def uygulama_farki(faturalar, yillar, saticilar=None):
     """Fatura toplami ile calismadaki elestiri girdisini karsilastirir.
 
     Fatura listesi tarhiyata otomatik yazilabildigi icin, elle girilmis bir
     tutarin sessizce ezilmesi ya da iki kaynagin birbirinden ayrilmasi
     tehlikelidir. Bu yuzden fark satir satir bildirilir.
     """
-    diziler = indirim_dizileri(faturalar)
+    diziler = indirim_dizileri(faturalar, saticilar)
     mevcut = {}
     for yil_kaydi in yillar or []:
         try:
@@ -267,17 +307,17 @@ def bulgular(faturalar, yillar=None, saticilar=None):
                                                    fatura_tarihi)})
 
         oran = kdv_orani(f)
-        if oran is not None and f.get("dahil"):
+        if oran is not None and sayilir(f, saticilar):
             if not any(abs(oran - o) <= ORAN_TOLERANSI for o in BILINEN_ORANLAR):
                 sonuc.append({"tur": "kdv_orani", "fatura": etiket,
                               "mesaj": "%s: KDV oranı %%%s çıkıyor; bilinen "
                                        "oranlardan biri değil." % (etiket, oran)})
 
-        if f.get("dahil") and not (f.get("kayit_yil") and f.get("kayit_ay")):
+        if sayilir(f, saticilar) and not (f.get("kayit_yil") and f.get("kayit_ay")):
             sonuc.append({"tur": "donem_yok", "fatura": etiket,
                           "mesaj": "%s: kayıt dönemi belirlenemedi; tarhiyata "
                                    "yazılamaz." % etiket})
-        elif f.get("dahil") and bilinen_yillar and f.get("kayit_yil") not in bilinen_yillar:
+        elif sayilir(f, saticilar) and bilinen_yillar and f.get("kayit_yil") not in bilinen_yillar:
             sonuc.append({"tur": "yil_disi", "fatura": etiket,
                           "mesaj": "%s: kayıt dönemi %s, ancak bu yıl için beyan "
                                    "verisi yüklenmemiş." % (etiket, f["kayit_yil"])})
@@ -339,7 +379,7 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
     # Donem -> kategori -> reddedilen KDV
     red = {}
     for f in faturalar or []:
-        if not f.get("dahil"):
+        if not sayilir(f, saticilar):
             continue
         yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
         if not yil or not ay:
@@ -389,9 +429,106 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
     return {"satirlar": satirlar, "toplam": toplam}
 
 
-def toplamlar(faturalar):
-    """Dahil edilen alis faturalarinin genel toplami."""
-    dahil = [f for f in (faturalar or []) if f.get("dahil")]
+# --------------------------------------------------------- oran ve ozel usulsuzluk
+def sahte_belge_orani(faturalar, sonuc, saticilar=None):
+    """Sahte belgelerin mukellefin toplam alislari icindeki payini hesaplar.
+
+    Bu oran, "bilerek kullanma" kanaatinin en cok dayandirildigi olcuttur:
+    alislarinin buyuk bolumunu sahte belgeyle belgelendiren bir mukellefin
+    durumu bilmediginin kabulu guclesir. Rapor bu orani yazar; kanaati yine
+    inceleme elemani kurar.
+
+    Olcut KDV uzerinden alinir: reddedilen KDV / beyan edilen bu donem
+    indirilecek KDV toplami. Matrah yerine KDV secilmesinin nedeni, fatura
+    dokumunde her zaman KDV bulunmasi ama alis matrahinin beyannamede ayrica
+    yer almamasidir.
+    """
+    dahil = [f for f in (faturalar or []) if sayilir(f, saticilar)]
+    sahte_kdv = sum(float(f.get("kdv") or 0.0) for f in dahil)
+    yillar = {f.get("kayit_yil") for f in dahil if f.get("kayit_yil")}
+    toplam_indirim = sum(
+        d["beyan"].get("bu_donem_indirim_toplam", 0.0)
+        for d in (sonuc.get("donemler") or []) if d["yil"] in yillar)
+    oran = (sahte_kdv / toplam_indirim * 100.0) if toplam_indirim > 0.005 else None
+    return {
+        "sahte_kdv": round(sahte_kdv, 2),
+        "toplam_indirim_kdv": round(toplam_indirim, 2),
+        "oran": round(oran, 2) if oran is not None else None,
+        "yillar": sorted(y for y in yillar if y),
+    }
+
+
+# VUK muk. 355 / 459 sira no'lu Genel Teblig: tevsik zorunlulugu haddi.
+# 2016 sonuna kadar 8.000 TL, 2017'den itibaren 7.000 TL.
+def tevsik_haddi(yil):
+    try:
+        yil = int(yil)
+    except (TypeError, ValueError):
+        return 7000.0
+    return 8000.0 if yil <= 2016 else 7000.0
+
+
+def ozel_usulsuzluk(faturalar, alt_had, ust_sinir, saticilar=None):
+    """Odemeleri tevsik etmeme fiilinden dogan ozel usulsuzluk cezasi.
+
+    Yalnizca kullanicinin "tevsik edilmemis" diye isaretledigi faturalar
+    hesaba girer; uygulama bunu kendiliginden varsaymaz. Ceza, islem
+    tutarinin (KDV dahil) yuzde besidir ve yila ait alt haddin altina
+    inemez. Bir hesap doneminde kesilebilecek toplam ceza da ust sinirla
+    kisitlidir (VUK muk. 355).
+
+    alt_had / ust_sinir yil yil degistigi icin kunyeden alinir; uygulama
+    bunlari tahmin etmez.
+    """
+    try:
+        alt_had = float(alt_had or 0.0)
+    except (TypeError, ValueError):
+        alt_had = 0.0
+    try:
+        ust_sinir = float(ust_sinir or 0.0)
+    except (TypeError, ValueError):
+        ust_sinir = 0.0
+
+    satirlar = []
+    for f in faturalar or []:
+        if not f.get("tevsik_yok") or not sayilir(f, saticilar):
+            continue
+        matrah = float(f.get("matrah") or 0.0)
+        kdv = float(f.get("kdv") or 0.0)
+        toplam = float(f.get("toplam") or 0.0) or (matrah + kdv)
+        if toplam < tevsik_haddi(f.get("kayit_yil")):
+            continue                      # had altinda kalan islem ceza dogurmaz
+        yuzde_bes = round(toplam * 0.05, 2)
+        satirlar.append({
+            "fatura_no": f.get("fatura_no") or "",
+            "tarih": f.get("tarih") or "",
+            "satici_vkn": f.get("satici_vkn") or "",
+            "kayit_yil": f.get("kayit_yil"),
+            "matrah": round(matrah, 2),
+            "kdv": round(kdv, 2),
+            "toplam": round(toplam, 2),
+            "yuzde_bes": yuzde_bes,
+            "alt_had": round(alt_had, 2),
+            "ceza": round(max(yuzde_bes, alt_had), 2),
+        })
+    satirlar.sort(key=lambda s: (s["kayit_yil"] or 0, s["tarih"], s["fatura_no"]))
+
+    ham_toplam = round(sum(s["ceza"] for s in satirlar), 2)
+    kesilecek = min(ham_toplam, ust_sinir) if ust_sinir > 0 else ham_toplam
+    return {
+        "satirlar": satirlar,
+        "islem_sayisi": len(satirlar),
+        "islem_tutari": round(sum(s["toplam"] for s in satirlar), 2),
+        "ham_toplam": ham_toplam,
+        "ust_sinir": round(ust_sinir, 2),
+        "ust_sinir_uygulandi": ust_sinir > 0 and ham_toplam > ust_sinir,
+        "kesilecek": round(kesilecek, 2),
+    }
+
+
+def toplamlar(faturalar, saticilar=None):
+    """Tarhiyata giren alis faturalarinin genel toplami."""
+    dahil = [f for f in (faturalar or []) if sayilir(f, saticilar)]
     return {
         "adet": len(dahil),
         "matrah": round(sum(float(f.get("matrah") or 0.0) for f in dahil), 2),

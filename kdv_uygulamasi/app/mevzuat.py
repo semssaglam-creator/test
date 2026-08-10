@@ -96,6 +96,78 @@ MADDELER = {
         "vergisinin indirim konusu yapılması mümkün değildir."),
 }
 
+MADDELER.update({
+    "vuk_227": (
+        "213 sayılı VUK md. 227 — Tevsik Zorunluluğu",
+        "Bu kanunda aksine hüküm olmadıkça bu kanuna göre tutulan ve üçüncü "
+        "şahıslarla olan münasebet ve muamelelere ait olan kayıtların tevsiki "
+        "mecburidir."),
+    "vuk_mk355": (
+        "213 sayılı VUK mükerrer md. 355 — Bilgi Vermekten Çekinenler ile "
+        "Tevsik Zorunluluğuna Uymayanlara Uygulanacak Ceza",
+        "Tahsilat ve ödemelerini banka, benzeri finans kurumları veya posta "
+        "idarelerince düzenlenen belgelerle tevsik etme zorunluluğuna uymayan "
+        "mükelleflerden her birine, her bir işlem için bu maddeye göre "
+        "uygulanan cezalardan az olmamak üzere işleme konu tutarın %5'i "
+        "nispetinde özel usulsüzlük cezası kesilir. Bu şekilde ceza kesilen "
+        "mükellefler hakkında bir takvim yılı içinde kesilecek toplam ceza "
+        "ilgili yıl için belirlenen üst sınırı aşamaz."),
+    "vuk_mk257": (
+        "213 sayılı VUK mükerrer md. 257 — Yetki",
+        "Maliye Bakanlığı, mükelleflere muameleleri ile ilgili tahsilat ve "
+        "ödemelerini banka, benzeri finans kurumları veya posta idarelerince "
+        "düzenlenen belgelerle tevsik etmeleri zorunluluğunu getirmeye ve bu "
+        "zorunluluğun kapsamını ve uygulamaya ilişkin usul ve esaslarını "
+        "belirlemeye yetkilidir."),
+    "vuk_336": (
+        "213 sayılı VUK md. 336 — Cezalarda Birleşme",
+        "Cezayı istilzam eden tek bir fiil ile vergi ziyaı ve usulsüzlük "
+        "birlikte işlenmiş olursa bunlara ait cezalardan sadece miktar "
+        "itibariyle en ağırı kesilir."),
+    "vuk_352": (
+        "213 sayılı VUK md. 352 — Usulsüzlük Dereceleri ve Cezaları",
+        "Usulsüzlükler, aşağıda yazılı derecelere ve bu kanuna bağlı cetvele "
+        "göre cezalandırılır. Usulsüzlük fiili re'sen takdiri gerektirirse, "
+        "bağlı cetvelde yazılı cezalar iki kat olarak kesilir."),
+    "vuk_ek11": (
+        "213 sayılı VUK Ek md. 11 — Tarhiyat Öncesi Uzlaşma",
+        "Maliye Bakanlığı, vergi incelemesine dayanılarak tarh edilecek "
+        "vergilerle bunlara ilişkin kesilecek vergi ziyaı cezalarında tarhiyat "
+        "öncesi uzlaşma yapılmasına izin verebilir. Şu kadar ki, 359 uncu "
+        "maddede yazılı fiillerle vergi ziyaına sebebiyet verilmesi halinde "
+        "tarh edilecek vergi ve kesilecek ceza ile bu fiillere iştirak "
+        "edenlere kesilecek ceza tarhiyat öncesi uzlaşma kapsamı dışındadır."),
+    "vuk_teblig_306": (
+        "306 Sıra No'lu VUK Genel Tebliği — Bilerek Kullanma Ölçütü",
+        "Sahte veya muhteviyatı itibariyle yanıltıcı belgenin gerek "
+        "düzenlenmesinin gerekse kullanılmasının kaçakçılık suçunun oluşması "
+        "yönünden ayrı ayrı değerlendirilmesi gerekir. Kaçakçılık suçunun "
+        "oluşması, sahte veya muhteviyatı itibariyle yanıltıcı belgenin "
+        "bilerek kullanılıp kullanılmadığının, diğer bir anlatımla bu "
+        "kullanımda kastın bulunup bulunmadığının değerlendirilmesine ve "
+        "belirlenmesine bağlıdır. Bu belgeleri bilmeden kullandığı sonucuna "
+        "varılan mükellefler adına vergi suçu raporu düzenlenmemesi ve "
+        "haklarında cumhuriyet savcılıklarına suç duyurusunda bulunulmaması "
+        "gerekir."),
+    "danistay_indirim": (
+        "Danıştay Kararları — Sahte Belgeye Dayalı KDV İndirimi",
+        "Danıştay Vergi Dava Daireleri Genel Kurulu ile Danıştay 3., 4., 7., 9. "
+        "ve 11. Daire kararlarında; yalnızca şekil şartları yerine getirilerek "
+        "düzenlenen, gerçek bir mal teslimi veya hizmet ifasına dayanmayan "
+        "faturalarda gösterilen katma değer vergisinin indirim konusu "
+        "yapılamayacağı, indirim müessesesinin işleyebilmesi için verginin "
+        "gerçekten yüklenilmiş olması gerektiği kabul edilmiştir."),
+    "kdv_indirim_sartlari": (
+        "KDV İndiriminin Üç Şartı (KDVK md. 29, 34 ve VUK md. 3)",
+        "Bir mal teslimi veya hizmet ifasına ilişkin katma değer vergisinin "
+        "indirim konusu yapılabilmesi için; gerçek bir mal tesliminin veya "
+        "hizmet ifasının bulunması, indirim konusu yapılacak katma değer "
+        "vergisinin fatura ve benzeri vesikalarda ayrıca gösterilmesi ve bu "
+        "vesikaların yasal defterlere kaydedilmesi şarttır. İndirim "
+        "mekanizmasının sağlıklı işlemesi bu üç şartın bir arada "
+        "gerçekleşmesine bağlıdır."),
+})
+
 # Re'sen takdir nedeni koduna gore madde anahtari
 RESEN_MADDELERI = {"30/4": "vuk_30_4", "30/6": "vuk_30_6", "30/7": "vuk_30_7"}
 

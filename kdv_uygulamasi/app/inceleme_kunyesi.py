@@ -42,6 +42,16 @@ BOLUMLER = [
             {"kod": "inceleme_konusu", "etiket": "İnceleme konusu", "tur": "metin",
              "varsayilan": "Katma Değer Vergisi yönünden",
              "ipucu": "Belgede \"... yönünden inceleme\" biçiminde geçer."},
+            {"kod": "is_emirleri", "etiket": "İş emirleri (birden çoksa)", "tur": "uzun",
+             "ipucu": "Her satıra bir iş emri; alanları dikey çizgiyle ayırın: "
+                      "tarih | sayı | dönem | konu. Örn: "
+                      "28.05.2024 | 23929873-663.05[31848]-22046 | 2023 | Sahte Belge Kullanma. "
+                      "Doldurulursa belgeye tablo olarak girer."},
+            {"kod": "mukellef_turu", "etiket": "Mükellef türü", "tur": "secim",
+             "secenekler": ["Kurum (sermaye şirketi)", "Gerçek kişi"],
+             "varsayilan": "Kurum (sermaye şirketi)",
+             "ipucu": "Belgede \"mükellef kurum\" mu \"mükellef\" mi denileceğini ve "
+                      "kurumlar vergisi mi gelir vergisi mi yazılacağını belirler."},
         ],
     },
     {
@@ -100,6 +110,17 @@ BOLUMLER = [
              "varsayilan": "Yok"},
             {"kod": "usul_notu", "etiket": "Usul incelemesine ilişkin not", "tur": "uzun",
              "ipucu": "Belgeye olduğu gibi aktarılır."},
+            {"kod": "ouc_uygula", "etiket": "Özel usulsüzlük (tevsik) hesaplansın",
+             "tur": "secim", "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
+             "ipucu": "Faturalar sekmesinde \"tevsik edilmemiş\" işaretlenen "
+                      "faturalardan VUK mükerrer 355 cezası hesaplanır."},
+            {"kod": "ouc_alt_had", "etiket": "Özel usulsüzlük alt haddi (TL)",
+             "tur": "metin",
+             "ipucu": "İlgili yıl için VUK mükerrer 355 alt haddi. 2023 için "
+                      "7.500 (544 Sıra No'lu Tebliğ). Uygulama yıl yıl tahmin etmez."},
+            {"kod": "ouc_ust_sinir", "etiket": "Bir hesap dönemi üst sınırı (TL)",
+             "tur": "metin",
+             "ipucu": "2023 için 5.500.000. Boş bırakılırsa sınır uygulanmaz."},
         ],
     },
     {
@@ -133,6 +154,24 @@ BOLUMLER = [
              "secenekler": ["Evet", "Hayır"], "varsayilan": "Evet"},
             {"kod": "duzeltme_notu", "etiket": "Beyanname düzeltme notu eklensin",
              "tur": "secim", "secenekler": ["Evet", "Hayır"], "varsayilan": "Hayır"},
+            {"kod": "tou_talebi", "etiket": "Tarhiyat öncesi uzlaşma talebi",
+             "tur": "secim",
+             "secenekler": ["Talep edilmedi", "Talep edildi"],
+             "varsayilan": "Talep edilmedi",
+             "ipucu": "Bilerek kullanmada VUK Ek 11 uyarınca uzlaşma kapsamı "
+                      "dışında kalındığı ayrıca yazılır."},
+            {"kod": "imzaya_davet", "etiket": "İmzaya davet / gıyabi tutanak notu",
+             "tur": "uzun",
+             "ipucu": "Mükellef imzaya gelmediyse davet yazısının tarih-sayısı ve "
+                      "tutanağın gıyapta düzenlendiği buraya yazılır; giriş "
+                      "bölümüne olduğu gibi girer."},
+            {"kod": "temsilci_tckn", "etiket": "Kanuni temsilci T.C. kimlik no",
+             "tur": "metin",
+             "ipucu": "Bilerek kullanmada suç duyurusu paragrafında geçer."},
+            {"kod": "bilerek_gerekce", "etiket": "Bilerek kullanma değerlendirmesi",
+             "tur": "uzun",
+             "ipucu": "Orana ek olarak yazılacak gerekçe. Oran uygulamaca "
+                      "hesaplanıp cümleye kendiliğinden eklenir."},
         ],
     },
 ]
@@ -202,9 +241,53 @@ def satirlar(kunye, kod):
     return [s.strip() for s in ham.replace("\r\n", "\n").split("\n") if s.strip()]
 
 
+# `satirlar` adi asagida yerel degiskenlerle cakistigi icin ikinci bir ad
+satirlar_al = satirlar
+
+
 def secim_mi(kunye, kod, beklenen):
     """Secim alaninin belirli bir degerde olup olmadigini soyler."""
     return str((kunye or {}).get(kod) or "").strip() == beklenen
+
+
+def is_emirleri(kunye):
+    """Serbest metne yazilan is emirlerini tabloya cevirir.
+
+    Her satir "tarih | sayi | donem | konu" bicimindedir; eksik alanlar bos
+    birakilir. Tek bir is emri varsa kullanici bu alani doldurmaz, belge
+    gorevlendirme yazisini cumle icinde yazar.
+    """
+    satirlar = []
+    for ham in satirlar_al(kunye, "is_emirleri"):
+        parcalar = [p.strip() for p in ham.replace("\t", "|").split("|")]
+        parcalar += [""] * (4 - len(parcalar))
+        satirlar.append({"tarih": parcalar[0], "sayi": parcalar[1],
+                         "donem": parcalar[2], "konu": parcalar[3] or "Sahte Belge Kullanma"})
+    return satirlar
+
+
+def kurum_mu(kunye):
+    """Belgede "mükellef kurum" mu yoksa "mükellef" mi denecegini soyler."""
+    return not secim_mi(kunye, "mukellef_turu", "Gerçek kişi")
+
+
+def mukellef_sozu(kunye, buyuk=False, ek=""):
+    """Metinde mukelleften soz eden kaliplari uretir.
+
+    Kurum ise "Mükellef Kurum" / "Mükellef Kurumun", gercek kisi ise
+    "mükellef" / "mükellefin" yazilir. Gercek kisiyi "mükellef kurum" diye
+    anmak, kurumlar vergisi bolumlerinin de yanlis kurulmasina yol acar.
+    """
+    if kurum_mu(kunye):
+        govde = "Mükellef Kurum" if buyuk else "mükellef kurum"
+        return govde + {"": "", "in": "un", "a": "a", "u": "u"}.get(ek, ek)
+    govde = "Mükellef" if buyuk else "mükellef"
+    return govde + {"": "", "in": "in", "a": "e", "u": "i"}.get(ek, ek)
+
+
+def gelir_vergisi_adi(kunye):
+    """Kurumda "kurumlar vergisi", gercek kiside "gelir vergisi"."""
+    return "kurumlar vergisi" if kurum_mu(kunye) else "gelir vergisi"
 
 
 def resen_madde_kodu(kunye):

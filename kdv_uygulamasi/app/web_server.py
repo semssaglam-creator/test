@@ -463,7 +463,7 @@ class Istekci(BaseHTTPRequestHandler):
             saticilar = calisma.get("saticilar") or {}
             satirlar = []
             for f in liste:
-                if not f.get("dahil"):
+                if not faturalar.sayilir(f, saticilar):
                     continue
                 bilgi = saticilar.get(f.get("satici_vkn") or "") or {}
                 yevmiye = " / ".join(p for p in (f.get("yevmiye_tarih"),
@@ -487,7 +487,8 @@ class Istekci(BaseHTTPRequestHandler):
                 return None
             satirlar.sort(key=lambda s: (s["satici_vkn"], s["kayit_donemi"],
                                          s["fatura_no"]))
-            return {"faturalar": satirlar, "toplam": faturalar.toplamlar(liste)}
+            return {"faturalar": satirlar,
+                    "toplam": faturalar.toplamlar(liste, saticilar)}
         except Exception:                                     # noqa: BLE001
             return None
 
@@ -502,12 +503,18 @@ class Istekci(BaseHTTPRequestHandler):
         return {
             "faturalar": liste,
             "saticilar": faturalar.satici_ozeti(liste, saticilar),
-            "toplamlar": faturalar.toplamlar(liste),
-            "donem_ozeti": {str(y): a for y, a in faturalar.donem_ozeti(liste).items()},
-            "indirim_dizileri": {str(y): d
-                                 for y, d in faturalar.indirim_dizileri(liste).items()},
-            "uygulama_farki": faturalar.uygulama_farki(liste, yillar),
+            "toplamlar": faturalar.toplamlar(liste, saticilar),
+            "donem_ozeti": {str(y): a
+                            for y, a in faturalar.donem_ozeti(liste, saticilar).items()},
+            "indirim_dizileri": {
+                str(y): d
+                for y, d in faturalar.indirim_dizileri(liste, saticilar).items()},
+            "uygulama_farki": faturalar.uygulama_farki(liste, yillar, saticilar),
             "bulgular": faturalar.bulgular(liste, yillar, saticilar),
+            # Sahte belgelerin toplam indirimler icindeki payi; "bilerek
+            # kullanma" degerlendirmesinin dayanagidir, ekranda da gorunsun.
+            "oran": faturalar.sahte_belge_orani(liste, _hesapla(calisma)[0],
+                                                saticilar),
         }
 
     # ------------------------------------------------------- belge taslaklari
@@ -517,16 +524,7 @@ class Istekci(BaseHTTPRequestHandler):
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
-        # Duzeltme dokumu yalnizca beyanname yuklendiyse eklenir; okunamazsa
-        # tutanagin geri kalani yine de uretilir.
-        duzeltme = None
-        if calisma.get("beyannameler"):
-            try:
-                beyannameler = _beyanname_modulu()
-                duzeltme = beyannameler.duzeltme_tablosu(
-                    beyannameler.duzenle(calisma["beyannameler"]))
-            except Exception:                             # noqa: BLE001
-                duzeltme = None
+        duzeltme = self._duzeltme_dokumu(calisma)
         inceleme = _inceleme_bilgisi(calisma)
         belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
                                      bulgular, duzeltme)
@@ -539,9 +537,22 @@ class Istekci(BaseHTTPRequestHandler):
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
         inceleme = _inceleme_bilgisi(calisma)
+        duzeltme = self._duzeltme_dokumu(calisma)
         belge = sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
-                                              yillar, sonuc, calisma, bulgular)
+                                              yillar, sonuc, calisma, bulgular,
+                                              duzeltme)
         return belge, inceleme
+
+    def _duzeltme_dokumu(self, calisma):
+        """Duzeltme beyannameleri tablosu; okunamazsa belge yine uretilir."""
+        if not calisma.get("beyannameler"):
+            return None
+        try:
+            beyannameler = _beyanname_modulu()
+            return beyannameler.duzeltme_tablosu(
+                beyannameler.duzenle(calisma["beyannameler"]))
+        except Exception:                                     # noqa: BLE001
+            return None
 
     def _rapor_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()

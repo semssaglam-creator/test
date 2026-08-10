@@ -329,7 +329,8 @@ def tarhiyat_toplami(tarhiyatli):
     olmaz ve tablo kendi icinde tutmaz.
     """
     alanlar = ("odenecek_beyan", "odenecek_olmasi_gereken", "resen_tarhi_gereken",
-               "aranmasi_gereken", "haksiz_iade", "toplam_fark")
+               "iade_beyan", "iade_olmasi_gereken", "aranmasi_gereken",
+               "resen_toplam", "haksiz_iade", "toplam_fark")
     return {a: round(sum(d["tarhiyat"].get(a, 0.0) for d in tarhiyatli), 2)
             for a in alanlar}
 

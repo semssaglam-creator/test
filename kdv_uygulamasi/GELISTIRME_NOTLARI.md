@@ -37,9 +37,13 @@ oturumda buradan devam edilir.
       - Beyan tablosunda **İade Edil. KDV** sütunu da var (9 sütun)
       - Tarhiyat tablosu iki satırlı birleşik başlık taşıyor
       - Fatura tablosu = "Kopya Fatura Dökümü" biçimi
-      — *Üreticiye uygulanacak (sıradaki iş)*
+      — *Rapora uygulandı; tutanak üreticisi henüz eski düzende (sıradaki iş)*
 - [x] Örnek belgelerdeki mantık ve yazım hataları düzeltildi; değişiklik
       listesi kullanıcıya sunuldu (DEGISIKLIK_LISTESI.md)
+- [ ] **Tutanak üreticisi de daire biçimine getirilecek**: iki giriş paragrafı
+      + kalın numaralı 1–12 madde düzeni, defter tablosu, gelir/kurumlar
+      vergisi beyan özeti, ba-bs + fatura tablosu, RDK dinlenme / taslak
+      tutanak / TÖU / özelge maddeleri, 2x3 imza tablosu.
 
 ### Diğer
 
@@ -56,6 +60,10 @@ oturumda buradan devam edilir.
 - [x] 2026-08-10 — Sahte belge kullanma raporu taslağı; bilerek/bilmeden
       ayrımına göre ceza dağılımı
 - [x] 2026-08-10 — Excel çıktısına Faturalar sayfası; kılavuz güncellemeleri
+- [x] 2026-08-10 — Rapor, dairenin biçimine getirildi (I–V, A/B/C/D/Ç);
+      bilerek kullanma kolu, oran hesabı, VUK mük. 355 özel usulsüzlük,
+      "İndirilecek KDV'den Çıkarılacak Tutar" tablosu, düzeltme beyannamesiyle
+      çıkarılmış satıcıların tarhiyat dışı bırakılması
 - [x] 2026-08-10 — Hesap incelemeleri tablosu: eksik olan *Önc. Dön. Dev. KDV*
       sütunu eklendi, punto 9'a düşürüldü, yıl başlığa taşındı, satırlarda
       yalnızca ay adı, "Toplam:" satırı vurgulandı. Diğer geniş tablolar da
