@@ -811,14 +811,10 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
         ouc = F.ozel_usulsuzluk(liste, kunye.get("ouc_alt_had"),
                                 kunye.get("ouc_ust_sinir"), saticilar)
 
+    # Belge dogrudan "I- GİRİŞ" ile baslar. Baslik/rapor no/tarih blogu
+    # bilerek yok: dairenin kullandigi raporlarda bu bilgiler rapor kapak
+    # sayfasinda yer aliyor, metnin basinda tekrarlanmiyor.
     b = Belge()
-    b.baslik("VERGİ İNCELEME RAPORU", 1)
-    b.paragraf("(Sahte Belge Kullanma — Taslak)", hiza="orta", italik=True,
-               aralik_sonra=60)
-    b.paragraf("Rapor No: %s          Tarih: %s"
-               % (ik.deger(kunye, "rapor_no", "rapor no"), _bugun()),
-               hiza="orta", aralik_sonra=240)
-
     _giris(b, inceleme, kunye, donemler, satici_satirlari)
     _usul(b, kunye, donemler, ouc)
     _hesap(b, kunye, donemler, duzeltme,

@@ -446,7 +446,7 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
     satici_satirlari = F.satici_ozeti(liste, saticilar)
 
     b = Belge()
-    b.baslik("VERGİ İNCELEME TUTANAĞI", 1)
+    b.baslik("VERGİ İNCELEME TUTANAĞI", 1, hiza="orta")
     _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari)
 
     sayac = _Sayac()

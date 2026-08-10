@@ -130,14 +130,19 @@ class Belge:
         self._duz.append(str(metin or ""))
         return self
 
-    def baslik(self, metin, duzey=1):
-        """Bolum basligi. 1. duzey ortali ve 14 punto, 2. duzey sola dayali."""
+    def baslik(self, metin, duzey=1, hiza="sol"):
+        """Bolum basligi.
+
+        Ikisi de sola dayalidir; belge basligi gibi ortalanmasi gereken tek
+        tuk yerde `hiza="orta"` verilir. 1. duzey daha buyuk punto ve daha
+        genis ust bosluk alir.
+        """
         if duzey == 1:
-            self.paragraf(metin, kalin=True, hiza="orta", buyukluk=14,
+            self.paragraf(metin, kalin=True, hiza=hiza, buyukluk=14,
                           aralik_once=240, aralik_sonra=180)
             self._duz[-1] = "\n" + metin.upper()
         else:
-            self.paragraf(metin, kalin=True, hiza="sol",
+            self.paragraf(metin, kalin=True, hiza=hiza,
                           aralik_once=180, aralik_sonra=120)
             self._duz[-1] = "\n" + metin
         return self
