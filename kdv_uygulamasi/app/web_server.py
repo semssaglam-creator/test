@@ -10,10 +10,12 @@ Sunucu 127.0.0.1 adresine baglanir; disaridan erisime acilmaz.
 """
 import base64
 import binascii
+import io
 import json
 import os
 import posixpath
 import urllib.parse
+import zipfile
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -571,17 +573,25 @@ class Istekci(BaseHTTPRequestHandler):
         return belge, inceleme
 
     def _rapor_hazirla(self, veri):
-        """Sahte belge kullanma raporu taslagini uretir."""
+        """Sahte belge kullanma raporu taslaklarini uretir.
+
+        Tutanak butun inceleme donemi icin tek duzenlenirken rapor her yil
+        icin ayri duzenlenir. Bu yuzden burada (yil, belge) ciftlerinden olusan
+        bir liste doner; tek yil incelenmisse listede tek eleman bulunur.
+        """
         from . import sahte_belge_raporu
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
         inceleme = _inceleme_bilgisi(calisma)
         duzeltme = self._duzeltme_dokumu(calisma)
-        belge = sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
+        rapor_yillari = sahte_belge_raporu.rapor_yillari(sonuc) or [None]
+        belgeler = [
+            (y, sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
                                               yillar, sonuc, calisma, bulgular,
-                                              duzeltme)
-        return belge, inceleme
+                                              duzeltme, y))
+            for y in rapor_yillari]
+        return belgeler, inceleme
 
     def _duzeltme_dokumu(self, calisma):
         """Duzeltme beyannameleri tablosu; okunamazsa belge yine uretilir."""
@@ -596,24 +606,49 @@ class Istekci(BaseHTTPRequestHandler):
 
     def _rapor_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()
-        belge, _inceleme = self._rapor_hazirla(veri)
+        belgeler, _inceleme = self._rapor_hazirla(veri)
         kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
-        return {"metin": belge.duz_metin(), "eksikler": ik.eksik_alanlar(kunye)}
+        # Birden cok yil varsa onizleme raporlari alt alta gosterir; hangi
+        # yila ait olduklari araya konan ayrac satiriyla belli olur.
+        parcalar = []
+        for yil, belge in belgeler:
+            if yil and len(belgeler) > 1:
+                parcalar.append("=" * 30 + (" %s YILI RAPORU " % yil)
+                                + "=" * 30 + "\n")
+            parcalar.append(belge.duz_metin())
+        return {"metin": "\n".join(parcalar),
+                "eksikler": ik.eksik_alanlar(kunye)}
 
     def _rapor_gonder(self, veri):
         from . import sahte_belge_raporu
-        belge, inceleme = self._rapor_hazirla(veri)
-        govde = belge.bayt()
-        dosya_adi = sahte_belge_raporu.dosya_adi(inceleme)
+        belgeler, inceleme = self._rapor_hazirla(veri)
+        dosyalar = [(sahte_belge_raporu.dosya_adi(inceleme, yil), belge.bayt())
+                    for yil, belge in belgeler]
+        self._ciktilara_yaz(dosyalar)
+        if len(dosyalar) == 1:
+            ad, govde = dosyalar[0]
+            self._belge_gonder(govde, ad,
+                               "application/vnd.openxmlformats-officedocument."
+                               "wordprocessingml.document")
+            return
+        # Her yilin raporu ayri bir belge; tarayiciya tek dosya inebildigi
+        # icin hepsi bir zip icinde gonderilir.
+        paket = io.BytesIO()
+        with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
+            for ad, govde in dosyalar:
+                z.writestr(ad, govde)
+        self._belge_gonder(paket.getvalue(), sahte_belge_raporu.paket_adi(inceleme),
+                           "application/zip")
+
+    def _ciktilara_yaz(self, dosyalar):
+        """Uretilen belgelerin birer kopyasini ciktilar klasorune birakir."""
         try:
             os.makedirs(CIKTI_DIR, exist_ok=True)
-            with open(os.path.join(CIKTI_DIR, dosya_adi), "wb") as f:
-                f.write(govde)
+            for ad, govde in dosyalar:
+                with open(os.path.join(CIKTI_DIR, ad), "wb") as f:
+                    f.write(govde)
         except OSError:
             pass
-        self._belge_gonder(govde, dosya_adi,
-                           "application/vnd.openxmlformats-officedocument."
-                           "wordprocessingml.document")
 
     def _tutanak_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()

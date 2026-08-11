@@ -114,6 +114,15 @@ oturumda buradan devam edilir.
       incelenen her yıl için bir satır kuruluyor ve tür / tasdik tarih-no /
       tasdik makamı kırmızı tutucu olarak bırakılıyor. Taslak üzerinde
       doldurulacak yerler belgede görünür duruyor. — *kullanıcı isteği*
+- [x] 2026-08-11 — **Her yıl için ayrı rapor.** Tutanak bütün inceleme dönemi
+      için tek düzenlenmeye devam ediyor; rapor ise incelenen her yıl için
+      ayrı üretiliyor. Yıla göre daraltılan veriler: hesap tabloları, fatura
+      dökümü, satıcı listesi, ceza dağılımı, oran hesabı, düzeltme
+      beyannameleri, tutarlılık bulguları ve iş emri tablosu. Böylece bir yılın
+      satıcısı bilmeden, diğerininki bilerek kullanma sayıldığında ceza katı,
+      suç duyurusu ve uzlaşma kapsamı her raporda kendi yılına göre kuruluyor.
+      Tek yıl varsa .docx, birden fazla yıl varsa raporlar tek .zip içinde
+      iniyor; kopyaları yine ciktilar klasörüne bırakılıyor. — *kullanıcı isteği*
 
 ---
 

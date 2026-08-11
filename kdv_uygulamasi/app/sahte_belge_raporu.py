@@ -57,7 +57,22 @@ def _bilerek_mi(satici_satirlari):
 
 
 # --------------------------------------------------------------------- I. giris
-def _giris(b, inceleme, kunye, donemler, satici_satirlari):
+def _yilin_is_emirleri(kunye, yil):
+    """Is emri listesini rapora konu yila daraltir.
+
+    Birden cok yil incelenirken her yilin raporunda yalnizca o yila ait
+    gorevlendirme yazilari yer almalidir. Donem sutununda yil yaziliysa
+    secim ona gore yapilir; hicbir satir eslesmezse liste oldugu gibi
+    kalir - eksik bilgi yuzunden tablo bosalmasin.
+    """
+    emirler = ik.is_emirleri(kunye)
+    if yil is None:
+        return emirler
+    eslesen = [e for e in emirler if str(yil) in (e.get("donem") or "")]
+    return eslesen or emirler
+
+
+def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
     b.baslik("I- GİRİŞ", 1)
     M = ik.mukellef_sozu
 
@@ -75,7 +90,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari):
         tanitim += " %s e-Defter ve e-Fatura uygulamaları kapsamındadır." % M(kunye, buyuk=True)
     b.paragraf(tanitim, girinti=1)
 
-    emirler = ik.is_emirleri(kunye)
+    emirler = _yilin_is_emirleri(kunye, yil)
     if emirler:
         b.paragraf(
             "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s iş "
@@ -788,14 +803,65 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
                       ik.deger(kunye, "eleman_ad", "ad soyad"))])
 
 
+def rapor_yillari(sonuc):
+    """Rapor duzenlenecek yillar.
+
+    Tutanak butun inceleme donemi icin tek duzenlenir; rapor ise her yil icin
+    ayri duzenlenir. Bu yuzden veri bulunan yillar burada tek yerden secilir ve
+    hem uretim hem indirme akisi ayni listeyi kullanir.
+    """
+    return sorted({d["yil"] for d in dolu_donemler(sonuc)})
+
+
+def _yila_indirge(sonuc, liste, bulgular, duzeltme, yil):
+    """Butun girdileri tek bir yila daraltir.
+
+    Rapor bir yila ait oldugundan hesap tablolari, fatura dokumu, ceza
+    dagilimi ve oran hesabi da yalnizca o yilin verisinden uretilmelidir;
+    aksi halde 2022 raporunda 2023 donemleri gorunur.
+    """
+    sonuc = dict(sonuc)
+    sonuc["donemler"] = [d for d in (sonuc.get("donemler") or [])
+                         if d["yil"] == yil]
+    liste = [f for f in liste if _fatura_yili(f) == yil]
+    duzeltme = [g for g in (duzeltme or [])
+                if str(g.get("yil")) == str(yil)] or None
+    bulgular = [x for x in (bulgular or []) if _bulgu_yili(x) in (None, yil)]
+    return sonuc, liste, bulgular, duzeltme
+
+
+def _fatura_yili(f):
+    """Faturanin kayit yili; cozulemezse None."""
+    try:
+        return int(f.get("kayit_yil"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _bulgu_yili(bulgu):
+    """Tutarlilik bulgusunun ait oldugu yil; donemi okunamazsa None."""
+    parcalar = str(bulgu.get("donem") or "").split("/")
+    try:
+        return int(parcalar[0].strip())
+    except (ValueError, IndexError):
+        return None
+
+
 # ---------------------------------------------------------------------- giris
 def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
-               duzeltme=None):
-    """Sahte belge kullanma raporu taslagini uretir."""
+               duzeltme=None, yil=None):
+    """Sahte belge kullanma raporu taslagini uretir.
+
+    `yil` verilirse rapor yalnizca o yila iliskin duzenlenir; birden cok yilin
+    incelendigi dosyalarda her yil icin ayri rapor yazilir.
+    """
     kunye = ik.normalize(kunye)
-    donemler = dolu_donemler(sonuc)
     mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
     liste = F.normalize(calisma.get("faturalar"), mukellef_vkn)
+    if yil is not None:
+        sonuc, liste, bulgular, duzeltme = _yila_indirge(
+            sonuc, liste, bulgular, duzeltme, int(yil))
+    donemler = dolu_donemler(sonuc)
     saticilar = calisma.get("saticilar") or {}
     satici_satirlari = F.satici_ozeti(liste, saticilar)
     ceza = F.ceza_dagilimi(liste, saticilar, sonuc)
@@ -809,7 +875,7 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     # bilerek yok: dairenin kullandigi raporlarda bu bilgiler rapor kapak
     # sayfasinda yer aliyor, metnin basinda tekrarlanmiyor.
     b = Belge()
-    _giris(b, inceleme, kunye, donemler, satici_satirlari)
+    _giris(b, inceleme, kunye, donemler, satici_satirlari, yil)
     _usul(b, kunye, donemler, ouc)
     _hesap(b, kunye, donemler, duzeltme,
            belgeye_giren_bulgular(bulgular, donemler))
@@ -819,7 +885,16 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     return b
 
 
-def dosya_adi(inceleme):
+def dosya_adi(inceleme, yil=None):
     ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
                  if c.isalnum() or c in " -_").strip() or "rapor"
+    if yil:
+        ad = "%s_%s" % (yil, ad)
     return ("Sahte_belge_raporu_taslagi_%s.docx" % ad).replace(" ", "_")
+
+
+def paket_adi(inceleme):
+    """Birden cok yilin raporu tek dosyada gonderilirken kullanilan ad."""
+    ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
+                 if c.isalnum() or c in " -_").strip() or "rapor"
+    return ("Sahte_belge_raporlari_%s.zip" % ad).replace(" ", "_")

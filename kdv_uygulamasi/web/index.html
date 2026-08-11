@@ -484,6 +484,9 @@
       nihai belge değildir; hukuki nitelendirme ve değerlendirme size aittir.
       Doldurulmayan alanlar belgede <em>[köşeli parantez]</em> içinde bırakılır ki
       gözden kaçmasın. Bu bilgiler çalışmayla birlikte kaydedilir.
+      <br>Tutanak bütün inceleme dönemi için tek düzenlenir; rapor ise
+      <strong>her yıl için ayrı</strong> düzenlenir. Birden fazla yıl incelendiyse
+      raporlar tek bir zip dosyası içinde iner.
     </div>
     <div class="satir">
       <div class="otomatik"><button class="btn birincil" id="tutanakIndir">Tutanak Taslağı (Word)</button></div>
@@ -2141,12 +2144,25 @@ async function belgeIndir(yol, varsayilanAd, basarili) {
   const blob = await yanit.blob();
   const bag = document.createElement("a");
   bag.href = URL.createObjectURL(blob);
-  bag.download = varsayilanAd;
+  // Sunucu adi bildirmisse o kullanilir: birden fazla yilin raporu tek zip
+  // olarak indigi icin uzanti burada degisebiliyor.
+  bag.download = sunucuDosyaAdi(yanit) || varsayilanAd;
   document.body.appendChild(bag);
   bag.click();
   document.body.removeChild(bag);
   URL.revokeObjectURL(bag.href);
   mesaj(basarili);
+}
+
+/** Content-Disposition başlığındaki dosya adını çözer; yoksa boş döner. */
+function sunucuDosyaAdi(yanit) {
+  const bas = yanit.headers.get("Content-Disposition") || "";
+  const yildizli = bas.match(/filename\*=UTF-8''([^;]+)/i);
+  if (yildizli) {
+    try { return decodeURIComponent(yildizli[1]); } catch { return ""; }
+  }
+  const duz = bas.match(/filename="([^"]+)"/i);
+  return duz ? duz[1] : "";
 }
 
 function belgeDosyaAdi(on) {
@@ -2175,7 +2191,8 @@ $("tutanakOnizle").addEventListener("click", async () => {
 $("raporIndir").addEventListener("click", async () => {
   try {
     await belgeIndir("/api/sahte_belge_raporu", belgeDosyaAdi("Sahte_belge_raporu"),
-                     "Rapor taslağı indirildi. Bir kopyası ciktilar klasörüne bırakıldı.");
+                     "Rapor taslağı indirildi. İncelenen her yıl için ayrı rapor " +
+                     "üretilir; kopyaları ciktilar klasörüne bırakıldı.");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
