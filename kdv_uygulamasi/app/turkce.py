@@ -65,3 +65,75 @@ def liste(ogeler, baglac="ve"):
     if len(ogeler) == 1:
         return ogeler[0]
     return "%s %s %s" % (", ".join(ogeler[:-1]), baglac, ogeler[-1])
+
+
+# ------------------------------------------------------------- ad / unvan
+# Turkce'de i/I cifti asimetriktir: "i" -> "İ", "I" -> "ı". Python'un
+# upper/lower'i bunu bilmez ve "İstanbul" -> "ISTANBUL" yerine "iSTANBUL"
+# gibi hatalar cikar. Bu yuzden cevrim once bu harfler icin yapilir.
+_BUYUK = {"i": "İ", "ı": "I"}
+_KUCUK = {"I": "ı", "İ": "i"}
+
+# Unvanlarda kucuk kalan baglaclar ve buyuk kalan kisaltmalar. Kisaltmalar
+# noktali yazildigindan cogu kendiliginden taninir; noktasiz yazilanlar icin
+# liste tutulur.
+_UNVAN_KUCUK = {"ve", "ile"}
+_UNVAN_BUYUK = {"AŞ", "A.Ş.", "LTD", "ŞTİ", "TİC", "SAN", "VD", "TAŞ", "KOM",
+                "İTH", "İHR", "PAZ", "İNŞ", "NAK", "OTO", "TR"}
+
+
+def buyuk(metin):
+    """Turkce kurallariyla buyuk harfe cevirir."""
+    return "".join(_BUYUK.get(ch, ch).upper() for ch in str(metin or ""))
+
+
+def kucuk(metin):
+    """Turkce kurallariyla kucuk harfe cevirir."""
+    return "".join(_KUCUK.get(ch, ch).lower() for ch in str(metin or ""))
+
+
+def _bas_harf(kelime):
+    """"AHMET" -> "Ahmet"; noktali kisaltmalar oldugu gibi kalir."""
+    if not kelime:
+        return kelime
+    return buyuk(kelime[0]) + kucuk(kelime[1:])
+
+
+def unvan(metin):
+    """Sirket unvanini yazim kurallarina getirir: her kelimenin ilk harfi buyuk.
+
+    Kisaltmalar buyuk kalir ("LTD. ŞTİ.", "A.Ş."), baglaclar kucuk yazilir
+    ("ve"). Bos deger oldugu gibi doner; yer tutucularin ("[unvan girilmedi]")
+    bozulmamasi icin koseli parantezli metne dokunulmaz.
+    """
+    ham = str(metin or "").strip()
+    if not ham or ham.startswith("["):
+        return ham
+    kelimeler = []
+    for kelime in ham.split():
+        cikarilmis = kelime.replace(".", "")
+        if kucuk(kelime) in _UNVAN_KUCUK:
+            kelimeler.append(kucuk(kelime))
+        elif "." in kelime or buyuk(cikarilmis) in _UNVAN_BUYUK:
+            kelimeler.append(buyuk(kelime))
+        else:
+            kelimeler.append(_bas_harf(kelime))
+    return " ".join(kelimeler)
+
+
+def kisi_adi(metin):
+    """Kisi adini yazim kurallarina getirir: ad(lar) ilk harf buyuk, soyad BUYUK.
+
+    Son kelime soyad sayilir; ondan oncekiler addir. Iki soyadli yazimlar
+    (ornegin evlilik soyadi) tek kelime gibi ele alinir - hangi kelimenin
+    soyad oldugunu metinden kestirmek guvenilir degil, yanlis tahmin de resmi
+    belgeye yanlis yazim koyar. Yer tutucular ("[ad soyad]") korunur.
+    """
+    ham = str(metin or "").strip()
+    if not ham or ham.startswith("["):
+        return ham
+    kelimeler = ham.split()
+    if len(kelimeler) == 1:
+        return _bas_harf(kelimeler[0])
+    return "%s %s" % (" ".join(_bas_harf(k) for k in kelimeler[:-1]),
+                      buyuk(kelimeler[-1]))

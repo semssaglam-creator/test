@@ -194,7 +194,7 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
         "faaliyeti ile iştigal etmektedir."
         % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
            inceleme.get("vkn_tckn") or "[VKN]",
-           inceleme.get("ad_unvan") or "[Mükellef unvanı]",
+           ik.mukellef_adi(inceleme, kunye),
            inceleme.get("adres") or "[Adres]",
            ik.deger(kunye, "faaliyet_konusu")))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
@@ -207,7 +207,7 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
     if satici_satirlari:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
                  % (s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
-                    s["vkn"] or "[VKN]", s["unvan"] or "[unvan girilmedi]")
+                    s["vkn"] or "[VKN]", ik.satici_unvani(s))
                  for s in satici_satirlari]
         alis = (" %s %s %s olan alışlarının sahte belge kullanma kapsamında "
                 "sınırlı olarak incelenmesi neticesinde aşağıdaki hususlar "
@@ -353,7 +353,7 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
             "fotokopisi)"
             % (M(kunye, buyuk=True, ek="in"),
                s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
-               s["vkn"] or "[VKN]", s["unvan"] or "[unvan girilmedi]",
+               s["vkn"] or "[VKN]", ik.satici_unvani(s),
                len(kendi), _tl(s["matrah"]), len(kendi)))
 
         tablo = []
@@ -393,7 +393,7 @@ def _soru_metni(veri_no, s, sorular, cevap):
             "tarafından düzenlenen faturaların sahte faturalar olduğunun tespit "
             "edildiği hususu izah edilmiş ve %s hususları sorulmuş olup, "
             "mükellef cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
-            % (veri_no, s["unvan"] or "[unvan girilmedi]", hususlar,
+            % (veri_no, ik.satici_unvani(s), hususlar,
                cevap or "[mükellefin beyanı]"))
 
 
@@ -506,8 +506,8 @@ def _kapanis(b, kunye):
 
     b.imza_bloklari([
         (ik.deger(kunye, "eleman_unvan", "unvan"),
-         ik.deger(kunye, "eleman_ad", "ad soyad")),
-        ("Mükellef", ik.deger(kunye, "nezdinde_ad", "ad soyad")),
+         ik.ad(kunye, "eleman_ad")),
+        ("Mükellef", ik.ad(kunye, "nezdinde_ad")),
     ])
 
 

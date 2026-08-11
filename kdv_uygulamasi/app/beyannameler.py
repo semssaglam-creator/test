@@ -13,8 +13,8 @@ Bu modul:
   - secilen kombinasyonu (hepsi ilk beyan / hepsi son hal / donem donem secim)
     incelemede kullanilacak beyan verisine cevirir.
 """
-from .satirlar import (AYLAR, BEYAN_SATIRLARI, ETIKETLER, OZET_KOLONLARI,
-                       VERI_KODLARI)
+from .satirlar import (AYLAR, BEYAN_SATIRLARI, ETIKETLER, OZET_HEDEF_SECENEKLERI,
+                       OZET_KOLONLARI, VERI_KODLARI)
 
 # Genel Bakis tablosu, Sonuc ve Fark sekmesindeki ozet tabloyla ayni kolonlari
 # kullanir; iki ekran yan yana okunabilsin diye. Asagidaki esleme, ozet
@@ -377,6 +377,72 @@ def duzeltme_tablosu(duzen):
         satirlar.sort(key=lambda s: (s["ay"], s["onay_ts"] or "9999", s["sira"]))
 
     return [{"yil": yil, "satirlar": yillar[yil]} for yil in sorted(yillar)]
+
+
+# Ayrintili duzeltme tablosunda yer alacak satirlar ve sirasi. Beyannamenin
+# butun satirlari yazilmaz: turetilmis / tekrarli kalemler (toplam KDV, "bu
+# doneme ait indirilecek KDV", teslim bedelleri) ayni degisikligi ikinci kez
+# gostererek tabloyu okunmaz hale getiriyor.
+AYRINTI_KODLARI = [
+    "matrah_toplami",
+    "hesaplanan_kdv",
+    "ilave_edilecek_kdv",
+    "onceki_donem_devreden",
+    "yurtici_alim_kdv",
+    "diger_indirimler_toplami",
+    "indirimler_toplami",
+    "odenmesi_gereken_kdv",
+    "iade_edilmesi_gereken_kdv",
+    "sonraki_donem_devreden",
+]
+
+
+def duzeltme_karsilastirmalari(duzen):
+    """Duzeltme verilen her donem icin satir bazinda oncesi / sonrasi tablosu.
+
+    Rapordaki "duzeltme beyannamesinde yapilan duzeltmelere iliskin ayrintili
+    tablo" bundan uretilir: hangi beyanname satirinin duzeltme oncesinde ve
+    sonrasinda ne oldugu ve aradaki fark.
+
+    Yalnizca degisen satirlar yazilir; "Onceki Donemden Devreden KDV" farki
+    sifir olsa da her zaman kalir, cunku devir zincirinin baslangicini
+    gosterir ve tablo onsuz okunmaz.
+
+    Doner: [{"yil", "ay", "ay_adi", "etiket", "tarih", "gerekce",
+             "satirlar": [{"kod", "etiket", "oncesi", "sonrasi", "fark"}]}]
+    """
+    adlar = dict(OZET_HEDEF_SECENEKLERI)
+    adlar["yurtici_alim_kdv"] = "Yurtiçi Alımlara İlişkin KDV"
+    sonuc = []
+    for d in duzen["donemler"]:
+        if d["surum_sayisi"] < 2:
+            continue
+        ilk, son = d["ilk"], d["son"]
+        satirlar = []
+        for kod in AYRINTI_KODLARI:
+            oncesi, sonrasi = ilk["degerler"].get(kod), son["degerler"].get(kod)
+            if oncesi is None and sonrasi is None:
+                continue
+            oncesi, sonrasi = oncesi or 0.0, sonrasi or 0.0
+            fark = round(sonrasi - oncesi, 2)
+            if abs(fark) <= 0.005 and kod != "onceki_donem_devreden":
+                continue
+            satirlar.append({
+                "kod": kod,
+                "etiket": adlar.get(kod) or ETIKETLER.get(kod, kod),
+                "oncesi": round(oncesi, 2),
+                "sonrasi": round(sonrasi, 2),
+                "fark": fark,
+            })
+        if not satirlar:
+            continue
+        sonuc.append({
+            "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
+            "etiket": d["etiket"], "tarih": _tarih(son["onay_zamani"]),
+            "gerekce": son["duzeltme_nedeni"] or "",
+            "satirlar": satirlar,
+        })
+    return sonuc
 
 
 def genel_bakis(duzen):

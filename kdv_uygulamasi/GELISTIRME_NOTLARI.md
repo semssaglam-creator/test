@@ -151,6 +151,23 @@ oturumda buradan devam edilir.
       tarihi). Veri yine ISO biçiminde saklanıyor; sıralama ve karşılaştırma
       ona dayandığı için çevrim yalnızca gösterimde yapılıyor.
       — *kullanıcı isteği*
+- [x] 2026-08-11 — Düzeltme gerekçesi artık tam okunuyor: uzun açıklama PDF'te
+      birden çok parçaya bölünüyor ya da alt satıra taşıyorsa hepsi toplanıyor
+      (tanınan bir alan başlığına veya satır aralığından büyük bir boşluğa
+      rastlayınca duruluyor). — *kullanıcı bildirimi*
+- [x] 2026-08-11 — Ad ve unvanlar yazım kurallarına göre yazılıyor: kişi
+      adlarında ad ilk harf büyük / soyad tümü büyük ("Ahmet HASAN"), şirket
+      unvanlarında her kelimenin ilk harfi büyük, kısaltmalar büyük, bağlaçlar
+      küçük ("Deneme İnşaat Sanayi ve Ticaret A.Ş."). Türkçe i/I çifti doğru
+      çevriliyor. Belgeye yazarken uygulanıyor; kullanıcının girdiği veri
+      değiştirilmiyor. — *kullanıcı isteği*
+- [x] 2026-08-11 — Raporda düzeltme beyannamesiyle çıkarılmış satıcının
+      bölümüne ayrıntılı düzeltme tablosu eklendi: Dönemi | Beyanname Satırı |
+      Düzeltme Öncesi Beyanname | Düzeltme Beyannamesi | Fark. Beyannameler
+      yüklüyse dönemler ve tutarlar veriden geliyor; yüklü değilse künyedeki
+      "Düzeltme beyannamesi verilen dönemler" alanına yazılan dönemler için
+      tablo kırmızı yer tutucularla açılıyor. — *kullanıcı isteği, örnek
+      tabloyla*
 
 ---
 

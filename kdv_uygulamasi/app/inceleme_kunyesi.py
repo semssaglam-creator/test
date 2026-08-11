@@ -12,6 +12,8 @@ Kunye, calisma JSON'unun icinde "kunye" anahtariyla saklanir; veritabani
 semasi degismez.
 """
 
+from . import turkce
+
 # Alan turleri:
 #   metin   : tek satir
 #   uzun    : cok satirli serbest metin
@@ -113,6 +115,12 @@ BOLUMLER = [
              "varsayilan": "Yok"},
             {"kod": "usul_notu", "etiket": "Usul incelemesine ilişkin not", "tur": "uzun",
              "ipucu": "Belgeye olduğu gibi aktarılır."},
+            {"kod": "duzeltme_donemleri",
+             "etiket": "Düzeltme beyannamesi verilen dönemler", "tur": "metin",
+             "ipucu": "Yalnızca beyannameler yüklenmediğinde gerekir; yüklüyse "
+                      "dönemler kendiliğinden bulunur. Biçim: 2023/Şubat, "
+                      "2023/Mart. Raporda bu dönemler için ayrıntılı düzeltme "
+                      "tablosu açılır, tutarlar kırmızı bırakılır."},
             {"kod": "ouc_uygula", "etiket": "Özel usulsüzlük (tevsik) hesaplansın",
              "tur": "secim", "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
              "ipucu": "Faturalar sekmesinde \"tevsik edilmemiş\" işaretlenen "
@@ -387,6 +395,30 @@ def kazanc_maddeleri(kunye):
     return ["gvk_37", "gvk_40", "gvk_mk120"]
 
 
+def mukellef_adi(inceleme, kunye, yer_tutucu="[Mükellef unvanı]"):
+    """Incelenen mukellefin adini yazim kurallariyla verir.
+
+    Kurumda unvan kurali (her kelimenin ilk harfi buyuk), gercek kiside ad
+    soyad kurali (ad ilk harf buyuk, soyad tumu buyuk) uygulanir. Belgeye
+    girecek metin buradan gecer; kullanicinin nasil yazdigina bakilmaz, cunku
+    sistem dokumlerinden gelen adlar cogunlukla bastan sona buyuk harftir.
+    """
+    ham = str((inceleme or {}).get("ad_unvan") or "").strip()
+    if not ham:
+        return yer_tutucu
+    return turkce.unvan(ham) if kurum_mu(kunye) else turkce.kisi_adi(ham)
+
+
+def satici_unvani(satici, yer_tutucu="[unvan girilmedi]"):
+    """Satici unvanini yazim kurallariyla verir."""
+    return turkce.unvan(str((satici or {}).get("unvan") or "").strip()) or yer_tutucu
+
+
+def ad(kunye, kod, yer_tutucu="ad soyad"):
+    """Kunyedeki bir kisi adini yazim kurallariyla verir."""
+    return turkce.kisi_adi(deger(kunye, kod, yer_tutucu))
+
+
 def suc_duyurusu_hedefi(kunye, inceleme=None):
     """Suc duyurusunun kim hakkinda yapilacagini yazar.
 
@@ -399,12 +431,12 @@ def suc_duyurusu_hedefi(kunye, inceleme=None):
     if kurum_mu(kunye):
         return "%s T.C. kimlik numaralı kanuni temsilci %s" % (
             deger(kunye, "temsilci_tckn", "T.C. kimlik no"),
-            deger(kunye, "kanuni_temsilci", "kanuni temsilci"))
+            ad(kunye, "kanuni_temsilci", "kanuni temsilci"))
     kimlik = (str(kunye.get("nezdinde_tckn") or "").strip()
               or str(inceleme.get("vkn_tckn") or "").strip()
               or "[T.C. kimlik no]")
-    ad = inceleme.get("ad_unvan") or "[Mükellef adı]"
-    return "%s T.C. kimlik numaralı %s" % (kimlik, ad)
+    return "%s T.C. kimlik numaralı %s" % (
+        kimlik, mukellef_adi(inceleme, kunye, "[Mükellef adı]"))
 
 
 # Sirketlerde donem "hesap donemi", gercek kisilerde "takvim yili" diye anilir.

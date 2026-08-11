@@ -587,21 +587,34 @@ class Istekci(BaseHTTPRequestHandler):
         yillar = _yillari_coz(calisma)
         inceleme = _inceleme_bilgisi(calisma)
         duzeltme = self._duzeltme_dokumu(calisma)
+        karsilastirmalar = self._duzeltme_karsilastirmalari(calisma)
         rapor_yillari = sahte_belge_raporu.rapor_yillari(sonuc) or [None]
         belgeler = [
             (y, sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
                                               yillar, sonuc, calisma, bulgular,
-                                              duzeltme, y))
+                                              duzeltme, y, karsilastirmalar))
             for y in rapor_yillari]
         return belgeler, inceleme
 
     def _duzeltme_dokumu(self, calisma):
         """Duzeltme beyannameleri tablosu; okunamazsa belge yine uretilir."""
+        return self._duzeltmeden_uret(calisma, "duzeltme_tablosu")
+
+    def _duzeltme_karsilastirmalari(self, calisma):
+        """Duzeltme donemlerinde satir bazinda oncesi / sonrasi dokumu."""
+        return self._duzeltmeden_uret(calisma, "duzeltme_karsilastirmalari")
+
+    def _duzeltmeden_uret(self, calisma, islev):
+        """Yuklenen beyannamelerden istenen dokumu uretir.
+
+        Beyanname okumasi belge uretimini engellememeli: dosya bozuksa ya da
+        beklenmedik bir bicimdeyse belge, o tablo olmadan yine uretilir.
+        """
         if not calisma.get("beyannameler"):
             return None
         try:
             beyannameler = _beyanname_modulu()
-            return beyannameler.duzeltme_tablosu(
+            return getattr(beyannameler, islev)(
                 beyannameler.duzenle(calisma["beyannameler"]))
         except Exception:                                     # noqa: BLE001
             return None

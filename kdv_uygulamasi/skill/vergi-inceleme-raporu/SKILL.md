@@ -250,6 +250,35 @@ Bilinmeyen her alan köşeli parantez içinde ve **kırmızı** (C00000) yazıl�
 `[VTR no]`, `[yevmiye tarihi]`, `[Sonuç bölümüne eklenecek tespit notu]`.
 Sessizce boş bırakma — okuyan nereyi dolduracağını görmeli.
 
+### Ad ve unvan yazımı
+
+Sistem dökümlerinden gelen adlar çoğunlukla baştan sona büyük harftir; belgeye
+yazarken düzeltilir:
+
+- **Kişi:** ad ilk harf büyük, soyad tümü büyük — "Ahmet HASAN"
+- **Şirket:** her kelimenin ilk harfi büyük, kısaltmalar büyük, bağlaçlar
+  küçük — "Deneme İnşaat Sanayi ve Ticaret A.Ş.", "Bir LTD. ŞTİ."
+- Türkçe i/I çiftine dikkat: "i" → "İ", "I" → "ı".
+
+### Düzeltmeyle çıkarılan faturalar: ayrıntılı tablo
+
+Bir satıcının faturaları düzeltme beyannamesiyle çıkarılmışsa, o satıcının
+bölümünde mükerrer tarhiyat açıklamasının ardından düzeltmenin ayrıntısı da
+verilir:
+
+```
+Dönemi <yıl> | Beyanname Satırı | Düzeltme Öncesi Beyanname | Düzeltme Beyannamesi | Fark
+Şubat        | Önceki Dönemden Devreden KDV | ... | ... | ...
+             | Yurtiçi Alımlara İlişkin KDV | ... | ... | ...
+             | İndirimler Toplamı           | ... | ... | ...
+             | Ödenmesi Gereken KDV         | ... | ... | ...
+             | Sonraki Döneme Devreden KDV  | ... | ... | ...
+```
+
+Ay adı yalnızca ilk satırda yazılır. Yalnızca değişen satırlar alınır; "Önceki
+Dönemden Devreden KDV" farkı sıfır olsa da kalır, devir zincirinin başlangıcını
+gösterir. Dönemler bilinmiyorsa tablo kırmızı yer tutucularla açılır.
+
 ---
 
 ## Adım 6 — Yapılmayacaklar

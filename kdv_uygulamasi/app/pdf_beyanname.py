@@ -330,6 +330,54 @@ def _alanlari_topla(parcalar):
     return degerler, tanimsiz
 
 
+def _etiket_mi(metin):
+    """Parca, beyannamenin taninan bir alan / bolum basligi mi."""
+    n = normalize(metin)
+    if not n:
+        return False
+    if n in ETIKET_ESLEMESI or n in EK_ETIKETLER or n in BOLUM_BASLIKLARI:
+        return True
+    # "Vergi Kimlik Numarası", "E-Posta Adresi" gibi kunye etiketleri de burada
+    # durdurucu sayilir; hepsini listelemek yerine bilinen birkac tanesi yeter.
+    return n.startswith(("VERGIKIMLIKNUMARASI", "EPOSTAADRESI", "TICARETSICILNO",
+                         "IRTIBATTELNO", "SOYADI", "ADI", "UNVANI",
+                         "VERGIDAIRESIMUDURLUGU", "ONAYZAMANI"))
+
+
+def _duzeltme_nedeni(ilk_sayfa, indeks):
+    """Duzeltme nedeni aciklamasinin tamamini toplar.
+
+    Aciklama tek parcada bitmeyebilir: uzun metinler PDF'te ayni satirda birkac
+    parcaya bolunur ya da alt satira taser. Onceden yalnizca ilk parca
+    alindigindan gerekce yarim kaliyordu. Burada once etiketin kendi satirinin
+    devami, sonra hemen altindaki satirlar - taninan bir alan basligina ya da
+    satir araligindan buyuk bir bosluga rastlanana kadar - eklenir.
+    """
+    x0, y0, m0 = ilk_sayfa[indeks]
+    parcalar = []
+    kalan = m0.split(":", 1)[1].strip() if ":" in m0 else ""
+    if kalan:
+        parcalar.append(kalan)
+
+    onceki_y = y0
+    for x, y, m in ilk_sayfa[indeks + 1:]:
+        ayni_satir = abs(y - onceki_y) <= HIZA_TOLERANSI
+        alt_satir = 0 < onceki_y - y <= SATIR_ARALIGI + HIZA_TOLERANSI
+        if not (ayni_satir or alt_satir):
+            break
+        if _etiket_mi(m) or tutar_coz(m) is not None:
+            break
+        # Alt satira gecildiyse aciklamanin devami sola yaslidir; sagdaki ayri
+        # bir sutun (ornegin "Onay Zamanı" degeri) gerekceye karismasin.
+        if alt_satir and x > x0 + 200:
+            break
+        metin = m.strip()
+        if metin:
+            parcalar.append(metin)
+        onceki_y = y
+    return " ".join(parcalar).strip()
+
+
 def _kunye(parcalar):
     """Mukellef, donem ve onay bilgilerini cikarir."""
     kunye = {"vkn": "", "unvan": "", "vergi_dairesi": "", "yil": None, "ay": None,
@@ -344,14 +392,10 @@ def _kunye(parcalar):
     eslesme = TARIH_SAATI.search(tam)
     if eslesme:
         kunye["onay_zamani"] = eslesme.group(0)
-    for i, m in enumerate(metinler):
-        n = normalize(m)
-        if n.startswith("DUZELTMENEDENI"):
-            # Aciklama ya ayni parcada iki nokta sonrasinda ya da sonraki parcada
-            kalan = m.split(":", 1)[1].strip() if ":" in m else ""
-            kunye["duzeltme_nedeni"] = kalan or (metinler[i + 1].strip()
-                                                 if i + 1 < len(metinler) else "")
-            kunye["duzeltme_nedeni"] = kunye["duzeltme_nedeni"] or "(belirtilmemiş)"
+    for i, (_x, _y, m) in enumerate(ilk_sayfa):
+        if normalize(m).startswith("DUZELTMENEDENI"):
+            kunye["duzeltme_nedeni"] = (_duzeltme_nedeni(ilk_sayfa, i)
+                                        or "(belirtilmemiş)")
 
     # Vergi dairesi: "VERGI DAIRESI MUDURLUGU" yazisinin hemen ustundeki ad
     for idx, (x, y, m) in enumerate(ilk_sayfa):

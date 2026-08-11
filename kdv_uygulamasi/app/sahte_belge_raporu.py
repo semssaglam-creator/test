@@ -83,7 +83,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
         "kapsamında e-tebligata tabidir."
         % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
            inceleme.get("vkn_tckn") or "[VKN]",
-           inceleme.get("ad_unvan") or "[Mükellef unvanı]",
+           ik.mukellef_adi(inceleme, kunye),
            M(kunye), inceleme.get("adres") or "[Adres]",
            ik.deger(kunye, "faaliyet_konusu"), M(kunye, buyuk=True)))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
@@ -120,7 +120,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
     if satici_satirlari:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
                  % (s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
-                    s["vkn"] or "[VKN]", s["unvan"] or "[unvan girilmedi]")
+                    s["vkn"] or "[VKN]", ik.satici_unvani(s))
                  for s in satici_satirlari]
         b.paragraf(
             "İş emri gerekçelerinde; %s %s %s olan alışlarının sahte belge "
@@ -281,7 +281,7 @@ def _hesap(b, kunye, donemler, duzeltme, bulgular):
 
 # ------------------------------------------------------------- IV. elestiri
 def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar=None, inceleme=None):
+              saticilar=None, inceleme=None, karsilastirmalar=None):
     b.baslik("IV- ELEŞTİRİLEN HUSUSLAR", 1)
     M = ik.mukellef_sozu
     kod = ik.resen_madde_kodu(kunye)
@@ -309,7 +309,7 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
                    girinti=1, italik=True)
     for i, s in enumerate(satici_satirlari, 1):
         _satici_bolumu(b, kunye, s, liste, i,
-                       _donem_ifadesi(kunye, donemler))
+                       _donem_ifadesi(kunye, donemler), karsilastirmalar)
 
     # ---- C: mevzuat
     b.baslik("C- İlgili Mevzuat", 2)
@@ -363,10 +363,74 @@ def _cikarilacak_tablosu(b, liste, saticilar=None):
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
-def _satici_bolumu(b, kunye, s, liste, sira, donem_metni=""):
+DUZELTME_AYRINTI_SATIRLARI = [
+    "Önceki Dönemden Devreden KDV",
+    "Yurtiçi Alımlara İlişkin KDV",
+    "İndirimler Toplamı",
+    "Ödenmesi Gereken KDV",
+    "Sonraki Döneme Devreden KDV",
+]
+
+
+def _donem_listesi(kunye):
+    """Kunyeye elle yazilan duzeltme donemlerini ayristirir.
+
+    Beyanname PDF'leri yuklenmediginde donemler veriden bulunamaz; kullanici
+    "2023/Şubat, 2023/Mart" gibi yazar. Ayrac olarak virgul de noktali virgul
+    de kabul edilir.
+    """
+    ham = str((kunye or {}).get("duzeltme_donemleri") or "")
+    for ayrac in (";", "\n"):
+        ham = ham.replace(ayrac, ",")
+    return [p.strip() for p in ham.split(",") if p.strip()]
+
+
+def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
+    """Duzeltme beyannamesinde satir bazinda ne degistigini gosteren tablolar.
+
+    Veri varsa (beyannameler yuklenmisse) donem donem gercek rakamlarla,
+    yoksa kunyeye yazilan donemler icin kirmizi yer tutucularla acilir.
+    Boylece beyanname yuklenmemis dosyalarda da tablo belgede hazir durur.
+    """
+    M = ik.mukellef_sozu
+    donemler = _donem_listesi(kunye)
+    if not karsilastirmalar and not donemler:
+        return
+
+    b.paragraf(
+        "%s tarafından verilen düzeltme beyannamelerinde yapılan düzeltmelere "
+        "ilişkin ayrıntılı tablo aşağıda sunulmuştur."
+        % M(kunye, buyuk=True), girinti=1)
+
+    if karsilastirmalar:
+        bloklar = [(k["yil"], k["ay_adi"],
+                    [[s["etiket"], _tl(s["oncesi"]), _tl(s["sonrasi"]),
+                      _tl(s["fark"])] for s in k["satirlar"]])
+                   for k in karsilastirmalar]
+    else:
+        bloklar = []
+        for metin in donemler:
+            yil, _, ay_adi = str(metin).partition("/")
+            bloklar.append((yil.strip() or "[yıl]", ay_adi.strip() or "[dönem]",
+                            [[ad, "[tutar]", "[tutar]", "[tutar]"]
+                             for ad in DUZELTME_AYRINTI_SATIRLARI]))
+
+    for yil, ay_adi, satirlar in bloklar:
+        # Ay adi yalnizca ilk satirda yazilir; ornekteki birlestirilmis hucrenin
+        # karsiligi budur.
+        tablo = [[ay_adi if i == 0 else ""] + satir
+                 for i, satir in enumerate(satirlar)]
+        b.tablo(["Dönemi\n%s" % yil, "Beyanname Satırı",
+                 "Düzeltme Öncesi\nBeyanname", "Düzeltme\nBeyannamesi", "Fark"],
+                tablo, hizalar=["orta", "sol", "sag", "sag", "sag"],
+                oranlar=[0.8, 2.0, 1.3, 1.3, 1.1], buyukluk=TABLO_PUNTOSU)
+
+
+def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
+                   karsilastirmalar=None):
     M = ik.mukellef_sozu
     daire = s["vergi_dairesi"] or "[Satıcının vergi dairesi]"
-    unvan = s["unvan"] or "[unvan girilmedi]"
+    unvan = ik.satici_unvani(s)
     b.baslik("B.%d- %s %s Vergi Kimlik Numaralı Mükellefi %s’den Olan Alışları"
              % (sira, daire, s["vkn"] or "[VKN]", unvan), 2)
 
@@ -424,6 +488,7 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni=""):
             "tarhiyata yol açmamak bakımından bu raporda hesaplanan tarhiyata "
             "dahil edilmemiştir."
             % (_tl(s["kdv"]), M(kunye)), girinti=1)
+        _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar)
         return
 
     b.paragraf(
@@ -461,7 +526,7 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
             "edilmiş olduğundan, aynı tutarın bir de bu raporla tarh edilmesi "
             "mükerrer tarhiyat sonucunu doğuracaktır. Bu nedenle anılan "
             "faturalar aşağıdaki hesaplamaya ve tarhiyata dahil edilmemiştir."
-            % (turkce.liste(["%s (VKN: %s)" % (s["unvan"] or "[unvan girilmedi]",
+            % (turkce.liste(["%s (VKN: %s)" % (ik.satici_unvani(s),
                                                s["vkn"] or "—") for s in haric]),
                _tl(sum(s["kdv"] for s in haric)), ik.mukellef_sozu(kunye)),
             girinti=1)
@@ -715,7 +780,7 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
         "sahte belge kullanımı ile sınırlı olarak incelenmesi neticesinde;"
         % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
            inceleme.get("vkn_tckn") or "[VKN]",
-           inceleme.get("ad_unvan") or "[Mükellef unvanı]",
+           ik.mukellef_adi(inceleme, kunye),
            _donem_ifadesi(kunye, donemler)),
         girinti=1)
 
@@ -801,7 +866,7 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     b.paragraf("Sonucuna varılmıştır.", girinti=1, aralik_once=120)
     b.bos_satir()
     b.imza_bloklari([(ik.deger(kunye, "eleman_unvan", "unvan"),
-                      ik.deger(kunye, "eleman_ad", "ad soyad"))])
+                      ik.ad(kunye, "eleman_ad"))])
 
 
 def rapor_yillari(sonuc):
@@ -850,11 +915,15 @@ def _bulgu_yili(bulgu):
 
 # ---------------------------------------------------------------------- giris
 def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
-               duzeltme=None, yil=None):
+               duzeltme=None, yil=None, karsilastirmalar=None):
     """Sahte belge kullanma raporu taslagini uretir.
 
     `yil` verilirse rapor yalnizca o yila iliskin duzenlenir; birden cok yilin
     incelendigi dosyalarda her yil icin ayri rapor yazilir.
+
+    `karsilastirmalar`, duzeltme verilen donemlerde satir bazinda oncesi /
+    sonrasi dokumudur (beyannameler.duzeltme_karsilastirmalari); duzeltmeyle
+    cikarilmis saticinin bolumunde ayrintili tablo olarak yazilir.
     """
     kunye = ik.normalize(kunye)
     mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
@@ -862,6 +931,8 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     if yil is not None:
         sonuc, liste, bulgular, duzeltme = _yila_indirge(
             sonuc, liste, bulgular, duzeltme, int(yil))
+        karsilastirmalar = [k for k in (karsilastirmalar or [])
+                            if k["yil"] == int(yil)]
     donemler = dolu_donemler(sonuc)
     saticilar = calisma.get("saticilar") or {}
     satici_satirlari = F.satici_ozeti(liste, saticilar)
@@ -881,7 +952,7 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     _hesap(b, kunye, donemler, duzeltme,
            belgeye_giren_bulgular(bulgular, donemler))
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar, inceleme)
+              saticilar, inceleme, karsilastirmalar)
     _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)
     return b
 
