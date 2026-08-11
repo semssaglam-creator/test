@@ -566,10 +566,11 @@ class Istekci(BaseHTTPRequestHandler):
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
-        duzeltme = self._duzeltme_dokumu(calisma)
         inceleme = _inceleme_bilgisi(calisma)
+        # Duzeltme beyannameleri tutanaga girmez; yalnizca raporun III.
+        # bolumunde yer alir.
         belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
-                                     bulgular, duzeltme, calisma)
+                                     bulgular, calisma)
         return belge, inceleme
 
     def _rapor_hazirla(self, veri):

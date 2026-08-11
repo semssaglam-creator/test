@@ -419,6 +419,9 @@ yer verilmiştir.
 aşağıda yer verilmiştir. (GİB YBS kayıtları)
    [beyan tablosu]
 
+   ↳ Düzeltme beyannameleri tutanağa girmez; dökümleri yalnızca raporun
+     III- HESAP İNCELEMELERİ bölümünde yer alır.
+
 6- <M> Ba-Bs analizi sorgulamasında <Satıcı VD'nin> <VKN> vergi kimlik
 numaralı mükellefi <Satıcı>'den <n> belge ile KDV hariç <tutar> TL tutarında
 alış bildiriminde bulunduğu tespit edilmiştir. Mükellef tarafından

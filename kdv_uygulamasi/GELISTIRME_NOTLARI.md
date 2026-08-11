@@ -139,6 +139,8 @@ oturumda buradan devam edilir.
       "Dahil" başlığındaki kutucuk süzülen satırların tamamını tek seferde
       dahil ediyor / çıkarıyor; süzgeç dışındaki satırlara dokunmuyor.
       — *kullanıcı isteği*
+- [x] 2026-08-11 — Düzeltme beyannameleri tutanaktan çıkarıldı; yalnızca
+      raporun III- HESAP İNCELEMELERİ bölümünde yer alıyor. — *kullanıcı isteği*
 
 ---
 

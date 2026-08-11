@@ -12,7 +12,10 @@ Girdi:
                 buradan okunur)
     sonuc     : hesap.seri_hesapla ciktisi
     bulgular  : hesap.beyan_tutarlilik_kontrol ciktisi (istege bagli)
-    duzeltme  : beyannameler.duzeltme_tablosu ciktisi (istege bagli)
+
+Duzeltme beyannameleri tutanaga girmez: tutanak, incelemede tespit edilen
+hususlarin mukellefle birlikte tutulan kaydidir; duzeltme dokumu raporun
+III. bolumunde yer alir.
 """
 from . import inceleme_kunyesi as ik
 from . import turkce
@@ -479,8 +482,7 @@ def _kapanis(b, kunye):
 
 
 # ---------------------------------------------------------------------- giris
-def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
-                 calisma=None):
+def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
     """Tutanak taslagini uretir ve `Belge` nesnesi dondurur."""
     from . import faturalar as F
 
@@ -514,10 +516,6 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
     _defter_maddesi(b, kunye, sayac, donemler)
     _vergi_beyani_maddesi(b, kunye, sayac, donemler)
     _kdv_beyani_maddesi(b, kunye, sayac, donemler)
-    if duzeltme:
-        _madde(b, sayac, "Mükellef tarafından verilen düzeltme beyannameleri "
-                         "aşağıdaki gibidir.")
-        _duzeltme_tablosu(b, duzeltme)
     # Satici varsa veri/soru ciftleri _fatura_maddesi icinde uretilir; ayrica
     # genel bir soru maddesi acilmaz.
     _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste)
@@ -534,27 +532,6 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, duzeltme=None,
 
     _kapanis(b, kunye)
     return b
-
-
-def _duzeltme_tablosu(b, duzeltme):
-    for yil_blogu in duzeltme:
-        tablo = []
-        for s in yil_blogu["satirlar"]:
-            tablo.append([s.get("donem") or "", s.get("tarih") or "",
-                          _tl(s.get("matrah_toplami")), _tl(s.get("hesaplanan_kdv")),
-                          _tl(s.get("onceki_donem_devreden")),
-                          _tl(s.get("bu_donem_indirilecek")),
-                          _tl(s.get("indirimler_toplami")),
-                          _tl(s.get("odenmesi_gereken_kdv")),
-                          _tl(s.get("sonraki_donem_devreden")),
-                          s.get("gerekce") or ""])
-        b.tablo(["Dönemi\n%s" % yil_blogu["yil"], "Düzeltme\nTarihi", "KDV\nMatrahı",
-                 "Hspl.\nKDV", "Önc. Dön.\nDev. KDV", "Bu Dön.\nİndl. KDV",
-                 "İndirimler\nToplamı", "Öden.\nKDV", "Son. Dön.\nDev. KDV",
-                 "Düzeltme Gerekçesi"], tablo,
-                hizalar=["sol", "sol"] + ["sag"] * 7 + ["sol"],
-                oranlar=[0.8, 0.9, 1.1, 0.9, 1, 1, 1.1, 0.9, 1, 1.8],
-                buyukluk=TABLO_PUNTOSU)
 
 
 def dosya_adi(inceleme):
