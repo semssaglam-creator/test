@@ -709,6 +709,18 @@ function tl(sayi) {
   return Number(sayi).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/**
+ * Tarihi GG.AA.YYYY biçiminde gösterir. Portal dökümlerinden gelen tarih
+ * "2023-01-03" biçiminde saklanır (sıralama ve karşılaştırma bu biçime
+ * dayanır); dönüşüm yalnızca gösterimde yapılır. Çözülemeyen değer olduğu
+ * gibi kalır.
+ */
+function tarihGoster(deger) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(deger || "").trim());
+  if (!m) return String(deger || "");
+  return `${m[3].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[1]}`;
+}
+
 function sayiCoz(metin) {
   if (metin === null || metin === undefined) return 0;
   let m = String(metin).trim().replace(/\s/g, "");
@@ -3126,7 +3138,7 @@ function faturaListesiniCiz() {
     tr.appendChild(tdTevsik);
 
     tr.appendChild(hucre("td", f.fatura_no || "—"));
-    tr.appendChild(hucre("td", f.tarih || "—"));
+    tr.appendChild(hucre("td", tarihGoster(f.tarih) || "—"));
     tr.appendChild(hucre("td", f.satici_vkn || "—", { className: f.satici_vkn ? "" : "sessiz" }));
 
     const tdYon = document.createElement("td");

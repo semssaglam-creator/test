@@ -508,14 +508,15 @@ class Istekci(BaseHTTPRequestHandler):
                 if not faturalar.sayilir(f, saticilar):
                     continue
                 bilgi = saticilar.get(f.get("satici_vkn") or "") or {}
-                yevmiye = " / ".join(p for p in (f.get("yevmiye_tarih"),
-                                                 f.get("yevmiye_no")) if p)
+                yevmiye = " / ".join(
+                    p for p in (faturalar.tarih_goster(f.get("yevmiye_tarih")),
+                                f.get("yevmiye_no")) if p)
                 satirlar.append({
                     "satici_vkn": f.get("satici_vkn") or "",
                     "satici_unvan": bilgi.get("unvan") or "",
                     "kullanma": bilgi.get("kullanma") or "Belirlenmedi",
                     "fatura_no": f.get("fatura_no") or "",
-                    "tarih": f.get("tarih") or "",
+                    "tarih": faturalar.tarih_goster(f.get("tarih")),
                     "kayit_donemi": ("%s/%02d" % (f["kayit_yil"], f["kayit_ay"])
                                      if f.get("kayit_yil") and f.get("kayit_ay") else ""),
                     "matrah": f.get("matrah") or 0.0,

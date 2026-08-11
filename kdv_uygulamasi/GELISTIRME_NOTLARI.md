@@ -141,6 +141,16 @@ oturumda buradan devam edilir.
       — *kullanıcı isteği*
 - [x] 2026-08-11 — Düzeltme beyannameleri tutanaktan çıkarıldı; yalnızca
       raporun III- HESAP İNCELEMELERİ bölümünde yer alıyor. — *kullanıcı isteği*
+- [x] 2026-08-11 — Tutanağın 4. maddesi (Gelir / Kurumlar Vergisi beyanname
+      dökümü) künyeye özet girilmemiş olsa da açılıyor: mükellef türüne göre
+      olağan kalemler yazılıp tutarlar kırmızı `[tutar]` bırakılıyor. Beyanname
+      PDF'i yüklenirse tablo veriden doluyor. — *kullanıcı isteği, örnek tutanak
+      karşılaştırmasıyla*
+- [x] 2026-08-11 — Fatura tarihleri her yerde GG.AA.YYYY gösteriliyor (fatura
+      listesi, tutanak ve rapor tabloları, Excel'in Faturalar sayfası, yevmiye
+      tarihi). Veri yine ISO biçiminde saklanıyor; sıralama ve karşılaştırma
+      ona dayandığı için çevrim yalnızca gösterimde yapılıyor.
+      — *kullanıcı isteği*
 
 ---
 

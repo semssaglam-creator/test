@@ -265,10 +265,40 @@ def _defter_maddesi(b, kunye, sayac, donemler):
             oranlar=[0.6, 1.4, 1.4, 1.6], buyukluk=TABLO_PUNTOSU)
 
 
+GELIR_VERGISI_KALEMLERI = [
+    "Ticari Kazançlar",
+    "Vergiye Tabi Gelir (Matrah)",
+    "Hesaplanan Gelir Vergisi",
+    "Mahsup Edilecek Vergiler Toplamı",
+    "Ödenmesi Gereken Gelir Vergisi",
+    "İadesi Gereken Gelir Vergisi",
+]
+
+KURUMLAR_VERGISI_KALEMLERI = [
+    "Ticari Bilanço Karı",
+    "Kanunen Kabul Edilmeyen Giderler",
+    "Zarar Olsa Dahi İndirilecek İstisna ve İndirimler",
+    "Kurumlar Vergisi Matrahı",
+    "Hesaplanan Kurumlar Vergisi",
+    "Mahsup Edilecek Vergiler Toplamı",
+    "Ödenmesi Gereken Kurumlar Vergisi",
+    "İadesi Gereken Kurumlar Vergisi",
+]
+
+
 def _vergi_beyani_maddesi(b, kunye, sayac, donemler):
-    satirlar = ik.cizgili_satirlar(kunye, "vergi_beyan_ozeti", 2)
+    """Gelir / Kurumlar Vergisi beyannamesi dokumu maddesi.
+
+    Kunyeye beyanname ozeti girilmemis olsa da madde atlanmaz: mukellef
+    turune gore olagan kalemler yazilir, tutarlar kirmizi tutucu olarak
+    birakilir. Ozet, beyanname PDF'i yuklenerek de doldurulabilir.
+    """
+    satirlar = ik.cizgili_satirlar(kunye, "vergi_beyan_ozeti", 2,
+                                   ["açıklama", "tutar"])
     if not satirlar:
-        return
+        kalemler = (KURUMLAR_VERGISI_KALEMLERI if ik.kurum_mu(kunye)
+                    else GELIR_VERGISI_KALEMLERI)
+        satirlar = [[ad, "[tutar]"] for ad in kalemler]
     ad = "Kurumlar Vergisi" if ik.kurum_mu(kunye) else "Gelir Vergisi"
     _madde(b, sayac, "%s %s ait %s Beyannamesi özetine aşağıda yer verilmiştir."
            % (ik.mukellef_sozu(kunye, buyuk=True, ek="in"),
@@ -329,7 +359,7 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
         tablo = []
         for f in kendi:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
-            tablo.append([f.get("tarih") or "", f.get("fatura_no") or "",
+            tablo.append([F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
                           F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])

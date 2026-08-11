@@ -398,7 +398,7 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni=""):
         tablo = []
         for f in kendi:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
-            tablo.append([f.get("tarih") or "", f.get("fatura_no") or "",
+            tablo.append([F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
                           F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])

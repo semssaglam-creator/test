@@ -68,6 +68,24 @@ SATICI_ALANLARI = [
 ]
 
 
+def tarih_goster(deger):
+    """Tarihi GG.AA.YYYY bicimine getirir.
+
+    Portal dokumleri tarihi "2023-01-03" olarak veriyor ve calismada da bu
+    bicimde saklaniyor: siralamada ve karsilastirmada dogru olan budur. Ekranda
+    ve belgede ise resmi yazim GG.AA.YYYY oldugundan cevrim yalnizca gosterimde
+    yapilir. Cozulemeyen deger oldugu gibi birakilir; kullanicinin elle yazdigi
+    bir metni bozmak, bicimlemekten kotudur.
+    """
+    metin = str(deger or "").strip()
+    parcalar = metin.split("-")
+    if len(parcalar) == 3 and len(parcalar[0]) == 4:
+        yil, ay, gun = parcalar
+        if yil.isdigit() and ay.isdigit() and gun.isdigit():
+            return "%02d.%02d.%s" % (int(gun), int(ay), yil)
+    return metin
+
+
 def yevmiye_hucreleri(f):
     """Fatura tablosunun son iki hucresi: yevmiye tarihi ve numarasi.
 
@@ -76,7 +94,7 @@ def yevmiye_hucreleri(f):
     yazilir: belge yazicisi bunlari kirmizi gosterdiginden, doldurulacak yer
     belgede goze carpar.
     """
-    return (f.get("yevmiye_tarih") or "[yevmiye tarihi]",
+    return (tarih_goster(f.get("yevmiye_tarih")) or "[yevmiye tarihi]",
             f.get("yevmiye_no") or "[yevmiye no]")
 
 
