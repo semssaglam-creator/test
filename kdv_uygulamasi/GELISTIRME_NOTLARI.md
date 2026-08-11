@@ -134,6 +134,11 @@ oturumda buradan devam edilir.
       görevlendirme cümlesi artık tablodan kuruluyor; boş hücreler ve hiç satır
       girilmemiş olması kırmızı yer tutucu bırakıyor. — *kullanıcı isteği,
       ekran görüntüsüyle*
+- [x] 2026-08-11 — Fatura listesine satıcı VKN süzgeci eklendi. Açılır listede
+      her satıcı, unvanı ve fatura adediyle görünüyor. Süzme yapıldıktan sonra
+      "Dahil" başlığındaki kutucuk süzülen satırların tamamını tek seferde
+      dahil ediyor / çıkarıyor; süzgeç dışındaki satırlara dokunmuyor.
+      — *kullanıcı isteği*
 
 ---
 

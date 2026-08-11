@@ -458,6 +458,7 @@
       toplamlara ve tarhiyata girmez.
     </div>
     <div id="fatToplam"></div>
+    <div id="fatSuzgec" class="satir" style="margin-bottom:10px;"></div>
     <div class="kaydir"><table class="tablo" id="fatListeTablo"></table></div>
   </div>
 
@@ -629,6 +630,7 @@ const durum = {
   // Sahte belge / fatura sekmesi
   fatOzet: null,        // sunucudan gelen satici, toplam, bulgu ozeti
   fatSatici: null,      // detay panelinde acik olan satici VKN'si
+  fatSuzgec: "",        // fatura listesinde suzulen satici VKN'si ("" = tumu)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -2255,7 +2257,7 @@ $("hYeni").addEventListener("click", () => {
   durum.sonuc = null; durum.bulgular = [];
   durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
   durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
-  durum.fatOzet = null; durum.fatSatici = null;
+  durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = "";
   $("cAd").value = ""; $("kunyeKarti").style.display = "none";
   $("fatDurum").innerHTML = "";
   faturaEkraniniCiz();
@@ -2296,7 +2298,7 @@ async function calismaAc(id) {
     durum.kayitliId = id;
     durum.degisti = false;
     durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
-    durum.fatOzet = null; durum.fatSatici = null;
+    durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = "";
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
     $("cAd").value = durum.calisma.ad;
@@ -3003,6 +3005,60 @@ function faturaSaticiDetayiniCiz() {
   kap.append(baslik, izgara);
 }
 
+/**
+ * Fatura listesinin satıcı VKN süzgecini kurar. Bir sahtecinin faturaları
+ * genellikle toplu işlenir; süzülen satırlar başlıktaki kutucukla tek seferde
+ * dahil edilip çıkarılabilsin diye süzme ile toplu seçim birlikte çalışır.
+ */
+function faturaSuzgeciniCiz(gorunen) {
+  const kap = $("fatSuzgec");
+  const sayaclar = new Map();
+  durum.calisma.faturalar.forEach((f) => {
+    const vkn = f.satici_vkn || "";
+    sayaclar.set(vkn, (sayaclar.get(vkn) || 0) + 1);
+  });
+  // Süzgeçteki satıcı listeden düşmüşse (dosya değişmiş olabilir) süzgeç açılır
+  if (durum.fatSuzgec && !sayaclar.has(durum.fatSuzgec)) durum.fatSuzgec = "";
+
+  kap.innerHTML = "";
+  const sar = document.createElement("div");
+  sar.className = "otomatik";
+  const etiket = document.createElement("label");
+  etiket.textContent = "Satıcı VKN'ye göre süz";
+  etiket.htmlFor = "fatSuzgecSecim";
+  const sec = document.createElement("select");
+  sec.id = "fatSuzgecSecim";
+  const unvan = (vkn) => ((durum.calisma.saticilar || {})[vkn] || {}).unvan || "";
+  const secenekler = [["", `Tümü (${durum.calisma.faturalar.length} satır)`]];
+  Array.from(sayaclar.keys()).sort().forEach((vkn) => {
+    const ad = unvan(vkn);
+    secenekler.push([vkn, `${vkn || "VKN yok"}${ad ? " — " + ad : ""} (${sayaclar.get(vkn)} satır)`]);
+  });
+  secenekler.forEach(([deger, metin]) => {
+    const o = document.createElement("option");
+    o.value = deger; o.textContent = metin;
+    sec.appendChild(o);
+  });
+  sec.value = durum.fatSuzgec || "";
+  sec.addEventListener("change", () => {
+    durum.fatSuzgec = sec.value;
+    faturaListesiniCiz();
+  });
+  sar.append(etiket, sec);
+  kap.appendChild(sar);
+
+  if (durum.fatSuzgec) {
+    const bilgi = document.createElement("div");
+    bilgi.className = "otomatik";
+    const dahil = gorunen.filter((f) => f.dahil).length;
+    bilgi.innerHTML =
+      `<label>&nbsp;</label><div class="yardim">Süzülen ${gorunen.length} satırın ` +
+      `<strong>${dahil}</strong> tanesi dahil. Başlıktaki kutucuk süzülen ` +
+      `satırların tamamını birden seçer.</div>`;
+    kap.appendChild(bilgi);
+  }
+}
+
 function faturaListesiniCiz() {
   const t = durum.fatOzet.toplamlar;
   $("fatToplam").innerHTML =
@@ -3011,15 +3067,41 @@ function faturaListesiniCiz() {
     `Matrah <strong>${tl(t.matrah)}</strong> TL, ` +
     `KDV <strong>${tl(t.kdv)}</strong> TL.</div>`;
 
+  const gorunen = durum.fatSuzgec
+    ? durum.calisma.faturalar.filter((f) => (f.satici_vkn || "") === durum.fatSuzgec)
+    : durum.calisma.faturalar;
+  faturaSuzgeciniCiz(gorunen);
+
   const tablo = $("fatListeTablo");
   tablo.innerHTML = "";
   const ust = document.createElement("tr");
-  ["Dahil", "Tevsik\nyok", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
+  const thDahil = document.createElement("th");
+  const hepsi = document.createElement("input");
+  hepsi.type = "checkbox";
+  hepsi.style.width = "auto";
+  hepsi.id = "fatHepsiSec";
+  hepsi.title = "Görünen satırların tamamını dahil et / çıkar";
+  hepsi.checked = gorunen.length > 0 && gorunen.every((f) => f.dahil);
+  hepsi.addEventListener("change", async () => {
+    gorunen.forEach((f) => { f.dahil = hepsi.checked; });
+    isaretle(false);
+    await faturalariTazele();
+  });
+  thDahil.append(hepsi, document.createTextNode(" Dahil"));
+  ust.appendChild(thDahil);
+  ["Tevsik\nyok", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
    "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
 
-  durum.calisma.faturalar.forEach((f, i) => {
+  if (!gorunen.length) {
+    const bos = document.createElement("tr");
+    bos.appendChild(hucre("td", "Bu satıcıya ait fatura yok.",
+                          { className: "sessiz" })).colSpan = 12;
+    tablo.appendChild(bos);
+  }
+
+  gorunen.forEach((f, i) => {
     const tr = document.createElement("tr");
 
     const tdDahil = document.createElement("td");
@@ -3154,7 +3236,7 @@ $("fatAktar").addEventListener("click", async () => {
 $("fatTemizle").addEventListener("click", async () => {
   if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;
   durum.calisma.faturalar = [];
-  durum.fatOzet = null; durum.fatSatici = null;
+  durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = "";
   $("fatDurum").innerHTML = "";
   isaretle(false);
   faturaEkraniniCiz();
