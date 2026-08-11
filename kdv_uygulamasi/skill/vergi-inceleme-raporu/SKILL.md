@@ -105,8 +105,15 @@ Eksikleri tek mesajda sor. Hiçbirini tahmin etme.
 e-Defter/e-Fatura kapsamı, e-Tebligat (VUK 107/A), kanuni temsilci ve T.C.
 kimlik no (kurumsa)
 
-**Görevlendirme:** iş emri tarih ve sayıları (birden çoksa tablo olarak),
-denetim daire başkanlığı, incelenen dönem, inceleme konusu
+**Görevlendirme:** her görevlendirme yazısı için tarih, sayı, dönem ve konu —
+birden çoksa raporda "Sıra No | İş Emri Tarihi | İş Emri Sayısı | Dönemi |
+Konusu" tablosu, tutanakta ise hepsi tek cümlede sayılır ("… tarih ve … sayılı,
+… tarih ve … sayılı görevlendirme yazıları ile"). Ayrıca denetim daire
+başkanlığı, incelenen dönem, inceleme konusu. Girilmemiş hücreler `[iş emri
+tarihi]` gibi kırmızı yer tutucu olarak bırakılır.
+
+İnceleme dosya no, rapor no, incelemeye başlama tarihi, inceleme türü ve
+inceleme gerekçesi belgede geçmez; sorma.
 
 **Satıcı başına:** unvan, VKN, vergi dairesi, VTR tarih ve sayısı, özel
 esaslara alınma tarihi, bilerek/bilmeden, düzeltmeyle çıkarılmış mı, fatura

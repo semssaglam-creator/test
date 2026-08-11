@@ -123,6 +123,17 @@ oturumda buradan devam edilir.
       suç duyurusu ve uzlaşma kapsamı her raporda kendi yılına göre kuruluyor.
       Tek yıl varsa .docx, birden fazla yıl varsa raporlar tek .zip içinde
       iniyor; kopyaları yine ciktilar klasörüne bırakılıyor. — *kullanıcı isteği*
+- [x] 2026-08-11 — "Görevlendirme ve İnceleme" bölümü tabloya çevrildi:
+      Sıra No | İş Emri Tarihi | İş Emri Sayısı | Dönemi | Konusu. Sıra no
+      kendiliğinden veriliyor, (+) düğmesi yeni satır açıyor, × satırı siliyor.
+      Serbest metinli "İş emirleri" kutusu ile ayrı "Görevlendirme yazısı
+      no / tarihi" alanları kaldırıldı; veri yine aynı biçimde saklandığından
+      eski çalışmalar olduğu gibi açılıyor. İnceleme dosya no, rapor no,
+      incelemeye başlama tarihi, inceleme türü ve inceleme gerekçesi alanları
+      silindi (hiçbir belgede kullanılmıyorlardı). Tutanak ve raporda
+      görevlendirme cümlesi artık tablodan kuruluyor; boş hücreler ve hiç satır
+      girilmemiş olması kırmızı yer tutucu bırakıyor. — *kullanıcı isteği,
+      ekran görüntüsüyle*
 
 ---
 

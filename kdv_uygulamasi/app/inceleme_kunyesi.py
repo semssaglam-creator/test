@@ -13,40 +13,43 @@ semasi degismez.
 """
 
 # Alan turleri:
-#   metin  : tek satir
-#   uzun   : cok satirli serbest metin
-#   tarih  : gg.aa.yyyy beklenir, dogrulanmaz (taslak icin serbest birakildi)
-#   secim  : seceneklerden biri
-#   sayi   : tam sayi
+#   metin   : tek satir
+#   uzun    : cok satirli serbest metin
+#   tarih   : gg.aa.yyyy beklenir, dogrulanmaz (taslak icin serbest birakildi)
+#   secim   : seceneklerden biri
+#   sayi    : tam sayi
+#   satirlar: sutunlari "kolonlar" ile bildirilen kucuk tablo. Arayuzde her
+#             satir bir kutucuk dizisidir, (+) dugmesiyle satir eklenir.
+#             Calismada yine tek metin olarak saklanir: her satir bir satir,
+#             hucreler dikey cizgiyle ayrilir. Boylece eski calismalar da
+#             oldugu gibi okunur.
+
+IS_EMRI_KOLONLARI = [
+    {"kod": "tarih", "etiket": "İş Emri Tarihi", "tur": "tarih"},
+    {"kod": "sayi", "etiket": "İş Emri Sayısı", "tur": "metin"},
+    {"kod": "donem", "etiket": "Dönemi", "tur": "metin"},
+    {"kod": "konu", "etiket": "Konusu", "tur": "metin",
+     "varsayilan": "Sahte Belge Kullanma"},
+]
+
 BOLUMLER = [
     {
         "kod": "gorevlendirme",
         "baslik": "Görevlendirme ve İnceleme",
         "alanlar": [
-            {"kod": "gorevlendirme_no", "etiket": "Görevlendirme yazısı no", "tur": "metin"},
-            {"kod": "gorevlendirme_tarihi", "etiket": "Görevlendirme yazısı tarihi",
-             "tur": "tarih"},
-            {"kod": "inceleme_dosya_no", "etiket": "İnceleme dosya no", "tur": "metin"},
-            {"kod": "rapor_no", "etiket": "Rapor no", "tur": "metin"},
-            {"kod": "baslama_tarihi", "etiket": "İncelemeye başlama tarihi", "tur": "tarih"},
-            {"kod": "inceleme_turu", "etiket": "İnceleme türü", "tur": "secim",
-             "secenekler": ["Tam inceleme", "Sınırlı inceleme"],
-             "varsayilan": "Sınırlı inceleme"},
-            {"kod": "inceleme_gerekce", "etiket": "İnceleme gerekçesi", "tur": "secim",
-             "secenekler": ["İhbar", "Karşıt inceleme", "Risk analizi",
-                            "İade talebi", "Diğer"],
-             "varsayilan": "Karşıt inceleme"},
+            {"kod": "is_emirleri", "etiket": "Görevlendirme yazıları",
+             "tur": "satirlar", "kolonlar": IS_EMRI_KOLONLARI,
+             "ipucu": "Her görevlendirme yazısı için (+) düğmesiyle yeni satır "
+                      "açın. Sıra numarası kendiliğinden verilir. Bir yazı "
+                      "birden çok yılı kapsıyorsa dönemi “2022,2023” biçiminde "
+                      "yazın; rapor yıl yıl düzenlendiğinden her yılın raporuna "
+                      "yalnızca kendi görevlendirme yazıları girer."},
             {"kod": "inceleme_yeri", "etiket": "İncelemenin yapıldığı yer", "tur": "secim",
              "secenekler": ["Mükellefin iş yerinde", "Dairede", "Uzaktan"],
              "varsayilan": "Dairede"},
             {"kod": "inceleme_konusu", "etiket": "İnceleme konusu", "tur": "metin",
              "varsayilan": "Katma Değer Vergisi yönünden",
              "ipucu": "Belgede \"... yönünden inceleme\" biçiminde geçer."},
-            {"kod": "is_emirleri", "etiket": "İş emirleri (birden çoksa)", "tur": "uzun",
-             "ipucu": "Her satıra bir iş emri; alanları dikey çizgiyle ayırın: "
-                      "tarih | sayı | dönem | konu. Örn: "
-                      "28.05.2024 | 23929873-663.05[31848]-22046 | 2023 | Sahte Belge Kullanma. "
-                      "Doldurulursa belgeye tablo olarak girer."},
             {"kod": "mukellef_turu", "etiket": "Mükellef türü", "tur": "secim",
              "secenekler": ["Kurum (sermaye şirketi)", "Gerçek kişi"],
              "varsayilan": "Kurum (sermaye şirketi)",
@@ -213,8 +216,8 @@ BOLUMLER = [
 # Taslagin anlamli olmasi icin gercekten gereken alanlar. Eksikse belge yine
 # uretilir; kullanici uyarilir ve belgede koseli parantezli bir yer tutucu kalir.
 ONEMLI_ALANLAR = [
-    "gorevlendirme_no", "gorevlendirme_tarihi", "inceleme_turu", "inceleme_gerekce",
-    "nezdinde_ad", "eleman_ad", "tutanak_tarihi", "tutanak_yeri", "faaliyet_konusu",
+    "is_emirleri", "nezdinde_ad", "eleman_ad", "tutanak_tarihi", "tutanak_yeri",
+    "faaliyet_konusu",
 ]
 
 _ALANLAR = {a["kod"]: a for b in BOLUMLER for a in b["alanlar"]}
@@ -298,6 +301,27 @@ def is_emirleri(kunye):
         satirlar.append({"tarih": parcalar[0], "sayi": parcalar[1],
                          "donem": parcalar[2], "konu": parcalar[3] or "Sahte Belge Kullanma"})
     return satirlar
+
+
+def gorevlendirme_ifadesi(emirler):
+    """Gorevlendirme yazilarini cumle icine girecek bicime getirir.
+
+    Tek yazi varsa "28.05.2024 tarih ve X sayılı görevlendirme yazısı",
+    birden coksa hepsi sayilir ve "yazıları" denir. Girilmemis hucreler ve
+    hic satir olmamasi durumu kirmizi yer tutucu birakir: belgeyi okuyan
+    kisi neyi elle dolduracagini gorsun.
+    """
+    if not emirler:
+        return ("[görevlendirme yazısı tarihi] tarih ve "
+                "[görevlendirme yazısı sayısı] sayılı görevlendirme yazısı")
+    parcalar = ["%s tarih ve %s sayılı"
+                % (e.get("tarih") or "[görevlendirme yazısı tarihi]",
+                   e.get("sayi") or "[görevlendirme yazısı sayısı]")
+                for e in emirler]
+    # `turkce.liste` burada kullanilmaz: modul dongusu olusur ve bu liste
+    # "ile" baglaciyla degil, viryulle siralanir.
+    return "%s görevlendirme yazı%s" % (", ".join(parcalar),
+                                        "sı" if len(parcalar) == 1 else "ları")
 
 
 def cizgili_satirlar(kunye, kod, alan_sayisi, tutucular=None):

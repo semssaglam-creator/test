@@ -134,6 +134,13 @@
   .kunye-izgara .genis { grid-column: 1 / -1; }
   .kunye-izgara textarea { font-family: inherit; font-size: 13px; line-height: 1.5; }
   .kunye-izgara .yardim { margin-top: 3px; }
+  table.satir-alani { width: 100%; margin: 4px 0 8px; }
+  table.satir-alani th { font-size: 12px; white-space: nowrap; }
+  table.satir-alani td { padding: 3px 4px; }
+  table.satir-alani td.sira { text-align: center; color: #5a6b7d; width: 46px; }
+  table.satir-alani input { width: 100%; box-sizing: border-box; padding: 4px 6px; font-size: 13px; }
+  table.satir-alani td:last-child { width: 34px; text-align: center; }
+  table.satir-alani td:last-child button { padding: 2px 8px; line-height: 1.2; }
   .kaynak-etiket { display: inline-block; background: #eef2f6; border: 1px solid #dde3ea; border-radius: 4px; padding: 2px 8px; font-size: 11.5px; margin: 2px 4px 2px 0; color: #5a6b7d; }
 </style>
 </head>
@@ -3198,7 +3205,118 @@ $("vbAktar").addEventListener("click", () => {
 // Not: yukaridaki "kunyeKarti", sistem sorgusundan okunan mukellef kunyesidir.
 // Buradaki kunye, tutanak ve rapor taslaklarinin gerektirdigi INCELEME
 // kunyesidir; alan tanimlari sunucudan (app/inceleme_kunyesi.py) gelir.
+/**
+ * "satirlar" türündeki alanı küçük bir tablo olarak kurar: her satır bir
+ * kutucuk dizisi, sıra no kendiliğinden verilir, (+) düğmesi yeni satır açar.
+ * Çalışmada yine tek metin olarak saklanır (satır başına bir kayıt, hücreler
+ * dikey çizgiyle ayrılmış); böylece eski çalışmalar da okunur.
+ */
+function kunyeSatirAlaniKur(alan) {
+  const sar = document.createElement("div");
+  sar.className = "genis";
+  const etiket = document.createElement("label");
+  etiket.textContent = alan.etiket;
+  const tablo = document.createElement("table");
+  tablo.className = "tablo satir-alani";
+  tablo.id = "k_" + alan.kod;
+  const bas = document.createElement("thead");
+  const basSatir = document.createElement("tr");
+  ["Sıra No"].concat(alan.kolonlar.map((k) => k.etiket)).concat([""])
+    .forEach((m) => {
+      const th = document.createElement("th");
+      th.textContent = m;
+      basSatir.appendChild(th);
+    });
+  bas.appendChild(basSatir);
+  const govde = document.createElement("tbody");
+  tablo.append(bas, govde);
+
+  const ekle = document.createElement("button");
+  ekle.type = "button";
+  ekle.className = "btn ikincil";
+  ekle.textContent = "+ Görevlendirme yazısı ekle";
+  ekle.addEventListener("click", () => {
+    satirAlaniSatirEkle(govde, alan, alan.kolonlar.map(
+      (k) => k.varsayilan || ""));
+    satirAlaniYaz(govde, alan);
+  });
+
+  sar.append(etiket, tablo, ekle);
+  if (alan.ipucu) {
+    const y = document.createElement("div");
+    y.className = "yardim";
+    y.textContent = alan.ipucu;
+    sar.appendChild(y);
+  }
+  return sar;
+}
+
+/** Bir satır ekler; değerleri verilen dizi doldurur. */
+function satirAlaniSatirEkle(govde, alan, degerler) {
+  const tr = document.createElement("tr");
+  const sira = document.createElement("td");
+  sira.className = "sira";
+  tr.appendChild(sira);
+  alan.kolonlar.forEach((k, i) => {
+    const td = document.createElement("td");
+    const girdi = document.createElement("input");
+    girdi.type = "text";
+    girdi.value = (degerler && degerler[i]) || "";
+    if (k.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+    girdi.addEventListener("change", () => satirAlaniYaz(govde, alan));
+    td.appendChild(girdi);
+    tr.appendChild(td);
+  });
+  const silHucre = document.createElement("td");
+  const sil = document.createElement("button");
+  sil.type = "button";
+  sil.className = "btn ikincil";
+  sil.textContent = "×";
+  sil.title = "Satırı sil";
+  sil.addEventListener("click", () => {
+    tr.remove();
+    satirAlaniYaz(govde, alan);
+  });
+  silHucre.appendChild(sil);
+  tr.appendChild(silHucre);
+  govde.appendChild(tr);
+  satirAlaniNumarala(govde);
+}
+
+function satirAlaniNumarala(govde) {
+  Array.from(govde.rows).forEach((tr, i) => {
+    tr.cells[0].textContent = String(i + 1);
+  });
+}
+
+/** Tablodaki satırları çalışmaya tek metin olarak yazar. */
+function satirAlaniYaz(govde, alan) {
+  satirAlaniNumarala(govde);
+  const satirlar = Array.from(govde.rows).map((tr) =>
+    Array.from(tr.querySelectorAll("input")).map((g) => g.value.trim()).join(" | "))
+    .filter((s) => s.replace(/[|\s]/g, ""));
+  durum.calisma.kunye[alan.kod] = satirlar.join("\n");
+  isaretle(false);
+  eksikleriCiz();
+}
+
+/** Çalışmadaki metni tabloya döker (kullanıcı yazarken dokunmaz). */
+function satirAlaniCiz(alan, deger) {
+  const tablo = $("k_" + alan.kod);
+  if (!tablo) return;
+  const govde = tablo.tBodies[0];
+  if (govde.contains(document.activeElement)) return;
+  govde.innerHTML = "";
+  String(deger || "").split("\n").filter((s) => s.trim()).forEach((satir) => {
+    satirAlaniSatirEkle(govde, alan, satir.split("|").map((p) => p.trim()));
+  });
+  if (!govde.rows.length) {
+    satirAlaniSatirEkle(govde, alan, alan.kolonlar.map((k) => k.varsayilan || ""));
+  }
+}
+
 function kunyeAlaniKur(alan) {
+  if (alan.tur === "satirlar") return kunyeSatirAlaniKur(alan);
   const sar = document.createElement("div");
   if (alan.tur === "uzun") sar.className = "genis";
   const etiket = document.createElement("label");
@@ -3262,6 +3380,7 @@ function kunyeFormunuCiz() {
   const kunye = durum.calisma.kunye || (durum.calisma.kunye = {});
   durum.tanimlar.kunye_bolumleri.forEach((bolum) => {
     bolum.alanlar.forEach((a) => {
+      if (a.tur === "satirlar") { satirAlaniCiz(a, kunye[a.kod]); return; }
       const girdi = $("k_" + a.kod);
       if (!girdi || girdi === document.activeElement) return;
       const deger = kunye[a.kod];
@@ -3280,8 +3399,7 @@ function eksikleriCiz(eksikler) {
   if (eksikler === undefined) {
     // Sunucuya gitmeden, ONEMLI_ALANLAR ile ayni olcutu yerelde uygular
     const kunye = durum.calisma.kunye || {};
-    const onemli = ["gorevlendirme_no", "gorevlendirme_tarihi", "inceleme_turu",
-      "inceleme_gerekce", "nezdinde_ad", "eleman_ad", "tutanak_tarihi",
+    const onemli = ["is_emirleri", "nezdinde_ad", "eleman_ad", "tutanak_tarihi",
       "tutanak_yeri", "faaliyet_konusu"];
     const etiketler = {};
     (durum.tanimlar.kunye_bolumleri || []).forEach((b) =>

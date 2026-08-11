@@ -100,19 +100,20 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
                M(kunye, ek="in")),
             girinti=1)
         b.tablo(["Sıra No", "İş Emri Tarihi", "İş Emri Sayısı", "Dönemi", "Konusu"],
-                [[str(i), e["tarih"], e["sayi"], e["donem"], e["konu"]]
+                [[str(i),
+                  e["tarih"] or "[iş emri tarihi]",
+                  e["sayi"] or "[iş emri sayısı]",
+                  e["donem"] or "[dönemi]", e["konu"]]
                  for i, e in enumerate(emirler, 1)],
                 hizalar=["orta", "orta", "sol", "orta", "sol"],
                 oranlar=[0.5, 1, 2.2, 0.8, 1.5], buyukluk=TABLO_PUNTOSU)
     else:
         b.paragraf(
-            "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s tarih "
-            "ve %s sayılı görevlendirme yazısı ile %s %s işlemlerinin “Sahte "
-            "Belge Kullanma” gerekçesiyle sınırlı olarak incelenmesi "
-            "istenmiştir."
+            "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s ile %s "
+            "%s işlemlerinin “Sahte Belge Kullanma” gerekçesiyle sınırlı olarak "
+            "incelenmesi istenmiştir."
             % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
-               ik.deger(kunye, "gorevlendirme_tarihi", "tarih"),
-               ik.deger(kunye, "gorevlendirme_no", "sayı"),
+               ik.gorevlendirme_ifadesi(emirler),
                M(kunye, ek="in"), _donem_ifadesi(kunye, donemler)),
             girinti=1)
 

@@ -217,13 +217,11 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
                 "tespit edilmiştir.")
 
     b.paragraf(
-        "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s tarih ve "
-        "%s sayılı görevlendirme yazısı ile %s işlemlerinin “Sahte Belge "
-        "Kullanma” gerekçesiyle sınırlı olarak incelenmesi istenmiştir.%s "
-        "(Ek-1: Kimlik kartı fotokopisi)"
+        "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s ile %s "
+        "işlemlerinin “Sahte Belge Kullanma” gerekçesiyle sınırlı olarak "
+        "incelenmesi istenmiştir.%s (Ek-1: Kimlik kartı fotokopisi)"
         % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
-           ik.deger(kunye, "gorevlendirme_tarihi", "tarih"),
-           ik.deger(kunye, "gorevlendirme_no", "sayı"),
+           ik.gorevlendirme_ifadesi(ik.is_emirleri(kunye)),
            _donem_ifadesi(kunye, donemler), alis),
         girinti=1)
 
