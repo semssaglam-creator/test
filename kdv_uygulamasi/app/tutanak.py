@@ -163,6 +163,22 @@ def tarhiyat_toplami(tarhiyatli):
 
 
 
+def satici_veri_maddeleri(kunye, donemler, satici_sayisi):
+    """Satici verilerinin dustugu tutanak madde numaralari: [6, 8, 10, ...].
+
+    Rapor, re'sen takdir nedenini yazarken tutanagin hangi maddelerine atif
+    yapacagini bilmek zorunda. Numaralar tutanak uretilirken sayacla veriliyor;
+    ayni sirayi rapor tarafinda tekrar tahmin etmemek icin burada tek yerden
+    hesaplanir. Satici basina iki madde (veri + soru) surdugunden numaralar
+    ikiser ikiser artar.
+    """
+    # 1: ispat vasitasi, 2: inceleme yeri, 3: defter, 4: gelir/kurumlar beyani
+    onceki = 4
+    if donemler:                                  # 5: KDV beyan dokumu
+        onceki += 1
+    return [onceki + 1 + 2 * i for i in range(max(int(satici_sayisi or 0), 0))]
+
+
 # ---------------------------------------------------------------- maddeler
 class _Sayac:
     """Tutanak maddelerini sirali numaralandirir.
@@ -180,10 +196,13 @@ class _Sayac:
 
 
 def _madde(b, sayac, metin):
-    """Kalin, numarali tutanak maddesi. Kullanilan numarayi dondurur."""
+    """Numarali tutanak maddesi. Kullanilan numarayi dondurur.
+
+    Madde metni duz yazilir; dairenin tutanaklarinda da madde govdesi kalin
+    degildir. Numara ile metin ayni paragrafta kalir.
+    """
     no = sayac()
-    b.paragraf("%d- %s" % (no, metin), kalin=True, aralik_once=140,
-               aralik_sonra=80)
+    b.paragraf("%d- %s" % (no, metin), aralik_once=140, aralik_sonra=80)
     return no
 
 
@@ -307,7 +326,13 @@ def _vergi_beyani_maddesi(b, kunye, sayac, donemler):
             oranlar=[3, 1], buyukluk=TABLO_PUNTOSU)
 
 
-def _kdv_beyani_maddesi(b, kunye, sayac, donemler):
+def _kdv_beyani_maddesi(b, kunye, sayac, donemler, uyumsuz=None):
+    """KDV beyan dokumu ve varsa uzerinde bulunan tutarsizliklar.
+
+    Aritmetik denetim bulgulari, tutanagin sonunda ayri bir maddede degil
+    dayandiklari tablonun hemen altinda yer alir; okuyan kisi hangi tabloya
+    iliskin oldugunu aramak zorunda kalmasin.
+    """
     if not donemler:
         return
     _madde(b, sayac, "%s %s ait Katma Değer Vergisi Beyannameleri özet "
@@ -315,6 +340,11 @@ def _kdv_beyani_maddesi(b, kunye, sayac, donemler):
            % (ik.mukellef_sozu(kunye, buyuk=True, ek="in"),
               _donem_ifadesi(kunye, donemler, "yonelme")))
     beyan_dokum_tablosu(b, donemler)
+    if uyumsuz:
+        b.paragraf("Beyan edilen tutarlar üzerinde yapılan aritmetik "
+                   "denetimde aşağıdaki hususlar tespit edilmiştir:",
+                   girinti=1, aralik_once=120)
+        b.madde_listesi([x["mesaj"] for x in uyumsuz], numarali=False)
 
 
 def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
@@ -545,7 +575,8 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
                % ik.deger(kunye, "inceleme_yeri").lower())
     _defter_maddesi(b, kunye, sayac, donemler)
     _vergi_beyani_maddesi(b, kunye, sayac, donemler)
-    _kdv_beyani_maddesi(b, kunye, sayac, donemler)
+    _kdv_beyani_maddesi(b, kunye, sayac, donemler,
+                        belgeye_giren_bulgular(bulgular, donemler))
     # Satici varsa veri/soru ciftleri _fatura_maddesi icinde uretilir; ayrica
     # genel bir soru maddesi acilmaz.
     _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste)
@@ -553,12 +584,6 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)
         _sorular_maddesi(b, kunye, sayac, satici_satirlari)
     _standart_maddeler(b, kunye, sayac, donemler)
-
-    uyumsuz = belgeye_giren_bulgular(bulgular, donemler)
-    if uyumsuz:
-        _madde(b, sayac, "Beyan edilen tutarlar üzerinde yapılan aritmetik "
-                         "denetimde aşağıdaki hususlar tespit edilmiştir:")
-        b.madde_listesi([x["mesaj"] for x in uyumsuz], numarali=False)
 
     _kapanis(b, kunye)
     return b

@@ -588,13 +588,27 @@ class Istekci(BaseHTTPRequestHandler):
         inceleme = _inceleme_bilgisi(calisma)
         duzeltme = self._duzeltme_dokumu(calisma)
         karsilastirmalar = self._duzeltme_karsilastirmalari(calisma)
+        dokumler = self._beyan_dokumleri(calisma)
         rapor_yillari = sahte_belge_raporu.rapor_yillari(sonuc) or [None]
         belgeler = [
             (y, sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
                                               yillar, sonuc, calisma, bulgular,
-                                              duzeltme, y, karsilastirmalar))
+                                              duzeltme, y, karsilastirmalar,
+                                              dokumler))
             for y in rapor_yillari]
         return belgeler, inceleme
+
+    def _beyan_dokumleri(self, calisma):
+        """Raporun III. bolumu icin ilk beyan ve son hal dokumleri."""
+        if not calisma.get("beyannameler"):
+            return None
+        try:
+            beyannameler = _beyanname_modulu()
+            duzen = beyannameler.duzenle(calisma["beyannameler"])
+            return {"ilk": beyannameler.surum_dokumu(duzen, "ilk"),
+                    "son": beyannameler.surum_dokumu(duzen, "son")}
+        except Exception:                                     # noqa: BLE001
+            return None
 
     def _duzeltme_dokumu(self, calisma):
         """Duzeltme beyannameleri tablosu; okunamazsa belge yine uretilir."""

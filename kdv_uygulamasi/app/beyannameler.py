@@ -397,6 +397,29 @@ AYRINTI_KODLARI = [
 ]
 
 
+def surum_dokumu(duzen, hangi="ilk"):
+    """Her donem icin ilk ya da son beyannamenin ozet satiri.
+
+    Rapordaki III. bolum uc tablo tasir: mukellefin ilk (kanuni suresinde
+    verilen) beyannameleri, verdigi duzeltme beyannameleri ve beyanin son
+    hali. Ilk ve son tablolar bu dokumden uretilir; kolonlar Sonuc ve Fark
+    ekranindaki ozet kolonlariyla ayni olsun diye `OZET_ESLEMESI` kullanilir.
+
+    Doner: [{"yil", "ay", "ay_adi", "ozet": {ozet_kodu: tutar}}]
+    """
+    # Rapordaki dokum tablosu "Hspl. KDV" sutununu `hesaplanan` adiyla okur;
+    # ozet eslemesinde bu ad bulunmadigindan ayrica eklenir.
+    esleme = dict(OZET_ESLEMESI, hesaplanan="hesaplanan_kdv")
+    satirlar = []
+    for d in duzen["donemler"]:
+        surum = d["ilk"] if hangi == "ilk" else d["son"]
+        ozet = {kod: round(surum["degerler"].get(kaynak) or 0.0, 2)
+                for kod, kaynak in esleme.items()}
+        satirlar.append({"yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
+                         "ozet": ozet})
+    return satirlar
+
+
 def duzeltme_karsilastirmalari(duzen):
     """Duzeltme verilen her donem icin satir bazinda oncesi / sonrasi tablosu.
 

@@ -24,8 +24,9 @@ from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
 from .belge_docx import TABLO_PUNTOSU, Belge
-from .tutanak import (belgeye_giren_bulgular, beyan_dokum_tablosu,
-                      dolu_donemler, tarhiyat_toplami)
+from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
+                      beyan_dokum_tablosu, dolu_donemler,
+                      satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
 
@@ -49,6 +50,16 @@ def _donem_ifadesi(kunye, donemler, hal="yalin"):
         return "[yıl] %s" % ik.donem_adi(kunye, False, hal)
     return "%s %s" % (turkce.liste(yillar),
                       ik.donem_adi(kunye, len(yillar) > 1, hal))
+
+
+def _madde_numaralari_metni(numaralar):
+    """[6, 8, 10] -> "6., 8. ve 10." ; bos liste kirmizi tutucu birakir."""
+    if not numaralar:
+        return "[ilgili]"
+    if len(numaralar) == 1:
+        return "%d." % numaralar[0]
+    return "%s ve %d." % (", ".join("%d." % n for n in numaralar[:-1]),
+                          numaralar[-1])
 
 
 def _bilerek_mi(satici_satirlari):
@@ -144,48 +155,28 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
 
 # ---------------------------------------------------------------- II. usul
 def _usul(b, kunye, donemler, ouc):
+    """II- USUL İNCELEMELERİ.
+
+    Genel usulsuzluk basligi bilerek yok: defter tasdiki ve ibrazi tutanakta
+    zaten tespit ediliyor, raporda ayri bir bolum acmak tekrar oluyordu.
+    Bolum, varsa usul notu ve ozel usulsuzluk cezasindan olusur.
+    """
     b.baslik("II- USUL İNCELEMELERİ", 1)
-    M = ik.mukellef_sozu
-
-    b.baslik("A- Genel Usulsüzlük", 2)
-    tasdik = kunye.get("defter_tasdik") or ""
-    if tasdik == "Usulüne uygun":
-        b.paragraf("%s %s ait yasal defterlerinin usulüne uygun şekilde tasdik "
-                   "ettirildiği ve incelemeye ibraz edildiği tespit edilmiştir."
-                   % (M(kunye, buyuk=True, ek="in"),
-                      _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
-    else:
-        b.paragraf("213 sayılı Vergi Usul Kanunu’nun 221. maddesi uyarınca "
-                   "tasdik ettirilmesi gereken defterler yönünden “%s” durumu "
-                   "tespit edilmiştir." % (tasdik or "[belirtilmedi]"), girinti=1)
-
-    usulsuzluk = kunye.get("usulsuzluk") or "Yok"
-    if usulsuzluk != "Yok" and "Özel" not in usulsuzluk:
-        b.paragraf(
-            "Raporun IV. bölümünde açıklandığı üzere, sahte olduğu tespit "
-            "edilen belgelerin defter kayıtlarına ve beyanlara intikal "
-            "ettirilmiş olması nedeniyle defter kayıtları ve bunlarla ilgili "
-            "vesikalar, vergi matrahının doğru ve kesin olarak tespitine imkân "
-            "vermeyecek derecede noksan, usulsüz ve karışıktır. Bu fiil 213 "
-            "sayılı Vergi Usul Kanunu’nun 352/I-3. maddesinde birinci derece "
-            "usulsüzlük olarak sayılmış olup, aynı zamanda 30/4. maddesinde "
-            "re’sen takdir nedeni olarak öngörüldüğünden, 352. madde hükmünce "
-            "%s adına iki kat birinci derece usulsüzlük cezası kesilmesi "
-            "gerekmektedir." % M(kunye), girinti=1)
-        b.paragraf("Ceza uygulamasında 213 sayılı Vergi Usul Kanunu’nun 336. "
-                   "maddesi hükmünün de dikkate alınması gerekir.", girinti=1)
 
     for satir in ik.satirlar(kunye, "usul_notu"):
         b.paragraf(satir, girinti=1)
 
     if ouc and ouc["satirlar"]:
         _ozel_usulsuzluk(b, kunye, ouc)
+    elif not ik.satirlar(kunye, "usul_notu"):
+        b.paragraf("Usul yönünden tenkidi gerektiren bir husus tespit "
+                   "edilmemiştir.", girinti=1)
 
 
 def _ozel_usulsuzluk(b, kunye, ouc):
     """VUK muk. 355 — odemeleri tevsik etmeme fiili."""
     M = ik.mukellef_sozu
-    b.baslik("B- Özel Usulsüzlük Cezası", 2)
+    b.baslik("A- Özel Usulsüzlük Cezası", 2)
     b.baslik("1- 213 Sayılı Vergi Usul Kanunu’nun Mükerrer 355. Maddesine Göre "
              "Ödemelerini Tevsik Etmeme Fiili", 2)
 
@@ -239,37 +230,93 @@ def _ozel_usulsuzluk(b, kunye, ouc):
 
 
 # --------------------------------------------------------------- III. hesap
-def _hesap(b, kunye, donemler, duzeltme, bulgular):
+DAR_TABLO_PUNTOSU = 8
+
+
+def _surum_tablosu(b, satirlar):
+    """Beyanname dokumunu (ilk beyan / son hal) yil yil tabloya doker."""
+    for yil in sorted({s["yil"] for s in satirlar}):
+        alt = [s for s in satirlar if s["yil"] == yil]
+        govde = [[s["ay_adi"]] + [_tl(s["ozet"].get(kod))
+                                  for kod, _e in BEYAN_DOKUM_KOLONLARI]
+                 for s in alt]
+        govde.append(["Toplam:"] + [
+            _tl(sum(s["ozet"].get(kod, 0.0) for s in alt))
+            for kod, _e in BEYAN_DOKUM_KOLONLARI])
+        b.tablo(["Dönemi\n%s" % yil] + [e for _k, e in BEYAN_DOKUM_KOLONLARI],
+                govde, hizalar=["sol"] + ["sag"] * len(BEYAN_DOKUM_KOLONLARI),
+                oranlar=[1.0] + [1.15] * len(BEYAN_DOKUM_KOLONLARI),
+                buyukluk=TABLO_PUNTOSU, toplam_satiri=True, dar=True)
+
+
+def _duzeltme_tablosu(b, duzeltme):
+    """Verilen duzeltme beyannameleri.
+
+    Duzeltme gerekcesi tabloya sigmiyordu: dokuz tutar sutununun yaninda genis
+    bir metin sutunu, rakamlarin alt satira kaymasina yol aciyordu. Gerekce
+    artik tablonun altinda cumle olarak yazilir, tablo da dar hucre
+    bosluklariyla ve kucuk puntoyla kurulur.
+    """
+    for yil_blogu in duzeltme:
+        tablo = []
+        gerekceler = []
+        for s in yil_blogu["satirlar"]:
+            tablo.append([s.get("donem") or "", s.get("tarih") or "",
+                          _tl(s.get("matrah_toplami")), _tl(s.get("hesaplanan_kdv")),
+                          _tl(s.get("onceki_donem_devreden")),
+                          _tl(s.get("bu_donem_indirilecek")),
+                          _tl(s.get("indirimler_toplami")),
+                          _tl(s.get("odenmesi_gereken_kdv")),
+                          _tl(s.get("sonraki_donem_devreden"))])
+            if s.get("gerekce"):
+                gerekceler.append((s.get("donem") or "", s["gerekce"]))
+        b.tablo(["Dönemi\n%s" % yil_blogu["yil"], "Düzeltme\nTarihi",
+                 "KDV\nMatrahı", "Hspl.\nKDV", "Önc. Dön.\nDev. KDV",
+                 "Bu Dön.\nİndl. KDV", "İndirimler\nToplamı", "Öden.\nKDV",
+                 "Son. Dön.\nDev. KDV"], tablo,
+                hizalar=["sol", "orta"] + ["sag"] * 7,
+                oranlar=[0.7, 1.0, 1.3, 1.2, 1.1, 1.2, 1.3, 1.0, 1.1],
+                buyukluk=DAR_TABLO_PUNTOSU, dar=True)
+        for donem, gerekce in gerekceler:
+            b.paragraf("%s dönemine ilişkin düzeltme gerekçesi: “%s”"
+                       % (donem, gerekce.strip().rstrip(".")),
+                       girinti=1, buyukluk=DAR_TABLO_PUNTOSU + 1)
+
+
+def _hesap(b, kunye, donemler, duzeltme, bulgular, dokumler=None):
+    """III- HESAP İNCELEMELERİ.
+
+    Uc tablo sirayla: mukellefin ilk (kanuni suresinde verilen) beyannameleri,
+    verdigi duzeltme beyannameleri ve beyanin son hali. Beyanname PDF'leri
+    yuklenmemisse ilk ve son hal ayrimi bilinmediginden calismadaki tek beyan
+    dokumu yazilir.
+    """
     b.baslik("III- HESAP İNCELEMELERİ", 1)
     M = ik.mukellef_sozu
+    dokumler = dokumler or {}
 
-    b.paragraf("%s %s ilişkin katma değer vergisi beyanlarının özet bilgileri "
-               "aşağıdaki gibidir."
-               % (M(kunye, buyuk=True, ek="in"),
-                  _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
-    beyan_dokum_tablosu(b, donemler)
+    if dokumler.get("ilk"):
+        b.paragraf("%s %s ilişkin kanuni süresinde verdiği katma değer vergisi "
+                   "beyannamelerinin özet bilgileri aşağıdaki gibidir."
+                   % (M(kunye, buyuk=True, ek="in"),
+                      _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
+        _surum_tablosu(b, dokumler["ilk"])
+    else:
+        b.paragraf("%s %s ilişkin katma değer vergisi beyanlarının özet "
+                   "bilgileri aşağıdaki gibidir."
+                   % (M(kunye, buyuk=True, ek="in"),
+                      _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
+        beyan_dokum_tablosu(b, donemler)
 
     if duzeltme:
         b.paragraf("%s tarafından verilen düzeltme beyannameleri aşağıdaki "
                    "gibidir." % M(kunye, buyuk=True), girinti=1)
-        for yil_blogu in duzeltme:
-            tablo = []
-            for s in yil_blogu["satirlar"]:
-                tablo.append([s.get("donem") or "", s.get("tarih") or "",
-                              _tl(s.get("matrah_toplami")), _tl(s.get("hesaplanan_kdv")),
-                              _tl(s.get("onceki_donem_devreden")),
-                              _tl(s.get("bu_donem_indirilecek")),
-                              _tl(s.get("indirimler_toplami")),
-                              _tl(s.get("odenmesi_gereken_kdv")),
-                              _tl(s.get("sonraki_donem_devreden")),
-                              s.get("gerekce") or ""])
-            b.tablo(["Dönemi\n%s" % yil_blogu["yil"], "Düzeltme\nTarihi",
-                     "KDV\nMatrahı", "Hspl.\nKDV", "Önc. Dön.\nDev. KDV",
-                     "Bu Dön.\nİndl. KDV", "İndirimler\nToplamı", "Öden.\nKDV",
-                     "Son. Dön.\nDev. KDV", "Düzeltme Gerekçesi"], tablo,
-                    hizalar=["sol", "sol"] + ["sag"] * 7 + ["sol"],
-                    oranlar=[0.8, 0.9, 1.1, 0.9, 1, 1, 1.1, 0.9, 1, 1.8],
-                    buyukluk=TABLO_PUNTOSU)
+        _duzeltme_tablosu(b, duzeltme)
+
+    if dokumler.get("son"):
+        b.paragraf("Yapılan düzeltmeler sonrasında beyanların son hali "
+                   "aşağıdaki gibidir.", girinti=1)
+        _surum_tablosu(b, dokumler["son"])
 
     if bulgular:
         b.paragraf("%s katma değer vergisi beyannamelerinin tetkikinde;"
@@ -288,18 +335,25 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
 
     # ---- A: re'sen takdir nedeni
     b.baslik("A- Re’sen Takdir Nedeni", 2)
+    veri_maddeleri = satici_veri_maddeleri(kunye, donemler,
+                                           len(satici_satirlari))
     b.paragraf(
-        "Raporun izleyen bölümlerinde ayrıntılı olarak açıklandığı üzere, "
-        "rapora ekli tutanakta belirtilen ve sahte belge olduğu tespit edilen "
-        "faturaların ilgili vergilendirme dönemlerinde defter kayıtlarına ve "
-        "beyanlara intikal ettirildiği anlaşılmıştır.", girinti=1)
+        "Raporun IV. bölümünde ayrıntılı olarak açıklandığı üzere, rapora ekli "
+        "tutanağın %s %s belirtilen sahte faturaların yasal defterlere "
+        "kaydedildiği, söz konusu faturalarda gösterilen Katma Değer Vergisi "
+        "tutarlarının ise İndirilecek Katma Değer Vergisi hesabına "
+        "kaydedilerek beyannamelerde indirim konusu yapıldığı tespit "
+        "edilmiştir."
+        % (_madde_numaralari_metni(veri_maddeleri),
+           "maddesinde" if len(veri_maddeleri) == 1 else "maddelerinde"),
+        girinti=1)
     b.paragraf(
-        "Bu durum, 213 sayılı Vergi Usul Kanunu’nun %s. maddesi hükmü "
-        "gereğince %s defter kayıtları ve bunlarla ilgili vesikaların vergi "
-        "matrahının doğru ve kesin olarak tespitine imkân vermeyecek derecede "
-        "noksan, usulsüz ve karışık olduğunu, dolayısıyla ihticaca salih "
-        "bulunmadığını göstermekte olup, anılan madde uyarınca re’sen tarhiyat "
-        "yapılması gerekmektedir." % (kod, M(kunye, ek="in")), girinti=1)
+        "Bu tespit, tutulması zorunlu olan defterlerin ve verilen "
+        "beyannamelerin gerçek durumu yansıtmadığına dair delil niteliğinde "
+        "olup, söz konusu husus 213 sayılı Vergi Usul Kanunu’nun %s. "
+        "maddesinde re’sen takdir nedeni olarak sayılmıştır. Bu nedenle %s "
+        "adına re’sen tarhiyat yapılması gerekmektedir."
+        % (kod, M(kunye)), girinti=1)
 
     # ---- B: satici basina veriler
     b.baslik("B- Re’sen Takdir Verileri", 2)
@@ -444,17 +498,21 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
 
     # Vergi Tekniği Raporu cumlesi girilmemis olsa da yazilir: eksik tarih ve
     # sayi kirmizi yer tutucu olarak kalir ve doldurulmasi gerektigi gorunur.
+    # Vergi Teknigi Raporunun sonuc bolumundeki tespit, ayni cumlenin devami
+    # olarak yazilir: "... tanzim edilmis olup, raporun sonuc bolumunde <tespit>
+    # tespitine yer verilmistir."
+    tespit = " ".join(satir.strip() for satir in str(s["not"] or "").split("\n")
+                      if satir.strip())
     b.paragraf(
         "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
-        "tanzim edilmiştir."
-        % (s["vtr_tarihi"] or "[VTR tarihi]", s["vtr_no"] or "[VTR no]"),
+        "tanzim edilmiş olup, anılan raporun sonuç bölümünde %s tespitine yer "
+        "verilmiştir."
+        % (s["vtr_tarihi"] or "[VTR tarihi]", s["vtr_no"] or "[VTR no]",
+           tespit.rstrip(".") or "[satıcı hakkındaki tespit]"),
         girinti=1)
     if s["ozel_esaslar"]:
         b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
                    "kapsamına alınmıştır." % s["ozel_esaslar"], girinti=1)
-    for satir in str(s["not"] or "").split("\n"):
-        if satir.strip():
-            b.paragraf(satir.strip(), girinti=1)
 
     kendi = [f for f in liste
              if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]]
@@ -515,22 +573,6 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
     sayilan = [s for s in satici_satirlari if s not in haric]
     toplam_kdv = sum(s["kdv"] for s in sayilan)
 
-    if haric:
-        # Mukerrer tarhiyat riski: bu tutar mukellefin kendi duzeltmesiyle
-        # zaten indirimlerden cikmis durumda.
-        b.paragraf(
-            "Öncelikle belirtmek gerekir ki; %s tarafından düzenlenen ve "
-            "toplam %s TL katma değer vergisi içeren faturalar, %s tarafından "
-            "verilen düzeltme beyannameleri ile ilgili dönem indirimlerinden "
-            "çıkarılmıştır. Söz konusu tutar beyanlardan hâlihazırda tenzil "
-            "edilmiş olduğundan, aynı tutarın bir de bu raporla tarh edilmesi "
-            "mükerrer tarhiyat sonucunu doğuracaktır. Bu nedenle anılan "
-            "faturalar aşağıdaki hesaplamaya ve tarhiyata dahil edilmemiştir."
-            % (turkce.liste(["%s (VKN: %s)" % (ik.satici_unvani(s),
-                                               s["vkn"] or "—") for s in haric]),
-               _tl(sum(s["kdv"] for s in haric)), ik.mukellef_sozu(kunye)),
-            girinti=1)
-
     if not sayilan:
         b.paragraf("Düzeltme beyannameleriyle çıkarılan faturalar dışında "
                    "tarhiyata konu edilecek bir tutar kalmamıştır.", girinti=1)
@@ -547,6 +589,24 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
         "edilemeyeceği sonucuna ulaşılmıştır."
         % (M(kunye, ek="in"), _donem_ifadesi(kunye, donemler, "bulunma"),
            _tl(toplam_kdv)), girinti=1)
+
+    if haric:
+        # Mukerrer tarhiyat riski: bu tutar mukellefin kendi duzeltmesiyle
+        # zaten indirimlerden cikmis durumda. Aciklama, duzeltilmis beyan
+        # tablosunun hemen oncesinde yer alir; tablodaki tutarlarin neden bu
+        # faturalari icermedigi orada sorulur.
+        b.paragraf(
+            "Diğer taraftan; %s tarafından düzenlenen ve toplam %s TL katma "
+            "değer vergisi içeren faturalar, %s tarafından verilen düzeltme "
+            "beyannameleri ile ilgili dönem indirimlerinden çıkarılmıştır. Söz "
+            "konusu tutar beyanlardan hâlihazırda tenzil edilmiş olduğundan, "
+            "aynı tutarın bir de bu raporla tarh edilmesi mükerrer tarhiyat "
+            "sonucunu doğuracaktır. Bu nedenle anılan faturalar aşağıdaki "
+            "hesaplamaya ve tarhiyata dahil edilmemiştir."
+            % (turkce.liste(["%s (VKN: %s)" % (ik.satici_unvani(s),
+                                               s["vkn"] or "—") for s in haric]),
+               _tl(sum(s["kdv"] for s in haric)), M(kunye)),
+            girinti=1)
 
     b.paragraf("Yapılan düzeltmeler sonucunda beyanların aşağıdaki gibi olması "
                "gerekmektedir.", girinti=1)
@@ -785,16 +845,6 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
         girinti=1)
 
     maddeler, sira = [], 1
-    usulsuzluk = kunye.get("usulsuzluk") or "Yok"
-    if usulsuzluk != "Yok" and "Özel" not in usulsuzluk:
-        maddeler.append(
-            "%d- Raporun II. bölümünde belirtildiği üzere; 213 sayılı Vergi "
-            "Usul Kanunu’nun 352/I-3. maddesi gereğince birinci derece "
-            "usulsüzlük cezasının iki kat olarak kesilmesi, ancak ceza "
-            "uygulamasında aynı Kanun’un 336. maddesinin dikkate alınması "
-            "gerektiği," % sira)
-        sira += 1
-
     if tarhiyatli:
         kat = "üç kat" if bilerek else "bir kat"
         maddeler.append(
@@ -810,7 +860,7 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
 
     if ouc and ouc["satirlar"]:
         maddeler.append(
-            "%d- Raporun II/B.1 bölümünde ayrıntılı olarak açıklandığı üzere; "
+            "%d- Raporun II/A.1 bölümünde ayrıntılı olarak açıklandığı üzere; "
             "213 sayılı Vergi Usul Kanunu’nun mükerrer 355. maddesi hükmü "
             "gereğince toplam %s TL özel usulsüzlük cezası kesilmesi gerektiği,"
             % (sira, _tl(ouc["kesilecek"])))
@@ -915,7 +965,7 @@ def _bulgu_yili(bulgu):
 
 # ---------------------------------------------------------------------- giris
 def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
-               duzeltme=None, yil=None, karsilastirmalar=None):
+               duzeltme=None, yil=None, karsilastirmalar=None, dokumler=None):
     """Sahte belge kullanma raporu taslagini uretir.
 
     `yil` verilirse rapor yalnizca o yila iliskin duzenlenir; birden cok yilin
@@ -933,6 +983,8 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
             sonuc, liste, bulgular, duzeltme, int(yil))
         karsilastirmalar = [k for k in (karsilastirmalar or [])
                             if k["yil"] == int(yil)]
+        dokumler = {ad: [s for s in satirlar if s["yil"] == int(yil)]
+                    for ad, satirlar in (dokumler or {}).items()}
     donemler = dolu_donemler(sonuc)
     saticilar = calisma.get("saticilar") or {}
     satici_satirlari = F.satici_ozeti(liste, saticilar)
@@ -950,7 +1002,7 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     _giris(b, inceleme, kunye, donemler, satici_satirlari, yil)
     _usul(b, kunye, donemler, ouc)
     _hesap(b, kunye, donemler, duzeltme,
-           belgeye_giren_bulgular(bulgular, donemler))
+           belgeye_giren_bulgular(bulgular, donemler), dokumler)
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
               saticilar, inceleme, karsilastirmalar)
     _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)

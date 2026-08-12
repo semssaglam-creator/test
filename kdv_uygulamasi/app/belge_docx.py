@@ -164,7 +164,8 @@ class Belge:
 
     # ------------------------------------------------------------------ tablo
     def tablo(self, basliklar, satirlar, hizalar=None, oranlar=None,
-              baslik_tekrari=True, buyukluk=None, toplam_satiri=False):
+              baslik_tekrari=True, buyukluk=None, toplam_satiri=False,
+              dar=False):
         """Tam sayfa genisliginde, cerceveli bir tablo ekler.
 
         basliklar    : baslik hucrelerinin metinleri
@@ -175,6 +176,10 @@ class Belge:
                        tablolari 12 puntoda sigmaz; basliklar satir ortasindan
                        bolunur ve rakamlar alt satira taser.
         toplam_satiri: son satir kalin yazilir ve zemini griler
+        dar          : hucre ic bosluklarini daraltir. Word'un varsayilan
+                       bosluklari sutun basina 216 twip yer yer; dokuz on
+                       sutunlu tutar tablolarinda bu, rakamlarin alt satira
+                       kaymasina yol aciyor.
         """
         kolon_sayisi = len(basliklar)
         if not kolon_sayisi:
@@ -191,11 +196,19 @@ class Belge:
         cerceve = "".join(
             '<w:%s w:val="single" w:sz="4" w:space="0" w:color="808080"/>' % kenar
             for kenar in ("top", "left", "bottom", "right", "insideH", "insideV"))
+        kenar_boslugu = ""
+        if dar:
+            kenar_boslugu = (
+                '<w:tblCellMar>'
+                '<w:left w:w="43" w:type="dxa"/><w:right w:w="43" w:type="dxa"/>'
+                '</w:tblCellMar>')
         parcalar = [
+            # Sira onemli: OOXML semasinda tblCellMar, tblLayout'tan sonra
+            # gelir; ters yazildiginda Word belgeyi bozuk sayar.
             '<w:tbl><w:tblPr><w:tblW w:w="%d" w:type="dxa"/>'
             '<w:tblBorders>%s</w:tblBorders>'
-            '<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>%s</w:tblGrid>'
-            % (YAZI_ALANI, cerceve,
+            '<w:tblLayout w:type="fixed"/>%s</w:tblPr><w:tblGrid>%s</w:tblGrid>'
+            % (YAZI_ALANI, cerceve, kenar_boslugu,
                "".join('<w:gridCol w:w="%d"/>' % g for g in genislikler))]
 
         parcalar.append(self._satir_xml(basliklar, genislikler, hizalar,
