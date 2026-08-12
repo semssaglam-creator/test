@@ -311,7 +311,35 @@ def beyana_cevir(duzen, secim):
         kayit["dolu_aylar"].sort()
         kayit["ay_sayisi"] = max(kayit["dolu_aylar"]) if kayit["dolu_aylar"] else 12
         liste.append(kayit)
-    return {"yillar": liste, "kullanilan": kullanilan}
+    return {"yillar": liste, "kullanilan": kullanilan,
+            "mukellef": mukellef_bilgisi(duzen),
+            "uyarilar": [u for u in duzen["uyarilar"] if "vergi kimlik" in u]}
+
+
+def mukellef_bilgisi(duzen):
+    """Beyannamelerden okunan mukellef kimligi.
+
+    Beyanname PDF'i mukellefin VKN'sini, unvanini ve vergi dairesini de
+    tasiyor; bunlar calismaya yazilirsa kullanicinin elle girmesi gerekmez.
+    Birden cok VKN varsa kimlik verilmez: karisik bir yigini tek mukellefe
+    mal etmek, yanlis kimlikle rapor uretmek demektir. `duzenle` bu durumu
+    zaten uyari olarak bildirir.
+    """
+    kimlikler = duzen.get("mukellefler") or []
+    vknler = {k["vkn"] for k in kimlikler if k["vkn"]}
+    if len(vknler) != 1:
+        return None
+    vkn = sorted(vknler)[0]
+    unvan = next((k["unvan"] for k in kimlikler if k["vkn"] == vkn and k["unvan"]), "")
+    daire = ""
+    for d in duzen["donemler"]:
+        for s in d["surumler"]:
+            if s["vkn"] == vkn and s["vergi_dairesi"]:
+                daire = s["vergi_dairesi"]
+                break
+        if daire:
+            break
+    return {"vkn_tckn": vkn, "ad_unvan": unvan, "vergi_dairesi": daire}
 
 
 # Rapora yapistirilan "duzeltme beyannameleri" tablosunun kolon duzeni.

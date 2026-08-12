@@ -155,19 +155,54 @@ def yonu_belirle(fatura, mukellef_vkn):
     return YON_BELIRSIZ
 
 
+def _ortak_vkn(ham_faturalar):
+    """Butun satirlarda tekrar eden VKN'yi bulur.
+
+    Portal dokumlerinde bir taraf hep aynidir: incelenen mukellef. Calismada
+    mukellefin VKN'si girilmemisse yon tayini bundan yararlanir; boylece
+    kullanici VKN yazmadan da alis/satis ayrimi dogru kurulur.
+    """
+    kumeler = []
+    for f in ham_faturalar or []:
+        kume = {v for v in (_vkn(f.get("alici_vkn")),
+                            _vkn(f.get("duzenleyen_vkn"))) if v}
+        if kume:
+            kumeler.append(kume)
+    if not kumeler:
+        return ""
+    ortak = set.intersection(*kumeler)
+    return sorted(ortak)[0] if len(ortak) == 1 else ""
+
+
+def _taraf_sutunu_var(ham_faturalar):
+    """Dokumde hem alici hem duzenleyen VKN sutunu tasiniyor mu."""
+    return (any(_vkn(f.get("alici_vkn")) for f in ham_faturalar or [])
+            and any(_vkn(f.get("duzenleyen_vkn")) for f in ham_faturalar or []))
+
+
 def normalize(ham_faturalar, mukellef_vkn=None):
     """Ham fatura satirlarini calismada saklanacak bicime getirir.
 
     Kullanicinin elle degistirdigi alanlar (yon, kayit donemi, dahil) varsa
     korunur; yalnizca bos olanlar veriden turetilir.
+
+    Yon tayini: dokumde alici ve duzenleyen sutunlari varsa mukellefin VKN'si
+    ile karsilastirilir. Mukellef VKN'si girilmemisse butun satirlarda tekrar
+    eden VKN mukellef sayilir. Dokum taraf sutunu tasimiyorsa - tek tarafli
+    alis listelerinde oldugu gibi - mukellef alici kabul edilir; aksi halde
+    butun satirlar "belirsiz" kalip tarhiyat disinda kaliyordu.
     """
+    ham_faturalar = list(ham_faturalar or [])
+    mukellef_vkn = _vkn(mukellef_vkn) or _ortak_vkn(ham_faturalar)
+    taraf_var = _taraf_sutunu_var(ham_faturalar)
     sonuc = []
-    for ham in ham_faturalar or []:
+    for ham in ham_faturalar:
         f = dict(ham)
         f.setdefault("iptal", False)
 
         if not f.get("yon"):
-            f["yon"] = yonu_belirle(f, mukellef_vkn)
+            f["yon"] = (yonu_belirle(f, mukellef_vkn) if taraf_var
+                        else YON_ALIS)
 
         if not f.get("kayit_yil") or not f.get("kayit_ay"):
             # Once yevmiye tarihi: KDV indirimi kayit doneminde yapilir

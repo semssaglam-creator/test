@@ -236,6 +236,7 @@ TARHIYAT_KOLONLARI = [
     ("Ödenecek KDV", "odenecek_olmasi_gereken", "Olması Gereken", ""),
     ("Ödenecek KDV", "odenecek_beyan", "Beyan Edilen", ""),
     ("1", "resen_tarhi_gereken", "Re'sen Tarhı Gereken KDV", "vurgu1"),
+    ("Ceza", "vergi_ziyai_cezasi", "Vergi Ziyaı Cezası", "vurgu1"),
     ("İade Edil. KDV", "iade_olmasi_gereken", "Olması Gereken", ""),
     ("İade Edil. KDV", "iade_beyan", "Beyan Edilen", ""),
     ("2", "aranmasi_gereken", "Aranması Ger. KDV", "vurgu1"),
@@ -246,6 +247,37 @@ TARHIYAT_KOLONLARI = [
     ("1+2+3", "toplam_fark", "Toplam Fark", "vurgu2"),
 ]
 
+# Tarhiyat tablosunda her zaman gosterilen sutunlar. Digerleri (iade ve
+# ihracat iadesi kolonlari ile bunlari iceren toplamlar) yalnizca tutar
+# tasidiklarinda yazilir: bos sutunlar tabloyu Word'e sigmayacak kadar
+# genisletiyordu.
+TARHIYAT_ZORUNLU_KODLAR = ["odenecek_olmasi_gereken", "odenecek_beyan",
+                           "resen_tarhi_gereken", "vergi_ziyai_cezasi"]
+
+
+def gorunen_tarhiyat_kolonlari(donemler):
+    """Verilen donemlerde tutar tasiyan tarhiyat sutunlarini secer."""
+    dolu = set()
+    for d in donemler or []:
+        for kod, deger in (d.get("tarhiyat") or {}).items():
+            try:
+                if abs(float(deger or 0.0)) > 0.005:
+                    dolu.add(kod)
+            except (TypeError, ValueError):
+                continue
+    gorunen = [k for k in TARHIYAT_KOLONLARI
+               if k[1] in TARHIYAT_ZORUNLU_KODLAR or k[1] in dolu]
+    kodlar = {k[1] for k in gorunen}
+    # Bilesenleri gizlenmisse toplam sutunlari re'sen tarhi gereken vergiyi
+    # tekrar etmis olur; onlari da yazmaya gerek yok.
+    atilacak = set()
+    if "aranmasi_gereken" not in kodlar:
+        atilacak.add("resen_toplam")
+    if not ({"aranmasi_gereken", "haksiz_iade"} & kodlar):
+        atilacak.add("toplam_fark")
+    return [k for k in gorunen if k[1] not in atilacak]
+
+
 # Fark ayristirmasinda gosterilen bilesenler
 AYRISTIRMA_BLOKLARI = [
     ("fark_tespit", "Tespitlerimin Etkisi",
@@ -255,7 +287,7 @@ AYRISTIRMA_BLOKLARI = [
      "Önceki dönemlerdeki tespitlerin devir zinciriyle bu döneme taşınan etkisi"),
     ("fark_beyan_hatasi", "Beyan Aritmetik Farkı",
      "Beyannamenin kendi rakamları içinde tutmayan kısım; tespitten bağımsızdır"),
-    ("fark", "Toplam Fark", "Üç bileşenin toplamı: eleştirili − beyan edilen"),
+    ("fark", "Toplam Fark", "Üç bileşenin toplamı: olması gereken − beyan edilen"),
 ]
 
 

@@ -129,6 +129,15 @@ def _sayi(deger):
     return tutar_coz(deger) or 0.0
 
 
+def _ziya_kati(calisma):
+    """Vergi ziyai cezasinin kati: bilerek kullanmada uc, aksi halde bir kat."""
+    try:
+        kat = int(str((calisma or {}).get("ziya_kati") or 1).strip()[0])
+    except (ValueError, IndexError):
+        kat = 1
+    return 3 if kat == 3 else 1
+
+
 def _hesapla(calisma):
     """Calismayi hesaplar; veritabanina dokunmaz."""
     yillar = _yillari_coz(calisma)
@@ -138,7 +147,7 @@ def _hesapla(calisma):
                 "kaynak_analizi": {"kaynaklar": [], "donemler": [], "etkilesim_var": False}}, []
     # Baslangic devri artik yil bazinda tutulur; _yillari_coz eski kayitlardaki
     # calisma duzeyindeki degeri ilk yila tasidi.
-    sonuc = hesap.seri_hesapla(yillar)
+    sonuc = hesap.seri_hesapla(yillar, ziya_kati=_ziya_kati(calisma))
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
     return sonuc, hesap.beyan_tutarlilik_kontrol(yillar)
 
@@ -731,7 +740,8 @@ class Istekci(BaseHTTPRequestHandler):
             except Exception:
                 duzeltmeler = None
         calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular,
-                        duzeltmeler, self._fatura_bloku(calisma))
+                        duzeltmeler, self._fatura_bloku(calisma),
+                        _ziya_kati(calisma))
         with open(dosya_yolu, "rb") as f:
             govde = f.read()
         self.send_response(200)

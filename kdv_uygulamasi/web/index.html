@@ -234,6 +234,15 @@
       hesaplanır. Farklı oranlı teslimlerde oranı değiştirebilir veya
       <strong>Oto</strong> kutusunu kaldırıp tutarı elle girebilirsiniz.
     </div>
+    <div class="satir" style="margin-bottom:10px;">
+      <div class="otomatik">
+        <button class="btn ikincil" id="tumIndirimReddi">Bu dönemin indirilecek KDV'sini tümüyle reddet</button>
+      </div>
+      <div class="genis"><div class="yardim">Defter ve belgeler ibraz edilmediğinde
+        kullanılır: seçili yılın her ayında beyan edilen <strong>bu döneme ait
+        indirilecek KDV</strong> tutarı, indirim reddi satırına yazılır. Girilmiş
+        tutarların üzerine yazar; ay ay değiştirebilirsiniz.</div></div>
+    </div>
     <div class="kaydir"><table class="izgara" id="elestiriIzgara"></table></div>
   </div>
   <div class="kart">
@@ -275,11 +284,19 @@
     <div class="yil-sekmeler" id="tarhiyatYilSekme"></div>
     <div class="satir">
       <div class="otomatik"><button class="btn" id="excelIndir2">Excel'e Aktar</button></div>
+      <div class="dar">
+        <label for="ziyaKati">Vergi ziyaı cezası</label>
+        <select id="ziyaKati">
+          <option value="1">1 kat (VUK 344)</option>
+          <option value="3">3 kat (VUK 359 kapsamında)</option>
+        </select>
+      </div>
     </div>
     <div class="yardim" style="margin-bottom:12px;">
       <strong>(1)</strong> re'sen tarhı gereken KDV, <strong>(2)</strong> haksız iade
       talebi nedeniyle aranması gereken KDV, <strong>(3)</strong> iade gerçekleşmişse
       haksız olarak iade edilen KDV. Sütunlar yalnızca mükellef aleyhine olan yönü taşır.
+      Tutar taşımayan iade sütunları gösterilmez.
     </div>
     <div class="kaydir"><table id="tarhiyatTablo"></table></div>
     <div id="tarhiyatNot"></div>
@@ -1781,9 +1798,9 @@ function sonucuCiz() {
     ? durum.sonuc.genel_toplam
     : (durum.sonuc.yil_toplamlari.find((y) => String(y.yil) === String(durum.sonucYil))
        || durum.sonuc.genel_toplam);
-  kap.appendChild(karsilastirmaTablosu("Eleştirili (Yeniden Hesaplanmış)", donemler, "elestirili", toplam));
+  kap.appendChild(karsilastirmaTablosu("Olması Gereken (Yeniden Hesaplanmış)", donemler, "elestirili", toplam));
   kap.appendChild(karsilastirmaTablosu("Beyan Edilen", donemler, "beyan", toplam));
-  kap.appendChild(karsilastirmaTablosu("Fark (Eleştirili − Beyan)", donemler, "fark", toplam, true));
+  kap.appendChild(karsilastirmaTablosu("Fark (Olması Gereken − Beyan)", donemler, "fark", toplam, true));
 
   const bulgular = durum.bulgular || [];
   $("bulguKart").style.display = bulgular.length ? "block" : "none";
@@ -1858,7 +1875,37 @@ function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
 }
 
 // ---------------------------------------------------------- tarhiyat ozeti
+/**
+ * Tarhiyat tablosunda gösterilecek sütunlar. Ödenecek KDV, re'sen tarhı
+ * gereken vergi ve ceza her zaman görünür; iade sütunları yalnızca tutar
+ * taşıdıklarında yazılır. Boş sütunlar tabloyu Word'e sığmayacak kadar
+ * genişletiyordu. Aynı ölçüt sunucu tarafında da uygulanır
+ * (satirlar.gorunen_tarhiyat_kolonlari).
+ */
+const TARHIYAT_ZORUNLU = ["odenecek_olmasi_gereken", "odenecek_beyan",
+  "resen_tarhi_gereken", "vergi_ziyai_cezasi"];
+
+function gorunenTarhiyatKolonlari(donemler) {
+  const dolu = new Set();
+  donemler.forEach((d) => {
+    Object.entries(d.tarhiyat || {}).forEach(([kod, deger]) => {
+      if (Math.abs(Number(deger) || 0) > 0.005) dolu.add(kod);
+    });
+  });
+  const gorunen = (durum.tanimlar.tarhiyat_kolonlari || []).filter(
+    (k) => TARHIYAT_ZORUNLU.includes(k.kod) || dolu.has(k.kod));
+  const kodlar = new Set(gorunen.map((k) => k.kod));
+  // Bileşenleri gizlenmişse toplam sütunları re'sen tarhı gereken vergiyi
+  // tekrar eder; onları da yazmaya gerek yok.
+  const atilacak = new Set();
+  if (!kodlar.has("aranmasi_gereken")) atilacak.add("resen_toplam");
+  if (!kodlar.has("aranmasi_gereken") && !kodlar.has("haksiz_iade")) atilacak.add("toplam_fark");
+  return gorunen.filter((k) => !atilacak.has(k.kod));
+}
+
 function tarhiyatiCiz() {
+  const kutu = $("ziyaKati");
+  if (kutu) kutu.value = String(durum.calisma.ziya_kati || 1);
   yilKulaklariniCiz("tarhiyatYilSekme", durum.tarhiyatYil, (y) => {
     durum.tarhiyatYil = y; tarhiyatiCiz();
   }, true, false);
@@ -1872,7 +1919,7 @@ function tarhiyatiCiz() {
       'sorguyu yapıştırın.</td></tr>';
     return;
   }
-  const kolonlar = durum.tanimlar.tarhiyat_kolonlari;
+  const kolonlar = gorunenTarhiyatKolonlari(donemler);
 
   const ust = document.createElement("tr");
   ust.appendChild(hucre("th", "Dönemi", { rowSpan: 2 }));
@@ -2786,15 +2833,68 @@ async function beyannameyiUygula() {
       if (durum.aktifYil == null) durum.aktifYil = yeni.yil;
     });
 
+    // Beyanname mükellefin kimliğini de taşır; boş alanlar oradan doldurulur.
+    // Kullanıcının kendi yazdığı değer korunur.
+    const yazilanKimlik = [];
+    if (y.mukellef) {
+      Object.entries({ vkn_tckn: "VKN", ad_unvan: "unvan",
+                       vergi_dairesi: "vergi dairesi" }).forEach(([kod, ad]) => {
+        if (y.mukellef[kod] && !String(durum.calisma.mukellef[kod] || "").trim()) {
+          durum.calisma.mukellef[kod] = y.mukellef[kod];
+          yazilanKimlik.push(ad);
+        }
+      });
+      $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
+      $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
+      $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
+    }
+
     $("bnSecimOzet").innerHTML =
       '<div class="yardim" style="margin-top:10px;"><strong>Beyan verisine yazıldı:</strong><ul style="margin:4px 0 0 18px;">' +
       y.kullanilan.map((k) => `<li>${k.donem} — ${k.surum}` +
         (k.onay_zamani ? ` (${k.onay_zamani})` : "") + `</li>`).join("") +
-      "</ul></div>";
+      "</ul></div>" +
+      (yazilanKimlik.length
+        ? `<div class="yardim">Mükellef bilgilerinden ${yazilanKimlik.join(", ")} ` +
+          "beyannameden alındı.</div>" : "") +
+      (y.uyarilar || []).map((u) =>
+        `<div class="uyari-satir" style="margin-top:8px;">${u.replace(/[<>]/g, "")}</div>`).join("");
     isaretle();
     mesaj(`${y.kullanilan.length} dönem beyan verisine yazıldı.`);
+    if ((y.uyarilar || []).length) {
+      mesaj("Yüklenen beyannameler tek mükellefe ait değil; uyarıya bakın.", "hata");
+    }
   } catch (hata) { mesaj(hata.message, "hata"); }
 }
+
+/**
+ * Defter ve belge ibraz edilmediğinde dönemin indirilecek KDV'sinin tamamı
+ * reddedilir (VUK 30/3). Seçili yılın beyan satırındaki "bu döneme ait
+ * indirilecek KDV" tutarları, indirim reddi satırına olduğu gibi yazılır.
+ */
+$("tumIndirimReddi").addEventListener("click", async () => {
+  const yil = aktifYilKaydi();
+  if (!yil) { mesaj("Önce beyan verisini yükleyin.", "hata"); return; }
+  const kaynak = (yil.beyan && yil.beyan.bu_donem_indirilecek) || [];
+  const dolu = kaynak.filter((v) => Math.abs(Number(v) || 0) > 0.005).length;
+  if (!dolu) { mesaj("Bu yılda indirilecek KDV beyanı bulunamadı.", "hata"); return; }
+  if (!confirm(`${yil.yil} yılında beyan edilen indirilecek KDV tutarlarının ` +
+               `tamamı (${dolu} dönem) reddedilecek. Girilmiş indirim reddi ` +
+               "tutarlarının üzerine yazılacak. Sürdürülsün mü?")) return;
+  for (let ay = 0; ay < 12; ay++) {
+    yil.elestiri.indirim_cikar[ay] = ay < yil.ay_sayisi
+      ? Number(kaynak[ay] || 0) : yil.elestiri.indirim_cikar[ay];
+  }
+  isaretle();
+  elestiriIzgarasiniCiz();
+  mesaj(`${dolu} dönemin indirilecek KDV'si tümüyle reddedildi.`);
+});
+
+$("ziyaKati").addEventListener("change", async () => {
+  durum.calisma.ziya_kati = Number($("ziyaKati").value) === 3 ? 3 : 1;
+  isaretle(false);
+  await hesapla();
+});
 
 $("bnMod").addEventListener("change", () => { bnSecimCiz(); });
 $("bnYalnizDegisen").addEventListener("change", () => { beyannameleriTazele(); });

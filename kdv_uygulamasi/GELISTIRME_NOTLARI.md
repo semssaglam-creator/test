@@ -169,6 +169,38 @@ oturumda buradan devam edilir.
       tablo kırmızı yer tutucularla açılıyor. — *kullanıcı isteği, örnek
       tabloyla*
 
+### 2026-08-11 — kullanıcının toplu düzeltme listesi
+
+- [x] Tarhiyat özetinde tutar taşımayan iade sütunları gizleniyor; bileşenleri
+      gizlenmişse "1+2" ve "1+2+3" toplamları da yazılmıyor. Tablo böylece
+      Word'e yapıştırıldığında sayfaya sığıyor. Aynı ölçüt hem ekranda hem
+      Excel'de geçerli (Excel formülleri artık sabit sütun harfi değil,
+      gösterilen sütunların harflerini kullanıyor).
+- [x] "Eleştirili" sözü ekranda ve Excel'de "Olması Gereken" olarak değişti.
+- [x] Tarhiyat özetine **Vergi Ziyaı Cezası** sütunu eklendi; 1 kat / 3 kat
+      seçimi ekranda yapılıyor, çalışmayla birlikte kaydediliyor.
+- [x] Tutanakta madde gövdeleri ince puntoya çevrildi.
+- [x] Tutanaktaki aritmetik denetim bulguları, KDV beyan tablosunun altına
+      taşındı (son maddedeki liste kaldırıldı).
+- [x] Raporda III. bölüm üç tablo: ilk beyannameler, düzeltme beyannameleri,
+      beyanın son hali. Düzeltme tablosu taşmıyor: gerekçe sütunu tablodan
+      çıkıp altta cümle oldu, tablo dar hücre boşluklarıyla 8 puntoda.
+- [x] Raporda "Genel Usulsüzlük" bölümü kaldırıldı.
+- [x] A- Re'sen Takdir Nedeni metni yeniden yazıldı; tutanağın satıcı veri
+      maddelerine (6., 8., 10. …) atıf yapıyor ve ikinci paragraf VUK 30/6 ile
+      uyumlu.
+- [x] Vergi Tekniği Raporu cümlesi satıcıya ilişkin tespitle tamamlanıyor.
+- [x] Düzeltmeyle çıkarılan faturalara ilişkin paragraf, düzeltilmiş beyan
+      tablosunun hemen öncesine taşındı.
+- [x] Beyanname yüklenip beyan verisine aktarıldığında mükellefin VKN, unvan
+      ve vergi dairesi bilgileri de alınıyor; farklı VKN'li beyanname
+      karışmışsa uyarı veriliyor.
+- [x] Fatura dökümünde alıcı/satıcı sütunları varsa yön onlardan belirleniyor;
+      mükellef VKN'si girilmemişse bütün satırlarda tekrar eden VKN mükellef
+      sayılıyor. Döküm taraf sütunu taşımıyorsa mükellef alıcı kabul ediliyor.
+- [x] İnceleme Tespitleri sekmesine "Bu dönemin indirilecek KDV'sini tümüyle
+      reddet" düğmesi eklendi (defter ve belge ibraz edilmediği hâl).
+
 ---
 
 ## Not düşerken

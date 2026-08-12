@@ -29,7 +29,8 @@ from openpyxl.utils import get_column_letter
 
 from .satirlar import (AYLAR_BUYUK, BEYAN_SATIRLARI, BEYAN_TOPLAM_TURLERI,
                        ELESTIRI_ALANLARI, OZET_KOLONLARI, TARHIYAT_KOLONLARI,
-                       TOPLAM_TURLERI, varsayilan_kdv_orani)
+                       TOPLAM_TURLERI, gorunen_tarhiyat_kolonlari,
+                       varsayilan_kdv_orani)
 
 FONT = Font(name="Calibri", size=10)
 FONT_BOLD = Font(name="Calibri", size=10, bold=True)
@@ -226,7 +227,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
 
     # --- Elestirili blok: once yerler ayrilir, formuller beyan ve elestiri
     # satir numaralari belli olduktan sonra doldurulur
-    satir = _baslik_satiri(ws, satir, "ELEŞTİRİLİ (YENİDEN HESAPLANMIŞ) BEYAN")
+    satir = _baslik_satiri(ws, satir, "OLMASI GEREKEN (YENİDEN HESAPLANMIŞ) BEYAN")
     x = {}
     for alan, etiket in ELESTIRILI_ALANLARI:
         _yaz(ws, satir, 1, etiket, FONT, SOL, bicim=None)
@@ -357,7 +358,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
         c = sut[sira]
         return "=" + "+".join(f"{c}{b[k]}" for k in OZET_BEYAN_KAYNAGI[alan])
 
-    satir, el_ilk = _ozet_tablo(ws, satir, "ÖZET — ELEŞTİRİLİ", yil_donemleri,
+    satir, el_ilk = _ozet_tablo(ws, satir, "ÖZET — OLMASI GEREKEN", yil_donemleri,
                                 "elestirili", formul=el_formulu)
     satir, by_ilk = _ozet_tablo(ws, satir, "ÖZET — BEYAN EDİLEN", yil_donemleri,
                                 "beyan", formul=by_formulu)
@@ -367,7 +368,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
         h = get_column_letter(j)
         return f"={h}{el_ilk + sira}-{h}{by_ilk + sira}"
 
-    _ozet_tablo(ws, satir, "FARK (ELEŞTİRİLİ − BEYAN)", yil_donemleri, "fark",
+    _ozet_tablo(ws, satir, "FARK (OLMASI GEREKEN − BEYAN)", yil_donemleri, "fark",
                 DOLGU_FARK, fark_mi=True, formul=fark_formulu)
     return {"yil": yil, "ay_sayisi": ay_sayisi, "x": x, "b": b, "e": e}
 
@@ -404,7 +405,7 @@ def _ozet_sayfasi(wb, inceleme, sonuc, bulgular, duzen):
         return "=" + "+".join(f"{sayfa}{c}{duzen['b'][k]}"
                               for k in OZET_BEYAN_KAYNAGI[alan])
 
-    satir, el_ilk = _ozet_tablo(ws, satir, "TÜM DÖNEMLER — ELEŞTİRİLİ", donemler,
+    satir, el_ilk = _ozet_tablo(ws, satir, "TÜM DÖNEMLER — OLMASI GEREKEN", donemler,
                                 "elestirili", formul=el_formulu)
     satir, by_ilk = _ozet_tablo(ws, satir, "TÜM DÖNEMLER — BEYAN EDİLEN", donemler,
                                 "beyan", formul=by_formulu)
@@ -427,39 +428,46 @@ def _ozet_sayfasi(wb, inceleme, sonuc, bulgular, duzen):
     return ws
 
 
-def _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen):
-    """Elde kullanilan tarhiyat ozeti tablosunun karsiligi (formullu)."""
+def _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati=1):
+    """Elde kullanilan tarhiyat ozeti tablosunun karsiligi (formullu).
+
+    Tutar tasimayan iade sutunlari yazilmaz: bos sutunlar tabloyu Word'e
+    yapistirildiginda sayfaya sigmayacak kadar genisletiyordu. Formuller de
+    bu yuzden sabit sutun harfleriyle degil, gosterilen sutunlarin kendi
+    harfleriyle kurulur.
+    """
+    kolonlar = gorunen_tarhiyat_kolonlari(sonuc["donemler"])
     ws = wb.create_sheet("Tarhiyat Özeti")
     ws.column_dimensions["A"].width = 14
-    for i in range(2, len(TARHIYAT_KOLONLARI) + 2):
+    for i in range(2, len(kolonlar) + 2):
         ws.column_dimensions[get_column_letter(i)].width = 16
 
     satir = 1
     _yaz(ws, satir, 1, "TARHİYAT ÖZETİ", FONT_BASLIK, SOL, DOLGU_BASLIK, bicim=None)
     ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
-                   end_column=len(TARHIYAT_KOLONLARI) + 1)
+                   end_column=len(kolonlar) + 1)
     satir += 2
 
     # Gruplanmis ust baslik
     _yaz(ws, satir, 1, "Dönemi", FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
     ws.merge_cells(start_row=satir, start_column=1, end_row=satir + 1, end_column=1)
     i = 0
-    while i < len(TARHIYAT_KOLONLARI):
+    while i < len(kolonlar):
         j = i
-        while (j + 1 < len(TARHIYAT_KOLONLARI)
-               and TARHIYAT_KOLONLARI[j + 1][0] == TARHIYAT_KOLONLARI[i][0]):
+        while (j + 1 < len(kolonlar)
+               and kolonlar[j + 1][0] == kolonlar[i][0]):
             j += 1
-        dolgu = _tarhiyat_dolgu(TARHIYAT_KOLONLARI[i][3]) or DOLGU_BASLIK
+        dolgu = _tarhiyat_dolgu(kolonlar[i][3]) or DOLGU_BASLIK
         # Once tum hucreler bicimlendirilir, birlestirme en sonda yapilir:
         # birlestirilen hucrelere sonradan yazilamaz
         for k in range(i + 2, j + 3):
             _yaz(ws, satir, k, "", FONT_BOLD, ORTA, dolgu, bicim=None)
-        _yaz(ws, satir, i + 2, TARHIYAT_KOLONLARI[i][0], FONT_BOLD, ORTA, dolgu, bicim=None)
+        _yaz(ws, satir, i + 2, kolonlar[i][0], FONT_BOLD, ORTA, dolgu, bicim=None)
         if j > i:
             ws.merge_cells(start_row=satir, start_column=i + 2, end_row=satir, end_column=j + 2)
         i = j + 1
     satir += 1
-    for idx, (grup, _kod, etiket, vurgu) in enumerate(TARHIYAT_KOLONLARI):
+    for idx, (grup, _kod, etiket, vurgu) in enumerate(kolonlar):
         dolgu = _tarhiyat_dolgu(vurgu) or DOLGU_BASLIK
         _yaz(ws, satir, idx + 2, "" if etiket == grup else etiket, FONT_BOLD, ORTA,
              dolgu, bicim=None)
@@ -471,39 +479,46 @@ def _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen):
     for d in sonuc["donemler"]:
         if d["yil"] != onceki_yil:
             _yaz(ws, satir, 1, f"{d['yil']} Dönemi", FONT_BOLD, SOL, DOLGU_BASLIK, bicim=None)
-            for k in range(2, len(TARHIYAT_KOLONLARI) + 2):
+            for k in range(2, len(kolonlar) + 2):
                 _yaz(ws, satir, k, "", FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
             satir += 1
             onceki_yil = d["yil"]
         s, c = f"'{d['yil']}'!", get_column_letter(d["ay"] + 1)
-        # Sutunlar: B ödenecek olması gereken, C beyan, D re'sen, E iade olması
-        # gereken, F iade beyan, G aranması, H 1+2, I ihracat iadesi olması
-        # gereken, J beyan, K haksız iade, L toplam fark
+        # Gosterilen sutunlarin harfleri; gizlenen bir sutuna atif gerekirse
+        # yerine 0 konur (gizlenmis olmasi butun donemlerde sifir demektir).
+        harf = {kod: get_column_letter(idx + 2)
+                for idx, (_g, kod, _e, _v) in enumerate(kolonlar)}
+        H = lambda kod: ("%s%d" % (harf[kod], satir)) if kod in harf else "0"
         formuller = {
             "odenecek_olmasi_gereken": f"={s}{c}{x['odenecek']}",
             "odenecek_beyan": f"={s}{c}{b['odenmesi_gereken_kdv']}",
-            "resen_tarhi_gereken": f"=MAX(B{satir}-C{satir},0)",
+            "resen_tarhi_gereken":
+                f"=MAX({H('odenecek_olmasi_gereken')}-{H('odenecek_beyan')},0)",
+            "vergi_ziyai_cezasi": f"={H('resen_tarhi_gereken')}*{int(ziya_kati)}",
             "iade_olmasi_gereken": f"={s}{c}{x['iade']}",
             "iade_beyan": f"={s}{c}{b['iade_edilmesi_gereken_kdv']}",
-            "aranmasi_gereken": f"=MAX(F{satir}-E{satir},0)",
-            "resen_toplam": f"=D{satir}+G{satir}",
+            "aranmasi_gereken":
+                f"=MAX({H('iade_beyan')}-{H('iade_olmasi_gereken')},0)",
+            "resen_toplam": f"={H('resen_tarhi_gereken')}+{H('aranmasi_gereken')}",
             # Elestirili ihracat iadesi: tecil edilebilir - tecil edilecek
             "ihracat_iade_olmasi_gereken": (f"={s}{c}{b['tecil_edilebilir_kdv']}"
                                             f"-{s}{c}{x['tecil_edilecek']}"),
             "ihracat_iade_beyan": f"={s}{c}{b['ihracat_tecil_edilemeyen']}",
-            "haksiz_iade": f"=MAX(J{satir}-I{satir},0)",
-            "toplam_fark": f"=D{satir}+G{satir}+K{satir}",
+            "haksiz_iade":
+                f"=MAX({H('ihracat_iade_beyan')}-{H('ihracat_iade_olmasi_gereken')},0)",
+            "toplam_fark": (f"={H('resen_tarhi_gereken')}+{H('aranmasi_gereken')}"
+                            f"+{H('haksiz_iade')}"),
         }
         _yaz(ws, satir, 1, d["ay_adi"], FONT, SOL, bicim=None)
-        for idx, (_g, kod, _e, vurgu) in enumerate(TARHIYAT_KOLONLARI):
+        for idx, (_g, kod, _e, vurgu) in enumerate(kolonlar):
             font = FONT_FARK if vurgu == "vurgu1" else (FONT_BOLD if vurgu == "vurgu2" else FONT)
             _yaz(ws, satir, idx + 2, formuller[kod], font, SAG, _tarhiyat_dolgu(vurgu))
         satir += 1
 
     _yaz(ws, satir, 1, "Toplam", FONT_BOLD, SOL, DOLGU_TOPLAM, bicim=None)
-    for idx, (_g, _kod, _e, vurgu) in enumerate(TARHIYAT_KOLONLARI):
-        harf = get_column_letter(idx + 2)
-        _yaz(ws, satir, idx + 2, f"=SUM({harf}{ilk_veri}:{harf}{satir - 1})",
+    for idx, (_g, _kod, _e, vurgu) in enumerate(kolonlar):
+        sutun = get_column_letter(idx + 2)
+        _yaz(ws, satir, idx + 2, f"=SUM({sutun}{ilk_veri}:{sutun}{satir - 1})",
              FONT_BOLD, SAG, _tarhiyat_dolgu(vurgu) or DOLGU_TOPLAM)
     satir += 2
 
@@ -757,7 +772,7 @@ def _fatura_sayfasi(wb, fatura_bloku):
 
 
 def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
-                    duzeltme_bloklari=None, fatura_bloku=None):
+                    duzeltme_bloklari=None, fatura_bloku=None, ziya_kati=1):
     """Excel calisma dosyasini uretir ve yola yazar."""
     wb = Workbook()
     wb.remove(wb.active)
@@ -772,7 +787,7 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
     _yil_uyum_sayfasi(wb, sonuc)
     if duzen:
         # Satir duzeni butun yil sayfalarinda aynidir; sonuncusu yeterlidir
-        _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen)
+        _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati)
         _ozet_sayfasi(wb, inceleme, sonuc, bulgular or [], duzen)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
     wb.save(dosya_yolu)

@@ -193,12 +193,14 @@ OZET_ALANLARI = ["matrah", "toplam_kdv", "onceki_devir", "bu_donem_indirim_topla
 AYRISTIRMA_ALANLARI = OZET_ALANLARI + ["tecil_edilecek", "ihracat_iade"]
 
 
-def seri_hesapla(yillar, devreden_baslangic=None):
+def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
     """Cok yilli seriyi kronolojik sirada hesaplar.
 
     yillar: [{"yil": 2022, "ay_sayisi": 12, "beyan": {...}, "elestiri": {...}}, ...]
     devreden_baslangic: serinin ilk donemine tasinacak duzeltilmis devir
         (None ise ilk donemde beyandaki devir esas alinir).
+    ziya_kati: vergi ziyai cezasinin kati (VUK 344: bir kat; 359 kapsaminda
+        uc kat). Tarhiyat ozetindeki ceza sutunu bununla hesaplanir.
 
     Doner: {"donemler": [...], "yil_toplamlari": [...], "genel_toplam": {...}}
     Her donem kaydi beyan / elestirili / fark uclusunu birlikte tasir.
@@ -249,7 +251,8 @@ def seri_hesapla(yillar, devreden_baslangic=None):
                 "fark_tespit": fark_tespit,
                 "fark_devir": fark_devir,
                 "elestiri_var": _elestiri_var(elestiri, ay),
-                "tarhiyat": _tarhiyat_satiri(beyan_ozet, elestirili),
+                "tarhiyat": _tarhiyat_satiri(beyan_ozet, elestirili,
+                                            ziya_kati),
             })
             devreden = elestirili["sonraki_devir"]
 
@@ -262,7 +265,7 @@ def seri_hesapla(yillar, devreden_baslangic=None):
     }
 
 
-def _tarhiyat_satiri(beyan_ozet, elestirili):
+def _tarhiyat_satiri(beyan_ozet, elestirili, ziya_kati=1):
     """Bir donemin tarhiyat ozeti satirini uretir.
 
     Sutunlar, elde kullanilan tarhiyat tablosunun karsiligidir:
@@ -283,6 +286,9 @@ def _tarhiyat_satiri(beyan_ozet, elestirili):
         "odenecek_olmasi_gereken": _yuvarla(elestirili["odenecek"]),
         "odenecek_beyan": _yuvarla(beyan_ozet["odenecek"]),
         "resen_tarhi_gereken": _yuvarla(resen),
+        # Ceza, re'sen tarhi gereken vergi uzerinden hesaplanir; kat secimi
+        # (bir kat / uc kat) kullaniciya aittir.
+        "vergi_ziyai_cezasi": _yuvarla(resen * float(ziya_kati or 1)),
         "iade_olmasi_gereken": _yuvarla(elestirili["iade"]),
         "iade_beyan": _yuvarla(beyan_ozet["iade"]),
         "aranmasi_gereken": _yuvarla(aranmasi),
@@ -298,6 +304,7 @@ def _tarhiyat_satiri(beyan_ozet, elestirili):
 
 
 TARHIYAT_ALANLARI = ["odenecek_olmasi_gereken", "odenecek_beyan", "resen_tarhi_gereken",
+                     "vergi_ziyai_cezasi",
                      "iade_olmasi_gereken", "iade_beyan", "aranmasi_gereken", "resen_toplam",
                      "ihracat_iade_olmasi_gereken", "ihracat_iade_beyan", "haksiz_iade",
                      "toplam_fark", "fazla_beyan_odenecek", "eksik_talep_iade"]
