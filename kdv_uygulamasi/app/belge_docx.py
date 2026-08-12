@@ -68,6 +68,66 @@ def _kacir(metin):
                  .replace('"', "&quot;"))
 
 
+# Tablo sigdirmada kullanilan olculer
+GOVDE_PUNTOSU = 12          # belge govde puntosu (stiller.xml ile ayni)
+EN_KUCUK_PUNTO = 7          # bundan kucugu okunmuyor; asagi inilmez
+GENIS_HUCRE_BOSLUGU = 216   # Word varsayilani (sutun basina, iki yan toplam)
+DAR_HUCRE_BOSLUGU = 86
+
+
+def _en_uzun_hucreler(basliklar, satirlar, kolon_sayisi):
+    """Her kolon icin en uzun satirin karakter sayisi.
+
+    Hucre icindeki alt satirlar (\\n) ayri ayri olculur: baslikta "Dönemi\\n2023"
+    yazdiginda kolonun genisligini "Dönemi" belirler, ikisinin toplami degil.
+    """
+    uzunluklar = [0] * kolon_sayisi
+    for satir in [basliklar] + list(satirlar or []):
+        for i, hucre in enumerate(list(satir)[:kolon_sayisi]):
+            for parca in str(hucre or "").split("\n"):
+                uzunluklar[i] = max(uzunluklar[i], len(parca))
+    return uzunluklar
+
+
+def _icerik_agirliklari(basliklar, satirlar, kolon_sayisi):
+    """Kolon genislik agirliklarini icerikten cikarir.
+
+    Oran verilmediginde kolonlari esit bolmek, kisa kolonlara gereksiz yer
+    ayirip uzun kolonlari alt satira dusuruyordu. En kisa kolon da okunabilsin
+    diye alt sinir konur.
+    """
+    uzunluklar = _en_uzun_hucreler(basliklar, satirlar, kolon_sayisi)
+    return [max(u, 4) for u in uzunluklar]
+
+
+def _sigacak_punto(basliklar, satirlar, kolon_sayisi, buyukluk, dar):
+    """Tablonun sayfaya sigmasi icin punto ve hucre boslugu secer.
+
+    Times New Roman'da rakam ve ortalama harf genisligi yaklasik yarim em'dir;
+    gereken genislik buradan kestirilir. Once dar hucre boslugu denenir,
+    yetmezse punto oranli olarak kucultulur.
+    """
+    punto = float(buyukluk or GOVDE_PUNTOSU)
+    uzunluklar = _en_uzun_hucreler(basliklar, satirlar, kolon_sayisi)
+    karakter = float(sum(uzunluklar))
+    if karakter <= 0:
+        return buyukluk, dar
+
+    def gereken(p, bosluk):
+        return karakter * p * 10.0 + bosluk * kolon_sayisi
+
+    if gereken(punto, DAR_HUCRE_BOSLUGU if dar else GENIS_HUCRE_BOSLUGU) <= YAZI_ALANI:
+        return buyukluk, dar
+
+    dar = True
+    kalan = YAZI_ALANI - DAR_HUCRE_BOSLUGU * kolon_sayisi
+    if kalan <= 0:
+        return EN_KUCUK_PUNTO, dar
+    yeni = min(punto, kalan / (karakter * 10.0))
+    yeni = max(EN_KUCUK_PUNTO, round(yeni * 2) / 2.0)   # yarim puntoya yuvarla
+    return yeni, dar
+
+
 def _rpr(kalin, italik, buyukluk, renk=None):
     """Kosu bicim blogu. Ogelerin sirasi Word semasinin bekledigi siradir."""
     ozellikler = []
@@ -78,8 +138,11 @@ def _rpr(kalin, italik, buyukluk, renk=None):
     if renk:
         ozellikler.append('<w:color w:val="%s"/>' % renk)
     if buyukluk:
+        # Word yazi buyuklugunu yarim punto biriminde tutar; kesirli punto
+        # (orn. 8,5) bu sayede yazilabiliyor.
+        yarim = max(1, int(round(float(buyukluk) * 2)))
         ozellikler.append('<w:sz w:val="%d"/><w:szCs w:val="%d"/>'
-                          % (buyukluk * 2, buyukluk * 2))
+                          % (yarim, yarim))
     return "<w:rPr>%s</w:rPr>" % "".join(ozellikler) if ozellikler else ""
 
 
@@ -180,14 +243,22 @@ class Belge:
                        bosluklari sutun basina 216 twip yer yer; dokuz on
                        sutunlu tutar tablolarinda bu, rakamlarin alt satira
                        kaymasina yol aciyor.
+
+        Genislik ve punto icerige gore ayarlanir: en uzun hucrelerin sayfaya
+        sigmadigi tablolarda once hucre bosluklari daraltilir, yetmezse punto
+        oranli olarak kucultulur (en az `EN_KUCUK_PUNTO`). Boylece satirlar
+        alt satira kaymaz.
         """
         kolon_sayisi = len(basliklar)
         if not kolon_sayisi:
             return self
         hizalar = list(hizalar or ["sol"] * kolon_sayisi)
         hizalar += ["sol"] * (kolon_sayisi - len(hizalar))
-        agirliklar = list(oranlar or [1] * kolon_sayisi)
+        agirliklar = list(oranlar or _icerik_agirliklari(basliklar, satirlar,
+                                                         kolon_sayisi))
         agirliklar += [1] * (kolon_sayisi - len(agirliklar))
+        buyukluk, dar = _sigacak_punto(basliklar, satirlar, kolon_sayisi,
+                                       buyukluk, dar)
         toplam = float(sum(agirliklar)) or 1.0
         genislikler = [int(YAZI_ALANI * a / toplam) for a in agirliklar]
         # Yuvarlama artigini son kolona ver ki tablo tam genislikte kalsin

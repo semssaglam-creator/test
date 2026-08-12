@@ -3388,11 +3388,26 @@ $("vbSecici").addEventListener("change", async () => {
 
 $("vbAktar").addEventListener("click", () => {
   if (!vbOkunan) return;
-  durum.calisma.kunye.vergi_beyan_ozeti = vbOkunan.metin;
+  // Künyedeki özet yıl yıl tutulur: yeni beyanname öncekilerin üzerine
+  // yazmaz, yalnızca kendi yılının satırlarını yeniler. Böylece incelenen
+  // her yılın beyannamesi ayrı ayrı yüklenebiliyor.
+  const yil = String(vbOkunan.yil || "").trim();
+  const eski = String(durum.calisma.kunye.vergi_beyan_ozeti || "")
+    .split("\n").map((s) => s.trim()).filter(Boolean);
+  const kalan = yil
+    ? eski.filter((s) => s.split("|")[0].trim() !== yil)
+    : eski;
+  const yeni = kalan.concat(vbOkunan.metin.split("\n").filter(Boolean));
+  // Yıla göre sırala; yılsız (eski) satırlar başta kalsın
+  yeni.sort((a, b) => (a.split("|")[0].trim() || "").localeCompare(
+    b.split("|")[0].trim() || "", "tr"));
+  const metin = yeni.join("\n");
+  durum.calisma.kunye.vergi_beyan_ozeti = metin;
   const girdi = $("k_vergi_beyan_ozeti");
-  if (girdi) girdi.value = vbOkunan.metin;
+  if (girdi) girdi.value = metin;
   isaretle(false);
-  mesaj("Beyanname özeti künyeye aktarıldı.");
+  const yillar = new Set(yeni.map((s) => s.split("|")[0].trim()).filter(Boolean));
+  mesaj(`Beyanname özeti künyeye aktarıldı (künyede ${yillar.size} yıl var).`);
 });
 
 // --------------------------------------------------- inceleme kunyesi formu

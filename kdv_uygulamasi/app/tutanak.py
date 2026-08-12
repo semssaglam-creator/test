@@ -199,10 +199,12 @@ def _madde(b, sayac, metin):
     """Numarali tutanak maddesi. Kullanilan numarayi dondurur.
 
     Madde metni duz yazilir; dairenin tutanaklarinda da madde govdesi kalin
-    degildir. Numara ile metin ayni paragrafta kalir.
+    degildir. Numara ile metin ayni paragrafta kalir ve paragraf, tutanagin
+    oteki paragraflari gibi satir basi girintisiyle baslar.
     """
     no = sayac()
-    b.paragraf("%d- %s" % (no, metin), aralik_once=140, aralik_sonra=80)
+    b.paragraf("%d- %s" % (no, metin), girinti=1,
+               aralik_once=140, aralik_sonra=80)
     return no
 
 
@@ -211,10 +213,10 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
     tanitim = (
         "%s %s vergi kimlik numaralı mükellefi %s, “%s” adresinde “%s” "
         "faaliyeti ile iştigal etmektedir."
-        % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
-           inceleme.get("adres") or "[Adres]",
+           ik.adres(inceleme.get("adres")),
            ik.deger(kunye, "faaliyet_konusu")))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
         tanitim += (" %s e-Defter ve e-Fatura uygulamaları kapsamındadır."
@@ -225,7 +227,7 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
 
     if satici_satirlari:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
-                 % (s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
+                 % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
                     s["vkn"] or "[VKN]", ik.satici_unvani(s))
                  for s in satici_satirlari]
         alis = (" %s %s %s olan alışlarının sahte belge kullanma kapsamında "
@@ -329,25 +331,84 @@ KURUMLAR_VERGISI_KALEMLERI = [
 ]
 
 
+def _inceleme_yeri_cumlesi(inceleme, kunye):
+    """İncelemenin nerede yapildigini adresiyle birlikte yazar.
+
+    Yalnizca "dairede" demek yetmiyor; tutanakta incelemenin yapildigi adres
+    de yer almali. Adres girilmemisse kirmizi yer tutucu birakilir ki taslak
+    uzerinde doldurulsun.
+    """
+    yer = str(kunye.get("inceleme_yeri") or "").strip()
+    calisma_adresi = ik.adres(kunye.get("calisma_adresi"),
+                              "[Müfettişliğin çalışma adresi]")
+    if yer == "Mükellefin iş yerinde":
+        return ("İnceleme, %s “%s” adresindeki iş yerinde yapılmıştır."
+                % (ik.mukellef_sozu(kunye, ek="in"),
+                   ik.adres(inceleme.get("adres"))))
+    if yer == "Uzaktan":
+        return ("İnceleme, Müfettişliğimizin “%s” çalışma adresinden uzaktan "
+                "erişim yoluyla yapılmıştır." % calisma_adresi)
+    return ("İnceleme, Müfettişliğimizin “%s” çalışma adresinde yapılmıştır."
+            % calisma_adresi)
+
+
+def _vergi_beyani_yillari(kunye, donemler):
+    """Yil -> [(aciklama, tutar)] biciminde beyanname ozetleri.
+
+    Kunyedeki satirlar "yil | aciklama | tutar" duzenindedir. Eski
+    calismalarda yil sutunu yoktur; o satirlar incelemenin ilk yilina
+    yazilir - veri kaybolmasin, ama yil bilgisi de uydurulmasin diye yil
+    okunamayan satirlar kirmizi "[yıl]" basligi altinda toplanir.
+    """
+    incelenen = sorted({d["yil"] for d in donemler})
+    varsayilan = str(incelenen[0]) if incelenen else "[yıl]"
+    gruplar = {}
+    sira = []
+    for ham in ik.satirlar(kunye, "vergi_beyan_ozeti"):
+        parcalar = [p.strip() for p in ham.replace("\t", "|").split("|")]
+        if len(parcalar) >= 3:
+            yil, aciklama, tutar = parcalar[0], parcalar[1], parcalar[2]
+        else:
+            parcalar += [""] * (2 - len(parcalar))
+            yil, aciklama, tutar = varsayilan, parcalar[0], parcalar[1]
+        yil = yil or varsayilan
+        if not (aciklama or tutar):
+            continue
+        if yil not in gruplar:
+            gruplar[yil] = []
+            sira.append(yil)
+        gruplar[yil].append([aciklama or "[açıklama]", tutar or "[tutar]"])
+
+    if not sira:
+        # Hic ozet girilmemis: incelenen her yil icin olagan kalemler yazilir,
+        # tutarlar kirmizi birakilir.
+        kalemler = (KURUMLAR_VERGISI_KALEMLERI if ik.kurum_mu(kunye)
+                    else GELIR_VERGISI_KALEMLERI)
+        for yil in (incelenen or ["[yıl]"]):
+            sira.append(str(yil))
+            gruplar[str(yil)] = [[ad, "[tutar]"] for ad in kalemler]
+    return [(yil, gruplar[yil]) for yil in sira]
+
+
 def _vergi_beyani_maddesi(b, kunye, sayac, donemler):
     """Gelir / Kurumlar Vergisi beyannamesi dokumu maddesi.
 
-    Kunyeye beyanname ozeti girilmemis olsa da madde atlanmaz: mukellef
-    turune gore olagan kalemler yazilir, tutarlar kirmizi tutucu olarak
-    birakilir. Ozet, beyanname PDF'i yuklenerek de doldurulabilir.
+    Inceleme birden cok yili kapsiyorsa her yilin ozeti ayri tablo olarak
+    yazilir. Kunyeye ozet girilmemis olsa da madde atlanmaz: mukellef turune
+    gore olagan kalemler yazilir, tutarlar kirmizi tutucu olarak birakilir.
     """
-    satirlar = ik.cizgili_satirlar(kunye, "vergi_beyan_ozeti", 2,
-                                   ["açıklama", "tutar"])
-    if not satirlar:
-        kalemler = (KURUMLAR_VERGISI_KALEMLERI if ik.kurum_mu(kunye)
-                    else GELIR_VERGISI_KALEMLERI)
-        satirlar = [[ad, "[tutar]"] for ad in kalemler]
+    bloklar = _vergi_beyani_yillari(kunye, donemler)
     ad = "Kurumlar Vergisi" if ik.kurum_mu(kunye) else "Gelir Vergisi"
-    _madde(b, sayac, "%s %s ait %s Beyannamesi özetine aşağıda yer verilmiştir."
+    _madde(b, sayac, "%s %s ait %s Beyannamesi özetlerine aşağıda yer "
+                     "verilmiştir."
            % (ik.mukellef_sozu(kunye, buyuk=True, ek="in"),
               _donem_ifadesi(kunye, donemler, "yonelme"), ad))
-    b.tablo(["Açıklama", "Tutar"], satirlar, hizalar=["sol", "sag"],
-            oranlar=[3, 1], buyukluk=TABLO_PUNTOSU)
+    # Baslikta buyuk harfe cevirirken Turkce i/I ciftine dikkat edilmeli;
+    # str.title() "ilk" gibi sozcukleri bozar.
+    donem_adi = turkce.unvan(ik.donem_adi(kunye, False))
+    for yil, satirlar in bloklar:
+        b.tablo(["%s %s\nAçıklama" % (yil, donem_adi), "Tutar"], satirlar,
+                hizalar=["sol", "sag"], oranlar=[3, 1], buyukluk=TABLO_PUNTOSU)
 
 
 def _kdv_beyani_maddesi(b, kunye, sayac, donemler, uyumsuz=None):
@@ -406,7 +467,7 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
             "ile defter kayıtları aşağıdaki gibidir. (Ek-2: %d adet fatura "
             "fotokopisi)"
             % (M(kunye, buyuk=True, ek="in"),
-               s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
+               ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
                s["vkn"] or "[VKN]", ik.satici_unvani(s),
                len(kendi), _tl(s["matrah"]), len(kendi)))
 
@@ -430,11 +491,15 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
 
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
         cevap = (s.get("cevap") or "").strip() or genel_cevap
-        _madde(b, sayac, _soru_metni(veri_no, s, sorular, cevap))
+        _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
 
 
-def _soru_metni(veri_no, s, sorular, cevap):
-    """Bir saticinin faturalarina iliskin soru maddesinin metni."""
+def _soru_metni(kunye, veri_no, s, sorular, cevap):
+    """Bir saticinin faturalarina iliskin soru maddesinin metni.
+
+    Sorular kurumda kurum yetkilisine, gercek kisi mukellefte mukellefin
+    kendisine yoneltilir; madde de ona gore baslar.
+    """
     if sorular:
         hususlar = turkce.liste([x.rstrip("?").strip() for x in sorular])
     else:
@@ -443,11 +508,12 @@ def _soru_metni(veri_no, s, sorular, cevap):
                     "emtiayı alıp almadığı, mal sevklerinin kim tarafından "
                     "yerine getirildiği ve fatura ödemelerinin ne şekilde "
                     "yapıldığı")
-    return ("Mükellefe, tutanağın %d. maddesinde bilgileri yer alan ve %s "
-            "tarafından düzenlenen faturaların sahte faturalar olduğunun tespit "
-            "edildiği hususu izah edilmiş ve %s hususları sorulmuş olup, "
-            "mükellef cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
-            % (veri_no, ik.satici_unvani(s), hususlar,
+    return ("%s, tutanağın %d. maddesinde bilgileri yer alan ve %s tarafından "
+            "düzenlenen faturaların sahte faturalar olduğunun tespit edildiği "
+            "hususu izah edilmiş ve %s hususları sorulmuş olup, %s cevaben; "
+            "“%s” şeklinde ifade ve beyanda bulunmuştur."
+            % (ik.soru_muhatabi(kunye, ek="e"), veri_no, ik.satici_unvani(s),
+               hususlar, ik.soru_muhatabi(kunye, buyuk=False),
                cevap or "[mükellefin beyanı]"))
 
 
@@ -483,16 +549,19 @@ def _sorular_maddesi(b, kunye, sayac, satici_satirlari):
     beyan = " ".join(ik.satirlar(kunye, "mukellef_beyani"))
     if not sorular and not beyan:
         return
+    muhatap = ik.soru_muhatabi(kunye, ek="e")
+    kucuk = ik.soru_muhatabi(kunye, buyuk=False)
     if sorular:
-        giris = ("Mükellefe, yukarıda bilgileri yer alan faturaların sahte "
-                 "faturalar olduğunun tespit edildiği hususu izah edilmiş ve "
-                 "%s sorulmuş olup, mükellef cevaben; “%s” şeklinde ifade ve "
-                 "beyanda bulunmuştur."
-                 % (turkce.liste([s.rstrip("?") for s in sorular]) + " hususları",
-                    beyan or "[mükellefin beyanı]"))
+        giris = ("%s, yukarıda bilgileri yer alan faturaların sahte faturalar "
+                 "olduğunun tespit edildiği hususu izah edilmiş ve %s sorulmuş "
+                 "olup, %s cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
+                 % (muhatap,
+                    turkce.liste([s.rstrip("?") for s in sorular]) + " hususları",
+                    kucuk, beyan or "[mükellefin beyanı]"))
     else:
-        giris = ("Mükellefe tespit edilen hususlar izah edilmiş olup, mükellef "
-                 "cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur." % beyan)
+        giris = ("%s tespit edilen hususlar izah edilmiş olup, %s cevaben; "
+                 "“%s” şeklinde ifade ve beyanda bulunmuştur."
+                 % (muhatap, kucuk, beyan))
     _madde(b, sayac, giris)
 
 
@@ -590,13 +659,7 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
            "düzenlenmesinden önce mükellefe açıklanmıştır.")
     # Calisma adresi girilmediyse inceleme yeri secimi ("Dairede" vb.) yazilir;
     # cumle o zaman "... Dairede çalışma adresinde" olmasin diye ayrilir.
-    adres = str(kunye.get("calisma_adresi") or "").strip()
-    if adres:
-        _madde(b, sayac, "İnceleme, Müfettişliğimizin “%s” çalışma adresinde "
-                         "yapılmıştır." % adres)
-    else:
-        _madde(b, sayac, "İnceleme %s yapılmıştır."
-               % ik.deger(kunye, "inceleme_yeri").lower())
+    _madde(b, sayac, _inceleme_yeri_cumlesi(inceleme, kunye))
     _defter_maddesi(b, kunye, sayac, donemler)
     _vergi_beyani_maddesi(b, kunye, sayac, donemler)
     _kdv_beyani_maddesi(b, kunye, sayac, donemler,

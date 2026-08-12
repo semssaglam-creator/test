@@ -162,8 +162,11 @@ BOLUMLER = [
                       "Örn: 2023 | Yevmiye Defteri | 25.12.2022 - 55555 | Mersin 17. Noterliği"},
             {"kod": "vergi_beyan_ozeti",
              "etiket": "Gelir / Kurumlar Vergisi beyanname özeti", "tur": "uzun",
-             "ipucu": "Her satıra bir kalem: açıklama | tutar. Örn: "
-                      "Ticari Kazançlar | 13.019,63"},
+             "ipucu": "Her satıra bir kalem: yıl | açıklama | tutar. Örn: "
+                      "2023 | Ticari Kazançlar | 13.019,63. İncelenen her yıl "
+                      "için ayrı satırlar yazın; tutanakta yıl yıl ayrı tablo "
+                      "olarak yer alır. Beyanname PDF'i yüklendiğinde yıl "
+                      "kendiliğinden eklenir."},
             {"kod": "muhasebe_kaydi", "etiket": "Faturaların muhasebe kaydı", "tur": "uzun",
              "ipucu": "Fatura tablosunun altına girer. Örn: alışların 153-Ticari "
                       "Mallar ile 191-İndirilecek KDV hesaplarına borç, 320-Satıcılar "
@@ -395,6 +398,22 @@ def kazanc_maddeleri(kunye):
     return ["gvk_37", "gvk_40", "gvk_mk120"]
 
 
+def soru_muhatabi(kunye, buyuk=True, ek=""):
+    """Tutanakta alislara iliskin sorularin yoneltildigi kisi.
+
+    Kurumda sorular tuzel kisiye degil, onun adina hareket eden yetkiliye
+    yoneltilir ve tutanakta "Mükellef Kurum Yetkilisi" diye anilir; gercek
+    kisi mukellefte muhatap mukellefin kendisidir. Iyelik ekiyle biten
+    "Yetkilisi" sozcugu yonelme ekinden once kaynastirma "n"si aldigindan
+    ekler burada verilir.
+    """
+    if kurum_mu(kunye):
+        govde = "Mükellef Kurum Yetkilisi" if buyuk else "mükellef kurum yetkilisi"
+        return govde + {"": "", "e": "ne", "in": "nin"}.get(ek, ek)
+    govde = "Mükellef" if buyuk else "mükellef"
+    return govde + {"": "", "e": "e", "in": "in"}.get(ek, ek)
+
+
 def mukellef_adi(inceleme, kunye, yer_tutucu="[Mükellef unvanı]"):
     """Incelenen mukellefin adini yazim kurallariyla verir.
 
@@ -407,6 +426,16 @@ def mukellef_adi(inceleme, kunye, yer_tutucu="[Mükellef unvanı]"):
     if not ham:
         return yer_tutucu
     return turkce.unvan(ham) if kurum_mu(kunye) else turkce.kisi_adi(ham)
+
+
+def vergi_dairesi(deger, yer_tutucu="[Vergi dairesi]"):
+    """Vergi dairesi adini yazim kurallariyla verir ("SEYHAN VD" -> "Seyhan VD")."""
+    return turkce.unvan(str(deger or "").strip()) or yer_tutucu
+
+
+def adres(deger, yer_tutucu="[Adres]"):
+    """Adresi yazim kurallariyla verir; sistem dokumlerinden buyuk harf gelir."""
+    return turkce.adres(str(deger or "").strip()) or yer_tutucu
 
 
 def satici_unvani(satici, yer_tutucu="[unvan girilmedi]"):

@@ -203,6 +203,25 @@ oturumda buradan devam edilir.
 - [x] Tutanakta da görevlendirme yazıları tablo hâlinde: raporla aynı düzen
       (Sıra No | İş Emri Tarihi | İş Emri Sayısı | Dönemi | Konusu). Hiç iş
       emri girilmemişse eski cümle kırmızı yer tutucularla yazılıyor.
+- [x] Gelir / Kurumlar Vergisi beyanname özeti artık yıl yıl tutuluyor:
+      künyede satırlar "yıl | açıklama | tutar", tutanakta her yıl için ayrı
+      tablo. Beyanname PDF'i aktarımı önceki yılların üzerine yazmıyor,
+      yalnızca kendi yılını yeniliyor. Eski (yılsız) kayıtlar incelemenin ilk
+      yılına düşüyor.
+- [x] Tutanakta incelemenin yapıldığı yer adresiyle yazılıyor; yalnızca
+      "dairede" demiyor. Mükellefin iş yeri / uzaktan seçimleri de kendi
+      cümlesini kuruyor, adres boşsa kırmızı tutucu kalıyor.
+- [x] Alışlara ilişkin soru maddeleri kurumda "Mükellef Kurum Yetkilisine",
+      gerçek kişide "Mükellefe" diye başlıyor; cevabı veren de aynı biçimde
+      anılıyor.
+- [x] Tutanakta yazım kuralları: vergi dairesi, adres, ad-soyad ve unvanlar
+      belgeye yazılırken düzeltiliyor (adres için kısaltmalar korunuyor:
+      "KURTULUŞ MAH. VD KAMPÜSÜ" → "Kurtuluş Mah. VD Kampüsü").
+- [x] Tutanakta her madde paragraf başı girintisiyle başlıyor.
+- [x] Tablolar içeriğe göre sığdırılıyor: kolon genişlikleri en uzun hücreden
+      hesaplanıyor, sığmayan tabloda önce hücre boşlukları daraltılıyor,
+      yetmezse punto oranlı olarak küçültülüyor (en az 7). Raporun tarhiyat
+      tablosunda da boş iade sütunları yazılmıyor.
 
 ---
 

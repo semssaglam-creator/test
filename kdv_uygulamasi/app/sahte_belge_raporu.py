@@ -92,10 +92,10 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
         "bölümlerinde %s olarak anılacaktır), “%s” adresinde “%s” faaliyeti "
         "ile iştigal etmektedir. %s Vergi Usul Kanununun 107/A maddesi "
         "kapsamında e-tebligata tabidir."
-        % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
-           M(kunye), inceleme.get("adres") or "[Adres]",
+           M(kunye), ik.adres(inceleme.get("adres")),
            ik.deger(kunye, "faaliyet_konusu"), M(kunye, buyuk=True)))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
         tanitim += " %s e-Defter ve e-Fatura uygulamaları kapsamındadır." % M(kunye, buyuk=True)
@@ -130,7 +130,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
 
     if satici_satirlari:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
-                 % (s["vergi_dairesi"] or "[Satıcının vergi dairesi]",
+                 % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
                     s["vkn"] or "[VKN]", ik.satici_unvani(s))
                  for s in satici_satirlari]
         b.paragraf(
@@ -483,7 +483,7 @@ def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
 def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
                    karsilastirmalar=None):
     M = ik.mukellef_sozu
-    daire = s["vergi_dairesi"] or "[Satıcının vergi dairesi]"
+    daire = ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]")
     unvan = ik.satici_unvani(s)
     b.baslik("B.%d- %s %s Vergi Kimlik Numaralı Mükellefi %s’den Olan Alışları"
              % (sira, daire, s["vkn"] or "[VKN]", unvan), 2)
@@ -638,26 +638,29 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
 
 
 def _tarhiyat_tablosu(b, tarhiyatli):
-    """Iki satirli baslik tasiyan tarhiyat tablosu (ornek raporun duzeni)."""
+    """Iki satirli baslik tasiyan tarhiyat tablosu (ornek raporun duzeni).
+
+    Iade sutunlari yalnizca tutar tasidiklarinda yazilir; bos sutunlar tabloyu
+    gereksiz genisletiyor, rakamlari alt satira dusuruyordu.
+    """
     toplam = tarhiyat_toplami(tarhiyatli)
-    satirlar = []
-    for d in tarhiyatli:
-        t = d["tarhiyat"]
-        satirlar.append([_donem_adi(d), _tl(t["odenecek_olmasi_gereken"]),
-                         _tl(t["odenecek_beyan"]), _tl(t["resen_tarhi_gereken"]),
-                         _tl(t["iade_olmasi_gereken"]), _tl(t["iade_beyan"]),
-                         _tl(t["aranmasi_gereken"]), _tl(t["resen_toplam"])])
-    satirlar.append(["Toplam:", _tl(toplam["odenecek_olmasi_gereken"]),
-                     _tl(toplam["odenecek_beyan"]), _tl(toplam["resen_tarhi_gereken"]),
-                     _tl(toplam["iade_olmasi_gereken"]), _tl(toplam["iade_beyan"]),
-                     _tl(toplam["aranmasi_gereken"]),
-                     _tl(toplam["resen_tarhi_gereken"] + toplam["aranmasi_gereken"])])
-    b.tablo(["Dönemi", "Ödenecek KDV\nOlması Gereken", "Ödenecek KDV\nBeyan Edilen",
-             "Re’sen Tarhı\nGereken KDV", "İade Edil. KDV\nOlması Gereken",
-             "İade Edil. KDV\nBeyan Edilen", "Aranması Ger.\nKDV",
-             "Re’sen Tarhı\nGer. Toplam"], satirlar,
-            hizalar=["sol"] + ["sag"] * 7,
-            oranlar=[0.9, 1.1, 1.1, 1.1, 1.1, 1.1, 1, 1.1],
+    iade_var = any(_var(toplam.get(kod)) for kod in
+                   ("iade_olmasi_gereken", "iade_beyan", "aranmasi_gereken"))
+    kodlar = ["odenecek_olmasi_gereken", "odenecek_beyan", "resen_tarhi_gereken"]
+    basliklar = ["Dönemi", "Ödenecek KDV\nOlması Gereken",
+                 "Ödenecek KDV\nBeyan Edilen", "Re’sen Tarhı\nGereken KDV"]
+    if iade_var:
+        kodlar += ["iade_olmasi_gereken", "iade_beyan", "aranmasi_gereken",
+                   "resen_toplam"]
+        basliklar += ["İade Edil. KDV\nOlması Gereken",
+                      "İade Edil. KDV\nBeyan Edilen", "Aranması Ger.\nKDV",
+                      "Re’sen Tarhı\nGer. Toplam"]
+
+    satirlar = [[_donem_adi(d)] + [_tl(d["tarhiyat"][kod]) for kod in kodlar]
+                for d in tarhiyatli]
+    satirlar.append(["Toplam:"] + [_tl(toplam[kod]) for kod in kodlar])
+    b.tablo(basliklar, satirlar, hizalar=["sol"] + ["sag"] * len(kodlar),
+            oranlar=[0.9] + [1.1] * len(kodlar),
             buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
@@ -838,7 +841,7 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     b.paragraf(
         "%s %s vergi kimlik numaralı mükellefi %s’in %s defter ve belgelerinin "
         "sahte belge kullanımı ile sınırlı olarak incelenmesi neticesinde;"
-        % (inceleme.get("vergi_dairesi") or "[Vergi dairesi]",
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
            _donem_ifadesi(kunye, donemler)),

@@ -163,7 +163,13 @@ def ozet_oku(yol, dosya_adi=None):
 
 
 def kunye_metnine_cevir(ozet):
-    """Okunan kalemleri kunyedeki "açıklama | tutar" bicimine getirir."""
+    """Okunan kalemleri kunyedeki "yıl | açıklama | tutar" bicimine getirir.
+
+    Satirin basinda yil tasinir: inceleme birden cok yili kapsadiginda her yilin
+    beyanname ozeti tutanakta ayri tablo olarak yer alir. Yili okunamayan
+    beyannamede alan kirmizi tutucu ile birakilir ki elle doldurulsun.
+    """
     from . import turkce
-    return "\n".join("%s | %s" % (k["etiket"], turkce.tl(k["tutar"]))
+    yil = str(ozet.get("yil") or "").strip() or "[yıl]"
+    return "\n".join("%s | %s | %s" % (yil, k["etiket"], turkce.tl(k["tutar"]))
                      for k in ozet.get("kalemler") or [])

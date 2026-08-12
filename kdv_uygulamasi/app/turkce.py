@@ -137,3 +137,44 @@ def kisi_adi(metin):
         return _bas_harf(kelimeler[0])
     return "%s %s" % (" ".join(_bas_harf(k) for k in kelimeler[:-1]),
                       buyuk(kelimeler[-1]))
+
+
+def _adres_parcasi(parca):
+    """Adresteki tek bir sozcugu bicimler.
+
+    Kisa ve bastan sona buyuk yazilmis parcalar kisaltma sayilip oldugu gibi
+    kalir ("VD", "OSB", "B"); otekilerin ilk harfi buyuk yazilir.
+    """
+    if not parca:
+        return parca
+    harfler = "".join(ch for ch in parca if ch.isalpha())
+    if (harfler == parca and len(parca) <= 3
+            and parca == buyuk(parca)) or buyuk(parca) in _UNVAN_BUYUK:
+        return parca
+    return _bas_harf(parca)
+
+
+def adres(metin):
+    """Adresi yazim kurallarina getirir: her kelimenin ilk harfi buyuk.
+
+    Sistem dokumlerinden gelen adresler bastan sona buyuk harf oluyor. Kelime
+    ayraci olarak bosluk yaninda "/" ve "-" de sayilir ("SEYHAN/ADANA" ->
+    "Seyhan/Adana"). Rakam tasiyan parcalar bozulmaz ("NO:5" -> "No:5").
+    Koseli parantezli yer tutuculara dokunulmaz.
+    """
+    ham = str(metin or "").strip()
+    if not ham or ham.startswith("["):
+        return ham
+    kelimeler = []
+    for kelime in ham.split():
+        parcalar, tampon, ayraclar = [], "", "/-"
+        for ch in kelime:
+            if ch in ayraclar:
+                parcalar.append(_adres_parcasi(tampon))
+                parcalar.append(ch)
+                tampon = ""
+            else:
+                tampon += ch
+        parcalar.append(_adres_parcasi(tampon))
+        kelimeler.append("".join(parcalar))
+    return " ".join(kelimeler)
