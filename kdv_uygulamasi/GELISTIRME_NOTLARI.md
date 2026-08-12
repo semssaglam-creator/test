@@ -200,6 +200,9 @@ oturumda buradan devam edilir.
       sayılıyor. Döküm taraf sütunu taşımıyorsa mükellef alıcı kabul ediliyor.
 - [x] İnceleme Tespitleri sekmesine "Bu dönemin indirilecek KDV'sini tümüyle
       reddet" düğmesi eklendi (defter ve belge ibraz edilmediği hâl).
+- [x] Tutanakta da görevlendirme yazıları tablo hâlinde: raporla aynı düzen
+      (Sıra No | İş Emri Tarihi | İş Emri Sayısı | Dönemi | Konusu). Hiç iş
+      emri girilmemişse eski cümle kırmızı yer tutucularla yazılıyor.
 
 ---
 

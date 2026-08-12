@@ -401,6 +401,10 @@ açıklanmıştır.
 2- İnceleme, Müfettişliğimizin "<çalışma adresi>" çalışma adresinde
 yapılmıştır.
 
+   ↳ Giriş paragrafında görevlendirme yazıları, raporda olduğu gibi tablo
+     hâlinde verilir: [Sıra No | İş Emri Tarihi | İş Emri Sayısı | Dönemi |
+     Konusu]. Tek bir görevlendirme yazısı varsa cümle içinde de yazılabilir.
+
 3- Mükellef tarafından incelemeye ibraz edilen yasal defterlere ilişkin
 bilgiler aşağıdaki tabloda gösterildiği gibidir.
    [Yılı | Defterin Türü | Tasdik Tarihi ve Numarası | Tasdik Makamı]

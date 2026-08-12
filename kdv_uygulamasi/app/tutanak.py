@@ -238,14 +238,38 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
         alis = (" İnceleme neticesinde aşağıdaki hususlar mükellef ile birlikte "
                 "tespit edilmiştir.")
 
-    b.paragraf(
-        "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s ile %s "
-        "işlemlerinin “Sahte Belge Kullanma” gerekçesiyle sınırlı olarak "
-        "incelenmesi istenmiştir.%s (Ek-1: Kimlik kartı fotokopisi)"
-        % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
-           ik.gorevlendirme_ifadesi(ik.is_emirleri(kunye)),
-           _donem_ifadesi(kunye, donemler), alis),
-        girinti=1)
+    emirler = ik.is_emirleri(kunye)
+    if emirler:
+        # Birden cok gorevlendirme yazisi cumle icinde sayilinca paragraf
+        # okunmaz hale geliyor; raporda oldugu gibi tablo yazilir.
+        b.paragraf(
+            "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s iş "
+            "emirleri ile %s incelenmesi istenen yıllar ve inceleme konusu "
+            "aşağıdaki gibidir."
+            % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
+               M(kunye, ek="in")),
+            girinti=1)
+        b.tablo(["Sıra No", "İş Emri Tarihi", "İş Emri Sayısı", "Dönemi", "Konusu"],
+                [[str(i),
+                  e["tarih"] or "[iş emri tarihi]",
+                  e["sayi"] or "[iş emri sayısı]",
+                  e["donem"] or "[dönemi]", e["konu"]]
+                 for i, e in enumerate(emirler, 1)],
+                hizalar=["orta", "orta", "sol", "orta", "sol"],
+                oranlar=[0.5, 1, 2.2, 0.8, 1.5], buyukluk=TABLO_PUNTOSU)
+        b.paragraf(
+            "Bu kapsamda %s işlemleri “Sahte Belge Kullanma” gerekçesiyle "
+            "sınırlı olarak incelenmiştir.%s (Ek-1: Kimlik kartı fotokopisi)"
+            % (_donem_ifadesi(kunye, donemler), alis), girinti=1)
+    else:
+        b.paragraf(
+            "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s ile %s "
+            "işlemlerinin “Sahte Belge Kullanma” gerekçesiyle sınırlı olarak "
+            "incelenmesi istenmiştir.%s (Ek-1: Kimlik kartı fotokopisi)"
+            % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
+               ik.gorevlendirme_ifadesi(emirler),
+               _donem_ifadesi(kunye, donemler), alis),
+            girinti=1)
 
 
 def _donem_ifadesi(kunye, donemler, hal="yalin"):
