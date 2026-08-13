@@ -409,7 +409,7 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
     _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran, inceleme)
 
     # ---- Ç: tarhiyat oncesi uzlasma
-    _uzlasma(b, kunye, satici_satirlari)
+    _uzlasma(b, kunye, satici_satirlari, ceza)
 
 
 def _cikarilacak_tablosu(b, liste, saticilar=None):
@@ -818,11 +818,28 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
     _tarhiyat_tablosu(b, tarhiyatli)
 
 
-def _tarhiyat_tablosu(b, tarhiyatli):
+def _donem_cezalari(tarhiyatli, ceza):
+    """Donem -> vergi ziyai cezasi.
+
+    Fatura listesi girildiginde ceza, bilerek/bilmeden ayrimina gore uc kat ve
+    bir kat olarak paylastirilmis haliyle `ceza_dagilimi`dan gelir. Liste
+    girilmemisse beyan uzerinden hesaplanan tek katsayili tutara dusulur;
+    boylece sutun her durumda dolu olur.
+    """
+    dagilim = {(s["yil"], s["ay"]): s["ceza_toplam"]
+               for s in ((ceza or {}).get("satirlar") or [])}
+    return [dagilim.get((d["yil"], d["ay"]),
+                        d["tarhiyat"].get("vergi_ziyai_cezasi") or 0.0)
+            for d in tarhiyatli]
+
+
+def _tarhiyat_tablosu(b, tarhiyatli, ceza=None):
     """Iki satirli baslik tasiyan tarhiyat tablosu (ornek raporun duzeni).
 
     Iade sutunlari yalnizca tutar tasidiklarinda yazilir; bos sutunlar tabloyu
-    gereksiz genisletiyor, rakamlari alt satira dusuruyordu.
+    gereksiz genisletiyor, rakamlari alt satira dusuruyordu. `ceza` verildiginde
+    sona vergi ziyai cezasi sutunu eklenir - sonuc bolumunde tarhiyat ile
+    cezanin ayni tabloda gorulmesi isteniyor.
     """
     toplam = tarhiyat_toplami(tarhiyatli)
     iade_var = any(_var(toplam.get(kod)) for kod in
@@ -839,9 +856,49 @@ def _tarhiyat_tablosu(b, tarhiyatli):
 
     satirlar = [[_donem_adi(d)] + [_tl(d["tarhiyat"][kod]) for kod in kodlar]
                 for d in tarhiyatli]
-    satirlar.append(["Toplam:"] + [_tl(toplam[kod]) for kod in kodlar])
+    toplam_satiri = [_tl(toplam[kod]) for kod in kodlar]
+
+    cezalar = _donem_cezalari(tarhiyatli, ceza) if ceza is not None else []
+    if any(_var(x) for x in cezalar):
+        basliklar.append("Vergi Ziyaı\nCezası")
+        for satir, tutar in zip(satirlar, cezalar):
+            satir.append(_tl(tutar))
+        toplam_satiri.append(_tl(sum(cezalar)))
+        kodlar = kodlar + ["vergi_ziyai_cezasi"]
+
+    satirlar.append(["Toplam:"] + toplam_satiri)
     b.tablo(basliklar, satirlar, hizalar=["sol"] + ["sag"] * len(kodlar),
             oranlar=[0.9] + [1.1] * len(kodlar),
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+
+def _ceza_tablosu(b, ceza):
+    """Ceza paylastirma tablosu; yalnizca veri tasiyan sutunlar yazilir.
+
+    Butun belgeler bilerek kullanilmissa "bilmeden" sutunlarini, hicbiri
+    bilerek degilse "bilerek" sutunlarini yazmak tabloyu sifirlarla doldurup
+    genisletiyordu. Sutunlar bu yuzden verinin kendisinden secilir.
+    """
+    t = ceza["toplam"]
+    bilmeden_pay = lambda x: x["pay_bilmeden"] + x["pay_belirsiz"]
+    bilmeden_ceza = lambda x: x["ceza_bilmeden"] + x["ceza_belirsiz"]
+
+    kolonlar = [("Re’sen Tarh\nEdilecek KDV", lambda x: x["tarh"])]
+    if _var(t["pay_bilerek"]) or _var(t["ceza_bilerek"]):
+        kolonlar += [("Bilerek Kullanılan\nBelgeler", lambda x: x["pay_bilerek"]),
+                     ("Vergi Ziyaı Cezası\n(3 kat)", lambda x: x["ceza_bilerek"])]
+    if _var(bilmeden_pay(t)) or _var(bilmeden_ceza(t)):
+        kolonlar += [("Bilmeden Kullanılan\nBelgeler", bilmeden_pay),
+                     ("Vergi Ziyaı Cezası\n(1 kat)", bilmeden_ceza)]
+    kolonlar.append(("Vergi Ziyaı Cezası\nToplamı", lambda x: x["ceza_toplam"]))
+
+    satirlar = [["%s/%s" % (x["yil"], x["ay_adi"])]
+                + [_tl(al(x)) for _e, al in kolonlar]
+                for x in ceza["satirlar"]]
+    satirlar.append(["Toplam:"] + [_tl(al(t)) for _e, al in kolonlar])
+    b.tablo(["Dönemi"] + [e for e, _al in kolonlar], satirlar,
+            hizalar=["sol"] + ["sag"] * len(kolonlar),
+            oranlar=[0.9] + [1.2] * len(kolonlar),
             buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
@@ -885,24 +942,7 @@ def _ceza_degerlendirmesi(b, kunye, satici_satirlari, ceza):
             "eşit olmayabilir; devir zinciri reddin bir kısmını "
             "soğurabildiğinden, paylaştırma tarh edilen tutar üzerinden "
             "yapılmıştır.", girinti=1)
-        tablo = []
-        for s in ceza["satirlar"]:
-            tablo.append(["%s/%s" % (s["yil"], s["ay_adi"]), _tl(s["tarh"]),
-                          _tl(s["pay_bilerek"]), _tl(s["ceza_bilerek"]),
-                          _tl(s["pay_bilmeden"] + s["pay_belirsiz"]),
-                          _tl(s["ceza_bilmeden"] + s["ceza_belirsiz"]),
-                          _tl(s["ceza_toplam"])])
-        t = ceza["toplam"]
-        tablo.append(["Toplam:", _tl(t["tarh"]), _tl(t["pay_bilerek"]),
-                      _tl(t["ceza_bilerek"]),
-                      _tl(t["pay_bilmeden"] + t["pay_belirsiz"]),
-                      _tl(t["ceza_bilmeden"] + t["ceza_belirsiz"]),
-                      _tl(t["ceza_toplam"])])
-        b.tablo(["Dönemi", "Tarh Edilecek\nKDV", "Bilerek\nPay", "Ceza\n(3 kat)",
-                 "Bilmeden\nPay", "Ceza\n(1 kat)", "Ceza\nToplamı"], tablo,
-                hizalar=["sol"] + ["sag"] * 6,
-                oranlar=[0.9, 1.2, 1.1, 1.1, 1.1, 1.1, 1.2],
-                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+        _ceza_tablosu(b, ceza)
         if karisik:
             b.paragraf(
                 "[Bilerek/bilmeden kullanma nitelendirmesi yapılmamış satıcılar "
@@ -984,31 +1024,76 @@ def _kasit_degerlendirmesi(b, kunye, satici_satirlari, oran, inceleme):
                ik.gecici_vergi_adi(kunye)), girinti=1)
 
 
-def _uzlasma(b, kunye, satici_satirlari):
-    bilerek = _bilerek_mi(satici_satirlari)
+def _uzlasma(b, kunye, satici_satirlari, ceza=None):
+    """Ç- Tarhiyat Öncesi Uzlaşma Talebi Yönünden Değerlendirme.
+
+    Bilerek kullanma VUK Ek 11 uyarinca uzlasma kapsami disindadir; bilmeden
+    kullanmada uzlasma istenebilir. Ikisi bir arada oldugunda tarhiyatin
+    hangi kisminin kapsamda oldugu donem donem tabloyla gosterilir - tek
+    cumleyle "kapsam disindadir" demek, kapsamdaki kismi gizlerdi.
+    """
     M = ik.mukellef_sozu
     b.baslik("Ç- Tarhiyat Öncesi Uzlaşma Talebi Yönünden Değerlendirme", 2)
+
+    satirlar = (ceza or {}).get("satirlar") or []
+    toplam = (ceza or {}).get("toplam") or {}
+    kapsam_disi = _var(toplam.get("pay_bilerek"))
+    kapsamda = _var(toplam.get("pay_bilmeden")) or _var(toplam.get("pay_belirsiz"))
+    if not (kapsam_disi or kapsamda):          # fatura listesi henuz girilmemis
+        kapsam_disi = _bilerek_mi(satici_satirlari)
+        kapsamda = not kapsam_disi
+
     if ik.secim_mi(kunye, "tou_talebi", "Talep edildi"):
-        b.paragraf("%s, salınacak vergiler ve kesilecek cezalar için 213 sayılı "
+        b.paragraf("%s salınacak vergiler ve kesilecek cezalar için 213 sayılı "
                    "Vergi Usul Kanunu’nun Ek 11. maddesinde düzenlenen tarhiyat "
-                   "öncesi uzlaşma hakkını kullanmıştır."
-                   % M(kunye, buyuk=True), girinti=1)
+                   "öncesi uzlaşma talebi bulunmaktadır."
+                   % M(kunye, buyuk=True, ek="in"), girinti=1)
     else:
         b.paragraf("%s, salınacak vergiler ve kesilecek cezalar için 213 sayılı "
                    "Vergi Usul Kanunu’nun Ek 11. maddesinde düzenlenen tarhiyat "
-                   "öncesi uzlaşma talep hakkını kullanmamıştır."
+                   "öncesi uzlaşma talebinde bulunmamıştır."
                    % M(kunye, buyuk=True), girinti=1)
 
-    if bilerek:
-        baslik, metin = mevzuat.madde("vuk_ek11")
-        b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
-        b.paragraf("“%s”" % metin, girinti=1, italik=True)
+    if not kapsam_disi:
+        return
+
+    baslik, metin = mevzuat.madde("vuk_ek11")
+    b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
+    b.paragraf("“%s”" % metin, girinti=1, italik=True)
+
+    if not kapsamda:
         b.paragraf(
             "Dolayısıyla %s vergi ziyaına 213 sayılı Vergi Usul Kanunu’nun "
             "359/b maddesinde sayılan “sahte belge kullanma” fiili ile "
             "sebebiyet vermesi nedeniyle, tarh edilecek vergi ve kesilecek "
             "cezalar tarhiyat öncesi uzlaşma kapsamı dışındadır."
             % M(kunye, ek="in"), girinti=1)
+        return
+
+    # Kismen bilerek, kismen bilmeden: tarhiyatin kapsam ici / disi ayrimi
+    b.paragraf(
+        "Dolayısıyla tarh edilecek verginin, bilerek kullanıldığı tespit "
+        "edilen belgelere isabet eden kısmı, vergi ziyaına 213 sayılı Vergi "
+        "Usul Kanunu’nun 359/b maddesinde sayılan “sahte belge kullanma” fiili "
+        "ile sebebiyet verilmiş olması nedeniyle tarhiyat öncesi uzlaşma "
+        "kapsamı dışındadır. Kalan kısım için uzlaşma talep edilebilir. "
+        "Tarhiyatın dönem itibarıyla dağılımı aşağıdaki gibidir.", girinti=1)
+
+    tablo = []
+    for x in satirlar:
+        disi = x["pay_bilerek"]
+        ici = x["pay_bilmeden"] + x["pay_belirsiz"]
+        if not (_var(disi) or _var(ici)):
+            continue
+        tablo.append(["%s/%s" % (x["yil"], x["ay_adi"]), _tl(ici), _tl(disi),
+                      _tl(ici + disi)])
+    ici_toplam = toplam.get("pay_bilmeden", 0.0) + toplam.get("pay_belirsiz", 0.0)
+    tablo.append(["Toplam:", _tl(ici_toplam), _tl(toplam.get("pay_bilerek")),
+                  _tl(ici_toplam + (toplam.get("pay_bilerek") or 0.0))])
+    b.tablo(["Dönemi", "Uzlaşma Kapsamında\nTarh Edilecek KDV",
+             "Uzlaşma Kapsamı Dışında\nTarh Edilecek KDV", "Toplam"], tablo,
+            hizalar=["sol", "sag", "sag", "sag"], oranlar=[0.9, 1.4, 1.5, 1.1],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
 # ------------------------------------------------------------------- V. sonuc
@@ -1018,6 +1103,16 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     tarhiyatli = [d for d in donemler if _var(d["tarhiyat"]["toplam_fark"])]
     toplam = tarhiyat_toplami(tarhiyatli)
     bilerek = _bilerek_mi(satici_satirlari)
+    # Ceza dagilimi girildiginde kat, satici satici degil belgelere isabet eden
+    # tutara gore belirlenir; kismen bilerek kismen bilmeden kullanmada tek bir
+    # kat yazmak, altindaki tablodaki karma ceza tutarini aciklamiyordu.
+    ceza_toplami = (ceza or {}).get("toplam") or {}
+    bilerek_var = _var(ceza_toplami.get("pay_bilerek"))
+    bilmeden_var = (_var(ceza_toplami.get("pay_bilmeden"))
+                    or _var(ceza_toplami.get("pay_belirsiz")))
+    if not (bilerek_var or bilmeden_var):      # fatura listesi henuz girilmemis
+        bilerek_var, bilmeden_var = bilerek, not bilerek
+    karma = bilerek_var and bilmeden_var
 
     b.paragraf(
         "%s %s vergi kimlik numaralı mükellefi %s’in %s defter ve belgelerinin "
@@ -1030,7 +1125,11 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
 
     maddeler, sira = [], 1
     if tarhiyatli:
-        kat = "üç kat" if bilerek else "bir kat"
+        if karma:
+            kat = ("bilerek kullanılan belgelere isabet eden kısmı için üç kat, "
+                   "kalan kısmı için bir kat")
+        else:
+            kat = "üç kat" if bilerek_var else "bir kat"
         maddeler.append(
             "%d- Raporun IV/B ve IV/D bölümlerinde belirtildiği üzere, aşağıda "
             "belirtilen dönemler itibarıyla ortaya çıkan toplam %s TL "
@@ -1061,11 +1160,19 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
             % (sira, M(kunye, ek="in"),
                ik.suc_duyurusu_hedefi(kunye, inceleme)))
         sira += 1
-        maddeler.append(
-            "%d- Raporun IV/Ç bölümünde açıklandığı üzere, tarh edilecek vergi "
-            "ve kesilecek cezaların 213 sayılı Vergi Usul Kanunu’nun Ek 11. "
-            "maddesi uyarınca tarhiyat öncesi uzlaşma kapsamı dışında olduğu,"
-            % sira)
+        if karma:
+            maddeler.append(
+                "%d- Raporun IV/Ç bölümünde açıklandığı üzere, tarh edilecek "
+                "verginin bilerek kullanılan belgelere isabet eden kısmı ile bu "
+                "kısma ilişkin cezaların 213 sayılı Vergi Usul Kanunu’nun Ek 11. "
+                "maddesi uyarınca tarhiyat öncesi uzlaşma kapsamı dışında olduğu,"
+                % sira)
+        else:
+            maddeler.append(
+                "%d- Raporun IV/Ç bölümünde açıklandığı üzere, tarh edilecek vergi "
+                "ve kesilecek cezaların 213 sayılı Vergi Usul Kanunu’nun Ek 11. "
+                "maddesi uyarınca tarhiyat öncesi uzlaşma kapsamı dışında olduğu,"
+                % sira)
         sira += 1
 
     son = donemler[-1] if donemler else None
@@ -1082,11 +1189,12 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     if not maddeler:
         maddeler.append("1- Tenkidi gerektirir bir husus tespit edilmediği,")
 
-    for madde in maddeler:
+    # Tarhiyat tablosu, maddelerin sonunda degil kendisini oneren maddenin
+    # hemen altinda durur; tarhiyat onerisi her zaman ilk maddedir.
+    for sayi, madde in enumerate(maddeler):
         b.paragraf(madde, kalin=True, girinti=1, aralik_sonra=100)
-
-    if tarhiyatli:
-        _tarhiyat_tablosu(b, tarhiyatli)
+        if tarhiyatli and sayi == 0:
+            _tarhiyat_tablosu(b, tarhiyatli, ceza)
 
     # Inceleme elemaninin kendi tespit notu. Girilmediginde kirmizi yer tutucu
     # kalir; belgeyi okuyan burasinin doldurulacagini gorur.

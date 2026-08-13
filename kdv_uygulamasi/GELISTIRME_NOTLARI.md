@@ -269,6 +269,20 @@ oturumda buradan devam edilir.
       hesaplanıyor, sığmayan tabloda önce hücre boşlukları daraltılıyor,
       yetmezse punto oranlı olarak küçültülüyor (en az 7). Raporun tarhiyat
       tablosunda da boş iade sütunları yazılmıyor.
+- [x] **Ceza tablosu ve uzlaşma bölümü.** Ceza tablosunun sütun başlıkları
+      "Re'sen Tarh Edilecek KDV", "Bilerek Kullanılan Belgeler", "Vergi Ziyaı
+      Cezası (3 kat)", "Bilmeden Kullanılan Belgeler", "Vergi Ziyaı Cezası
+      (1 kat)" oldu; veri taşımayan sütunlar tabloya hiç girmiyor (tamamı
+      bilerek kullanılmışsa bilmeden sütunları yazılmıyor). Uzlaşma bölümünde
+      "hakkını kullanmıştır" yerine "tarhiyat öncesi uzlaşma talebi
+      bulunmaktadır" yazılıyor; kısmen bilerek kısmen bilmeden kullanmada
+      tarhiyatın dönem dönem uzlaşma kapsamındaki ve kapsam dışındaki kısmını
+      gösteren tablo ekleniyor.
+- [x] Sonuç bölümündeki tarhiyat tablosu, maddelerin sonunda değil tarhiyatı
+      öneren maddenin hemen altında duruyor ve vergi ziyaı cezası sütunu
+      taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
+      paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
+      yazılıyor.
 
 ---
 
