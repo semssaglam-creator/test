@@ -62,6 +62,25 @@ def _madde_numaralari_metni(numaralar):
                           numaralar[-1])
 
 
+_TIRNAKLAR = "“”\"'‘’«»"
+
+
+def _alinti_govdesi(metin):
+    """Alinti icine girecek metni hazirlar.
+
+    Kullanicidan gelen metin tirnaklariyla birlikte yapistirilmis olabilir;
+    belgede tirnak iki kez gorunmesin diye bastaki ve sondaki tirnaklar
+    temizlenir. Sondaki nokta da atilir: cumle "... tespitine yer verilmiştir."
+    diye surdugunden alintinin icinde nokta kalmaz.
+    """
+    govde = str(metin or "").strip()
+    while govde and govde[0] in _TIRNAKLAR:
+        govde = govde[1:].lstrip()
+    while govde and govde[-1] in _TIRNAKLAR:
+        govde = govde[:-1].rstrip()
+    return govde.rstrip(".").strip()
+
+
 def _bilerek_mi(satici_satirlari):
     """Satıcılardan herhangi biri bilerek kullanma sayilmis mi."""
     return any(s["kullanma"] == "Bilerek kullanma" for s in satici_satirlari)
@@ -644,11 +663,14 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     # Vergi Teknigi Raporunun sonuc bolumundeki tespit, ayni cumlenin devami
     # olarak yazilir: "... tanzim edilmis olup, raporun sonuc bolumunde <tespit>
     # tespitine yer verilmistir."
-    tespit = " ".join(satir.strip() for satir in str(s["not"] or "").split("\n")
-                      if satir.strip()).strip().rstrip(".")
     # Alintilanan tespit tirnak icine alinir: metin baska bir belgeden -
-    # Vergi Teknigi Raporunun sonuc bolumunden - aktarilmaktadir. Tespit
-    # girilmemisse kirmizi yer tutucu tirnaksiz kalir; tutucu alinti degildir.
+    # Vergi Teknigi Raporunun sonuc bolumunden - aktarilmaktadir. Kullanici
+    # metni tirnaklariyla birlikte yapistirmis olabilir; o zaman tirnak iki kez
+    # yazilmasin diye once mevcut tirnaklar temizlenir. Tespit girilmemisse
+    # kirmizi yer tutucu tirnaksiz kalir; yer tutucu alinti degildir.
+    tespit = _alinti_govdesi(" ".join(
+        satir.strip() for satir in str(s["not"] or "").split("\n")
+        if satir.strip()))
     b.paragraf(
         "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
         "tanzim edilmiş olup, anılan raporun sonuç bölümünde %s tespitine yer "

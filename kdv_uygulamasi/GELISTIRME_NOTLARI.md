@@ -243,7 +243,10 @@ oturumda buradan devam edilir.
       nedeni hem satıcı bölümleri aynı eşlemeden okuyor. Dört yıllık, yedi
       satıcılı senaryoyla doğrulandı (madde_tutarlilik.py).
 - [x] Vergi Tekniği Raporunun sonuç bölümünden aktarılan tespit tırnak içine
-      alınıyor; girilmemişse kırmızı yer tutucu tırnaksız kalıyor.
+      alınıyor; girilmemişse kırmızı yer tutucu tırnaksız kalıyor. Metni
+      tırnaklarıyla birlikte yapıştırdıysanız tırnak iki kez yazılmıyor —
+      satıcı notundaki baştaki/sondaki tırnaklar temizlenip tek seviyeye
+      indiriliyor (B.1 tırnaksız / B.2 tırnaklı görünümünün sebebi buydu).
 - [x] Tutanağın giriş cümlesinde alışlar yıl yıl gruplanıyor: "2022 hesap
       döneminde A'dan alışları, 2023 hesap döneminde B ve C'den olan
       alışlarının…". Gruplar faturaların kayıt yılından kuruluyor; bir satıcı
