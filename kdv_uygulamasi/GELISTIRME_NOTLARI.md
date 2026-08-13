@@ -235,6 +235,15 @@ oturumda buradan devam edilir.
       yazılıyor: faturalarının kaydedildiği aylar, gerekçesinde satıcının
       unvanı geçen aylar ve bunlardan sonra devir zincirini taşıyan aylar.
       Fatura listesinin altındaki serbest düzeltme açıklaması kaldırıldı.
+- [x] **Rapordaki tutanak atıfları düzeltildi.** Rapor yıl yıl yazılıyor ama
+      tutanak bütün yılları kapsayan tek belge; madde numaraları o yılın satıcı
+      sayısından hesaplandığı için 2021 raporu tutanakta 2024 satıcısına ait
+      olan maddeye atıf yapıyordu. Numaralar artık daraltmadan önce, bütün
+      satıcılar üzerinden hesaplanıp VKN ile eşleştiriliyor; hem re'sen takdir
+      nedeni hem satıcı bölümleri aynı eşlemeden okuyor. Dört yıllık, yedi
+      satıcılı senaryoyla doğrulandı (madde_tutarlilik.py).
+- [x] Vergi Tekniği Raporunun sonuç bölümünden aktarılan tespit tırnak içine
+      alınıyor; girilmemişse kırmızı yer tutucu tırnaksız kalıyor.
 - [x] Tutanağın giriş cümlesinde alışlar yıl yıl gruplanıyor: "2022 hesap
       döneminde A'dan alışları, 2023 hesap döneminde B ve C'den olan
       alışlarının…". Gruplar faturaların kayıt yılından kuruluyor; bir satıcı

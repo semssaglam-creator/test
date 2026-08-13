@@ -321,15 +321,19 @@ def _hesap(b, kunye, donemler, duzeltme, bulgular, dokumler=None):
 
 # ------------------------------------------------------------- IV. elestiri
 def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar=None, inceleme=None, karsilastirmalar=None):
+              saticilar=None, inceleme=None, karsilastirmalar=None,
+              madde_no=None):
     b.baslik("IV- ELEŞTİRİLEN HUSUSLAR", 1)
     M = ik.mukellef_sozu
     kod = ik.resen_madde_kodu(kunye)
 
     # ---- A: re'sen takdir nedeni
     b.baslik("A- Re’sen Takdir Nedeni", 2)
-    veri_maddeleri = satici_veri_maddeleri(kunye, donemler,
-                                           len(satici_satirlari))
+    # Atif yapilacak madde numaralari tutanaktaki gercek numaralardir; rapor
+    # yil yil yazildigindan kendi saticilarinin numaralari secilir.
+    madde_no = madde_no or {}
+    veri_maddeleri = [madde_no[s["vkn"]] for s in satici_satirlari
+                      if s["vkn"] in madde_no]
     b.paragraf(
         "Raporun IV. bölümünde ayrıntılı olarak açıklandığı üzere, rapora ekli "
         "tutanağın %s %s belirtilen sahte faturaların yasal defterlere "
@@ -356,12 +360,10 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
                    girinti=1, italik=True)
     # Tutanaktaki veri maddesi numaralari: rapor, her saticiyi kendi maddesine
     # atifla anlatir.
-    for i, (s, veri_no) in enumerate(
-            zip(satici_satirlari, veri_maddeleri
-                + [None] * len(satici_satirlari)), 1):
+    for i, s in enumerate(satici_satirlari, 1):
         _satici_bolumu(b, kunye, s, liste, i,
                        _donem_ifadesi(kunye, donemler), karsilastirmalar,
-                       veri_no)
+                       madde_no.get(s["vkn"]))
 
     # ---- C: mevzuat
     b.baslik("C- İlgili Mevzuat", 2)
@@ -643,13 +645,16 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     # olarak yazilir: "... tanzim edilmis olup, raporun sonuc bolumunde <tespit>
     # tespitine yer verilmistir."
     tespit = " ".join(satir.strip() for satir in str(s["not"] or "").split("\n")
-                      if satir.strip())
+                      if satir.strip()).strip().rstrip(".")
+    # Alintilanan tespit tirnak icine alinir: metin baska bir belgeden -
+    # Vergi Teknigi Raporunun sonuc bolumunden - aktarilmaktadir. Tespit
+    # girilmemisse kirmizi yer tutucu tirnaksiz kalir; tutucu alinti degildir.
     b.paragraf(
         "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
         "tanzim edilmiş olup, anılan raporun sonuç bölümünde %s tespitine yer "
         "verilmiştir."
         % (s["vtr_tarihi"] or "[VTR tarihi]", s["vtr_no"] or "[VTR no]",
-           tespit.rstrip(".") or "[satıcı hakkındaki tespit]"),
+           ("“%s”" % tespit) if tespit else "[satıcı hakkındaki tespit]"),
         girinti=1)
     if s["ozel_esaslar"]:
         b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
@@ -1076,6 +1081,20 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
                       ik.ad(kunye, "eleman_ad"))])
 
 
+def _tutanak_madde_numaralari(kunye, sonuc, liste, saticilar):
+    """Satici VKN -> tutanaktaki veri maddesi numarasi.
+
+    Tutanak tek belgedir ve butun yillarin saticilarini ayni sayacla
+    numaralandirir; siralama `faturalar.satici_ozeti` ile aynidir. Rapor bu
+    esleme uzerinden atif yapar, boylece yil yil yazilan raporlarda numaralar
+    tutanakla ortusur.
+    """
+    tum_saticilar = F.satici_ozeti(liste, saticilar)
+    numaralar = satici_veri_maddeleri(kunye, dolu_donemler(sonuc),
+                                      len(tum_saticilar))
+    return {s["vkn"]: no for s, no in zip(tum_saticilar, numaralar)}
+
+
 def rapor_yillari(sonuc):
     """Rapor duzenlenecek yillar.
 
@@ -1135,6 +1154,13 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     kunye = ik.normalize(kunye)
     mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
     liste = F.normalize(calisma.get("faturalar"), mukellef_vkn)
+    # Tutanak butun yillari kapsayan TEK belgedir; madde numaralari da butun
+    # saticilar uzerinden verilir. Rapor yil yil yazildigindan, atif yapacagi
+    # numarayi kendi yilinin satici sayisindan hesaplayamaz - o zaman 2021
+    # raporu, tutanakta 2024 saticisina ait olan 6. maddeye atif yapiyordu.
+    # Bu yuzden numaralar daraltmadan ONCE, tam listeden cikarilir.
+    madde_no = _tutanak_madde_numaralari(kunye, sonuc, liste,
+                                         calisma.get("saticilar") or {})
     if yil is not None:
         sonuc, liste, bulgular, duzeltme = _yila_indirge(
             sonuc, liste, bulgular, duzeltme, int(yil))
@@ -1161,7 +1187,7 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     _hesap(b, kunye, donemler, duzeltme,
            belgeye_giren_bulgular(bulgular, donemler), dokumler)
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
-              saticilar, inceleme, karsilastirmalar)
+              saticilar, inceleme, karsilastirmalar, madde_no)
     _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)
     return b
 
