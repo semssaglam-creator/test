@@ -225,6 +225,18 @@ oturumda buradan devam edilir.
       içeren bölüm kırmızı: kullanılan hesap faaliyete göre değişiyor. Yıl,
       satıcının faturalarının kayıt yılından alınıyor. Künyeye metin
       yazılmışsa o kullanılıyor.
+- [x] Raporda satıcı fatura tablosunun öncesine, tutanağın ilgili veri
+      maddesine atıf yapan ve faturaları düzenleyen mükellefi anan paragraf
+      eklendi.
+- [x] Düzeltmeyle çıkarılmış satıcının bölümünde artık düzeltme anlatısı,
+      örnekteki düzende ayrıntılı tablo (aylar satır; düzeltme öncesi /
+      düzeltme beyannamesi / fark) ve "hangi satırdan çıkarıldığı" kapanış
+      cümlesi yer alıyor. Bütün düzeltmeler değil, o satıcıya bağlanabilenler
+      yazılıyor: faturalarının kaydedildiği aylar, gerekçesinde satıcının
+      unvanı geçen aylar ve bunlardan sonra devir zincirini taşıyan aylar.
+      Fatura listesinin altındaki serbest düzeltme açıklaması kaldırıldı.
+- [x] III. bölümdeki düzeltme beyannameleri kısmında yalnızca tablo var;
+      gerekçe ne sütun ne de açıklama olarak yazılıyor.
 - [x] Tarhiyat öncesi uzlaşma maddesi kullanıcının verdiği kalıba uyarlandı;
       talep edilmemiş hâli de aynı yapıda yazılıyor.
 - [x] Tablolar içeriğe göre sığdırılıyor: kolon genişlikleri en uzun hücreden

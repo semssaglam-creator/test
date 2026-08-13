@@ -455,12 +455,13 @@ def duzeltme_karsilastirmalari(duzen):
     tablo" bundan uretilir: hangi beyanname satirinin duzeltme oncesinde ve
     sonrasinda ne oldugu ve aradaki fark.
 
-    Yalnizca degisen satirlar yazilir; "Onceki Donemden Devreden KDV" farki
-    sifir olsa da her zaman kalir, cunku devir zincirinin baslangicini
-    gosterir ve tablo onsuz okunmaz.
+    Butun ayrinti kalemleri yazilir (farki sifir olanlar da): rapordaki tablo
+    sabit sutunlu oldugundan eksik kalem tabloyu bozar. Hangi satirin degistigi
+    "degisti" bayragindan okunur.
 
     Doner: [{"yil", "ay", "ay_adi", "etiket", "tarih", "gerekce",
-             "satirlar": [{"kod", "etiket", "oncesi", "sonrasi", "fark"}]}]
+             "satirlar": [{"kod", "etiket", "oncesi", "sonrasi", "fark",
+                           "degisti"}]}]
     """
     adlar = dict(OZET_HEDEF_SECENEKLERI)
     adlar["yurtici_alim_kdv"] = "Yurtiçi Alımlara İlişkin KDV"
@@ -471,21 +472,18 @@ def duzeltme_karsilastirmalari(duzen):
         ilk, son = d["ilk"], d["son"]
         satirlar = []
         for kod in AYRINTI_KODLARI:
-            oncesi, sonrasi = ilk["degerler"].get(kod), son["degerler"].get(kod)
-            if oncesi is None and sonrasi is None:
-                continue
-            oncesi, sonrasi = oncesi or 0.0, sonrasi or 0.0
+            oncesi = ilk["degerler"].get(kod) or 0.0
+            sonrasi = son["degerler"].get(kod) or 0.0
             fark = round(sonrasi - oncesi, 2)
-            if abs(fark) <= 0.005 and kod != "onceki_donem_devreden":
-                continue
             satirlar.append({
                 "kod": kod,
                 "etiket": adlar.get(kod) or ETIKETLER.get(kod, kod),
                 "oncesi": round(oncesi, 2),
                 "sonrasi": round(sonrasi, 2),
                 "fark": fark,
+                "degisti": abs(fark) > 0.005,
             })
-        if not satirlar:
+        if not any(s["degisti"] for s in satirlar):
             continue
         sonuc.append({
             "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],

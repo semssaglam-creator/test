@@ -252,14 +252,13 @@ def _surum_tablosu(b, satirlar):
 def _duzeltme_tablosu(b, duzeltme):
     """Verilen duzeltme beyannameleri.
 
-    Duzeltme gerekcesi tabloya sigmiyordu: dokuz tutar sutununun yaninda genis
-    bir metin sutunu, rakamlarin alt satira kaymasina yol aciyordu. Gerekce
-    artik tablonun altinda cumle olarak yazilir, tablo da dar hucre
-    bosluklariyla ve kucuk puntoyla kurulur.
+    Yalnizca tablo yazilir: duzeltme gerekcesi ne sutun olarak (dokuz tutar
+    sutununun yaninda rakamlari alt satira dusuruyordu) ne de altta aciklama
+    olarak yer alir. Gerekce, saticinin bolumundeki duzeltme anlatisinda
+    kendi baglaminda gecer.
     """
     for yil_blogu in duzeltme:
         tablo = []
-        gerekceler = []
         for s in yil_blogu["satirlar"]:
             tablo.append([s.get("donem") or "", s.get("tarih") or "",
                           _tl(s.get("matrah_toplami")), _tl(s.get("hesaplanan_kdv")),
@@ -268,8 +267,6 @@ def _duzeltme_tablosu(b, duzeltme):
                           _tl(s.get("indirimler_toplami")),
                           _tl(s.get("odenmesi_gereken_kdv")),
                           _tl(s.get("sonraki_donem_devreden"))])
-            if s.get("gerekce"):
-                gerekceler.append((s.get("donem") or "", s["gerekce"]))
         b.tablo(["Dönemi\n%s" % yil_blogu["yil"], "Düzeltme\nTarihi",
                  "KDV\nMatrahı", "Hspl.\nKDV", "Önc. Dön.\nDev. KDV",
                  "Bu Dön.\nİndl. KDV", "İndirimler\nToplamı", "Öden.\nKDV",
@@ -277,10 +274,6 @@ def _duzeltme_tablosu(b, duzeltme):
                 hizalar=["sol", "orta"] + ["sag"] * 7,
                 oranlar=[0.7, 1.0, 1.3, 1.2, 1.1, 1.2, 1.3, 1.0, 1.1],
                 buyukluk=DAR_TABLO_PUNTOSU, dar=True)
-        for donem, gerekce in gerekceler:
-            b.paragraf("%s dönemine ilişkin düzeltme gerekçesi: “%s”"
-                       % (donem, gerekce.strip().rstrip(".")),
-                       girinti=1, buyukluk=DAR_TABLO_PUNTOSU + 1)
 
 
 def _hesap(b, kunye, donemler, duzeltme, bulgular, dokumler=None):
@@ -361,9 +354,14 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
         b.paragraf("[Sahte belge düzenlediği tespit edilen mükelleflere ait "
                    "fatura listesi girilmediği için bu bölüm boş bırakılmıştır.]",
                    girinti=1, italik=True)
-    for i, s in enumerate(satici_satirlari, 1):
+    # Tutanaktaki veri maddesi numaralari: rapor, her saticiyi kendi maddesine
+    # atifla anlatir.
+    for i, (s, veri_no) in enumerate(
+            zip(satici_satirlari, veri_maddeleri
+                + [None] * len(satici_satirlari)), 1):
         _satici_bolumu(b, kunye, s, liste, i,
-                       _donem_ifadesi(kunye, donemler), karsilastirmalar)
+                       _donem_ifadesi(kunye, donemler), karsilastirmalar,
+                       veri_no)
 
     # ---- C: mevzuat
     b.baslik("C- İlgili Mevzuat", 2)
@@ -417,13 +415,18 @@ def _cikarilacak_tablosu(b, liste, saticilar=None):
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
-DUZELTME_AYRINTI_SATIRLARI = [
-    "Önceki Dönemden Devreden KDV",
-    "Yurtiçi Alımlara İlişkin KDV",
-    "İndirimler Toplamı",
-    "Ödenmesi Gereken KDV",
-    "Sonraki Döneme Devreden KDV",
+# Ayrintili duzeltme tablosunun sutunlari (ornek rapordaki duzen)
+DUZELTME_AYRINTI_KOLONLARI = [
+    ("onceki_donem_devreden", "Önceki Dönemden\nDevreden KDV"),
+    ("yurtici_alim_kdv", "Yurtiçi Alımlara\nİlişkin KDV"),
+    ("indirimler_toplami", "İndirimler\nToplamı"),
+    ("odenmesi_gereken_kdv", "Ödenmesi Gereken\nKDV"),
+    ("sonraki_donem_devreden", "Son. Dön.\nDev. KDV"),
+    ("iade_edilmesi_gereken_kdv", "İade Edil.\nKDV"),
 ]
+
+DUZELTME_AYRINTI_SATIRLARI = ["Düzeltme Öncesi Beyanname", "Düzeltme Beyannamesi",
+                              "Fark"]
 
 
 def _donem_listesi(kunye):
@@ -439,49 +442,173 @@ def _donem_listesi(kunye):
     return [p.strip() for p in ham.split(",") if p.strip()]
 
 
-def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
-    """Duzeltme beyannamesinde satir bazinda ne degistigini gosteren tablolar.
+def _saticinin_duzeltmeleri(karsilastirmalar, kendi, unvan):
+    """Bu saticiya baglanabilecek duzeltme donemlerini secer.
 
-    Veri varsa (beyannameler yuklenmisse) donem donem gercek rakamlarla,
-    yoksa kunyeye yazilan donemler icin kirmizi yer tutucularla acilir.
-    Boylece beyanname yuklenmemis dosyalarda da tablo belgede hazir durur.
+    Butun duzeltmeler yazilmaz; yalnizca (a) saticinin faturalarinin
+    kaydedildigi donemler, (b) duzeltme gerekcesinde saticinin unvani gecen
+    donemler ve (c) bunlardan sonra devir zincirini tasiyan donemler alinir.
+    (c) sarti onemli: bir donemde indirimden cikarilan KDV, izleyen aylarin
+    devreden KDV satirlarini da degistirdiginden o aylarin duzeltmeleri de
+    ayni tespitin parcasidir.
     """
-    M = ik.mukellef_sozu
-    donemler = _donem_listesi(kunye)
-    if not karsilastirmalar and not donemler:
-        return
+    if not karsilastirmalar:
+        return []
+    sirali = sorted(karsilastirmalar, key=lambda k: (k["yil"], k["ay"]))
+    aylar = {(f.get("kayit_yil"), f.get("kayit_ay")) for f in kendi
+             if f.get("kayit_yil") and f.get("kayit_ay")}
+    ad = turkce.kucuk(unvan or "").replace(".", "").strip()
 
+    secili, zincir = [], False
+    for k in sirali:
+        gerekce = turkce.kucuk(k.get("gerekce") or "").replace(".", "")
+        devir_farki = any(s["kod"] == "onceki_donem_devreden" and s["degisti"]
+                          for s in k["satirlar"])
+        kendi_ayi = (k["yil"], k["ay"]) in aylar
+        gerekcede = bool(ad) and len(ad) > 4 and ad in gerekce
+        if kendi_ayi or gerekcede or (zincir and devir_farki):
+            secili.append(k)
+            zincir = True
+        else:
+            zincir = False
+    return secili
+
+
+def _duzeltme_ayrinti_tablosu(b, karsilastirmalar):
+    """Ornek rapordaki duzen: satirlar ay x (oncesi / sonrasi / fark).
+
+    Ay adi ucluden yalnizca ilkinde yazilir; ornekteki birlestirilmis hucrenin
+    karsiligi budur.
+    """
+    yillar = sorted({k["yil"] for k in karsilastirmalar})
+    for yil in yillar:
+        satirlar = []
+        for k in [x for x in karsilastirmalar if x["yil"] == yil]:
+            degerler = {s["kod"]: s for s in k["satirlar"]}
+            for i, etiket in enumerate(DUZELTME_AYRINTI_SATIRLARI):
+                hucreler = []
+                for kod, _e in DUZELTME_AYRINTI_KOLONLARI:
+                    satir = degerler.get(kod) or {}
+                    if i == 2:
+                        # Dairenin tablosunda "Fark", duzeltmeyle beyandan
+                        # CIKARILAN tutardir; bu yuzden oncesi - sonrasi.
+                        hucreler.append(_tl(-(satir.get("fark") or 0.0)))
+                    else:
+                        hucreler.append(_tl(satir.get(
+                            "oncesi" if i == 0 else "sonrasi")))
+                satirlar.append([k["ay_adi"] if i == 0 else "", etiket]
+                                + hucreler)
+        b.tablo(["Dönemi\n%s" % yil, ""]
+                + [e for _k, e in DUZELTME_AYRINTI_KOLONLARI], satirlar,
+                hizalar=["orta", "sol"] + ["sag"] * len(DUZELTME_AYRINTI_KOLONLARI),
+                oranlar=[0.7, 1.6] + [1.1] * len(DUZELTME_AYRINTI_KOLONLARI),
+                buyukluk=TABLO_PUNTOSU)
+
+
+def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
+    """Beyanname yuklenmemis dosyalarda kirmizi tutuculu ayrintili tablo.
+
+    Veri varsa gercek rakamlar `_duzeltme_ayrinti_tablosu` ile yazilir; burasi
+    yalnizca kunyeye elle yazilan donemler icin bos tablo acar.
+    """
+    donemler = _donem_listesi(kunye)
+    if karsilastirmalar or not donemler:
+        return
     b.paragraf(
         "%s tarafından verilen düzeltme beyannamelerinde yapılan düzeltmelere "
         "ilişkin ayrıntılı tablo aşağıda sunulmuştur."
-        % M(kunye, buyuk=True), girinti=1)
+        % ik.mukellef_sozu(kunye, buyuk=True), girinti=1)
+    bloklar = {}
+    for metin in donemler:
+        yil, _, ay_adi = str(metin).partition("/")
+        bloklar.setdefault(yil.strip() or "[yıl]", []).append(
+            ay_adi.strip() or "[dönem]")
+    for yil, aylar in bloklar.items():
+        satirlar = []
+        for ay_adi in aylar:
+            for i, etiket in enumerate(DUZELTME_AYRINTI_SATIRLARI):
+                satirlar.append([ay_adi if i == 0 else "", etiket]
+                                + ["[tutar]"] * len(DUZELTME_AYRINTI_KOLONLARI))
+        b.tablo(["Dönemi\n%s" % yil, ""]
+                + [e for _k, e in DUZELTME_AYRINTI_KOLONLARI], satirlar,
+                hizalar=["orta", "sol"] + ["sag"] * len(DUZELTME_AYRINTI_KOLONLARI),
+                oranlar=[0.7, 1.6] + [1.1] * len(DUZELTME_AYRINTI_KOLONLARI),
+                buyukluk=TABLO_PUNTOSU)
 
-    if karsilastirmalar:
-        bloklar = [(k["yil"], k["ay_adi"],
-                    [[s["etiket"], _tl(s["oncesi"]), _tl(s["sonrasi"]),
-                      _tl(s["fark"])] for s in k["satirlar"]])
-                   for k in karsilastirmalar]
-    else:
-        bloklar = []
-        for metin in donemler:
-            yil, _, ay_adi = str(metin).partition("/")
-            bloklar.append((yil.strip() or "[yıl]", ay_adi.strip() or "[dönem]",
-                            [[ad, "[tutar]", "[tutar]", "[tutar]"]
-                             for ad in DUZELTME_AYRINTI_SATIRLARI]))
 
-    for yil, ay_adi, satirlar in bloklar:
-        # Ay adi yalnizca ilk satirda yazilir; ornekteki birlestirilmis hucrenin
-        # karsiligi budur.
-        tablo = [[ay_adi if i == 0 else ""] + satir
-                 for i, satir in enumerate(satirlar)]
-        b.tablo(["Dönemi\n%s" % yil, "Beyanname Satırı",
-                 "Düzeltme Öncesi\nBeyanname", "Düzeltme\nBeyannamesi", "Fark"],
-                tablo, hizalar=["orta", "sol", "sag", "sag", "sag"],
-                oranlar=[0.8, 2.0, 1.3, 1.3, 1.1], buyukluk=TABLO_PUNTOSU)
+def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
+    """Duzeltmeyle cikarilan satici icin duzeltme anlatisi, tablo ve kapanis.
+
+    Butun duzeltmeler degil, bu saticiya baglanabilenler yazilir
+    (bkz. `_saticinin_duzeltmeleri`). Beyanname yuklenmemisse kunyeye yazilan
+    donemler icin kirmizi tutuculu tablo acilir.
+    """
+    M = ik.mukellef_sozu
+    ilgili = _saticinin_duzeltmeleri(karsilastirmalar, kendi, s.get("unvan"))
+    if not ilgili:
+        _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar)
+        return
+
+    yillar = sorted({k["yil"] for k in ilgili})
+    donem_metni = turkce.liste(["%s/%s" % (k["ay_adi"], k["yil"]) for k in ilgili])
+    gerekceler = [k["gerekce"] for k in ilgili if k.get("gerekce")]
+    gerekce_cumlesi = ""
+    if gerekceler:
+        # Ayni gerekce her donemde tekrarlanir; benzersizlestirilip yazilir.
+        benzersiz = []
+        for g in gerekceler:
+            if g not in benzersiz:
+                benzersiz.append(g)
+        gerekce_cumlesi = (" ve düzeltme beyannamelerinin Düzeltme Gerekçesi "
+                           "kısmına %s yazıldığı"
+                           % turkce.liste(["“%s”" % g.strip().rstrip(".")
+                                           for g in benzersiz]))
+    b.paragraf(
+        "%s tarafından verilen %s yılı KDV beyannamelerinin tetkikinde; %s "
+        "%s için düzeltme beyannamesi verdiği%s anlaşılmış olup KDV "
+        "beyannamesinde yapılan düzeltmelere ilişkin ayrıntılı tablo aşağıda "
+        "sunulmuştur."
+        % (M(kunye, buyuk=True),
+           turkce.liste([str(y) for y in yillar]), donem_metni,
+           "dönemi" if len(ilgili) == 1 else "dönemleri",
+           gerekce_cumlesi), girinti=1)
+    _duzeltme_ayrinti_tablosu(b, ilgili)
+
+    # Kapanis: KDV'nin hangi donemde hangi satirdan cikarildigi.
+    def _farkli(k, kod):
+        return any(x["kod"] == kod and x["degisti"] for x in k["satirlar"])
+
+    alim = [k for k in ilgili if _farkli(k, "yurtici_alim_kdv")]
+    devir = [k for k in ilgili if k not in alim
+             and _farkli(k, "onceki_donem_devreden")]
+    kapanis = ("Yukarıdaki açıklamalar ve tespit edilen hususlar ile ilgili "
+               "mevzuat hükümlerinden hareketle; %s tarafından kullanılan ve "
+               "tutanağın %s maddesinde belirtilen faturalara isabet eden "
+               "%s TL tutarındaki katma değer vergisinin"
+               % (M(kunye), ("%d." % veri_no) if veri_no else "[ilgili]",
+                  _tl(s["kdv"])))
+    if alim:
+        kapanis += (" %s dönemi için %s tarihinde verilen düzeltme beyannamesi "
+                    "ile yurt içi alımlara ilişkin KDV satırından"
+                    % (turkce.liste(["%s/%s" % (k["ay_adi"], k["yil"])
+                                     for k in alim]),
+                       turkce.liste([k["tarih"] or "[düzeltme tarihi]"
+                                     for k in alim])))
+    if devir:
+        kapanis += ("%s %s %s için verdiği düzeltme beyannameleri ile de "
+                    "devreden KDV satırlarından"
+                    % ("," if alim else "",
+                       turkce.liste(["%s/%s" % (k["ay_adi"], k["yil"])
+                                     for k in devir]),
+                       "dönemi" if len(devir) == 1 else "dönemleri"))
+    if not (alim or devir):
+        kapanis += " ilgili dönem düzeltme beyannameleri ile beyanlardan"
+    kapanis += " çıkarıldığı tespit edilmiştir."
+    b.paragraf(kapanis, girinti=1)
 
 
 def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
-                   karsilastirmalar=None):
+                   karsilastirmalar=None, veri_no=None):
     M = ik.mukellef_sozu
     daire = ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]")
     unvan = ik.satici_unvani(s)
@@ -517,6 +644,22 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     kendi = [f for f in liste
              if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]]
     if kendi:
+        # Fatura tablosundan once tutanaga atif: hangi maddede tespit edildigi,
+        # faturalari kimin duzenledigi ve hangi donem beyannamelerinde indirim
+        # konusu yapildigi.
+        yillar = sorted({f["kayit_yil"] for f in kendi if f.get("kayit_yil")})
+        b.paragraf(
+            "Rapora ekli vergi inceleme tutanağının %s maddesinde tespit "
+            "edildiği üzere, %s, düzenlenen Vergi Tekniği Raporu ile sahte "
+            "olduğu tespit edilen %s %s Vergi Kimlik Numaralı Mükellefi %s "
+            "tarafından düzenlenen faturaları yevmiye defterine kaydederek, bu "
+            "faturalara ait KDV’leri %s dönemi KDV beyannamelerinde indirilecek "
+            "KDV olarak göstermiştir. Faturalara ilişkin ayrıntılı bilgiler "
+            "aşağıdaki tabloda yer almaktadır."
+            % (("%d." % veri_no) if veri_no else "[ilgili]",
+               M(kunye, buyuk=True), daire, s["vkn"] or "[VKN]", unvan,
+               turkce.liste([str(y) for y in yillar]) or "[yıl]"),
+            girinti=1)
         tablo = []
         for f in kendi:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
@@ -535,9 +678,6 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     if s.get("duzeltme_ile_cikarildi") == "Evet":
         # Mukerrer tarhiyati onlemek icin bu satici tarhiyata girmez; gerekcesi
         # burada ve degerlendirme bolumunde acikca yazilir.
-        for satir in str(s.get("duzeltme_aciklama") or "").split("\n"):
-            if satir.strip():
-                b.paragraf(satir.strip(), girinti=1)
         b.paragraf(
             "Yukarıda dökümü verilen faturalara ait %s TL tutarındaki katma "
             "değer vergisi, %s tarafından verilen düzeltme beyannameleri ile "
@@ -546,7 +686,7 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
             "tarhiyata yol açmamak bakımından bu raporda hesaplanan tarhiyata "
             "dahil edilmemiştir."
             % (_tl(s["kdv"]), M(kunye)), girinti=1)
-        _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar)
+        _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no)
         return
 
     b.paragraf(
