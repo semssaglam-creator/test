@@ -98,7 +98,7 @@ def belgeye_giren_bulgular(bulgular, donemler):
     for bulgu in bulgular or []:
         if not bulgu.get("mesaj"):
             continue
-        if bulgu.get("tur") == "donem_boslugu":
+        if bulgu.get("tur") in ("donem_boslugu", "indirim_asimi"):
             continue
         if bulgu.get("tur") == "devir_zinciri":
             donem = _donem_coz(bulgu.get("donem"))

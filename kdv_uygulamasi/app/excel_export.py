@@ -295,6 +295,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
 
     # --- Elestirili blok formulleri (hesap.py: _donem_hesapla) ---
     otomatik = elestiri.get("hesaplanan_otomatik") or [True] * 12
+    sifirla = elestiri.get("indirim_sifirla") or [False] * 12
     if onceki_yil:
         onc_yil, onc_ay = onceki_yil
         devir_kaynagi = f"'{onc_yil}'!{get_column_letter(onc_ay + 1)}{x['sonraki_devir']}"
@@ -318,6 +319,10 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
         else:
             onceki = f"{sut[i - 1]}{x['sonraki_devir']}"
 
+        ham_indirim = f"{c}{b['bu_donem_indirilecek']}-{c}{e['indirim_cikar']}"
+        indirim_formulu = (f"MAX({ham_indirim},0)"
+                           if i < len(sifirla) and sifirla[i] else ham_indirim)
+
         if i < len(otomatik) and otomatik[i] is False:
             hesaplanan_ilave = f"{c}{e['hesaplanan_kdv_ilave']}"
         else:
@@ -329,7 +334,9 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
             "ilave_edilecek": f"{c}{b['ilave_edilecek_kdv']}",
             "toplam_kdv": f"{c}{x['hesaplanan']}+{c}{x['ilave_edilecek']}",
             "onceki_devir": f"{onceki}-{c}{e['devir_cikar']}",
-            "bu_donem_indirim": f"{c}{b['bu_donem_indirilecek']}-{c}{e['indirim_cikar']}",
+            # Isaretli donemde hesap eksiye dusmez; ekrandaki 0,00 kabulunun
+            # Excel karsiligi budur.
+            "bu_donem_indirim": indirim_formulu,
             "diger_indirim": f"{c}{b['diger_indirimler_toplami']}",
             "indirimler": (f"{c}{x['onceki_devir']}+{c}{x['bu_donem_indirim']}"
                            f"+{c}{x['diger_indirim']}"),

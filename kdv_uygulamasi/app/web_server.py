@@ -105,6 +105,8 @@ def _yillari_coz(calisma):
         elestiri["kdv_orani"] = [None if o in (None, "") else _sayi(o) for o in oranlar[:12]]
         otomatik = (gelen_e.get("hesaplanan_otomatik") or []) + [True] * 12
         elestiri["hesaplanan_otomatik"] = [bool(o) for o in otomatik[:12]]
+        sifir = (gelen_e.get("indirim_sifirla") or []) + [False] * 12
+        elestiri["indirim_sifirla"] = [bool(s) for s in sifir[:12]]
         pin = ham.get("devir_baslangic")
         yillar.append({
             "yil": yil,
@@ -149,7 +151,8 @@ def _hesapla(calisma):
     # calisma duzeyindeki degeri ilk yila tasidi.
     sonuc = hesap.seri_hesapla(yillar, ziya_kati=_ziya_kati(calisma))
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
-    return sonuc, hesap.beyan_tutarlilik_kontrol(yillar)
+    return sonuc, (hesap.indirim_asimi_bulgulari(yillar)
+                   + hesap.beyan_tutarlilik_kontrol(yillar))
 
 
 def _inceleme_bilgisi(calisma):

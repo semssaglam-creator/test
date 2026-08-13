@@ -278,6 +278,18 @@ oturumda buradan devam edilir.
       bulunmaktadır" yazılıyor; kısmen bilerek kısmen bilmeden kullanmada
       tarhiyatın dönem dönem uzlaşma kapsamındaki ve kapsam dışındaki kısmını
       gösteren tablo ekleniyor.
+- [x] **İndirim aşımı uyarısı.** "Bu döneme ait indirilecek KDV" eksiye
+      düşemez. İnceleme Tespitleri sekmesinde beyan edilenden fazla çıkarma
+      yapılan dönemler kırmızı uyarıda dönem dönem listeleniyor (beyan edilen /
+      çıkarılan / fazla tutar) ve "Aşan dönemleri 0,00 olarak belirle" düğmesi
+      sunuluyor. İzgaradaki "İNDİRİM AŞIMINDA 0,00 KABUL ET" satırından ay ay
+      da işaretlenebiliyor. İşaretli dönemde hesap 0,00'da duruyor; aşan tutar
+      indirimden çıkarılmış sayılmadığından tarhiyata girmiyor ve bu belirtiliyor.
+      Excel formülü de aynı şekilde MAX(...;0) ile kuruluyor. Uyarı Sonuç
+      sekmesindeki bulgu listesinde de görünüyor, belgelere girmiyor.
+      (hesap.indirim_asimi_bulgulari, elestiri.indirim_sifirla)
+- [x] Fatura listesine kayıt yılı kulakçıkları eklendi; satıcı VKN süzgeci ve
+      başlıktaki toplu seçim kutucuğu seçili yılın içinde çalışıyor.
 - [x] **Vergi dairesi adı tam yazılıyor.** Ekrana "liman" ya da "LİMAN VD"
       yazılsa da belgeye "Liman Vergi Dairesi Müdürlüğü" geçiyor; daire adının
       geçtiği kalıplarda ("... mükellefi ...") ilgi hali eki de ekleniyor:
