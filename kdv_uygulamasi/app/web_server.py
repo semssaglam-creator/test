@@ -20,7 +20,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
-from .excel_export import calisma_olustur
+from .excel_export import calisma_olustur, fatura_listesi_olustur
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
@@ -105,8 +105,10 @@ def _yillari_coz(calisma):
         elestiri["kdv_orani"] = [None if o in (None, "") else _sayi(o) for o in oranlar[:12]]
         otomatik = (gelen_e.get("hesaplanan_otomatik") or []) + [True] * 12
         elestiri["hesaplanan_otomatik"] = [bool(o) for o in otomatik[:12]]
-        sifir = (gelen_e.get("indirim_sifirla") or []) + [False] * 12
-        elestiri["indirim_sifirla"] = [bool(s) for s in sifir[:12]]
+        # "indirim_sifirla" bu alanin onceki adiydi; eski kayitlar acilabilsin
+        sinirla = (gelen_e.get("indirim_sinirla")
+                   or gelen_e.get("indirim_sifirla") or []) + [False] * 12
+        elestiri["indirim_sinirla"] = [bool(s) for s in sinirla[:12]]
         pin = ham.get("devir_baslangic")
         yillar.append({
             "yil": yil,
@@ -303,6 +305,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._rapor_onizleme(veri))
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
+            elif yol == "/api/fatura_excel":
+                self._fatura_excel_gonder(veri)
             elif yol == "/api/yedek_al":
                 self._json_yanit({"dosya": os.path.basename(db.yedek_al())})
             elif yol == "/api/geri_yukle":
@@ -719,6 +723,34 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_header("Content-Type", icerik_turu)
         self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
         self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _fatura_excel_gonder(self, veri):
+        """Ekranda gorunen fatura listesini Excel olarak gonderir.
+
+        Satirlar istemciden gelir: ekranda hangi yil kulakcigi ve satici
+        suzgeci acikca o kume yazilir, sutun duzeni de tablonunkiyle ayni olur.
+        """
+        basliklar = [str(x) for x in (veri.get("basliklar") or [])]
+        satirlar = veri.get("satirlar") or []
+        if not basliklar or not satirlar:
+            raise ApiHata("Listede yazılacak satır yok.")
+        guvenli = "".join(c for c in (veri.get("ad") or "fatura listesi")
+                          if c.isalnum() or c in " -_").strip() or "fatura listesi"
+        dosya_adi = f"Fatura_listesi_{guvenli}.xlsx".replace(" ", "_")
+        dosya_yolu = os.path.join(CIKTI_DIR, dosya_adi)
+        fatura_listesi_olustur(dosya_yolu, veri.get("baslik") or "FATURA LİSTESİ",
+                               basliklar, satirlar, veri.get("sayisal") or [],
+                               veri.get("toplanan"))
+        with open(dosya_yolu, "rb") as f:
+            govde = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/vnd.openxmlformats-"
+                                         "officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
+        self.send_header("Content-Length", str(len(govde)))
+        self._onbellek_kapali()
         self.end_headers()
         self.wfile.write(govde)
 

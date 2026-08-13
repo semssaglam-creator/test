@@ -295,7 +295,7 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
 
     # --- Elestirili blok formulleri (hesap.py: _donem_hesapla) ---
     otomatik = elestiri.get("hesaplanan_otomatik") or [True] * 12
-    sifirla = elestiri.get("indirim_sifirla") or [False] * 12
+    sinirla = elestiri.get("indirim_sinirla") or [False] * 12
     if onceki_yil:
         onc_yil, onc_ay = onceki_yil
         devir_kaynagi = f"'{onc_yil}'!{get_column_letter(onc_ay + 1)}{x['sonraki_devir']}"
@@ -319,9 +319,16 @@ def _yil_sayfasi(wb, yil_kaydi, donemler, onceki_yil):
         else:
             onceki = f"{sut[i - 1]}{x['sonraki_devir']}"
 
-        ham_indirim = f"{c}{b['bu_donem_indirilecek']}-{c}{e['indirim_cikar']}"
-        indirim_formulu = (f"MAX({ham_indirim},0)"
-                           if i < len(sifirla) and sifirla[i] else ham_indirim)
+        # Sinirli donemde cikarma, yurtici alimlar (yoksa bu doneme ait
+        # indirilecek KDV) tutarini asamaz; ekrandaki hesabin karsiligi budur.
+        yurtici_dizi = beyan.get("yurtici_alim_kdv") or []
+        yurtici_var = (i < len(yurtici_dizi)
+                       and abs(float(yurtici_dizi[i] or 0.0)) > 0.005)
+        sinir_hucresi = (f"{c}{b['yurtici_alim_kdv']}" if yurtici_var
+                         else f"{c}{b['bu_donem_indirilecek']}")
+        cikar = (f"MIN({c}{e['indirim_cikar']},{sinir_hucresi})"
+                 if i < len(sinirla) and sinirla[i] else f"{c}{e['indirim_cikar']}")
+        indirim_formulu = f"{c}{b['bu_donem_indirilecek']}-{cikar}"
 
         if i < len(otomatik) and otomatik[i] is False:
             hesaplanan_ilave = f"{c}{e['hesaplanan_kdv_ilave']}"
@@ -797,5 +804,57 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
         _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati)
         _ozet_sayfasi(wb, inceleme, sonuc, bulgular or [], duzen)
     os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
+    wb.save(dosya_yolu)
+    return dosya_yolu
+
+
+def fatura_listesi_olustur(dosya_yolu, baslik, basliklar, satirlar, sayisal=(),
+                           toplanan=None):
+    """Ekranda gorunen fatura listesini tek sayfalik Excel'e yazar.
+
+    Icerik ekrandaki tablonun kendisidir: yil kulakcigi ve satici suzgeci
+    neyi gosteriyorsa o satirlar, ayni sutun duzeniyle yazilir. Tutar
+    sutunlari sayi olarak gecer; boylece Excel'de toplanabilir.
+
+    sayisal: tutar tasiyan sutunlarin sifirdan baslayan sira numaralari.
+    toplanan: TOPLAM satirina girecek sutunlar (verilmezse sayisal olanlarin
+        tumu). Oran gibi toplanmasi anlamsiz sutunlar disarida birakilir.
+    """
+    sayisal = set(sayisal or ())
+    toplanan = sayisal if toplanan is None else set(toplanan)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Fatura Listesi"
+
+    _yaz(ws, 1, 1, baslik, FONT_BASLIK, SOL, DOLGU_BASLIK, bicim=None)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1,
+                   end_column=max(len(basliklar), 1))
+    for i, etiket in enumerate(basliklar, 1):
+        _yaz(ws, 2, i, etiket, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+    ws.row_dimensions[2].height = 28
+
+    for sira, satir in enumerate(satirlar, 3):
+        for i, deger in enumerate(satir, 1):
+            if (i - 1) in sayisal:
+                _yaz(ws, sira, i, float(deger or 0.0), FONT, SAG)
+            else:
+                _yaz(ws, sira, i, "" if deger is None else str(deger),
+                     FONT, SOL, bicim=None)
+
+    son = len(satirlar) + 3
+    _yaz(ws, son, 1, "TOPLAM", FONT_BOLD, SOL, DOLGU_TOPLAM, bicim=None)
+    for i in range(2, len(basliklar) + 1):
+        if (i - 1) in toplanan:
+            toplam = sum(float(s[i - 1] or 0.0) for s in satirlar
+                         if len(s) >= i)
+            _yaz(ws, son, i, toplam, FONT_BOLD, SAG, DOLGU_TOPLAM)
+        else:
+            _yaz(ws, son, i, "", FONT_BOLD, ORTA, DOLGU_TOPLAM, bicim=None)
+
+    for i, etiket in enumerate(basliklar, 1):
+        en_uzun = max([len(str(etiket))]
+                      + [len(str(s[i - 1])) for s in satirlar if len(s) >= i])
+        ws.column_dimensions[get_column_letter(i)].width = min(max(en_uzun + 2, 10), 40)
+    ws.freeze_panes = "A3"
     wb.save(dosya_yolu)
     return dosya_yolu

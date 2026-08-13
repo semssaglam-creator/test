@@ -63,13 +63,13 @@ def bos_elestiri():
         "yuklenilen_cikar": [0.0] * 12,
         "kdv_orani": [None] * 12,
         "hesaplanan_otomatik": [True] * 12,
-        "indirim_sifirla": [False] * 12,
+        "indirim_sinirla": [False] * 12,
     }
 
 
-def _indirim_sifirlansin(elestiri, ay):
-    """O donemde indirim asimi 0,00'a cekilecek mi."""
-    isaretler = elestiri.get("indirim_sifirla") or []
+def _indirim_sinirlansin(elestiri, ay):
+    """O donemde cikarma, yurtici alimlar tutariyla sinirlanacak mi."""
+    isaretler = elestiri.get("indirim_sinirla") or []
     return bool(ay < len(isaretler) and isaretler[ay])
 
 
@@ -110,16 +110,21 @@ def _donem_hesapla(beyan, elestiri, yil, ay, devreden_giris):
         # Zincirin ici: onceki donemin duzeltilmis devri esas alinir; bu donemde
         # ayrica bir devir elestirisi varsa o da dusulur.
         onceki_devir = devreden_giris - _d(elestiri, "devir_cikar", ay)
-    # Bu doneme ait indirilecek KDV eksiye dusemez: beyan edilenden fazlasi
-    # cikarilamaz. Asim, faturanin baska bir donemde kaydedilmis olmasindan ya
-    # da beyan rakaminin yanlisligindan gelir; ikisi de bildirilmesi gereken
-    # durumlar. Isaret konmussa tutar 0,00'a cekilir, konmamissa hesap oldugu
-    # gibi surer ve asim uyari olarak bildirilir.
-    ham_bu_donem_indirim = (_d(beyan, "bu_donem_indirilecek", ay)
-                            - _d(elestiri, "indirim_cikar", ay))
-    indirim_asimi = max(-ham_bu_donem_indirim, 0.0)
-    sifirlandi = indirim_asimi > 0.005 and _indirim_sifirlansin(elestiri, ay)
-    bu_donem_indirim = 0.0 if sifirlandi else ham_bu_donem_indirim
+    # Sahte belgelerin KDV'si yurtici alimlar icinden cikarilir; indirimden
+    # cikarilabilecek en yuksek tutar o satirdir. Yurtici alim satiri
+    # okunmamissa (eski bicim beyan, eksik dokum) bu doneme ait indirilecek
+    # KDV'ye dusulur; hesap yine eksiye dusmez.
+    beyan_indirim = _d(beyan, "bu_donem_indirilecek", ay)
+    yurtici = _d(beyan, "yurtici_alim_kdv", ay)
+    sinir = yurtici if yurtici > 0.005 else beyan_indirim
+    istenen_cikar = _d(elestiri, "indirim_cikar", ay)
+    # Indirimin tamaminin reddi (defter ve belgelerin ibraz edilmemesi gibi)
+    # bilincli bir istir; yurtici alimlari asmasi asim sayilmaz.
+    tam_ret = beyan_indirim > 0.005 and abs(istenen_cikar - beyan_indirim) <= 0.005
+    indirim_asimi = 0.0 if tam_ret else max(istenen_cikar - sinir, 0.0)
+    sinirlandi = indirim_asimi > 0.005 and _indirim_sinirlansin(elestiri, ay)
+    uygulanan_cikar = sinir if sinirlandi else istenen_cikar
+    bu_donem_indirim = beyan_indirim - uygulanan_cikar
     diger_indirim = _d(beyan, "diger_indirimler_toplami", ay)
     indirimler = onceki_devir + bu_donem_indirim + diger_indirim
 
@@ -160,7 +165,9 @@ def _donem_hesapla(beyan, elestiri, yil, ay, devreden_giris):
         "onceki_devir": _yuvarla(onceki_devir),
         "bu_donem_indirim": _yuvarla(bu_donem_indirim),
         "indirim_asimi": _yuvarla(indirim_asimi),
-        "indirim_sifirlandi": sifirlandi,
+        "indirim_siniri": _yuvarla(sinir),
+        "uygulanan_indirim_cikar": _yuvarla(uygulanan_cikar),
+        "indirim_sinirlandi": sinirlandi,
         "diger_indirim": _yuvarla(diger_indirim),
         # Ozet tablosunda beyan tarafiyla ayni tanim kullanilir: bu doneme ait
         # indirilecek KDV ile 103+104+105 toplaminin birlesimi
@@ -488,13 +495,24 @@ def kaynak_analizi(yillar, devreden_baslangic=None):
     }
 
 
-def indirim_asimi_bulgulari(yillar):
-    """Beyan edilenden fazla indirim cikarilan donemleri bildirir.
+def indirim_siniri(beyan, ay):
+    """Bir donemde indirimden cikarilabilecek en yuksek tutar.
 
-    "Bu doneme ait indirilecek KDV" eksiye dusemez. Asim genellikle faturanin
-    beyan donemi ile defter kayit doneminin ayrilmasindan ya da beyan
-    rakamindaki hatadan gelir; incelemeci bunu gormeden tarhiyat kurmamalidir.
-    Isaret konmus donemler (0,00 kabul edilenler) uyari listesinde cikmaz.
+    Sahte belgelerin KDV'si "yurtici alimlara iliskin KDV" satirindan
+    cikarilir; sinir odur. Bu satir okunmamissa "bu doneme ait indirilecek
+    KDV"ye dusulur.
+    """
+    yurtici = _d(beyan, "yurtici_alim_kdv", ay)
+    return yurtici if yurtici > 0.005 else _d(beyan, "bu_donem_indirilecek", ay)
+
+
+def indirim_asimi_bulgulari(yillar):
+    """Cikarilabilecek tutari asan donemleri bildirir.
+
+    Asim genellikle faturanin beyan donemi ile defter kayit doneminin
+    ayrilmasindan ya da beyan rakamindaki hatadan gelir; incelemeci bunu
+    gormeden tarhiyat kurmamalidir. Indirimin tamaminin reddi (defter ibraz
+    edilmemesi gibi) bilincli bir istir, asim sayilmaz.
     """
     bulgular = []
     for yil_kaydi in sorted(yillar, key=lambda y: y["yil"]):
@@ -503,29 +521,33 @@ def indirim_asimi_bulgulari(yillar):
         elestiri = yil_kaydi.get("elestiri") or bos_elestiri()
         ay_sayisi = min(max(int(yil_kaydi.get("ay_sayisi") or 12), 1), 12)
         for ay in range(ay_sayisi):
-            mevcut = _d(beyan, "bu_donem_indirilecek", ay)
+            beyan_indirim = _d(beyan, "bu_donem_indirilecek", ay)
+            sinir = indirim_siniri(beyan, ay)
             cikan = _d(elestiri, "indirim_cikar", ay)
-            asim = _yuvarla(cikan - mevcut)
+            if beyan_indirim > 0.005 and abs(cikan - beyan_indirim) <= 0.005:
+                continue                       # indirimin tamami bilerek reddedilmis
+            asim = _yuvarla(cikan - sinir)
             if asim <= 0.005:
                 continue
+            sinirli = _indirim_sinirlansin(elestiri, ay)
+            yurtici_mi = _d(beyan, "yurtici_alim_kdv", ay) > 0.005
             bulgular.append({
                 "donem": f"{yil}/{AYLAR[ay]}",
                 "yil": yil,
                 "ay": ay + 1,
                 "tur": "indirim_asimi",
                 "asim": asim,
-                "mevcut": _yuvarla(mevcut),
+                "sinir": _yuvarla(sinir),
                 "cikan": _yuvarla(cikan),
-                "sifirlandi": _indirim_sifirlansin(elestiri, ay),
-                "mesaj": (f"Beyan edilen bu döneme ait indirilecek KDV {_tl(mevcut)} TL "
-                          f"iken indirimden çıkarılacak tutar {_tl(cikan)} TL girilmiş; "
-                          f"{_tl(asim)} TL fazla. İndirilecek KDV eksiye düşemez: ya "
-                          f"faturalar başka dönemde indirim konusu yapılmıştır ya da "
-                          f"beyan rakamı eksik girilmiştir."
-                          + (" Bu dönem 0,00 olarak belirlendi; aşan tutar "
-                             "indirimden çıkarılmış sayılmadığından tarhiyata "
-                             "girmez."
-                             if _indirim_sifirlansin(elestiri, ay) else "")),
+                "sinirlandi": sinirli,
+                "mesaj": (f"İndirimden çıkarılacak tutar {_tl(cikan)} TL girilmiş; "
+                          f"{'yurtiçi alımlara ilişkin KDV' if yurtici_mi else 'beyan edilen bu döneme ait indirilecek KDV'}"
+                          f" ise {_tl(sinir)} TL. {_tl(asim)} TL fazla. Sahte "
+                          f"belgelerin KDV'si ancak bu tutar kadar indirimden "
+                          f"çıkarılabilir: faturalar başka bir dönemde indirim "
+                          f"konusu yapılmış ya da beyan rakamı eksik olabilir."
+                          + (" Bu dönemde çıkarma bu tutarla sınırlandı; aşan "
+                             "kısım tarhiyata girmiyor." if sinirli else "")),
             })
     return bulgular
 

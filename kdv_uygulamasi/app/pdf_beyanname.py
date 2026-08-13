@@ -463,13 +463,20 @@ def _turet(degerler):
     ind = degerler.get("indirimler_toplami")
     onc = degerler.get("onceki_donem_devreden", 0.0)
 
-    # Bu doneme ait indirilecek KDV: oran dagilimi toplami yoksa
-    # 108+109+110 kalemlerinin toplami
-    if "bu_donem_indirilecek" not in degerler:
-        parcalar = [degerler.get(k) for k in
-                    ("yurtici_alim_kdv", "sorumlu_sifatiyla_kdv", "ithalde_odenen_kdv")]
-        if any(p is not None for p in parcalar):
-            degerler["bu_donem_indirilecek"] = round(sum(p or 0.0 for p in parcalar), 2)
+    # Bu doneme ait indirilecek KDV = 108+109+110. Oran dagilimi tablosunun
+    # toplami buna esit degildir: "Satıştan iade edilen ... nedeniyle
+    # indirilmesi gereken KDV" (103) gibi kalemler de o tabloda oranlara
+    # dagitilir. Toplami oldugu gibi almak, bu doneme ait indirimi sisirip
+    # 103+104+105 toplamini ayni tutarda eksiltiyordu. Bu yuzden kalemler
+    # okunabildiginde onlar esas alinir; oran dagilimi toplami yalnizca
+    # kalemler yoksa (2019/Ocak ve oncesi bicimi) kullanilir.
+    parcalar = [degerler.get(k) for k in
+                ("yurtici_alim_kdv", "sorumlu_sifatiyla_kdv", "ithalde_odenen_kdv")]
+    if any(p is not None for p in parcalar):
+        kalem_toplami = round(sum(p or 0.0 for p in parcalar), 2)
+        if "bu_donem_indirilecek" in degerler:
+            degerler["oran_dagilimi_toplami"] = degerler["bu_donem_indirilecek"]
+        degerler["bu_donem_indirilecek"] = kalem_toplami
 
     bu = degerler.get("bu_donem_indirilecek")
     # 103+104+105 toplami: indirimler toplamindan devir ve bu donem indirimi dusulur
@@ -497,6 +504,20 @@ def _denetle(degerler):
                 "Toplam KDV %.2f okundu; hesaplanan (%.2f) ve ilave edilecek (%.2f) "
                 "toplamı %.2f." % (d("toplam_kdv"), d("hesaplanan_kdv"),
                                    d("ilave_edilecek_kdv"), beklenen))
+
+    if "oran_dagilimi_toplami" in degerler:
+        fark = d("oran_dagilimi_toplami") - d("bu_donem_indirilecek")
+        if abs(fark) > 0.01:
+            iade = d("satistan_iade_kdv")
+            uyarilar.append(
+                "Oranlara göre dağılım tablosunun toplamı %.2f; yurtiçi alımlar, "
+                "sorumlu sıfatıyla ödenen ve ithalde ödenen KDV toplamı ise %.2f. "
+                "Aradaki %.2f fark, oranlara dağıtılan diğer indirim kalemlerinden "
+                "gelir%s. Bu döneme ait indirilecek KDV olarak kalemlerin toplamı "
+                "alındı; fark 103+104+105 toplamında yer alıyor."
+                % (d("oran_dagilimi_toplami"), d("bu_donem_indirilecek"), fark,
+                   " (satıştan iade edilen mal ve hizmetler nedeniyle indirilmesi "
+                   "gereken KDV)" if abs(iade - fark) < 0.01 else ""))
 
     if "indirimler_toplami" in degerler and "bu_donem_indirilecek" in degerler:
         beklenen = (d("onceki_donem_devreden") + d("bu_donem_indirilecek")
@@ -546,6 +567,12 @@ def beyanname_oku(yol, dosya_adi=None):
     if kunye["yil"] is None or kunye["ay"] is None:
         raise PdfHata("Beyannamenin dönemi (yıl/ay) okunamadı.")
 
+    uyarilar = _denetle(degerler)
+    # Oran dagilimi toplami bir uygulama satiri degildir; denetimden sonra
+    # bilgi alanina alinir.
+    if "oran_dagilimi_toplami" in degerler:
+        ek["oran_dagilimi_toplami"] = degerler.pop("oran_dagilimi_toplami")
+
     return {
         "yil": kunye["yil"],
         "ay": kunye["ay"],
@@ -559,6 +586,6 @@ def beyanname_oku(yol, dosya_adi=None):
         "kaynak": dosya_adi or os.path.basename(yol),
         "degerler": degerler,
         "ek": ek,
-        "uyarilar": _denetle(degerler),
+        "uyarilar": uyarilar,
         "tanimsiz": tanimsiz,
     }

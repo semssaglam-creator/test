@@ -146,14 +146,17 @@ def _rpr(kalin, italik, buyukluk, renk=None):
     return "<w:rPr>%s</w:rPr>" % "".join(ozellikler) if ozellikler else ""
 
 
-def _kosular(metin, kalin=False, italik=False, buyukluk=None):
+def _kosular(metin, kalin=False, italik=False, buyukluk=None, renk=None):
     """Bir paragrafin ic parcalarini (w:r) uretir; satir sonlarini korur.
 
     Kose parantezli parcalar kirmizi yazilir. Bu parcalar, kunyede
     doldurulmamis alanlarin yerine konan tutuculardir; belgeyi okuyanin
     "burayi elle dolduracagim" diyebilmesi icin goze carpmalari gerekir.
+
+    `renk` verildiginde paragrafin tamami o renkte yazilir; koseli parantez
+    kullanmadan dikkat cekmesi gereken notlar icindir.
     """
-    duz = _rpr(kalin, italik, buyukluk)
+    duz = _rpr(kalin, italik, buyukluk, renk)
     kirmizi = _rpr(kalin, italik, buyukluk, YER_TUTUCU_RENGI)
     parcalar = []
     satirlar = str(metin or "").split("\n")
@@ -180,7 +183,8 @@ class Belge:
 
     # ------------------------------------------------------------- paragraflar
     def paragraf(self, metin="", kalin=False, italik=False, hiza="iki",
-                 buyukluk=None, girinti=0, aralik_once=0, aralik_sonra=120):
+                 buyukluk=None, girinti=0, aralik_once=0, aralik_sonra=120,
+                 renk=None):
         """Duz paragraf ekler. `girinti` cm cinsindendir."""
         ozellikler = ['<w:spacing w:before="%d" w:after="%d" w:line="360" '
                       'w:lineRule="auto"/>' % (aralik_once, aralik_sonra)]
@@ -189,7 +193,7 @@ class Belge:
         ozellikler.append('<w:jc w:val="%s"/>' % _HIZA_KODLARI.get(hiza, "both"))
         self._govde.append("<w:p><w:pPr>%s</w:pPr>%s</w:p>"
                            % ("".join(ozellikler),
-                              _kosular(metin, kalin, italik, buyukluk)))
+                              _kosular(metin, kalin, italik, buyukluk, renk)))
         self._duz.append(str(metin or ""))
         return self
 

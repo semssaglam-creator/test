@@ -19,7 +19,7 @@ III. bolumunde yer alir.
 """
 from . import inceleme_kunyesi as ik
 from . import turkce
-from .belge_docx import TABLO_PUNTOSU, Belge
+from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
 from .satirlar import AYLAR, ELESTIRI_ALANLARI
 
 _tl = turkce.tl
@@ -161,6 +161,45 @@ def tarhiyat_toplami(tarhiyatli):
     return {a: round(sum(d["tarhiyat"].get(a, 0.0) for d in tarhiyatli), 2)
             for a in alanlar}
 
+
+
+DIKKAT_NOTU = ("DİKKAT: LİSTEDE BULUNAN İNDİRİLECEK KDV TUTARINDAN DAHA AZ "
+               "İNDİRİLECEK KDV BEYAN EDİLMİŞTİR.")
+
+
+def indirim_yetersiz_donemler(liste, saticilar, donemler):
+    """Fatura KDV'sinin, indirimden cikarilabilecek tutari astigi donemler.
+
+    Sahte belgelerin KDV'si "yurtici alimlara iliskin KDV" icinden cikarilir.
+    Bir donemde beyan edilen bu tutar, o donemde kaydedilen sahte faturalarin
+    KDV'sinden az ise faturalarin tamami o donemde indirim konusu yapilmamis
+    demektir; tarhiyat bu haliyle kurulamaz. Belgede ilgili maddenin basina
+    kirmizi bir not dusulur.
+
+    Doner: {(yil, ay), ...}
+    """
+    from . import faturalar as F
+
+    sinirlar = {(d["yil"], d["ay"]): d["elestirili"].get("indirim_siniri",
+                                                         d["beyan"]["bu_donem_indirim"])
+                for d in donemler or []}
+    yetersiz = set()
+    for yil, aylar in F.donem_ozeti(liste, saticilar).items():
+        for ay, hucre in aylar.items():
+            if (yil, ay) in sinirlar and hucre["kdv"] - sinirlar[(yil, ay)] > 0.005:
+                yetersiz.add((yil, ay))
+    return yetersiz
+
+
+def dikkat_notu(faturalar, yetersiz):
+    """Verilen faturalar yetersiz donemlere dusuyorsa kirmizi not metni."""
+    donemler = sorted({(f.get("kayit_yil"), f.get("kayit_ay")) for f in faturalar}
+                      & (yetersiz or set()))
+    if not donemler:
+        return ""
+    adlar = ", ".join("%d/%s" % (yil, turkce.buyuk(AYLAR[ay - 1]))
+                      for yil, ay in donemler)
+    return "%s (%s)" % (DIKKAT_NOTU, adlar)
 
 
 def satici_veri_maddeleri(kunye, donemler, satici_sayisi):
@@ -473,7 +512,7 @@ def _kdv_beyani_maddesi(b, kunye, sayac, donemler, uyumsuz=None):
         b.madde_listesi([x["mesaj"] for x in uyumsuz], numarali=False)
 
 
-def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
+def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
     """Satici basina VERI maddesi ve hemen ardindan SORU maddesi.
 
     Duzen tutanagin kendi mantigina uyar: once o saticiya ait ba-bs tespiti ve
@@ -498,7 +537,12 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
         if not kendi:
             continue
 
-        # --- VERI maddesi
+        # --- VERI maddesi. Beyan edilen indirim faturalari karsilamiyorsa
+        # maddenin basina kirmizi uyari dusulur.
+        not_metni = dikkat_notu(kendi, yetersiz)
+        if not_metni:
+            b.paragraf(not_metni, kalin=True, girinti=1, renk=KIRMIZI,
+                       aralik_once=140, aralik_sonra=0)
         veri_no = _madde(
             b, sayac,
             "%s Ba-Bs analizi sorgulamasında %s %s vergi kimlik numaralı "
@@ -738,7 +782,8 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
                         belgeye_giren_bulgular(bulgular, donemler))
     # Satici varsa veri/soru ciftleri _fatura_maddesi icinde uretilir; ayrica
     # genel bir soru maddesi acilmaz.
-    _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste)
+    _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste,
+                    indirim_yetersiz_donemler(liste, saticilar, donemler))
     if not satici_satirlari:
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)
         _sorular_maddesi(b, kunye, sayac, satici_satirlari)

@@ -23,10 +23,11 @@ Uretilen belge TASLAKTIR; nitelendirme inceleme elemanina aittir.
 from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
-from .belge_docx import TABLO_PUNTOSU, Belge
+from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
 from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
-                      beyan_dokum_tablosu, dolu_donemler,
-                      satici_veri_maddeleri, tarhiyat_toplami)
+                      beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
+                      indirim_yetersiz_donemler, satici_veri_maddeleri,
+                      tarhiyat_toplami)
 
 _tl = turkce.tl
 
@@ -379,10 +380,11 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
                    girinti=1, italik=True)
     # Tutanaktaki veri maddesi numaralari: rapor, her saticiyi kendi maddesine
     # atifla anlatir.
+    yetersiz = indirim_yetersiz_donemler(liste, saticilar, donemler)
     for i, s in enumerate(satici_satirlari, 1):
         _satici_bolumu(b, kunye, s, liste, i,
                        _donem_ifadesi(kunye, donemler), karsilastirmalar,
-                       madde_no.get(s["vkn"]))
+                       madde_no.get(s["vkn"]), yetersiz)
 
     # ---- C: mevzuat
     b.baslik("C- İlgili Mevzuat", 2)
@@ -643,12 +645,21 @@ def _duzeltme_kapanisi(b, kunye, s, takip, veri_no):
 
 
 def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
-                   karsilastirmalar=None, veri_no=None):
+                   karsilastirmalar=None, veri_no=None, yetersiz=None):
     M = ik.mukellef_sozu
     daire = ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in")
     unvan = ik.satici_unvani(s)
     b.baslik("B.%d- %s %s Vergi Kimlik Numaralı Mükellefi %s’den Olan Alışları"
              % (sira, daire, s["vkn"] or "[VKN]", unvan), 2)
+
+    # Beyan edilen indirim, o donemde kaydedilen faturalari karsilamiyorsa
+    # bolumun basina kirmizi uyari dusulur.
+    not_metni = dikkat_notu([f for f in liste if f.get("dahil")
+                             and (f.get("satici_vkn") or "") == s["vkn"]],
+                            yetersiz)
+    if not_metni:
+        b.paragraf(not_metni, kalin=True, girinti=1, renk=KIRMIZI,
+                   aralik_once=0, aralik_sonra=120)
 
     b.paragraf(
         "%s %s yasal defter ve belgelerinin tetkik edilmesi sonucunda %s %s "

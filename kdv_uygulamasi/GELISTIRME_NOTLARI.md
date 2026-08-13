@@ -278,16 +278,37 @@ oturumda buradan devam edilir.
       bulunmaktadır" yazılıyor; kısmen bilerek kısmen bilmeden kullanmada
       tarhiyatın dönem dönem uzlaşma kapsamındaki ve kapsam dışındaki kısmını
       gösteren tablo ekleniyor.
+- [x] **Beyannamedeki "bu döneme ait indirilecek KDV" düzeltildi.** Beyanname
+      PDF'inde bu satır, "oranlara göre dağılım" tablosunun toplamından
+      okunuyordu; o tabloya "satıştan iade edilen, işlemi gerçekleşmeyen veya
+      işleminden vazgeçilen mal ve hizmetler nedeniyle indirilmesi gereken KDV"
+      (103) gibi kalemler de dağıtıldığından tutar şişiyor, 103+104+105 toplamı
+      aynı tutarda eksiliyordu. Artık 108+109+110 kalemleri esas alınıyor; iki
+      rakam farklıysa farkın nereden geldiğini söyleyen bir uyarı veriliyor.
+      Kalemleri taşımayan eski biçim beyannamelerde dağılım toplamı kullanılmaya
+      devam ediyor. — *kullanıcı bildirimi*
+- [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
+      çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o
+      dönemin faturalarını taşıyan tutanak maddesinin ve rapor bölümünün başına
+      kırmızı ve kalın "DİKKAT: LİSTEDE BULUNAN İNDİRİLECEK KDV TUTARINDAN DAHA
+      AZ İNDİRİLECEK KDV BEYAN EDİLMİŞTİR." notu düşülüyor; ilgili dönemler
+      parantez içinde yazılıyor.
+- [x] Fatura listesi, ekranda göründüğü hâliyle (yıl kulakçığı ve satıcı
+      süzgeci neyi gösteriyorsa) tek sayfalık bir Excel dosyasına aktarılıyor.
+      Tutarlar sayı olarak yazılıyor, TOPLAM satırı ekleniyor.
 - [x] **İndirim aşımı uyarısı.** "Bu döneme ait indirilecek KDV" eksiye
-      düşemez. İnceleme Tespitleri sekmesinde beyan edilenden fazla çıkarma
-      yapılan dönemler kırmızı uyarıda dönem dönem listeleniyor (beyan edilen /
-      çıkarılan / fazla tutar) ve "Aşan dönemleri 0,00 olarak belirle" düğmesi
-      sunuluyor. İzgaradaki "İNDİRİM AŞIMINDA 0,00 KABUL ET" satırından ay ay
-      da işaretlenebiliyor. İşaretli dönemde hesap 0,00'da duruyor; aşan tutar
-      indirimden çıkarılmış sayılmadığından tarhiyata girmiyor ve bu belirtiliyor.
-      Excel formülü de aynı şekilde MAX(...;0) ile kuruluyor. Uyarı Sonuç
-      sekmesindeki bulgu listesinde de görünüyor, belgelere girmiyor.
-      (hesap.indirim_asimi_bulgulari, elestiri.indirim_sifirla)
+      düşemez; dahası sahte belgelerin KDV'si yurtiçi alımlara ilişkin KDV
+      içinden çıkarılır, en fazla o tutar kadar çıkarılabilir. İnceleme
+      Tespitleri sekmesinde sınırı aşan dönemler kırmızı uyarıda dönem dönem
+      listeleniyor (çıkarılan / sınır / fazla tutar) ve "Aşan dönemleri en fazla
+      bu tutarla sınırla" düğmesi sunuluyor. İzgaradaki "ÇIKARMAYI YURTİÇİ
+      ALIMLARLA SINIRLA" satırından ay ay da işaretlenebiliyor. İşaretli dönemde
+      çıkarma sınırda duruyor; aşan tutar tarhiyata girmiyor ve bu belirtiliyor.
+      Excel formülü de aynı şekilde MIN(...) ile kuruluyor. İndirimin tamamının
+      reddi (defter ibraz edilmemesi) bilinçli bir iş olduğundan aşım
+      sayılmıyor. Uyarı Sonuç sekmesindeki bulgu listesinde de görünüyor,
+      belgelere girmiyor.
+      (hesap.indirim_asimi_bulgulari, elestiri.indirim_sinirla)
 - [x] Fatura listesine kayıt yılı kulakçıkları eklendi; satıcı VKN süzgeci ve
       başlıktaki toplu seçim kutucuğu seçili yılın içinde çalışıyor.
 - [x] **Vergi dairesi adı tam yazılıyor.** Ekrana "liman" ya da "LİMAN VD"
