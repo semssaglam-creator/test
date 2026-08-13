@@ -448,6 +448,91 @@ def surum_dokumu(duzen, hangi="ilk"):
     return satirlar
 
 
+def _fark(karsilastirma, kod):
+    """Bir donemde bir beyanname satirinin duzeltmeyle degisimi (sonrasi - oncesi)."""
+    for s in karsilastirma["satirlar"]:
+        if s["kod"] == kod:
+            return s["fark"]
+    return 0.0
+
+
+def duzeltme_takibi(karsilastirmalar, baslangic_aylari, hedef_kdv=None,
+                    unvan=None):
+    """Duzeltmeyle cikarilan KDV'nin akibetini donem donem izler.
+
+    Bir donemde indirimlerden cikarilan KDV her zaman o ay odenecek vergiye
+    donusmez: o ayda devir varsa tutar once devri azaltir, izleyen aylarin
+    "onceki donemden devreden KDV" satirindan dusulerek tasinir ve ancak
+    odenecek verginin dogdugu ayda kapanir. Bu yuzden "fatura KDV'si gercekten
+    cikarilmis mi" sorusu tek aya bakarak yanitlanamaz.
+
+    Izleme su bicimde yurur:
+      - baslangic, saticinin faturalarinin kaydedildigi (ya da gerekcesinde
+        saticinin anildigi) donemdir,
+      - o donemde YURTICI ALIMLAR satirindan dusulen tutar "cikarilan"dir,
+      - her donemde odenecek verginin artisi (ve iadenin azalisi) kadari
+        kapanir; kapanmayan kisim "devirde kalan" olarak sonraki aya gecer,
+      - zincir, devreden KDV'de degisiklik olan aylar boyunca surer; kalan
+        sifirlaninca ya da zincir kirilinca durur.
+
+    Doner:
+      {"donemler": [{"karsilastirma", "cikarilan", "devirden_dusen",
+                     "odenecege_donusen", "kalan"}],
+       "cikarilan_toplam", "odenecege_donusen_toplam", "devirde_kalan",
+       "hedef", "tamamlandi", "eksik"}
+    """
+    sirali = sorted(karsilastirmalar or [], key=lambda k: (k["yil"], k["ay"]))
+    ad = (unvan or "").lower().replace(".", "").strip()
+    aylar = set(baslangic_aylari or [])
+
+    izleme, kalan, cikarilan_toplam, kapanan_toplam = [], 0.0, 0.0, 0.0
+    basladi = False
+    for k in sirali:
+        gerekce = (k.get("gerekce") or "").lower().replace(".", "")
+        kendi_ayi = (k["yil"], k["ay"]) in aylar or (
+            len(ad) > 4 and ad in gerekce)
+        devirden_dusen = max(0.0, -_fark(k, "onceki_donem_devreden"))
+        if not basladi and not kendi_ayi:
+            continue
+        if basladi and not kendi_ayi and devirden_dusen <= 0.005:
+            break                                   # zincir kirildi
+        basladi = True
+
+        cikarilan = max(0.0, -_fark(k, "yurtici_alim_kdv"))
+        kapanabilir = (max(0.0, _fark(k, "odenmesi_gereken_kdv"))
+                       + max(0.0, -_fark(k, "iade_edilmesi_gereken_kdv")))
+        kalan += cikarilan
+        kapanan = min(kalan, kapanabilir)
+        kalan = round(kalan - kapanan, 2)
+        cikarilan_toplam = round(cikarilan_toplam + cikarilan, 2)
+        kapanan_toplam = round(kapanan_toplam + kapanan, 2)
+        izleme.append({
+            "karsilastirma": k,
+            "cikarilan": round(cikarilan, 2),
+            "devirden_dusen": round(devirden_dusen, 2),
+            "odenecege_donusen": round(kapanan, 2),
+            "kalan": kalan,
+        })
+        if kalan <= 0.005 and cikarilan_toplam > 0.005:
+            if hedef_kdv is None or cikarilan_toplam + 0.005 >= float(hedef_kdv):
+                break
+
+    eksik = None
+    if hedef_kdv is not None:
+        eksik = round(float(hedef_kdv) - cikarilan_toplam, 2)
+        if eksik <= 0.005:
+            eksik = 0.0
+    return {
+        "donemler": izleme,
+        "cikarilan_toplam": cikarilan_toplam,
+        "odenecege_donusen_toplam": kapanan_toplam,
+        "devirde_kalan": kalan,
+        "hedef": None if hedef_kdv is None else round(float(hedef_kdv), 2),
+        "tamamlandi": bool(izleme) and (eksik in (None, 0.0)),
+        "eksik": eksik,
+    }
+
+
 def duzeltme_karsilastirmalari(duzen):
     """Duzeltme verilen her donem icin satir bazinda oncesi / sonrasi tablosu.
 

@@ -235,6 +235,16 @@ oturumda buradan devam edilir.
       yazılıyor: faturalarının kaydedildiği aylar, gerekçesinde satıcının
       unvanı geçen aylar ve bunlardan sonra devir zincirini taşıyan aylar.
       Fatura listesinin altındaki serbest düzeltme açıklaması kaldırıldı.
+- [x] **Düzeltmeyle çıkarma takibi.** Bir dönemde indirimlerden çıkarılan KDV
+      her zaman o ay ödenecek vergiye dönüşmez; devir varsa tutar devri azaltıp
+      izleyen ayların "önceki dönemden devreden KDV" satırından düşülerek
+      taşınır. Uygulama artık bunu izliyor: faturanın kaydedildiği aydan
+      başlayıp, çıkarılan tutar ödenecek vergiye dönüşene kadar devir zinciri
+      takip ediliyor; raporda çıkarılan tutar, ödenecek vergiye dönüşen kısım
+      ve devirde izlenen bakiye ayrı ayrı yazılıyor. Faturadaki KDV'nin tamamı
+      çıkarılmamışsa aradaki fark kırmızı bir uyarıyla belirtiliyor — o kısımda
+      mükerrer tarhiyat söz konusu olmadığından tarhiyata alınıp alınmayacağı
+      değerlendirilmeli. (beyannameler.duzeltme_takibi)
 - [x] III. bölümdeki düzeltme beyannameleri kısmında yalnızca tablo var;
       gerekçe ne sütun ne de açıklama olarak yazılıyor.
 - [x] Tarhiyat öncesi uzlaşma maddesi kullanıcının verdiği kalıba uyarlandı;
