@@ -235,6 +235,10 @@ oturumda buradan devam edilir.
       yazılıyor: faturalarının kaydedildiği aylar, gerekçesinde satıcının
       unvanı geçen aylar ve bunlardan sonra devir zincirini taşıyan aylar.
       Fatura listesinin altındaki serbest düzeltme açıklaması kaldırıldı.
+- [x] Tutanağın giriş cümlesinde alışlar yıl yıl gruplanıyor: "2022 hesap
+      döneminde A'dan alışları, 2023 hesap döneminde B ve C'den olan
+      alışlarının…". Gruplar faturaların kayıt yılından kuruluyor; bir satıcı
+      birden çok yılda geçiyorsa her yılın grubunda yer alıyor.
 - [x] **Düzeltmeyle çıkarma takibi.** Bir dönemde indirimlerden çıkarılan KDV
       her zaman o ay ödenecek vergiye dönüşmez; devir varsa tutar devri azaltıp
       izleyen ayların "önceki dönemden devreden KDV" satırından düşülerek

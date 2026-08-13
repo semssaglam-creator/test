@@ -208,7 +208,52 @@ def _madde(b, sayac, metin):
     return no
 
 
-def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
+def _satici_adi(s):
+    """Giris cumlesinde saticinin anilisi: vergi dairesi, VKN ve unvan."""
+    return ("%s %s vergi kimlik numaralı mükellefi %s"
+            % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
+               s["vkn"] or "[VKN]", ik.satici_unvani(s)))
+
+
+def _yil_bazli_alis_metni(kunye, satici_satirlari, liste, donemler):
+    """Alislari yil yil gruplayan ifade.
+
+    Bir tutanak birden cok yili kapsadiginda hangi yil kimden alis yapildigi
+    tek bir yiginda kayboluyordu. Ifade artik yil yil kuruluyor:
+    "2021 takvim yılında A’dan alışları, 2022 takvim yılında B ve C’den"
+    Son grup, cumlenin devamindaki "olan alışlarının" ekiyle birleseceginden
+    "alışları" sozcugunu almaz.
+    """
+    gruplar = {}
+    for s in satici_satirlari:
+        yillar = {f.get("kayit_yil") for f in liste
+                  if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]
+                  and f.get("kayit_yil")}
+        if not yillar:                       # kayit donemi cozulememis satici
+            yillar = {None}
+        for yil in yillar:
+            gruplar.setdefault(yil, []).append(s)
+
+    bilinen = sorted(y for y in gruplar if y)
+    if not bilinen:
+        # Yil bilgisi hic yoksa eski davranis: donem ifadesi + butun saticilar
+        return "%s %s" % (_donem_ifadesi(kunye, donemler, "bulunma"),
+                          turkce.liste(["%s’den" % _satici_adi(s)
+                                        for s in satici_satirlari]))
+
+    parcalar = []
+    for yil in bilinen + ([None] if None in gruplar else []):
+        adlar = turkce.liste(["%s’den" % _satici_adi(s) for s in gruplar[yil]])
+        parcalar.append("%s %s %s"
+                        % (yil if yil else "[yıl]",
+                           ik.donem_adi(kunye, False, "bulunma"), adlar))
+    if len(parcalar) == 1:
+        return parcalar[0]
+    return "%s alışları, %s" % (" alışları, ".join(parcalar[:-1]), parcalar[-1])
+
+
+def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
+                        liste=None):
     M = ik.mukellef_sozu
     tanitim = (
         "%s %s vergi kimlik numaralı mükellefi %s, “%s” adresinde “%s” "
@@ -226,16 +271,12 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari):
     b.paragraf(tanitim, girinti=1)
 
     if satici_satirlari:
-        adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
-                 % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
-                    s["vkn"] or "[VKN]", ik.satici_unvani(s))
-                 for s in satici_satirlari]
-        alis = (" %s %s %s olan alışlarının sahte belge kullanma kapsamında "
+        alis = (" %s %s olan alışlarının sahte belge kullanma kapsamında "
                 "sınırlı olarak incelenmesi neticesinde aşağıdaki hususlar "
                 "mükellef ile birlikte tespit edilmiştir."
                 % (M(kunye, buyuk=True, ek="in"),
-                   _donem_ifadesi(kunye, donemler, "bulunma"),
-                   turkce.liste(adlar)))
+                   _yil_bazli_alis_metni(kunye, satici_satirlari, liste or [],
+                                         donemler)))
     else:
         alis = (" İnceleme neticesinde aşağıdaki hususlar mükellef ile birlikte "
                 "tespit edilmiştir.")
@@ -679,7 +720,8 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
 
     b = Belge()
     b.baslik("VERGİ İNCELEME TUTANAĞI", 1, hiza="orta")
-    _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari)
+    _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
+                        liste)
 
     sayac = _Sayac()
     _madde(b, sayac,
