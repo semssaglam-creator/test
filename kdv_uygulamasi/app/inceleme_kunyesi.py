@@ -168,9 +168,10 @@ BOLUMLER = [
                       "olarak yer alır. Beyanname PDF'i yüklendiğinde yıl "
                       "kendiliğinden eklenir."},
             {"kod": "muhasebe_kaydi", "etiket": "Faturaların muhasebe kaydı", "tur": "uzun",
-             "ipucu": "Fatura tablosunun altına girer. Örn: alışların 153-Ticari "
-                      "Mallar ile 191-İndirilecek KDV hesaplarına borç, 320-Satıcılar "
-                      "hesabına alacak kaydedildiği."},
+             "ipucu": "Boş bırakılırsa fatura tablosunun altına standart "
+                      "paragraf yazılır (hesap numaraları kırmızı bırakılır; "
+                      "hizmet işletmesinde 740, ticaret işletmesinde 153). "
+                      "Buraya yazarsanız yazdığınız metin olduğu gibi girer."},
             {"kod": "rdk_dinlenme", "etiket": "Rapor Değerlendirme Komisyonunda dinlenme",
              "tur": "secim",
              "secenekler": ["Dinlenme talebi yoktur.", "Dinlenme talebi vardır."],

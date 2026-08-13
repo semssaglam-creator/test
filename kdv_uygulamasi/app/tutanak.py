@@ -486,12 +486,40 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
                 oranlar=[1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
-        for satir in ik.satirlar(kunye, "muhasebe_kaydi"):
+        for satir in _muhasebe_paragraflari(kunye, kendi):
             b.paragraf(satir, girinti=1)
 
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
         cevap = (s.get("cevap") or "").strip() or genel_cevap
         _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
+
+
+def _muhasebe_paragraflari(kunye, faturalar):
+    """Fatura tablosunun altina giren muhasebe kaydi paragrafi.
+
+    Kunyeye metin yazilmissa oldugu gibi kullanilir. Yazilmamissa dairenin
+    kullandigi kalip yazilir; yil, o saticinin faturalarinin kayit yilindan
+    alinir.
+
+    Hesap numaralarini iceren bolum kirmizi birakilir: kullanilan hesap
+    mukellefin faaliyetine gore degisir (hizmet isletmesinde 740-Hizmet Uretim
+    Maliyeti, ticaret isletmesinde 153-Ticari Mallar, sabit kiymette 25x) ve
+    dogru hesabi ancak defter kaydini goren inceleme elemani secebilir.
+    """
+    girilen = ik.satirlar(kunye, "muhasebe_kaydi")
+    if girilen:
+        return girilen
+    yillar = sorted({f.get("kayit_yil") for f in faturalar if f.get("kayit_yil")})
+    yil_metni = (turkce.liste([str(y) for y in yillar]) if yillar else "[yıl]")
+    return ["Yukarıda ayrıntılı dökümü yer alan faturaların %s yasal defterine "
+            "kayıtlarının tetkikinde, %s söz konusu alışları "
+            "[740-Hizmet Üretim Maliyeti ile 191-İndirilecek KDV hesaplarına "
+            "borç ve 320-Satıcılar hesabına alacak] kaydı ile %s yılı yevmiye "
+            "defterine kaydettiği; faturanın içerdiği KDV tutarlarını ilgili "
+            "dönem KDV beyannamelerinde indirim konusu yaptığı tespit "
+            "edilmiştir."
+            % (ik.mukellef_sozu(kunye, ek="in"),
+               ik.mukellef_sozu(kunye, buyuk=True, ek="in"), yil_metni)]
 
 
 def _soru_metni(kunye, veri_no, s, sorular, cevap):
@@ -579,14 +607,16 @@ def _standart_maddeler(b, kunye, sayac, donemler):
            "beyanda bulunmuştur." % ik.deger(kunye, "taslak_tutanak"))
     if ik.secim_mi(kunye, "tou_talebi", "Talep edildi"):
         _madde(b, sayac,
-               "Mükellef %s için tarhiyat öncesi uzlaşma kapsamına giren, adına "
+               "Mükellef %s için tarhiyat öncesi uzlaşma kapsamına giren adına "
                "tarh edilebilecek vergiler ve kesilebilecek cezalar için "
                "tarhiyat öncesi uzlaşma talep etmiştir."
                % _donem_ifadesi(kunye, donemler))
     else:
         _madde(b, sayac,
-               "Mükellef %s için tarhiyat öncesi uzlaşma talebinde "
-               "bulunmamıştır." % _donem_ifadesi(kunye, donemler))
+               "Mükellef %s için tarhiyat öncesi uzlaşma kapsamına giren adına "
+               "tarh edilebilecek vergiler ve kesilebilecek cezalar için "
+               "tarhiyat öncesi uzlaşma talebinde bulunmamıştır."
+               % _donem_ifadesi(kunye, donemler))
     _madde(b, sayac,
            "Mükellefe; mükellef hakkında verilmiş herhangi bir özelge olup "
            "olmadığı sorulmuş, mükellef cevaben; “%s” şeklinde ifade ve beyanda "

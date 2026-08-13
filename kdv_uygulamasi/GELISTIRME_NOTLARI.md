@@ -218,6 +218,15 @@ oturumda buradan devam edilir.
       belgeye yazılırken düzeltiliyor (adres için kısaltmalar korunuyor:
       "KURTULUŞ MAH. VD KAMPÜSÜ" → "Kurtuluş Mah. VD Kampüsü").
 - [x] Tutanakta her madde paragraf başı girintisiyle başlıyor.
+- [x] Satıcı fatura tablosunun altına muhasebe kaydı paragrafı standart olarak
+      yazılıyor ("… söz konusu alışları [740-Hizmet Üretim Maliyeti ile
+      191-İndirilecek KDV hesaplarına borç ve 320-Satıcılar hesabına alacak]
+      kaydı ile 2022 yılı yevmiye defterine kaydettiği; …"). Hesap numaralarını
+      içeren bölüm kırmızı: kullanılan hesap faaliyete göre değişiyor. Yıl,
+      satıcının faturalarının kayıt yılından alınıyor. Künyeye metin
+      yazılmışsa o kullanılıyor.
+- [x] Tarhiyat öncesi uzlaşma maddesi kullanıcının verdiği kalıba uyarlandı;
+      talep edilmemiş hâli de aynı yapıda yazılıyor.
 - [x] Tablolar içeriğe göre sığdırılıyor: kolon genişlikleri en uzun hücreden
       hesaplanıyor, sığmayan tabloda önce hücre boşlukları daraltılıyor,
       yetmezse punto oranlı olarak küçültülüyor (en az 7). Raporun tarhiyat
