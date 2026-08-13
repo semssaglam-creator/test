@@ -48,6 +48,22 @@ def ilgi(ozel_ad):
     return "%s'%s" % (ad, ek)
 
 
+def ilgi_kurum(kurum_adi):
+    """Kurum adina kesme isareti kullanmadan ilgi hali eki ekler.
+
+    Yazim kurallarina gore kurum ve kurulus adlarina gelen ekler kesme
+    isaretiyle ayrilmaz: "Liman Vergi Dairesi Müdürlüğü" -> "Liman Vergi
+    Dairesi Müdürlüğünün".
+    """
+    ad = (kurum_adi or "").strip()
+    if not ad or ad.startswith("["):     # yer tutucu ek almaz
+        return ad
+    ek = _ILGI[_son_unlu(ad)]
+    if _son_harf(ad).lower() in UNLULER:
+        ek = "n" + ek        # unluyle bitiyorsa kaynastirma harfi
+    return ad + ek
+
+
 def tl(deger):
     """Tutari Turkce bicimde yazar: binlik nokta, ondalik virgul."""
     try:

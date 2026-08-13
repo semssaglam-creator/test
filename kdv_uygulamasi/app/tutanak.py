@@ -211,7 +211,7 @@ def _madde(b, sayac, metin):
 def _satici_adi(s):
     """Giris cumlesinde saticinin anilisi: vergi dairesi, VKN ve unvan."""
     return ("%s %s vergi kimlik numaralı mükellefi %s"
-            % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
+            % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                s["vkn"] or "[VKN]", ik.satici_unvani(s)))
 
 
@@ -258,7 +258,7 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
     tanitim = (
         "%s %s vergi kimlik numaralı mükellefi %s, “%s” adresinde “%s” "
         "faaliyeti ile iştigal etmektedir."
-        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
            ik.adres(inceleme.get("adres")),
@@ -508,7 +508,7 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste):
             "ile defter kayıtları aşağıdaki gibidir. (Ek-2: %d adet fatura "
             "fotokopisi)"
             % (M(kunye, buyuk=True, ek="in"),
-               ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
+               ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                s["vkn"] or "[VKN]", ik.satici_unvani(s),
                len(kendi), _tl(s["matrah"]), len(kendi)))
 

@@ -111,7 +111,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
         "bölümlerinde %s olarak anılacaktır), “%s” adresinde “%s” faaliyeti "
         "ile iştigal etmektedir. %s Vergi Usul Kanununun 107/A maddesi "
         "kapsamında e-tebligata tabidir."
-        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
            M(kunye), ik.adres(inceleme.get("adres")),
@@ -149,7 +149,7 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
 
     if satici_satirlari:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
-                 % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]"),
+                 % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                     s["vkn"] or "[VKN]", ik.satici_unvani(s))
                  for s in satici_satirlari]
         b.paragraf(
@@ -645,7 +645,7 @@ def _duzeltme_kapanisi(b, kunye, s, takip, veri_no):
 def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
                    karsilastirmalar=None, veri_no=None):
     M = ik.mukellef_sozu
-    daire = ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]")
+    daire = ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in")
     unvan = ik.satici_unvani(s)
     b.baslik("B.%d- %s %s Vergi Kimlik Numaralı Mükellefi %s’den Olan Alışları"
              % (sira, daire, s["vkn"] or "[VKN]", unvan), 2)
@@ -1117,7 +1117,7 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     b.paragraf(
         "%s %s vergi kimlik numaralı mükellefi %s’in %s defter ve belgelerinin "
         "sahte belge kullanımı ile sınırlı olarak incelenmesi neticesinde;"
-        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi")),
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
            inceleme.get("vkn_tckn") or "[VKN]",
            ik.mukellef_adi(inceleme, kunye),
            _donem_ifadesi(kunye, donemler)),

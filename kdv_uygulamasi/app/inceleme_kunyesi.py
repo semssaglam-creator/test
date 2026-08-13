@@ -429,9 +429,50 @@ def mukellef_adi(inceleme, kunye, yer_tutucu="[Mükellef unvanı]"):
     return turkce.unvan(ham) if kurum_mu(kunye) else turkce.kisi_adi(ham)
 
 
-def vergi_dairesi(deger, yer_tutucu="[Vergi dairesi]"):
-    """Vergi dairesi adini yazim kurallariyla verir ("SEYHAN VD" -> "Seyhan VD")."""
-    return turkce.unvan(str(deger or "").strip()) or yer_tutucu
+# Vergi dairesi adinin sonunda gecen kisaltmalar; "vdb" baskanligi gosterir.
+_DAIRE_KISALTMALARI = {"vd": False, "vdm": False, "vdb": True}
+
+
+def daire_adi(deger, yer_tutucu="[Vergi dairesi]"):
+    """Vergi dairesi adini tam ve yazim kurallarina uygun bicimde verir.
+
+    Belgelerde daire adi tam yazilir; kullanici ise ekrana kisa yazar.
+    "liman" da "LIMAN VD" de "Liman Vergi Dairesi Müdürlüğü" olur. Tam yazilmis
+    adlar ("Büyük Mükellefler Vergi Dairesi Başkanlığı") oldugu gibi korunur.
+    """
+    ham = str(deger or "").strip()
+    if not ham:
+        return yer_tutucu
+    if ham.startswith("["):                    # yer tutucu
+        return ham
+
+    kelimeler = ham.split()
+    baskanlik = False
+    son = turkce.kucuk(kelimeler[-1]).replace(".", "")
+    if son in _DAIRE_KISALTMALARI:
+        baskanlik = _DAIRE_KISALTMALARI[son]
+        kelimeler = kelimeler[:-1]
+
+    govde = turkce.unvan(" ".join(kelimeler))
+    if not govde:
+        return yer_tutucu
+    kucugu = turkce.kucuk(govde)
+    if kucugu.endswith("müdürlüğü") or kucugu.endswith("başkanlığı"):
+        return govde
+    kuyruk = " Başkanlığı" if baskanlik else " Müdürlüğü"
+    if kucugu.endswith("vergi dairesi"):
+        return govde + kuyruk
+    return govde + " Vergi Dairesi" + kuyruk
+
+
+def vergi_dairesi(deger, yer_tutucu="[Vergi dairesi]", ek=""):
+    """Belgeye gececek vergi dairesi adi; ek="in" ilgi hali eki ekler.
+
+    Daire adi metinlerde hep "...nün ... mükellefi" kalibinda geciyor; eki
+    burada vermek, cagiran her yerde ayri ayri kurulmasini onluyor.
+    """
+    ad = daire_adi(deger, yer_tutucu)
+    return turkce.ilgi_kurum(ad) if ek == "in" else ad
 
 
 def adres(deger, yer_tutucu="[Adres]"):

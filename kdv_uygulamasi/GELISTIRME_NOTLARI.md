@@ -278,6 +278,13 @@ oturumda buradan devam edilir.
       bulunmaktadır" yazılıyor; kısmen bilerek kısmen bilmeden kullanmada
       tarhiyatın dönem dönem uzlaşma kapsamındaki ve kapsam dışındaki kısmını
       gösteren tablo ekleniyor.
+- [x] **Vergi dairesi adı tam yazılıyor.** Ekrana "liman" ya da "LİMAN VD"
+      yazılsa da belgeye "Liman Vergi Dairesi Müdürlüğü" geçiyor; daire adının
+      geçtiği kalıplarda ("... mükellefi ...") ilgi hali eki de ekleniyor:
+      "Liman Vergi Dairesi Müdürlüğünün". Kurum adlarına gelen ek kesme
+      işaretiyle ayrılmıyor. Tam yazılmış adlar ("Büyük Mükellefler Vergi
+      Dairesi Başkanlığı") olduğu gibi korunuyor. (inceleme_kunyesi.daire_adi,
+      turkce.ilgi_kurum)
 - [x] Sonuç bölümündeki tarhiyat tablosu, maddelerin sonunda değil tarhiyatı
       öneren maddenin hemen altında duruyor ve vergi ziyaı cezası sütunu
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
