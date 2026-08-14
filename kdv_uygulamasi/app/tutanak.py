@@ -191,6 +191,35 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
     return yetersiz
 
 
+def iptal_notlari(faturalar):
+    """Iptal/itiraz kaydi bulunan faturalar icin aciklama paragraflari.
+
+    Tarhiyata dahil edilmeyen faturalar tabloda gorunmez; kaydin varligi yine
+    de belgeye gecer ki o faturanin listede neden yer almadigi anlasilsin.
+    """
+    from . import faturalar as F
+
+    def ad(f):
+        return ("%s tarihinde düzenlenen %s numaralı fatura"
+                % (F.tarih_goster(f.get("tarih")) or "[tarih]",
+                   f.get("fatura_no") or "[fatura no]"))
+
+    iptalliler = [f for f in faturalar or [] if f.get("iptal")]
+    paragraflar = []
+    dahil = [ad(f) for f in iptalliler if f.get("dahil")]
+    haric = [ad(f) for f in iptalliler if not f.get("dahil")]
+    if dahil:
+        paragraflar.append("%s ile ilgili iptal/itiraz kaydı bulunduğu tespit "
+                           "edilmiştir." % turkce.liste(dahil))
+    if haric:
+        paragraflar.append("%s ile ilgili iptal/itiraz kaydı bulunduğu tespit "
+                           "edilmiş olup, söz konusu %s tarhiyata dahil "
+                           "edilmemiştir."
+                           % (turkce.liste(haric),
+                              "faturalar" if len(haric) > 1 else "fatura"))
+    return paragraflar
+
+
 def dikkat_notu(faturalar, yetersiz):
     """Verilen faturalar yetersiz donemlere dusuyorsa kirmizi not metni."""
     donemler = sorted({(f.get("kayit_yil"), f.get("kayit_ay")) for f in faturalar}
@@ -532,8 +561,8 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
     genel_cevap = " ".join(ik.satirlar(kunye, "mukellef_beyani"))
 
     for s in satici_satirlari:
-        kendi = [f for f in liste
-                 if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]]
+        tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
+        kendi = [f for f in tum if f.get("dahil")]
         if not kendi:
             continue
 
@@ -572,6 +601,9 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
         for satir in _muhasebe_paragraflari(kunye, kendi):
+            b.paragraf(satir, girinti=1)
+        # Iptal/itiraz kaydi, dahil edilmeyen faturalar icin de yazilir
+        for satir in iptal_notlari(tum):
             b.paragraf(satir, girinti=1)
 
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)

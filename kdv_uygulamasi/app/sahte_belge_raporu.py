@@ -26,8 +26,8 @@ from . import mevzuat, turkce
 from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
 from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
-                      indirim_yetersiz_donemler, satici_veri_maddeleri,
-                      tarhiyat_toplami)
+                      indirim_yetersiz_donemler, iptal_notlari,
+                      satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
 
@@ -693,8 +693,8 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
         b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
                    "kapsamına alınmıştır." % s["ozel_esaslar"], girinti=1)
 
-    kendi = [f for f in liste
-             if f.get("dahil") and (f.get("satici_vkn") or "") == s["vkn"]]
+    tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
+    kendi = [f for f in tum if f.get("dahil")]
     if kendi:
         # Fatura tablosundan once tutanaga atif: hangi maddede tespit edildigi,
         # faturalari kimin duzenledigi ve hangi donem beyannamelerinde indirim
@@ -726,6 +726,10 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
                 hizalar=["orta", "sol", "sol", "sag", "sag", "sag", "orta", "orta"],
                 oranlar=[1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+    # Iptal/itiraz kaydi, tarhiyata dahil edilmeyen faturalar icin de yazilir
+    for satir in iptal_notlari(tum):
+        b.paragraf(satir, girinti=1)
 
     if s.get("duzeltme_ile_cikarildi") == "Evet":
         # Mukerrer tarhiyati onlemek icin bu satici tarhiyata girmez; gerekcesi

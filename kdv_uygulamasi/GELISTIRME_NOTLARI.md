@@ -287,6 +287,18 @@ oturumda buradan devam edilir.
       rakam farklıysa farkın nereden geldiğini söyleyen bir uyarı veriliyor.
       Kalemleri taşımayan eski biçim beyannamelerde dağılım toplamı kullanılmaya
       devam ediyor. — *kullanıcı bildirimi*
+- [x] Fatura listesinde tarih, satıcı VKN, kayıt dönemi ve oran sütunlarına
+      süzgeç eklendi. Tarih serbest metinle süzülüyor ("05.2023" o ayı, "2023"
+      o yılı verir); diğerleri açılır listeden seçiliyor ve seçenekler diğer
+      süzgeçlerden geçen satırlardan kuruluyor. Süzgeçler görünen kümeyi
+      daralttığı için başlıktaki toplu seçim ve Excel aktarımı da aynı kümeye
+      uyuyor.
+- [x] **İptal/itiraz notu.** Satıcının faturaları arasında iptal/itiraz kaydı
+      bulunanlar için, tutanak maddesinin ve rapor bölümündeki fatura
+      tablosunun altına "gg.aa.yyyy tarihinde düzenlenen X numaralı fatura ile
+      ilgili iptal/itiraz kaydı bulunduğu tespit edilmiştir." notu düşülüyor.
+      Tarhiyata dahil edilmeyen faturalar tabloda görünmediğinden onlar için
+      not "... söz konusu fatura tarhiyata dahil edilmemiştir." diye sürüyor.
 - [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
       çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o
       dönemin faturalarını taşıyan tutanak maddesinin ve rapor bölümünün başına

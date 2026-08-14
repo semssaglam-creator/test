@@ -56,6 +56,7 @@
   .liste li .ad { flex: 1; cursor: pointer; }
 
   /* Yil kulakciklari */
+  .suzgec-satir td { background: #f4f7fa; padding: 3px 4px; }
   .yil-sekmeler { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; border-bottom: 2px solid #c3ccd6; padding-bottom: 0; }
   .yil-kulak { display: flex; align-items: center; background: #e4e9ef; border: 1px solid #c3ccd6; border-bottom: none; border-radius: 6px 6px 0 0; overflow: hidden; position: relative; bottom: -2px; }
   .yil-kulak.aktif { background: #1f3a5f; border-color: #1f3a5f; }
@@ -658,6 +659,7 @@ const durum = {
   fatSuzgec: "",        // fatura listesinde suzulen satici VKN'si ("" = tumu)
   fatYil: "tumu",       // fatura listesinde secili kayit yili ("tumu" = hepsi)
   fatGorunen: [],       // listede o an gorunen faturalar (Excel aktarimi)
+  fatSuzgecler: { tarih: "", donem: "", oran: "" },   // sutun suzgecleri
 };
 
 const $ = (id) => document.getElementById(id);
@@ -2446,6 +2448,7 @@ $("hYeni").addEventListener("click", () => {
   durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
   durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
   durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
   $("cAd").value = ""; $("kunyeKarti").style.display = "none";
   $("fatDurum").innerHTML = "";
   faturaEkraniniCiz();
@@ -2487,6 +2490,7 @@ async function calismaAc(id) {
     durum.degisti = false;
     durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
     durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
     $("cAd").value = durum.calisma.ad;
@@ -3301,6 +3305,99 @@ function faturaSuzgeciniCiz(gorunen, yildakiler) {
   }
 }
 
+// --- Sütun süzgeçlerinin okuduğu değerler: tabloda görünen biçimin aynısı
+function faturaTarihi(f) { return tarihGoster(f.tarih) || ""; }
+
+function faturaDonemi(f) {
+  return (f.kayit_yil && f.kayit_ay)
+    ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+}
+
+function faturaOrani(f) {
+  return f.matrah ? "%" + (f.kdv / f.matrah * 100).toFixed(1).replace(".", ",") : "";
+}
+
+/**
+ * Başlığın altındaki süzgeç satırı.
+ *
+ * Tarih serbest metinle süzülür: "05.2023" yazınca o ayın, "2023" yazınca o
+ * yılın faturaları kalır. Satıcı VKN, kayıt dönemi ve oran için seçenek
+ * listesi verinin kendisinden kurulur. Süzgeçler görünen kümeyi daralttığı
+ * için başlıktaki toplu seçim kutucuğu ve Excel aktarımı da aynı kümeye
+ * uyar.
+ */
+function faturaSutunSuzgecleri(suz) {
+  const tr = document.createElement("tr");
+  tr.className = "suzgec-satir";
+  const bos = (sayi) => {
+    for (let i = 0; i < sayi; i++) tr.appendChild(document.createElement("td"));
+  };
+  const kutuStili = "width:100%;padding:2px 4px;font-size:11px;";
+
+  bos(3);                                   // Dahil · Tevsik yok · Fatura No
+
+  const tdTarih = document.createElement("td");
+  const girdi = document.createElement("input");
+  girdi.type = "text";
+  girdi.placeholder = "gg.aa.yyyy";
+  girdi.title = "Tarihin bir parçasını yazın: 05.2023 o ayı, 2023 o yılı süzer";
+  girdi.style.cssText = kutuStili;
+  girdi.value = durum.fatSuzgecler.tarih;
+  girdi.addEventListener("input", () => {
+    durum.fatSuzgecler.tarih = girdi.value.trim();
+    faturaListesiniCiz();
+    const yeni = document.querySelector('.suzgec-satir input[type="text"]');
+    if (yeni) { yeni.focus(); yeni.setSelectionRange(yeni.value.length, yeni.value.length); }
+  });
+  tdTarih.appendChild(girdi);
+  tr.appendChild(tdTarih);
+
+  const secim = (deger, secenekler, etiket, uygula) => {
+    const td = document.createElement("td");
+    const sec = document.createElement("select");
+    sec.style.cssText = kutuStili;
+    const tumu = document.createElement("option");
+    tumu.value = ""; tumu.textContent = etiket;
+    sec.appendChild(tumu);
+    secenekler.forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v || "(boş)";
+      sec.appendChild(o);
+    });
+    sec.value = deger;
+    sec.addEventListener("change", () => { uygula(sec.value); faturaListesiniCiz(); });
+    td.appendChild(sec);
+    tr.appendChild(td);
+  };
+  const dizi = (haric, oku) => Array.from(new Set(suz(haric).map(oku))).sort();
+
+  secim(durum.fatSuzgec, dizi("vkn", (f) => f.satici_vkn || ""), "tümü",
+        (v) => { durum.fatSuzgec = v; });
+  bos(1);                                   // Yön
+  secim(durum.fatSuzgecler.donem, dizi("donem", faturaDonemi), "tümü",
+        (v) => { durum.fatSuzgecler.donem = v; });
+  bos(3);                                   // Matrah · KDV · Toplam
+  secim(durum.fatSuzgecler.oran, dizi("oran", faturaOrani), "tümü",
+        (v) => { durum.fatSuzgecler.oran = v; });
+
+  const tdSon = document.createElement("td");
+  if (durum.fatSuzgec || durum.fatSuzgecler.tarih || durum.fatSuzgecler.donem
+      || durum.fatSuzgecler.oran) {
+    const sil = document.createElement("button");
+    sil.className = "btn ikincil";
+    sil.textContent = "Süzgeçleri temizle";
+    sil.style.cssText = "padding:2px 6px;font-size:11px;";
+    sil.addEventListener("click", () => {
+      durum.fatSuzgec = "";
+      durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+      faturaListesiniCiz();
+    });
+    tdSon.appendChild(sil);
+  }
+  tr.appendChild(tdSon);
+  return tr;
+}
+
 /** Fatura listesinin kayit yili kulakciklari. */
 function faturaYilKulaklariniCiz() {
   const kap = $("fatYilSekme");
@@ -3348,10 +3445,19 @@ function faturaListesiniCiz() {
   const yildakiler = durum.fatYil === "tumu"
     ? durum.calisma.faturalar
     : durum.calisma.faturalar.filter((f) => String(f.kayit_yil || "") === String(durum.fatYil));
-  const gorunen = durum.fatSuzgec
-    ? yildakiler.filter((f) => (f.satici_vkn || "") === durum.fatSuzgec)
-    : yildakiler;
-  faturaSuzgeciniCiz(gorunen, yildakiler);
+  // Sütun süzgeçleri; "haric" verilen süzgeç uygulanmaz. Bir süzgecin seçenek
+  // listesi, diğer süzgeçlerden geçen satırlardan kurulur; böylece seçim
+  // yapıldıkça diğer listeler daralır ama boş kalmaz.
+  const suz = (haric) => yildakiler.filter((f) =>
+    (haric === "vkn" || !durum.fatSuzgec || (f.satici_vkn || "") === durum.fatSuzgec)
+    && (haric === "tarih" || !durum.fatSuzgecler.tarih
+        || faturaTarihi(f).includes(durum.fatSuzgecler.tarih))
+    && (haric === "donem" || !durum.fatSuzgecler.donem
+        || faturaDonemi(f) === durum.fatSuzgecler.donem)
+    && (haric === "oran" || !durum.fatSuzgecler.oran
+        || faturaOrani(f) === durum.fatSuzgecler.oran));
+  const gorunen = suz(null);
+  faturaSuzgeciniCiz(gorunen, suz("vkn"));
   durum.fatGorunen = gorunen;
 
   const tablo = $("fatListeTablo");
@@ -3375,6 +3481,7 @@ function faturaListesiniCiz() {
    "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
+  tablo.appendChild(faturaSutunSuzgecleri(suz));
 
   if (!gorunen.length) {
     const bos = document.createElement("tr");
@@ -3449,8 +3556,8 @@ function faturaListesiniCiz() {
     tr.appendChild(hucre("td", tl(f.matrah), { className: "sag" }));
     tr.appendChild(hucre("td", tl(f.kdv), { className: "sag" }));
     tr.appendChild(hucre("td", tl(f.toplam), { className: "sag" }));
-    const oran = f.matrah ? (f.kdv / f.matrah * 100) : null;
-    tr.appendChild(hucre("td", oran === null ? "—" : "%" + oran.toFixed(1), { className: "sag" }));
+    // Süzgeç seçenekleriyle birebir aynı biçim kullanılır
+    tr.appendChild(hucre("td", faturaOrani(f) || "—", { className: "sag" }));
 
     const notlar = [];
     if (f.iptal) notlar.push("iptal/itiraz");
@@ -3582,6 +3689,7 @@ $("fatTemizle").addEventListener("click", async () => {
   if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;
   durum.calisma.faturalar = [];
   durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
   $("fatDurum").innerHTML = "";
   isaretle(false);
   faturaEkraniniCiz();
