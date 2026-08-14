@@ -153,8 +153,32 @@ def _hesapla(calisma):
     # calisma duzeyindeki degeri ilk yila tasidi.
     sonuc = hesap.seri_hesapla(yillar, ziya_kati=_ziya_kati(calisma))
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
+    sonuc["dikkat"] = _dikkat_dokumu(calisma, yillar)
     return sonuc, (hesap.indirim_asimi_bulgulari(yillar)
                    + hesap.beyan_tutarlilik_kontrol(yillar))
+
+
+def _dikkat_dokumu(calisma, yillar):
+    """Fatura listesinin beyan edilen indirimi astigi donemlerin dokumu.
+
+    Fatura listesi yuklenmemisse bos doner; fatura modulundeki bir aksilik de
+    hesabin geri kalanini engellemez.
+    """
+    if not (calisma or {}).get("faturalar"):
+        return []
+    try:
+        faturalar = _fatura_modulu()
+        liste = faturalar.normalize(calisma["faturalar"],
+                                    (calisma.get("mukellef") or {}).get("vkn_tckn"))
+        sinirlar = {}
+        for yil_kaydi in yillar:
+            for ay in range(int(yil_kaydi.get("ay_sayisi") or 12)):
+                sinirlar[(int(yil_kaydi["yil"]), ay + 1)] = hesap.indirim_siniri(
+                    yil_kaydi.get("beyan") or {}, ay)
+        return faturalar.dikkat_dokumu(liste, sinirlar,
+                                       calisma.get("saticilar") or {})
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _inceleme_bilgisi(calisma):

@@ -267,12 +267,13 @@ def _madde(b, sayac, metin):
     """Numarali tutanak maddesi. Kullanilan numarayi dondurur.
 
     Madde metni duz yazilir; dairenin tutanaklarinda da madde govdesi kalin
-    degildir. Numara ile metin ayni paragrafta kalir ve paragraf, tutanagin
-    oteki paragraflari gibi satir basi girintisiyle baslar.
+    degildir. Yalnizca madde numarasi kalin yazilir ki maddeler goz gezdirirken
+    ayirt edilebilsin. Numara ile metin ayni paragrafta kalir ve paragraf,
+    tutanagin oteki paragraflari gibi satir basi girintisiyle baslar.
     """
     no = sayac()
     b.paragraf("%d- %s" % (no, metin), girinti=1,
-               aralik_once=140, aralik_sonra=80)
+               aralik_once=140, aralik_sonra=80, kalin_onek="%d-" % no)
     return no
 
 

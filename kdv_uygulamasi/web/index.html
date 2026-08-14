@@ -273,6 +273,10 @@
     </div>
     <div id="sonucIcerik"></div>
   </div>
+  <div class="kart" id="dikkatKart" style="display:none;">
+    <h2>Dikkat Edilmesi Gerekenler</h2>
+    <div id="dikkatIcerik"></div>
+  </div>
   <div class="kart" id="bulguKart" style="display:none;">
     <h2>Beyan Tutarlılık Bulguları</h2>
     <div id="bulguListe"></div>
@@ -1933,10 +1937,107 @@ function sonucuCiz() {
   kap.appendChild(karsilastirmaTablosu("Beyan Edilen", donemler, "beyan", toplam));
   kap.appendChild(karsilastirmaTablosu("Fark (Olması Gereken − Beyan)", donemler, "fark", toplam, true));
 
+  dikkatKartiniCiz();
   const bulgular = durum.bulgular || [];
   $("bulguKart").style.display = bulgular.length ? "block" : "none";
   $("bulguListe").innerHTML = bulgular.map((b) =>
     `<div class="bulgu"><strong>${b.donem}</strong> — ${b.mesaj}</div>`).join("");
+}
+
+/**
+ * "Dikkat Edilmesi Gerekenler" kartı.
+ *
+ * Bir dönemde listedeki faturaların KDV'si, beyan edilen yurtiçi alımlara
+ * ilişkin KDV'yi aşıyorsa faturaların tamamı o dönemde indirim konusu yapılmış
+ * olamaz. Hangilerinin yapıldığı ancak defter kaydından kesin belirlenir;
+ * uygulama beyan tutarına oturan adayları gösterir.
+ */
+function dikkatKartiniCiz() {
+  const kap = $("dikkatIcerik");
+  const dokum = (durum.sonuc && durum.sonuc.dikkat) || [];
+  const gorunen = String(durum.sonucYil) === "tumu" ? dokum
+    : dokum.filter((d) => String(d.yil) === String(durum.sonucYil));
+  $("dikkatKart").style.display = gorunen.length ? "block" : "none";
+  if (!gorunen.length) { kap.innerHTML = ""; return; }
+
+  kap.innerHTML =
+    '<div class="bulgu">Aşağıdaki dönemlerde <strong>listedeki faturaların ' +
+    "KDV'si, beyan edilen yurtiçi alımlara ilişkin KDV'den fazla</strong>. " +
+    'Mükellef bu alışların bir kısmını beyanına dahil etmemiş olabilir; o hâlde ' +
+    'dahil edilmeyen faturalar indirim konusu yapılmadığından tarhiyata da ' +
+    'girmemelidir. Hangi faturaların indirime girdiği <strong>ancak defter ' +
+    'kaydından</strong> kesin olarak belirlenir — aşağıdaki birleşimler adaydır, ' +
+    'tespit değildir.</div>';
+
+  gorunen.forEach((d) => {
+    const kutu = document.createElement("div");
+    kutu.className = "uyari-satir";
+    const secililer = d.faturalar.filter((f) => f.secili);
+    const disardakiler = d.faturalar.filter((f) => !f.secili);
+    const fatAdi = (f) => `${f.tarih} tarihli ${f.fatura_no || "—"} (${tl(f.kdv)} TL)`;
+    let ic =
+      `<strong>${d.donem}</strong><div>Beyan edilen yurtiçi alımlara ilişkin KDV: ` +
+      `<strong>${tl(d.sinir)}</strong> TL &nbsp;·&nbsp; listedeki faturaların KDV'si: ` +
+      `<strong>${tl(d.dahil_kdv)}</strong> TL &nbsp;·&nbsp; fazla: ` +
+      `<strong>${tl(d.asim)}</strong> TL</div>` +
+      `<div style="margin-top:6px;">Satıcı bütünlüğü korunarak beyana oturan en ` +
+      `yüksek birleşim: <strong>${tl(d.secim_toplami)}</strong> TL — ` +
+      (secililer.length ? secililer.map(fatAdi).join(", ") : "hiçbir fatura sığmıyor") +
+      "</div>";
+    if (disardakiler.length) {
+      ic += `<div style="margin-top:4px;">Bu birleşimin dışında kalan: ` +
+        disardakiler.map(fatAdi).join(", ") + "</div>";
+    }
+    if (d.alternatif > 0) {
+      ic += `<div style="margin-top:4px;"><strong>Aynı tutarı veren ${d.alternatif} ` +
+        `farklı satıcı birleşimi daha var</strong>; hangisinin beyana girdiği ` +
+        `aritmetikle belirlenemez.</div>`;
+    }
+    if (d.fatura_secim_toplami > d.secim_toplami + 0.005) {
+      ic += `<div style="margin-top:4px;">Satıcı bütünlüğü gözetilmezse fatura ` +
+        `bazında en çok <strong>${tl(d.fatura_secim_toplami)}</strong> TL oturuyor; ` +
+        `bu, bir satıcının faturalarını bölmek anlamına gelir.</div>`;
+    }
+    if (d.yaklasik) {
+      ic += '<div style="margin-top:4px;">Kalem sayısı çok olduğundan birleşim ' +
+        'büyükten küçüğe yerleştirmeyle bulundu; kesin en iyi çözüm olmayabilir.</div>';
+    }
+    kutu.innerHTML = ic;
+    kap.appendChild(kutu);
+  });
+
+  const dugme = document.createElement("button");
+  dugme.className = "btn ikincil";
+  dugme.id = "dikkatOturt";
+  dugme.textContent = "Faturaları beyana oturt";
+  dugme.title = "Birleşim dışında kalan faturaların “Dahil” işaretini kaldırır "
+    + "ve indirim reddini yeniden aktarır";
+  dugme.addEventListener("click", () => faturalariBeyanaOturt(gorunen));
+  const sar = document.createElement("div");
+  sar.style.marginTop = "10px";
+  sar.appendChild(dugme);
+  kap.appendChild(sar);
+}
+
+/** Birleşim dışında kalan faturaları tarhiyat dışına alır ve yeniden aktarır. */
+async function faturalariBeyanaOturt(dokum) {
+  const cikarilan = [];
+  dokum.forEach((d) => {
+    d.faturalar.filter((f) => !f.secili).forEach((f) => {
+      const fatura = durum.calisma.faturalar[f.sira];
+      if (fatura && fatura.dahil) {
+        fatura.dahil = false;
+        cikarilan.push(`${d.donem} ${f.fatura_no || "—"}`);
+      }
+    });
+  });
+  if (!cikarilan.length) { mesaj("Çıkarılacak fatura kalmadı.", "uyari"); return; }
+  isaretle(false);
+  await faturalariTazele();
+  await faturalariIndirimeAktar(true);
+  mesaj(`${cikarilan.length} fatura tarhiyat dışına alındı ve indirim reddi ` +
+        `yeniden aktarıldı: ${cikarilan.join(", ")}. Kalıcı olması için Kaydet ` +
+        "deyin.", "uyari");
 }
 
 function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
@@ -3662,11 +3763,20 @@ function faturaBulgulariniCiz() {
     `<div class="bulgu">${b.mesaj.replace(/[<>]/g, "")}</div>`).join("");
 }
 
-$("fatAktar").addEventListener("click", async () => {
+/**
+ * Dahil edilen faturaların dönem toplamlarını indirim reddi satırına yazar.
+ *
+ * "Faturaları beyana oturt" da aynı yolu kullanır; böylece tarhiyat her zaman
+ * o an tarhiyata dahil olan faturaların toplamına eşit kalır.
+ */
+async function faturalariIndirimeAktar(sessiz) {
   const diziler = (durum.fatOzet && durum.fatOzet.indirim_dizileri) || {};
   const yillar = Object.keys(diziler);
-  if (!yillar.length) { mesaj("Aktarılacak fatura yok.", "hata"); return; }
-  let yazilan = 0, atlanan = [];
+  if (!yillar.length) {
+    if (!sessiz) mesaj("Aktarılacak fatura yok.", "hata");
+    return false;
+  }
+  let yazilan = 0; const atlanan = [];
   yillar.forEach((y) => {
     const kayit = durum.calisma.yillar.find((k) => Number(k.yil) === Number(y));
     if (!kayit) { atlanan.push(y); return; }
@@ -3674,16 +3784,22 @@ $("fatAktar").addEventListener("click", async () => {
     yazilan += 1;
   });
   if (!yazilan) {
-    mesaj(`Beyan verisi yüklenmemiş yıl: ${atlanan.join(", ")}. Önce beyannameyi yükleyin.`, "hata");
-    return;
+    if (!sessiz) {
+      mesaj(`Beyan verisi yüklenmemiş yıl: ${atlanan.join(", ")}. Önce beyannameyi yükleyin.`, "hata");
+    }
+    return false;
   }
   isaretle(false);
   await hesapla();
   await faturalariTazele();
-  mesaj(atlanan.length
-    ? `${yazilan} yıl aktarıldı; ${atlanan.join(", ")} yılı beyan verisi olmadığı için atlandı.`
-    : `${yazilan} yılın indirim reddi fatura toplamlarından yazıldı.`);
-});
+  if (!sessiz) {
+    mesaj(atlanan.length
+      ? `${yazilan} yıl aktarıldı; ${atlanan.join(", ")} yılı beyan verisi olmadığı için atlandı.`
+      : `${yazilan} yılın indirim reddi fatura toplamlarından yazıldı.`);
+  }
+  return true;
+}
+$("fatAktar").addEventListener("click", () => faturalariIndirimeAktar());
 
 $("fatTemizle").addEventListener("click", async () => {
   if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;

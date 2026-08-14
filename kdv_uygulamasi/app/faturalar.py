@@ -616,3 +616,146 @@ def toplamlar(faturalar, saticilar=None):
         "toplam": round(sum(float(f.get("toplam") or 0.0) for f in dahil), 2),
         "toplam_satir": len(faturalar or []),
     }
+
+
+# --------------------------------------------------- beyana oturtma (altkume)
+# Bir donemde listedeki faturalarin toplami, beyan edilen yurtici alimlari
+# asabiliyor: mukellef bazi alislarini beyana hic dahil etmemis olabilir.
+# O zaman "hangi faturalar indirim konusu yapilmis" sorusu, toplama oturan
+# fatura birlesimini aramaya donusuyor. Kalem sayisi bu sinirin altindaysa
+# butun birlesimler taranir; ustundeyse buyukten kucuge yerlestirme yapilir.
+KESIN_COZUM_SINIRI = 18
+ALTERNATIF_SAYIM_TAVANI = 99
+
+
+def altkume_secimi(tutarlar, sinir):
+    """Toplami siniri asmayan en yuksek tutarli fatura birlesimini secer.
+
+    Doner: {"toplam", "secim" (indis listesi), "alternatif", "yaklasik"}
+    `alternatif`, ayni toplama ulasan baska birlesim sayisidir; birden
+    buyukse hangi faturalarin beyana girdigi tek basina aritmetikle
+    belirlenemiyor demektir.
+    """
+    kurus = [int(round(float(t or 0.0) * 100)) for t in tutarlar]
+    hedef = int(round(float(sinir or 0.0) * 100))
+    if hedef <= 0 or not kurus:
+        return {"toplam": 0.0, "secim": [], "alternatif": 0, "yaklasik": False}
+
+    if len(kurus) > KESIN_COZUM_SINIRI:
+        sirali = sorted(range(len(kurus)), key=lambda i: -kurus[i])
+        secim, toplam = [], 0
+        for i in sirali:
+            if toplam + kurus[i] <= hedef:
+                secim.append(i)
+                toplam += kurus[i]
+        return {"toplam": toplam / 100.0, "secim": sorted(secim),
+                "alternatif": 0, "yaklasik": True}
+
+    ornek = {0: ()}                 # toplam -> ornek indis demeti
+    sayac = {0: 1}                  # toplam -> kac farkli birlesim
+    for i, tutar in enumerate(kurus):
+        for toplam in sorted(ornek, reverse=True):
+            yeni = toplam + tutar
+            if yeni > hedef:
+                continue
+            if yeni not in ornek:
+                ornek[yeni] = ornek[toplam] + (i,)
+            sayac[yeni] = min(sayac.get(yeni, 0) + sayac[toplam],
+                              ALTERNATIF_SAYIM_TAVANI)
+    en_iyi = max(ornek)
+    return {"toplam": en_iyi / 100.0, "secim": list(ornek[en_iyi]),
+            "alternatif": max(sayac[en_iyi] - 1, 0), "yaklasik": False}
+
+
+def _satici_gruplari(dahil):
+    """Donemdeki faturalari satici satici gruplar.
+
+    Mukellef bir alisi beyana dahil etmediginde bunu genellikle tek tek
+    faturalarla degil, o saticiyla olan alislarinin tamamiyla yapar. Bu yuzden
+    aday birlesim once satici butunlugu korunarak aranir.
+    """
+    gruplar = {}
+    for sira, f in dahil:
+        vkn = f.get("satici_vkn") or ""
+        grup = gruplar.setdefault(vkn, {"vkn": vkn, "siralar": [], "kdv": 0.0})
+        grup["siralar"].append(sira)
+        grup["kdv"] = round(grup["kdv"] + float(f.get("kdv") or 0.0), 2)
+    return [gruplar[v] for v in sorted(gruplar)]
+
+
+def dikkat_dokumu(faturalar, sinirlar, saticilar=None):
+    """Beyan edilen indirim ile fatura listesini donem donem karsilastirir.
+
+    sinirlar: {(yil, ay): indirimden cikarilabilecek en yuksek tutar}
+        (beyandaki yurtici alimlara iliskin KDV; yoksa bu doneme ait
+        indirilecek KDV)
+
+    Yalnizca listedeki faturalarin KDV'si bu tutari asan donemler doner.
+    Boyle bir donemde faturalarin tamami indirim konusu yapilmis olamaz;
+    hangilerinin yapildigi ancak defter kaydindan kesin olarak belirlenir.
+    Uygulama iki aday uretir: satici butunlugu korunarak en yuksek birlesim
+    (varsayilan; mukellefin bir saticiyla olan alislarinin tamamini beyan disi
+    birakmasi tipik durumdur) ve fatura bazinda en yuksek birlesim. Ikisi
+    farkliysa ikisi de gosterilir - secim aritmetikle degil, defterle yapilir.
+    """
+    # Satirlar, calismadaki sirasiyla birlikte tutulur: ekran bu sira numarasi
+    # uzerinden faturayi bulup "dahil" isaretini kaldirabiliyor.
+    donemler = {}
+    for sira, f in enumerate(faturalar or []):
+        yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
+        if not yil or not ay:
+            continue
+        anahtar = (int(yil), int(ay))
+        hucre = donemler.setdefault(anahtar, {"tumu": [], "dahil": []})
+        hucre["tumu"].append(f)
+        if sayilir(f, saticilar):
+            hucre["dahil"].append((sira, f))
+
+    dokum = []
+    for (yil, ay) in sorted(donemler):
+        hucre = donemler[(yil, ay)]
+        sinir = float(sinirlar.get((yil, ay)) or 0.0)
+        dahil_kdv = round(sum(float(f.get("kdv") or 0.0)
+                              for _s, f in hucre["dahil"]), 2)
+        if dahil_kdv - sinir <= 0.005:
+            continue
+
+        gruplar = _satici_gruplari(hucre["dahil"])
+        grup_secim = altkume_secimi([g["kdv"] for g in gruplar], sinir)
+        secili_siralar = set()
+        secili_saticilar = []
+        for i in grup_secim["secim"]:
+            secili_siralar.update(gruplar[i]["siralar"])
+            secili_saticilar.append(gruplar[i]["vkn"])
+        fatura_secim = altkume_secimi([f.get("kdv") for _s, f in hucre["dahil"]],
+                                      sinir)
+
+        dokum.append({
+            "yil": yil,
+            "ay": ay,
+            "ay_adi": AYLAR[ay - 1],
+            "donem": "%d/%s" % (yil, AYLAR[ay - 1]),
+            "sinir": round(sinir, 2),
+            "liste_kdv": round(sum(float(f.get("kdv") or 0.0)
+                                   for f in hucre["tumu"]), 2),
+            "dahil_kdv": dahil_kdv,
+            "asim": round(dahil_kdv - sinir, 2),
+            "satici_sayisi": len(gruplar),
+            # Uygulanan aday: satici butunlugu korunmus birlesim
+            "secim_toplami": grup_secim["toplam"],
+            "alternatif": grup_secim["alternatif"],
+            "yaklasik": grup_secim["yaklasik"],
+            "secili_saticilar": secili_saticilar,
+            # Bilgi olarak: fatura bazinda daha yuksek bir toplam mumkun mu
+            "fatura_secim_toplami": fatura_secim["toplam"],
+            "fatura_alternatif": fatura_secim["alternatif"],
+            "faturalar": [{
+                "sira": sira,
+                "fatura_no": f.get("fatura_no") or "",
+                "tarih": tarih_goster(f.get("tarih")),
+                "satici_vkn": f.get("satici_vkn") or "",
+                "kdv": round(float(f.get("kdv") or 0.0), 2),
+                "secili": sira in secili_siralar,
+            } for sira, f in hucre["dahil"]],
+        })
+    return dokum

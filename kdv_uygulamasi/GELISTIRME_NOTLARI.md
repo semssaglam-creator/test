@@ -299,6 +299,22 @@ oturumda buradan devam edilir.
       ilgili iptal/itiraz kaydı bulunduğu tespit edilmiştir." notu düşülüyor.
       Tarhiyata dahil edilmeyen faturalar tabloda görünmediğinden onlar için
       not "... söz konusu fatura tarhiyata dahil edilmemiştir." diye sürüyor.
+- [x] **"Dikkat Edilmesi Gerekenler" kartı.** Bir dönemde listedeki
+      faturaların KDV'si beyan edilen yurtiçi alımlara ilişkin KDV'yi aşıyorsa,
+      Sonuç sekmesinde dönem dönem döküm veriliyor: beyan edilen tutar,
+      listedeki fatura KDV'si, fazla tutar ve beyana oturan aday fatura
+      birleşimleri. Aday önce **satıcı bütünlüğü korunarak** aranıyor —
+      mükellef bir alışı beyan dışı bıraktığında bunu genellikle o satıcıyla
+      olan alışlarının tamamıyla yapıyor. Aynı tutarı veren başka birleşim
+      varsa sayısı yazılıyor; fatura bazında daha yüksek bir toplam mümkünse o
+      da ayrıca belirtiliyor (bir satıcının faturalarını bölmek anlamına
+      geldiği notuyla). "Faturaları beyana oturt" düğmesi, birleşim dışında
+      kalan faturaların "Dahil" işaretini kaldırıp indirim reddini yeniden
+      aktarıyor; böylece tarhiyat her zaman gerçek bir fatura kümesinin
+      toplamına eşit kalıyor. Kart, adayların tespit değil varsayım olduğunu ve
+      kesin belirlemenin defter kaydından yapılacağını açıkça yazıyor.
+      (faturalar.dikkat_dokumu / altkume_secimi) — *kullanıcı bildirimi*
+- [x] Tutanakta madde numaraları kalın, madde gövdesi ince yazılıyor.
 - [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
       çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o
       dönemin faturalarını taşıyan tutanak maddesinin ve rapor bölümünün başına

@@ -184,17 +184,27 @@ class Belge:
     # ------------------------------------------------------------- paragraflar
     def paragraf(self, metin="", kalin=False, italik=False, hiza="iki",
                  buyukluk=None, girinti=0, aralik_once=0, aralik_sonra=120,
-                 renk=None):
-        """Duz paragraf ekler. `girinti` cm cinsindendir."""
+                 renk=None, kalin_onek=""):
+        """Duz paragraf ekler. `girinti` cm cinsindendir.
+
+        `kalin_onek`, paragrafin basindaki bir parcayi (madde numarasi gibi)
+        govde ince kalirken kalin yazar.
+        """
         ozellikler = ['<w:spacing w:before="%d" w:after="%d" w:line="360" '
                       'w:lineRule="auto"/>' % (aralik_once, aralik_sonra)]
         if girinti:
             ozellikler.append('<w:ind w:firstLine="%d"/>' % int(girinti * 567))
         ozellikler.append('<w:jc w:val="%s"/>' % _HIZA_KODLARI.get(hiza, "both"))
+        tam = str(metin or "")
+        govde = tam
+        parcalar = ""
+        if kalin_onek and tam.startswith(kalin_onek):
+            parcalar = _kosular(kalin_onek, True, italik, buyukluk, renk)
+            govde = tam[len(kalin_onek):]
+        parcalar += _kosular(govde, kalin, italik, buyukluk, renk)
         self._govde.append("<w:p><w:pPr>%s</w:pPr>%s</w:p>"
-                           % ("".join(ozellikler),
-                              _kosular(metin, kalin, italik, buyukluk, renk)))
-        self._duz.append(str(metin or ""))
+                           % ("".join(ozellikler), parcalar))
+        self._duz.append(tam)
         return self
 
     def baslik(self, metin, duzey=1, hiza="sol"):
