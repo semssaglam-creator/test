@@ -3900,7 +3900,7 @@ function kunyeSatirAlaniKur(alan) {
   const ekle = document.createElement("button");
   ekle.type = "button";
   ekle.className = "btn ikincil";
-  ekle.textContent = "+ Görevlendirme yazısı ekle";
+  ekle.textContent = alan.ekle_etiketi || "+ Satır ekle";
   ekle.addEventListener("click", () => {
     satirAlaniSatirEkle(govde, alan, alan.kolonlar.map(
       (k) => k.varsayilan || ""));
@@ -4066,7 +4066,7 @@ function eksikleriCiz(eksikler) {
     // Sunucuya gitmeden, ONEMLI_ALANLAR ile ayni olcutu yerelde uygular
     const kunye = durum.calisma.kunye || {};
     const onemli = ["is_emirleri", "nezdinde_ad", "eleman_ad", "tutanak_tarihi",
-      "tutanak_yeri", "faaliyet_konusu"];
+      "tutanak_yeri", "faaliyet_konulari"];
     const etiketler = {};
     (durum.tanimlar.kunye_bolumleri || []).forEach((b) =>
       b.alanlar.forEach((a) => { etiketler[a.kod] = a.etiket; }));

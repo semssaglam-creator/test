@@ -34,6 +34,12 @@ IS_EMRI_KOLONLARI = [
      "varsayilan": "Sahte Belge Kullanma"},
 ]
 
+# Faaliyet konusu tek sutunlu bir satir alanidir: mukellefin birden cok
+# faaliyet konusu varsa her biri ayri satira yazilir.
+FAALIYET_KOLONLARI = [
+    {"kod": "konu", "etiket": "Faaliyet konusu", "tur": "metin"},
+]
+
 BOLUMLER = [
     {
         "kod": "gorevlendirme",
@@ -41,6 +47,7 @@ BOLUMLER = [
         "alanlar": [
             {"kod": "is_emirleri", "etiket": "Görevlendirme yazıları",
              "tur": "satirlar", "kolonlar": IS_EMRI_KOLONLARI,
+             "ekle_etiketi": "+ Görevlendirme yazısı ekle",
              "ipucu": "Her görevlendirme yazısı için (+) düğmesiyle yeni satır "
                       "açın. Sıra numarası kendiliğinden verilir. Bir yazı "
                       "birden çok yılı kapsıyorsa dönemi “2022,2023” biçiminde "
@@ -63,8 +70,23 @@ BOLUMLER = [
         "kod": "mukellef_ek",
         "baslik": "Mükellefe İlişkin Ek Bilgiler",
         "alanlar": [
-            {"kod": "faaliyet_konusu", "etiket": "Faaliyet konusu", "tur": "metin",
-             "ipucu": "Örn: yapı malzemesi alım satımı"},
+            {"kod": "mukellef_vkn", "etiket": "Vergi kimlik numarası", "tur": "metin",
+             "ipucu": "Belgede “... vergi kimlik numaralı mükellefi” biçiminde "
+                      "geçer. Boş bırakılırsa Çalışma Bilgilerine girilen numara "
+                      "kullanılır."},
+            {"kod": "mukellef_tckn", "etiket": "T.C. kimlik numarası", "tur": "metin",
+             "ipucu": "Gerçek kişi mükelleflerde doldurun. İkisi de girilirse "
+                      "belgede her ikisi de yazılır."},
+            {"kod": "faaliyet_adresi", "etiket": "Faaliyet adresi", "tur": "uzun",
+             "ipucu": "Belgede “... adresinde” biçiminde geçer. Boş bırakılırsa "
+                      "Çalışma Bilgilerine girilen adres kullanılır."},
+            {"kod": "faaliyet_konulari", "etiket": "Faaliyet konuları",
+             "tur": "satirlar", "kolonlar": FAALIYET_KOLONLARI,
+             "ekle_etiketi": "+ Faaliyet konusu ekle",
+             "ipucu": "Örn: yapı malzemesi alım satımı. Mükellefin birden çok "
+                      "faaliyet konusu varsa (+) düğmesiyle her birini ayrı "
+                      "satıra yazın; belgede “... ve ... faaliyetleri ile "
+                      "iştigal etmektedir” biçiminde sıralanır."},
             {"kod": "nace_kodu", "etiket": "NACE kodu", "tur": "metin"},
             {"kod": "ise_baslama_tarihi", "etiket": "İşe başlama tarihi", "tur": "tarih"},
             {"kod": "kanuni_temsilci", "etiket": "Kanuni temsilci / ortaklar", "tur": "uzun"},
@@ -140,8 +162,10 @@ BOLUMLER = [
         "alanlar": [
             {"kod": "tutanak_tarihi", "etiket": "Tutanak tarihi", "tur": "tarih"},
             {"kod": "tutanak_yeri", "etiket": "Tutanağın düzenlendiği yer", "tur": "metin",
-             "ipucu": "Belgede \"... adresinde düzenlenmiş\" biçiminde geçer; "
-                      "adres olarak yazınız."},
+             "ipucu": "Adres olarak yazınız. Belgede iki yerde kullanılır: "
+                      "“... adresinde düzenlenmiş” cümlesinde ve incelemenin "
+                      "dairede/uzaktan yapıldığı hâlde “Müfettişliğimizin ... "
+                      "çalışma adresinde” cümlesinde."},
             {"kod": "tutanak_nusha", "etiket": "Nüsha sayısı", "tur": "sayi",
              "varsayilan": 2},
             {"kod": "hazir_bulunanlar", "etiket": "Hazır bulunanlar", "tur": "uzun",
@@ -152,10 +176,6 @@ BOLUMLER = [
             {"kod": "mukellef_beyani", "etiket": "Mükellefin beyanı / itirazı", "tur": "uzun"},
             {"kod": "tutanak_sayfa", "etiket": "Tutanak sayfa sayısı", "tur": "sayi",
              "varsayilan": 3},
-            {"kod": "calisma_adresi", "etiket": "Müfettişliğin çalışma adresi",
-             "tur": "metin",
-             "ipucu": "Tutanakta “İnceleme, Müfettişliğimizin ... çalışma "
-                      "adresinde yapılmıştır.” cümlesinde geçer."},
             {"kod": "defter_bilgileri", "etiket": "İbraz edilen defterler", "tur": "uzun",
              "ipucu": "Her satıra bir defter; alanları dikey çizgiyle ayırın: "
                       "yıl | defterin türü | tasdik tarihi ve numarası | tasdik makamı. "
@@ -229,7 +249,7 @@ BOLUMLER = [
 # uretilir; kullanici uyarilir ve belgede koseli parantezli bir yer tutucu kalir.
 ONEMLI_ALANLAR = [
     "is_emirleri", "nezdinde_ad", "eleman_ad", "tutanak_tarihi", "tutanak_yeri",
-    "faaliyet_konusu",
+    "faaliyet_konulari",
 ]
 
 _ALANLAR = {a["kod"]: a for b in BOLUMLER for a in b["alanlar"]}
@@ -250,7 +270,19 @@ def normalize(ham):
     Tanimsiz anahtarlar atilir: belge uretimi yalnizca bildigi alanlara
     dayansin, arayuzden gelen artik veri belgeye sizmasin.
     """
-    ham = ham or {}
+    ham = dict(ham or {})
+    # "faaliyet_konusu" tek satirlik bir metindi; artik satir alani. Eski
+    # calismalar acilirken o deger ilk satira tasinir ki belge bos kalmasin.
+    # Mufettisligin calisma adresi ayri bir alandi; artik tutanagin
+    # duzenlendigi yerden okunuyor. Eski kayitlarda o alan doluysa aktarilir.
+    if not str(ham.get("tutanak_yeri") or "").strip():
+        eski = str(ham.get("calisma_adresi") or "").strip()
+        if eski:
+            ham["tutanak_yeri"] = eski
+    if not str(ham.get("faaliyet_konulari") or "").strip():
+        eski = str(ham.get("faaliyet_konusu") or "").strip()
+        if eski:
+            ham["faaliyet_konulari"] = eski
     kunye = {}
     for kod, tanim in _ALANLAR.items():
         deger = ham.get(kod, tanim.get("varsayilan", ""))
@@ -334,6 +366,65 @@ def gorevlendirme_ifadesi(emirler):
     # "ile" baglaciyla degil, viryulle siralanir.
     return "%s görevlendirme yazı%s" % (", ".join(parcalar),
                                         "sı" if len(parcalar) == 1 else "ları")
+
+
+def faaliyet_konulari(kunye):
+    """Mukellefin faaliyet konularini liste olarak verir."""
+    return [s.split("|")[0].strip() for s in satirlar_al(kunye, "faaliyet_konulari")
+            if s.split("|")[0].strip()]
+
+
+def faaliyet_ifadesi(kunye):
+    """Cumleye girecek faaliyet ifadesi.
+
+    Tek konu varsa "“yapı malzemesi alım satımı” faaliyeti", birden coksa
+    hepsi sayilir ve "faaliyetleri" denir. Hic girilmemisse kirmizi yer
+    tutucu birakilir.
+    """
+    konular = faaliyet_konulari(kunye)
+    if not konular:
+        return "“[faaliyet konusu]” faaliyeti"
+    return "%s faaliyet%s" % (turkce.liste(["“%s”" % k for k in konular]),
+                              "i" if len(konular) == 1 else "leri")
+
+
+def mukellef_kimligi(inceleme, kunye):
+    """Belgede mukellefin anilisindaki kimlik numarasi ifadesi.
+
+    Kunyedeki numaralar esastir; girilmemisse Calisma Bilgilerine yazilan
+    numaraya dusulur. Gercek kisi mukellefte T.C. kimlik numarasi da
+    girilmisse ikisi birlikte yazilir.
+    """
+    kunye = kunye or {}
+    vkn = str(kunye.get("mukellef_vkn") or "").strip()
+    tckn = str(kunye.get("mukellef_tckn") or "").strip()
+    if not vkn and not tckn:
+        vkn = str((inceleme or {}).get("vkn_tckn") or "").strip()
+    parcalar = []
+    if vkn:
+        parcalar.append("%s vergi kimlik numaralı" % vkn)
+    if tckn:
+        parcalar.append("%s T.C. kimlik numaralı" % tckn)
+    if not parcalar:
+        return "[VKN] vergi kimlik numaralı"
+    return " ve ".join(parcalar)
+
+
+def calisma_adresi(kunye):
+    """Mufettisligin calisma adresi.
+
+    Ayri bir alan tutulmuyor: tutanagin duzenlendigi yer zaten bu adrestir
+    (inceleme dairede ya da uzaktan yapildiginda tutanak da orada duzenlenir),
+    ayni adresi iki kez yazdirmak gereksiz.
+    """
+    return adres((kunye or {}).get("tutanak_yeri"),
+                 "[Müfettişliğin çalışma adresi]")
+
+
+def faaliyet_adresi(kunye, inceleme=None):
+    """Belgeye gececek faaliyet adresi; kunye bos ise calismadaki adres."""
+    ham = str((kunye or {}).get("faaliyet_adresi") or "").strip()
+    return adres(ham or (inceleme or {}).get("adres"))
 
 
 def cizgili_satirlar(kunye, kod, alan_sayisi, tutucular=None):

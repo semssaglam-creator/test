@@ -108,15 +108,14 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
     M = ik.mukellef_sozu
 
     tanitim = (
-        "%s %s vergi kimlik numaralı mükellefi %s (Raporun ilerleyen "
-        "bölümlerinde %s olarak anılacaktır), “%s” adresinde “%s” faaliyeti "
-        "ile iştigal etmektedir. %s Vergi Usul Kanununun 107/A maddesi "
-        "kapsamında e-tebligata tabidir."
+        "%s %s mükellefi %s (Raporun ilerleyen bölümlerinde %s olarak "
+        "anılacaktır), “%s” adresinde %s ile iştigal etmektedir. %s Vergi Usul "
+        "Kanununun 107/A maddesi kapsamında e-tebligata tabidir."
         % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
-           inceleme.get("vkn_tckn") or "[VKN]",
+           ik.mukellef_kimligi(inceleme, kunye),
            ik.mukellef_adi(inceleme, kunye),
-           M(kunye), ik.adres(inceleme.get("adres")),
-           ik.deger(kunye, "faaliyet_konusu"), M(kunye, buyuk=True)))
+           M(kunye), ik.faaliyet_adresi(kunye, inceleme),
+           ik.faaliyet_ifadesi(kunye), M(kunye, buyuk=True)))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
         tanitim += " %s e-Defter ve e-Fatura uygulamaları kapsamındadır." % M(kunye, buyuk=True)
     b.paragraf(tanitim, girinti=1)
@@ -1130,10 +1129,10 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
     karma = bilerek_var and bilmeden_var
 
     b.paragraf(
-        "%s %s vergi kimlik numaralı mükellefi %s’in %s defter ve belgelerinin "
-        "sahte belge kullanımı ile sınırlı olarak incelenmesi neticesinde;"
+        "%s %s mükellefi %s’in %s defter ve belgelerinin sahte belge kullanımı "
+        "ile sınırlı olarak incelenmesi neticesinde;"
         % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
-           inceleme.get("vkn_tckn") or "[VKN]",
+           ik.mukellef_kimligi(inceleme, kunye),
            ik.mukellef_adi(inceleme, kunye),
            _donem_ifadesi(kunye, donemler)),
         girinti=1)

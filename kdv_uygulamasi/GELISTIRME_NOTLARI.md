@@ -314,6 +314,19 @@ oturumda buradan devam edilir.
       toplamına eşit kalıyor. Kart, adayların tespit değil varsayım olduğunu ve
       kesin belirlemenin defter kaydından yapılacağını açıkça yazıyor.
       (faturalar.dikkat_dokumu / altkume_secimi) — *kullanıcı bildirimi*
+- [x] **"Mükellefe İlişkin Ek Bilgiler" bölümü genişletildi.** Vergi kimlik
+      numarası, T.C. kimlik numarası ve faaliyet adresi künyeden alınıyor;
+      boş bırakılırsa Çalışma Bilgilerine girilen değere düşülüyor. Faaliyet
+      konusu tek satırlık metin olmaktan çıkıp (+) düğmesiyle satır eklenen
+      bir alana dönüştü: birden çok faaliyet konusu varsa belgede
+      "“a”, “b” ve “c” faaliyetleri ile iştigal etmektedir" biçiminde
+      sıralanıyor. VKN ve TCKN birlikte girilirse ikisi de yazılıyor.
+      Eski çalışmalardaki tek satırlık faaliyet konusu ilk satıra taşınıyor.
+      — *kullanıcı isteği*
+- [x] **Müfettişliğin çalışma adresi ayrı alan olmaktan çıkarıldı;**
+      "Tutanağın düzenlendiği yer" kutusundan okunuyor — inceleme dairede ya
+      da uzaktan yapıldığında tutanak da zaten o adreste düzenleniyor. Eski
+      çalışmalardaki değer aktarılıyor. — *kullanıcı isteği*
 - [x] Tutanakta madde numaraları kalın, madde gövdesi ince yazılıyor.
 - [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
       çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o

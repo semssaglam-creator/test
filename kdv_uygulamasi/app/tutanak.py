@@ -325,13 +325,12 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
                         liste=None):
     M = ik.mukellef_sozu
     tanitim = (
-        "%s %s vergi kimlik numaralı mükellefi %s, “%s” adresinde “%s” "
-        "faaliyeti ile iştigal etmektedir."
+        "%s %s mükellefi %s, “%s” adresinde %s ile iştigal etmektedir."
         % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
-           inceleme.get("vkn_tckn") or "[VKN]",
+           ik.mukellef_kimligi(inceleme, kunye),
            ik.mukellef_adi(inceleme, kunye),
-           ik.adres(inceleme.get("adres")),
-           ik.deger(kunye, "faaliyet_konusu")))
+           ik.faaliyet_adresi(kunye, inceleme),
+           ik.faaliyet_ifadesi(kunye)))
     if ik.secim_mi(kunye, "e_defter", "Kapsamda"):
         tanitim += (" %s e-Defter ve e-Fatura uygulamaları kapsamındadır."
                     % M(kunye, buyuk=True))
@@ -449,12 +448,11 @@ def _inceleme_yeri_cumlesi(inceleme, kunye):
     uzerinde doldurulsun.
     """
     yer = str(kunye.get("inceleme_yeri") or "").strip()
-    calisma_adresi = ik.adres(kunye.get("calisma_adresi"),
-                              "[Müfettişliğin çalışma adresi]")
+    calisma_adresi = ik.calisma_adresi(kunye)
     if yer == "Mükellefin iş yerinde":
         return ("İnceleme, %s “%s” adresindeki iş yerinde yapılmıştır."
                 % (ik.mukellef_sozu(kunye, ek="in"),
-                   ik.adres(inceleme.get("adres"))))
+                   ik.faaliyet_adresi(kunye, inceleme)))
     if yer == "Uzaktan":
         return ("İnceleme, Müfettişliğimizin “%s” çalışma adresinden uzaktan "
                 "erişim yoluyla yapılmıştır." % calisma_adresi)
