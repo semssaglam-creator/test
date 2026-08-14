@@ -72,6 +72,9 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-08-14 — Windows başlatıcısı geri geldi: "KDV Uygulamasini
+      Baslat.bat" ve KURULUM_WINDOWS.txt. Linux açılış yoluna
+      dokunmuyor; Python yoksa taşınabilir Python'u kendisi indiriyor
 - [x] 2026-08-14 — Tutanaktan değerlendirme cümlesi çıkarıldı (tutanak
       tespit belgesidir); düzeltme gerekçesi artık bütün düzeltme
       sürümlerinden toplanıp dökümün giriş cümlesinde yazılıyor
