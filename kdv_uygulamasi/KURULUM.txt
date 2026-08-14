@@ -92,7 +92,7 @@ Hepsi uygulama klasörünün içinde durur:
 
 Klasörü başka bir bilgisayara kopyalarsanız verileriniz de birlikte gider.
 Uygulama tamamen çevrimdışıdır; hiçbir veri dışarı gönderilmez, sunucu
-yalnızca kendi bilgisayarınızdan erişilebilir (127.0.0.1).
+yalnızca kendi bilgisayarınızdan erişilebilir (loopback).
 
 
 KALDIRMA
@@ -114,7 +114,7 @@ SORUN GİDERME
     çalıştırılmasına izin ver" kutusunu işaretleyin.
 
 Tarayıcı açılmıyor:
-    Terminal penceresinde yazan adresi (http://127.0.0.1:8766/) elle
+    Terminal penceresinde yazan adresi (http://localhost:8766/) elle
     tarayıcınıza yapıştırın.
 
 Uygulama zaten açıkken tekrar başlatırsanız sıradaki boş port kullanılır

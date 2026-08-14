@@ -263,7 +263,10 @@ def dosya_oku(yol, dosya_adi=None):
     """
     import openpyxl
 
-    dosya_adi = dosya_adi or os.path.basename(yol)
+    # yol bir akis (BytesIO) da olabilir; basename yalnizca metin yolda
+    # anlamlidir.
+    if not dosya_adi:
+        dosya_adi = os.path.basename(yol) if isinstance(yol, str) else ""
     try:
         wb = openpyxl.load_workbook(yol, read_only=True, data_only=True)
     except Exception as exc:                                    # noqa: BLE001

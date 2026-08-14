@@ -63,8 +63,11 @@ set "PY=%~dp0python\python.exe"
 exit /b 0
 
 :pthYaz
+rem findstr /c: LITERAL metin arar; ters egik cizgi kacis karakteri DEGILDIR.
+rem "..\\lib" yazilirsa iki ters egik cizgi aranir, hicbir zaman eslesmez ve
+rem satirlar her calistirmada yeniden eklenir.
 for %%D in ("%~dp0python\python*._pth") do (
-    findstr /c:"..\\lib" "%%~D" >nul 2>&1 || (
+    findstr /c:"..\lib" "%%~D" >nul 2>&1 || (
         echo.>>"%%~D"
         echo ..>>"%%~D"
         echo ..\lib>>"%%~D"

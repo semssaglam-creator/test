@@ -41,13 +41,13 @@ python3 -V
 python3 main.py
 ```
 
-Ekrana çalıştığı adresi yazar (varsayılan `http://127.0.0.1:8766/`) ve
+Ekrana çalıştığı adresi yazar (varsayılan `http://localhost:8766/`) ve
 varsayılan tarayıcınızda açar. Kapatmak için **Ctrl+C**.
 
 Port doluysa — örneğin uygulama zaten açıksa — sıradaki boş port denenir
 (8766–8775). Hangi portta çalıştığı ekranda yazar.
 
-Sunucu yalnızca `127.0.0.1` adresine bağlanır; ağdaki başka bir makineden
+Sunucu yalnızca yerel (loopback) adreslere bağlanır; ağdaki başka bir makineden
 erişilemez. Veriler bilgisayardan dışarı çıkmaz.
 
 Masaüstü olmayan bir makinede ya da SSH oturumunda tarayıcı açılamaz;

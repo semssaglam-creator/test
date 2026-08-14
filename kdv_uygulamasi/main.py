@@ -28,6 +28,38 @@ sys.path.append(os.path.join(BASE_DIR, "lib_ek"))
 PORT = 8766
 HATA_DOSYASI = "KDV HATA - BUNU GONDERIN.txt"
 
+# Kurumsal Windows makinelerinde isletim sisteminin varsayilan tarayicisi
+# ilke ile eski bir Edge/IE surumune sabitlenmis olabiliyor; arayuz orada
+# bozuk gorunur. Chrome kuruluysa once o denenir.
+_CHROME_YOLLARI = (
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+)
+
+
+def tarayici_ac(adres):
+    """Adresi tarayicida acar; acamazsa False doner.
+
+    webbrowser.open hicbir tarayici bulamadiginda istisna firlatmaz, sessizce
+    False doner. Donus degeri kontrol edilmezse kullanici bos bir ekrana bakip
+    uygulamanin acilmadigini sanir; oysa sunucu ayaktadir ve adres yalnizca
+    elle yapistirilmayi bekler.
+    """
+    if os.name == "nt":
+        for yol in _CHROME_YOLLARI:
+            if os.path.isfile(yol):
+                try:
+                    webbrowser.register(
+                        "chrome", None, webbrowser.BackgroundBrowser(yol))
+                    return webbrowser.get("chrome").open(adres)
+                except webbrowser.Error:
+                    break
+    try:
+        return webbrowser.open(adres)
+    except webbrowser.Error:
+        return False
+
 
 def _hatayi_yaz(metin):
     """Acilis basarisiz olursa gerekceyi okunabilir bir dosyaya birakir.
@@ -83,6 +115,11 @@ def _baslaticiyi_onar():
 
     Basarisiz olmasi onemsizdir; acilisi hicbir kosulda engellemez.
     """
+    # Windows'ta "calistirilabilir" isareti diye bir sey yok: os.access(X_OK)
+    # neredeyse her zaman True doner ve chmod bir ise yaramaz. Orada baslatici
+    # .bat dosyasidir, boyle bir onarima da ihtiyac duymaz.
+    if os.name == "nt":
+        return
     try:
         yol = os.path.join(BASE_DIR, "calistir.sh")
         if os.path.isfile(yol) and not os.access(yol, os.X_OK):
@@ -108,12 +145,22 @@ def main():
         print(f"Uygun port bulunamadi ({PORT}-{PORT + 9} dolu).")
         sys.exit(1)
 
-    adres = f"http://127.0.0.1:{port}/"
+    # Adres BILEREK localhost; 127.0.0.1 degil. Windows'un "yerel adresler
+    # icin proxy kullanma" ayari yalnizca noktasiz adlari kapsadigindan,
+    # 127.0.0.1 kurumsal proxy'ye gider ve sunucu sorunsuz calisirken
+    # kullanici "sayfaya ulasilamadi" gorur.
+    adres = f"http://localhost:{port}/"
     print("KDV Inceleme Calismasi calisiyor:", adres)
     print("Kapatmak icin bu pencerede Ctrl+C tusuna basin.")
+
+    def _ac():
+        if not tarayici_ac(adres):
+            print("\nTarayici kendiliginden acilamadi.")
+            print("Su adresi tarayiciya elle yapistirin:\n   ", adres)
+
     # daemon: tarayiciyi acan cagri takilirsa (ornegin masaustu olmayan bir
     # makinede ya da SSH oturumunda) Ctrl+C ile kapanmayi engellemesin
-    zamanlayici = threading.Timer(0.5, lambda: webbrowser.open(adres))
+    zamanlayici = threading.Timer(0.5, _ac)
     zamanlayici.daemon = True
     zamanlayici.start()
     try:

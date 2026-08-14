@@ -6,14 +6,16 @@ sonucu dondurur. Veritabanina yazma, kullanici acikca "Kaydet" dediginde
 gerceklesir.
 
 Yalnizca Python standart kutuphanesi kullanilir (http.server, json).
-Sunucu 127.0.0.1 adresine baglanir; disaridan erisime acilmaz.
+Sunucu yalnizca loopback adreslerini (::1 ve 127.0.0.1) dinler;
+disaridan erisime acilmaz.
 """
 import base64
 import binascii
 import io
 import json
 import os
-import posixpath
+import socket
+import threading
 import urllib.parse
 import zipfile
 from datetime import datetime
@@ -334,7 +336,10 @@ class Istekci(BaseHTTPRequestHandler):
             elif yol == "/api/yedek_al":
                 self._json_yanit({"dosya": os.path.basename(db.yedek_al())})
             elif yol == "/api/geri_yukle":
-                dosya = posixpath.basename(veri.get("dosya", ""))
+                # os.path, posixpath degil: posixpath ters egik cizgiyi
+                # ayirici saymaz, Windows'tan gelen "C:\\yol\\ad.db" metnini
+                # oldugu gibi dondurur ve yedek adi dogrulamasi delinir.
+                dosya = os.path.basename(str(veri.get("dosya", "")).replace("\\", "/"))
                 if not dosya.endswith(".db"):
                     raise ApiHata("Geçersiz yedek dosyası.")
                 db.yedekten_geri_yukle(dosya)
@@ -394,21 +399,17 @@ class Istekci(BaseHTTPRequestHandler):
             if not ham.startswith(b"%PDF"):
                 hatalar.append({"ad": ad, "mesaj": "Bu bir PDF dosyası değil."})
                 continue
-            gecici = os.path.join(CIKTI_DIR, "_yuklenen.pdf")
+            # Diske YAZILMAZ. Windows'ta acik bir dosya silinemez ve uzerine
+            # yazilamaz; sabit adli bir gecici dosya art arda iki yuklemede
+            # "PermissionError: [WinError 32]" verir (virus tarayicilar da
+            # yeni yazilan dosyayi kisa sure acik tutar). Okuyucular akis
+            # kabul ettigi icin dosyaya hic ihtiyac yok.
             try:
-                os.makedirs(CIKTI_DIR, exist_ok=True)
-                with open(gecici, "wb") as f:
-                    f.write(ham)
-                okunanlar.append(beyanname_oku(gecici, ad))
+                okunanlar.append(beyanname_oku(io.BytesIO(ham), ad))
             except PdfHata as exc:
                 hatalar.append({"ad": ad, "mesaj": str(exc)})
             except Exception as exc:                      # beklenmedik bicim
                 hatalar.append({"ad": ad, "mesaj": "Okunamadı: %s" % exc})
-            finally:
-                try:
-                    os.remove(gecici)
-                except OSError:
-                    pass
         return {"beyannameler": okunanlar, "hatalar": hatalar}
 
     def _beyanname_ozet(self, veri):
@@ -455,21 +456,17 @@ class Istekci(BaseHTTPRequestHandler):
             raise ApiHata("Dosya içeriği çözülemedi.")
         if not ham.startswith(b"%PDF"):
             raise ApiHata("Bu bir PDF dosyası değil.")
-        gecici = os.path.join(CIKTI_DIR, "_yuklenen_vergi.pdf")
+        # Diske YAZILMAZ. Windows'ta acik bir dosya silinemez ve uzerine
+        # yazilamaz; sabit adli bir gecici dosya art arda iki yuklemede
+        # "PermissionError: [WinError 32]" verir (virus tarayicilar da
+        # yeni yazilan dosyayi kisa sure acik tutar). Okuyucular akis
+        # kabul ettigi icin dosyaya hic ihtiyac yok.
         try:
-            os.makedirs(CIKTI_DIR, exist_ok=True)
-            with open(gecici, "wb") as f:
-                f.write(ham)
-            ozet = vergi_beyannamesi.ozet_oku(gecici, ad)
+            ozet = vergi_beyannamesi.ozet_oku(io.BytesIO(ham), ad)
         except PdfHata as exc:
             raise ApiHata(str(exc))
         except Exception as exc:                              # beklenmedik bicim
             raise ApiHata("Okunamadı: %s" % exc)
-        finally:
-            try:
-                os.remove(gecici)
-            except OSError:
-                pass
         ozet["metin"] = vergi_beyannamesi.kunye_metnine_cevir(ozet)
         return ozet
 
@@ -493,12 +490,13 @@ class Istekci(BaseHTTPRequestHandler):
             if not ham.startswith(b"PK"):
                 hatalar.append({"ad": ad, "mesaj": "Bu bir .xlsx dosyası değil."})
                 continue
-            gecici = os.path.join(CIKTI_DIR, "_yuklenen_fatura.xlsx")
+            # Diske YAZILMAZ. Windows'ta acik bir dosya silinemez ve uzerine
+            # yazilamaz; sabit adli bir gecici dosya art arda iki yuklemede
+            # "PermissionError: [WinError 32]" verir (virus tarayicilar da
+            # yeni yazilan dosyayi kisa sure acik tutar). Okuyucular akis
+            # kabul ettigi icin dosyaya hic ihtiyac yok.
             try:
-                os.makedirs(CIKTI_DIR, exist_ok=True)
-                with open(gecici, "wb") as f:
-                    f.write(ham)
-                sonuc = dosya_oku(gecici, ad)
+                sonuc = dosya_oku(io.BytesIO(ham), ad)
                 okunanlar.extend(sonuc["faturalar"])
                 sayfalar.extend({"dosya": ad, **s} for s in sonuc["sayfalar"])
                 uyarilar.extend("%s: %s" % (ad, u) for u in sonuc["uyarilar"])
@@ -506,11 +504,6 @@ class Istekci(BaseHTTPRequestHandler):
                 hatalar.append({"ad": ad, "mesaj": str(exc)})
             except Exception as exc:                          # beklenmedik bicim
                 hatalar.append({"ad": ad, "mesaj": "Okunamadı: %s" % exc})
-            finally:
-                try:
-                    os.remove(gecici)
-                except OSError:
-                    pass
 
         # VKN tasimayan dokumlerde (elle hazirlanan fatura listesi) saticiyi
         # kullanici yukleme sirasinda bildirir; yalnizca bos olanlara yazilir.
@@ -840,6 +833,79 @@ class Istekci(BaseHTTPRequestHandler):
         self.wfile.write(govde)
 
 
+def _ipv6_var():
+    """Makine gercekten IPv6 soketi acabiliyor mu?
+
+    socket.has_ipv6 bu soruyu cevaplamaz: Python'un IPv6 destegiyle
+    derlendigini soyler ve cekirdekte IPv6 kapatilmis olsa bile True kalir.
+    Boyle bir makinede AF_INET6 soketi acmak dogrudan OSError verir.
+    """
+    if not socket.has_ipv6:
+        return False
+    try:
+        socket.socket(socket.AF_INET6, socket.SOCK_STREAM).close()
+        return True
+    except OSError:
+        return False
+
+
+class _Sunucu(ThreadingHTTPServer):
+    # allow_reuse_address BILEREK kapali. Unix'te bu bayrak yalnizca TIME_WAIT
+    # bekleyen adresi geri verir, ama Windows'ta HALIHAZIRDA DINLENEN bir
+    # adrese ikinci soketin baglanmasina izin verir. Acik kalirsa "port dolu
+    # mu?" denemesi Windows'ta hicbir zaman hata almaz: uygulama zaten acikken
+    # ikinci kopya ayni porta baglanir, istekler iki kopya arasinda paylasilir
+    # ve kullanici kaydettigi verinin kayboldugunu sanir.
+    allow_reuse_address = False
+    daemon_threads = True
+
+
+class _SunucuV6(_Sunucu):
+    address_family = socket.AF_INET6
+
+
+class CiftSunucu:
+    """IPv4 ve IPv6 loopback'i birlikte dinleyen sunucu ciftidir.
+
+    Windows'ta localhost once ::1'e cozuldugu icin yalnizca 127.0.0.1
+    dinlemek yetmez; yalnizca ::1 dinlemek de IPv6'si kapali makinelerde
+    yetmez. Ikisi birden dinlenir.
+    """
+
+    def __init__(self, sunucular):
+        self._sunucular = sunucular
+
+    def serve_forever(self):
+        for s in self._sunucular[1:]:
+            threading.Thread(target=s.serve_forever, daemon=True).start()
+        self._sunucular[0].serve_forever()
+
+    def shutdown(self):
+        for s in self._sunucular:
+            s.shutdown()
+
+    def server_close(self):
+        for s in self._sunucular:
+            s.server_close()
+
+
 def sunucu_baslat(port=8766):
+    """Uygulamayi verilen portta iki loopback ailesinde birden dinletir.
+
+    IPv6 kullanilabiliyorsa iki aile de zorunludur: biri acilip digeri
+    acilamazsa acilan da kapatilir ve OSError firlatilir. Boylece cagiran
+    taraf portu dolu sayip sonrakini dener. Aksi halde calisan bir kopya
+    varken ikincisi yalnizca IPv4'te ayaga kalkar; localhost once ::1'e
+    cozuldugu icin tarayici ESKI kopyaya baglanir.
+    """
     db.init_db()
-    return ThreadingHTTPServer(("127.0.0.1", port), Istekci)
+    sunucular = []
+    try:
+        if _ipv6_var():
+            sunucular.append(_SunucuV6(("::1", port), Istekci))
+        sunucular.append(_Sunucu(("127.0.0.1", port), Istekci))
+    except OSError:
+        for s in sunucular:
+            s.server_close()
+        raise
+    return CiftSunucu(sunucular)

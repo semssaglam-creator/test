@@ -583,7 +583,9 @@ def beyanname_oku(yol, dosya_adi=None):
         "onay_zamani": kunye["onay_zamani"],
         "onay_ts": _onay_ts(kunye["onay_zamani"]),
         "duzeltme_nedeni": kunye["duzeltme_nedeni"],
-        "kaynak": dosya_adi or os.path.basename(yol),
+        # yol bir akis (BytesIO) da olabilir; bkz. fatura_oku.dosya_oku
+        "kaynak": dosya_adi or (os.path.basename(yol)
+                                if isinstance(yol, str) else ""),
         "degerler": degerler,
         "ek": ek,
         "uyarilar": uyarilar,

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===========================================================================
-#  {{UYGULAMA_ADI}} - Windows paketi uretir
+#  KDV Inceleme Calismasi - Windows paketi uretir
 #
 #  Kullanim:  ./paketle.sh [amd64|arm64]
 #
@@ -14,7 +14,7 @@ set -euo pipefail
 KOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$KOK"
 
-MIMARI="{{MIMARI}}"
+MIMARI="amd64"
 GOMULU="evet"
 for arg in "$@"; do
   case "$arg" in
@@ -28,9 +28,9 @@ for arg in "$@"; do
   esac
 done
 PYSURUM="3.12.8"
-PAKET="{{PAKET_KLASOR}}"
-ARSIV="{{ARSIV_ADI}}"
-TANI_DOSYASI="{{TANI_DOSYASI}}"
+PAKET="KDV Inceleme Calismasi"
+ARSIV="KDV_Inceleme_Calismasi_Windows.zip"
+TANI_DOSYASI="TANI RAPORU - BUNU GONDERIN.txt"
 ONBELLEK="$KOK/arac/onbellek"
 PYZIP="python-${PYSURUM}-embed-${MIMARI}.zip"
 PYURL="https://www.python.org/ftp/python/${PYSURUM}/${PYZIP}"
@@ -40,6 +40,21 @@ PYURL="https://www.python.org/ftp/python/${PYSURUM}/${PYZIP}"
 GEREKLI_DOSYALAR=(
   "main.py"
   "app/tani.py"
+  "app/web_server.py"
+  "app/hesap.py"
+  "app/db.py"
+  "app/belge_docx.py"
+  "app/tutanak.py"
+  "app/sahte_belge_raporu.py"
+  "app/excel_export.py"
+  "app/fatura_oku.py"
+  "app/pdf_beyanname.py"
+  "app/vergi_beyannamesi.py"
+  "web/index.html"
+  "lib/openpyxl/__init__.py"
+  "lib/pypdf/__init__.py"
+  "lib_ek/typing_extensions.py"
+  "KULLANIM.md"
   "calistir.bat"
   "kur.bat"
   "kaldir.bat"
@@ -91,6 +106,9 @@ DISARIDA=(
   '*.sh' '*.desktop' '*.db' '*.zip' '*.onceki' '*.tmp'
   'windows' 'arac' "$PAKET"
   'ciktilar/*' 'yedekler/*'
+  # Gelistirme malzemesi: Windows kullanicisinin isine yaramaz, kafa karistirir.
+  'GELISTIRME_NOTLARI.md' 'TERMINAL.md' 'skill' '.gitignore' 'ikon.png'
+  'WINDOWS TESTI*'
   # Tani ve hata raporlari kullanici verisidir: gelistirme sirasinda
   # olusanlar pakete girerse kullanici baskasinin makinesinin raporunu
   # gonderir ve teshis yanlis yere gider.

@@ -12,7 +12,7 @@ python3 main.py
 ```
 
 ya da klasördeki **KDV Uygulamasini Baslat** dosyasına çift tıklayarak. Tarayıcı
-`http://127.0.0.1:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
+`http://localhost:8766/` adresinde kendiliğinden açılır. Kurulum gerekmez;
 Excel çıktısı için `openpyxl`, beyanname PDF'leri için `pypdf` kütüphanesi
 `lib/` klasöründe birlikte gelir. Sunucu yalnızca bu bilgisayardan erişilebilir.
 
@@ -549,5 +549,5 @@ Yüklediğiniz PDF ve Excel dökümleri bilgisayarda saklanmaz; okunup içerikle
 beyan verisini, tespitleri, beyanname sürümlerini, fatura listesini, satıcı
 bilgilerini ve inceleme künyesini birlikte taşır.
 
-Hiçbir veri bu bilgisayardan çıkmaz. Sunucu yalnızca `127.0.0.1` adresine
+Hiçbir veri bu bilgisayardan çıkmaz. Sunucu yalnızca yerel (loopback) adreslere
 bağlanır; dışarıdan erişime açılmaz.

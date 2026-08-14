@@ -6,3 +6,8 @@ __pycache__/
 *.pyc
 baslatma_kaydi.txt
 baslatma_hatasi.txt
+
+# Windows paketi uretim ciktilari (paketle.sh her calistiginda yeniden uretilir)
+/KDV Inceleme Calismasi/
+/KDV_Inceleme_Calismasi_Windows.zip
+arac/onbellek/
