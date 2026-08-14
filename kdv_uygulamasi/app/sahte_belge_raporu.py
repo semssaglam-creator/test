@@ -527,12 +527,33 @@ def _donem_listesi(kunye):
     return [p.strip() for p in ham.split(",") if p.strip()]
 
 
+def _ayrinti_kolonlari(karsilastirmalar):
+    """Tabloya girecek tutar sutunlari.
+
+    "İade Edilmesi Gereken KDV" satiri KDV beyannamesinde ancak iade hakki
+    doguran bir islem varsa dolar; iadesi olmayan mukelleflerde sutun bastan
+    sona sifir yazar ve tabloyu bosuna genisletir. Duzeltme oncesinde de
+    sonrasinda da tutar yoksa sutun hic acilmaz.
+    """
+    dolu = False
+    for k in karsilastirmalar or []:
+        for s in k.get("satirlar") or []:
+            if s.get("kod") != "iade_edilmesi_gereken_kdv":
+                continue
+            if (abs(s.get("oncesi") or 0.0) > 0.005
+                    or abs(s.get("sonrasi") or 0.0) > 0.005):
+                dolu = True
+    return [(kod, etiket) for kod, etiket in DUZELTME_AYRINTI_KOLONLARI
+            if kod != "iade_edilmesi_gereken_kdv" or dolu]
+
+
 def _duzeltme_ayrinti_tablosu(b, karsilastirmalar):
     """Ornek rapordaki duzen: satirlar ay x (oncesi / sonrasi / fark).
 
     Ay adi ucluden yalnizca ilkinde yazilir; ornekteki birlestirilmis hucrenin
     karsiligi budur.
     """
+    kolonlar = _ayrinti_kolonlari(karsilastirmalar)
     yillar = sorted({k["yil"] for k in karsilastirmalar})
     for yil in yillar:
         satirlar = []
@@ -540,7 +561,7 @@ def _duzeltme_ayrinti_tablosu(b, karsilastirmalar):
             degerler = {s["kod"]: s for s in k["satirlar"]}
             for i, etiket in enumerate(DUZELTME_AYRINTI_SATIRLARI):
                 hucreler = []
-                for kod, _e in DUZELTME_AYRINTI_KOLONLARI:
+                for kod, _e in kolonlar:
                     satir = degerler.get(kod) or {}
                     if i == 2:
                         # Dairenin tablosunda "Fark", duzeltmeyle beyandan
@@ -551,10 +572,9 @@ def _duzeltme_ayrinti_tablosu(b, karsilastirmalar):
                             "oncesi" if i == 0 else "sonrasi")))
                 satirlar.append([k["ay_adi"] if i == 0 else "", etiket]
                                 + hucreler)
-        b.tablo(["Dönemi\n%s" % yil, ""]
-                + [e for _k, e in DUZELTME_AYRINTI_KOLONLARI], satirlar,
-                hizalar=["orta", "sol"] + ["sag"] * len(DUZELTME_AYRINTI_KOLONLARI),
-                oranlar=[0.7, 1.6] + [1.1] * len(DUZELTME_AYRINTI_KOLONLARI),
+        b.tablo(["Dönemi\n%s" % yil, ""] + [e for _k, e in kolonlar], satirlar,
+                hizalar=["orta", "sol"] + ["sag"] * len(kolonlar),
+                oranlar=[0.7, 1.6] + [1.1] * len(kolonlar),
                 buyukluk=TABLO_PUNTOSU)
 
 
@@ -571,6 +591,9 @@ def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
         "%s tarafından verilen düzeltme beyannamelerinde yapılan düzeltmelere "
         "ilişkin ayrıntılı tablo aşağıda sunulmuştur."
         % ik.mukellef_sozu(kunye, buyuk=True), girinti=1)
+    # Beyanname yuklenmedigi icin iade tutari da bilinmiyor; iadesi olmayan
+    # dosyalarin ezici cogunlugunda sutun bos kalacagindan burada da acilmaz.
+    kolonlar = _ayrinti_kolonlari([])
     bloklar = {}
     for metin in donemler:
         yil, _, ay_adi = str(metin).partition("/")
@@ -581,11 +604,10 @@ def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
         for ay_adi in aylar:
             for i, etiket in enumerate(DUZELTME_AYRINTI_SATIRLARI):
                 satirlar.append([ay_adi if i == 0 else "", etiket]
-                                + ["[tutar]"] * len(DUZELTME_AYRINTI_KOLONLARI))
-        b.tablo(["Dönemi\n%s" % yil, ""]
-                + [e for _k, e in DUZELTME_AYRINTI_KOLONLARI], satirlar,
-                hizalar=["orta", "sol"] + ["sag"] * len(DUZELTME_AYRINTI_KOLONLARI),
-                oranlar=[0.7, 1.6] + [1.1] * len(DUZELTME_AYRINTI_KOLONLARI),
+                                + ["[tutar]"] * len(kolonlar))
+        b.tablo(["Dönemi\n%s" % yil, ""] + [e for _k, e in kolonlar], satirlar,
+                hizalar=["orta", "sol"] + ["sag"] * len(kolonlar),
+                oranlar=[0.7, 1.6] + [1.1] * len(kolonlar),
                 buyukluk=TABLO_PUNTOSU)
 
 
@@ -611,6 +633,8 @@ def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
 
     yillar = sorted({k["yil"] for k in ilgili})
     donem_metni = turkce.liste(["%s/%s" % (k["ay_adi"], k["yil"]) for k in ilgili])
+    # Gerekce, beyannameden okundugu haliyle bu cumlenin icinde gecer;
+    # ayrica tabloya sutun olarak eklenmez.
     gerekceler = []
     for k in ilgili:
         g = (k.get("gerekce") or "").strip().rstrip(".")

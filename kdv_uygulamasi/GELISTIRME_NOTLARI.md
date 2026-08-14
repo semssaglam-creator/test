@@ -72,6 +72,9 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-08-14 — Düzeltme ayrıntı tablosunda "İade Edilmesi Gereken
+      KDV" sütunu, düzeltme öncesinde de sonrasında da tutar yoksa hiç
+      açılmıyor
 - [x] 2026-08-10 — Taslak vergi inceleme tutanağı (VUK 141) üretimi; künye
       formu; bağımlılık gerektirmeyen .docx yazıcı
 - [x] 2026-08-10 — Fatura dökümü okuma (e-Arşiv / e-Fatura / elle hazırlanan),
