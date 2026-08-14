@@ -1,0 +1,82 @@
+{{UYGULAMA_ADI}} - Windows kurulumu
+
+{{KISAYOL_ACIKLAMA}}
+
+Bilgisayara hicbir sey kurulmaz. Yonetici yetkisi gerekmez. Uygulama tek bir
+klasorde durur; o klasoru silmek uygulamayi tamamen kaldirir.
+
+
+1. ZIP DOSYASINI DOGRU ACIN
+
+   ZIP dosyasina SAG TIKLAYIN ve "Tumunu ayikla..." secin.
+
+   Onemli: dosyalari ZIP penceresinden surukleyip birakmayin. Surukle-birak
+   bazi alt klasorleri eksik birakir ve uygulama acilmaz.
+
+   Cikan klasoru su konumlardan birine koyun:
+       Masaustu
+       Belgeler
+
+   "C:\Program Files" ALTINA KOYMAYIN. Uygulama kendi klasorune yazar
+   (verileriniz, uretilen dosyalar); orasi yazmaya kapalidir.
+
+
+2. KUR.BAT DOSYASINA CIFT TIKLAYIN
+
+   Cikan klasorde "kur.bat" dosyasini bulun ve cift tiklayin.
+
+   Bu islem masaustune bir kisayol koyar ve uygulamanin ihtiyaci olan
+   tasinabilir Python'u hazirlar. Yalnizca bir kez yapilir.
+
+   Ilk calistirmada internetten yaklasik 11 MB indirilebilir. Indirme
+   engellenirse ekranda ne yapmaniz gerektigi yazacaktir.
+
+
+3. "WINDOWS BILGISAYARINIZI KORUDU" UYARISI
+
+   Bu uyari, dosyanin internetten gelmis olmasindandir; virus bildirimi
+   degildir.
+
+       "Ek bilgi" yazisina tiklayin
+       Acilan pencerede "Yine de calistir" dugmesine basin
+
+   Uyari yalnizca ilk seferde cikar.
+
+
+4. UYGULAMAYI ACIN
+
+   Masaustundeki "{{UYGULAMA_ADI}}" kisayoluna cift tiklayin.
+
+   Siyah bir pencere acilir ve icinde su satir gorunur:
+
+       {{UYGULAMA_ADI}} calisiyor: http://localhost:{{PORT}}/
+
+   Hemen ardindan tarayici kendiliginden acilir.
+
+   Siyah pencereyi KAPATMAYIN. Uygulama o pencere acik oldugu surece
+   calisir. Isiniz bitince pencereyi kapatin ya da icinde Ctrl+C tuslarina
+   basin.
+
+   Tarayici kendiliginden acilmazsa, siyah penceredeki adresi tarayiciya
+   elle yazin.
+
+
+SORUN CIKARSA
+
+   Klasordeki "tani.bat" dosyasina cift tiklayin.
+
+   Bu arac sorunun sebebini arastirir (ag ayarlari, port, eksik dosya,
+   yazma izni, tarayici) ve ayni klasore su dosyayi birakir:
+
+       {{TANI_DOSYASI}}
+
+   O dosyayi oldugu gibi gonderin; sebebin bulunmasi icin yeterlidir.
+
+
+KALDIRMAK ICIN
+
+   "kaldir.bat" masaustu kisayolunu siler.
+   Uygulamayi tamamen kaldirmak icin klasoru silin.
+
+   Dikkat: kaydettiginiz veriler de bu klasorun icindedir. Silmeden once
+   gerekiyorsa yedek alin.
