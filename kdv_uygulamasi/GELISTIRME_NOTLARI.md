@@ -327,6 +327,28 @@ oturumda buradan devam edilir.
       "Tutanağın düzenlendiği yer" kutusundan okunuyor — inceleme dairede ya
       da uzaktan yapıldığında tutanak da zaten o adreste düzenleniyor. Eski
       çalışmalardaki değer aktarılıyor. — *kullanıcı isteği*
+- [x] **Bütün sahteci satıcılar ve bütün faturaları belgelerde.** Tutanak ve
+      raporun fatura tabloları artık listedeki her satıcıyı ve her faturayı
+      gösteriyor; tek faturası tarhiyata girmeyen satıcının da tablosu
+      açılıyor. Tarhiyat yine yalnızca indirim konusu yapıldığı anlaşılan
+      faturalar üzerinden kuruluyor; aradaki farkın nedeni raporun C
+      bölümünde, "İndirilecek KDV Hesabından Çıkarılacak Tutar" tablosunun
+      hemen altında dört gerekçeye ayrılarak yazılıyor: iptal/itiraz kaydı,
+      düzeltme beyannamesiyle çıkarılma, beyan edilen yurtiçi alımların
+      aşılması, indirim konusu yapıldığının tespit edilememesi.
+      (`satici_ozeti` artık `liste_*` rakamlarını da taşıyor.)
+      — *kullanıcı isteği*
+- [x] **DİKKAT notu artık listenin tamamına bakıyor.** Faturalar beyana
+      oturtulup fazlası tarhiyat dışına alındığında not kayboluyordu; oysa
+      mükellefin bazı alışlarını beyan dışı bırakmış olması tarhiyat
+      düzeltilse de geçerli bir tespit. Ölçüt tarhiyata giren faturalar değil,
+      listenin tamamı. Hiçbir satıcı maddesine düşmeyen dönemler için ayrı bir
+      kırmızı not yazılıyor. — *kullanıcı bildirimi*
+- [x] **İptal/itiraz sütunu.** Fatura tablosuna elle işaretlenebilen
+      "İptal/itiraz" kutucuğu eklendi (önceden yalnızca portal dökümünde ayrı
+      sayfa varsa işaretleniyordu). Faturası tarhiyata girmeyen satıcının
+      iptal/itiraz açıklaması da artık belgede yer alıyor.
+      — *kullanıcı bildirimi*
 - [x] Tutanakta madde numaraları kalın, madde gövdesi ince yazılıyor.
 - [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
       çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o

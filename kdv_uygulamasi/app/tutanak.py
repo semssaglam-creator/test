@@ -173,8 +173,19 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
     Sahte belgelerin KDV'si "yurtici alimlara iliskin KDV" icinden cikarilir.
     Bir donemde beyan edilen bu tutar, o donemde kaydedilen sahte faturalarin
     KDV'sinden az ise faturalarin tamami o donemde indirim konusu yapilmamis
-    demektir; tarhiyat bu haliyle kurulamaz. Belgede ilgili maddenin basina
-    kirmizi bir not dusulur.
+    demektir. Belgede ilgili maddenin basina kirmizi bir not dusulur.
+
+    Olcut bilerek LISTENIN TAMAMIDIR: hangi faturalarin tarhiyata dahil
+    edildigine bakilmaz. Cunku not, tarhiyatin kurulusuna degil, listedeki
+    belgelerle beyan arasindaki celiskiye isaret eder. Aday fatura birlesimi
+    secilip fazla faturalar tarhiyat disina alindiginda tarhiyat beyana oturur
+    ama celiski ortadan kalkmaz - mukellef o alislari beyanina dahil etmemis
+    demektir ve tutanakta bunun gorunmesi gerekir. Iptal/itiraz kaydi bulunan
+    faturalar sayilmaz: onlarin indirim konusu yapilmadigi zaten ayrica
+    belirtiliyor.
+
+    `saticilar` artik kullanilmiyor; cagiranlarin duzeni bozulmasin diye
+    imzada birakildi.
 
     Doner: {(yil, ay), ...}
     """
@@ -183,12 +194,17 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
     sinirlar = {(d["yil"], d["ay"]): d["elestirili"].get("indirim_siniri",
                                                          d["beyan"]["bu_donem_indirim"])
                 for d in donemler or []}
-    yetersiz = set()
-    for yil, aylar in F.donem_ozeti(liste, saticilar).items():
-        for ay, hucre in aylar.items():
-            if (yil, ay) in sinirlar and hucre["kdv"] - sinirlar[(yil, ay)] > 0.005:
-                yetersiz.add((yil, ay))
-    return yetersiz
+    toplamlar = {}
+    for f in liste or []:
+        if f.get("yon") == F.YON_SATIS or f.get("iptal"):
+            continue
+        yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
+        if not yil or not ay:
+            continue
+        anahtar = (int(yil), int(ay))
+        toplamlar[anahtar] = toplamlar.get(anahtar, 0.0) + float(f.get("kdv") or 0.0)
+    return {d for d, kdv in toplamlar.items()
+            if d in sinirlar and kdv - sinirlar[d] > 0.005}
 
 
 def iptal_notlari(faturalar):
@@ -220,15 +236,52 @@ def iptal_notlari(faturalar):
     return paragraflar
 
 
+def yetersiz_donemleri(faturalar, yetersiz):
+    """Verilen faturalarin dustugu yetersiz donemler, sirali."""
+    return sorted({(f.get("kayit_yil"), f.get("kayit_ay")) for f in faturalar}
+                  & (yetersiz or set()))
+
+
+def _donem_adlari(donemler):
+    return ", ".join("%d/%s" % (yil, turkce.buyuk(AYLAR[ay - 1]))
+                     for yil, ay in donemler)
+
+
 def dikkat_notu(faturalar, yetersiz):
     """Verilen faturalar yetersiz donemlere dusuyorsa kirmizi not metni."""
-    donemler = sorted({(f.get("kayit_yil"), f.get("kayit_ay")) for f in faturalar}
-                      & (yetersiz or set()))
-    if not donemler:
-        return ""
-    adlar = ", ".join("%d/%s" % (yil, turkce.buyuk(AYLAR[ay - 1]))
-                      for yil, ay in donemler)
-    return "%s (%s)" % (DIKKAT_NOTU, adlar)
+    donemler = yetersiz_donemleri(faturalar, yetersiz)
+    return "%s (%s)" % (DIKKAT_NOTU, _donem_adlari(donemler)) if donemler else ""
+
+
+def kalan_iptal_notlari(b, liste, yazilan_vknler):
+    """Hicbir satici maddesine girmemis iptal/itiraz kayitlarini yazar.
+
+    Bir saticinin butun faturalari tarhiyat disinda kalirsa (hepsi iptal
+    edilmisse ya da aday birlesim disinda kaldiysa) o satici icin madde
+    acilmaz. Kaydin varligi yine de belgeye gecmelidir: fatura listede
+    gorunurken tarhiyatta yer almiyorsa okuyan kisi bunun nedenini
+    belgeden anlayabilmelidir.
+    """
+    kalan = [f for f in liste or []
+             if f.get("iptal") and (f.get("satici_vkn") or "") not in (yazilan_vknler or set())]
+    for satir in iptal_notlari(kalan):
+        b.paragraf(satir, girinti=1)
+
+
+def kalan_dikkat_notu(b, yetersiz, kapsanan):
+    """Hicbir satici maddesine dusmemis yetersiz donemler icin ayri not.
+
+    Aday fatura birlesimi secilip bir saticinin butun faturalari tarhiyat
+    disina alindiginda o saticinin maddesi acilmaz. Not onunla birlikte
+    kaybolmasin diye kalan donemler burada ayrica yazilir: listedeki
+    belgelerle beyan arasindaki celiski, tarhiyat beyana oturtulmus olsa da
+    belgede gorunmelidir.
+    """
+    kalan = sorted((yetersiz or set()) - set(kapsanan or set()))
+    if not kalan:
+        return
+    b.paragraf("%s (%s)" % (DIKKAT_NOTU, _donem_adlari(kalan)), kalin=True,
+               girinti=1, renk=KIRMIZI, aralik_once=140, aralik_sonra=0)
 
 
 def satici_veri_maddeleri(kunye, donemler, satici_sayisi):
@@ -553,21 +606,28 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
     """
     from . import faturalar as F
 
+    kapsanan, yazilan_vknler = set(), set()
     if not satici_satirlari:
-        return
+        return kapsanan, yazilan_vknler
     M = ik.mukellef_sozu
     sorular = ik.satirlar(kunye, "sorular")
     genel_cevap = " ".join(ik.satirlar(kunye, "mukellef_beyani"))
 
     for s in satici_satirlari:
+        # Saticinin LISTEDEKI butun faturalari yazilir; tarhiyata girmeyenler
+        # de tabloda yer alir. Sahte belge duzenledigi tespit edilen mukellef
+        # ve faturalari tutanakta gorunmelidir - hangilerinin indirim reddine
+        # konu edildigi ayri bir sorudur ve raporun degerlendirme bolumunde
+        # ayrica aciklanir.
         tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
-        kendi = [f for f in tum if f.get("dahil")]
-        if not kendi:
+        if not tum:
             continue
 
         # --- VERI maddesi. Beyan edilen indirim faturalari karsilamiyorsa
         # maddenin basina kirmizi uyari dusulur.
-        not_metni = dikkat_notu(kendi, yetersiz)
+        yazilan_vknler.add(s["vkn"])
+        kapsanan.update(yetersiz_donemleri(tum, yetersiz))
+        not_metni = dikkat_notu(tum, yetersiz)
         if not_metni:
             b.paragraf(not_metni, kalin=True, girinti=1, renk=KIRMIZI,
                        aralik_once=140, aralik_sonra=0)
@@ -582,24 +642,24 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
             % (M(kunye, buyuk=True, ek="in"),
                ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                s["vkn"] or "[VKN]", ik.satici_unvani(s),
-               len(kendi), _tl(s["matrah"]), len(kendi)))
+               len(tum), _tl(s["liste_matrah"]), len(tum)))
 
         tablo = []
-        for f in kendi:
+        for f in tum:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
             tablo.append([F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
                           F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])
-        tablo.append(["TOPLAM", "", "", _tl(s["matrah"]), _tl(s["kdv"]),
-                      _tl(s["toplam"]), "", ""])
+        tablo.append(["TOPLAM", "", "", _tl(s["liste_matrah"]),
+                      _tl(s["liste_kdv"]), _tl(s["liste_toplam"]), "", ""])
         b.tablo(["Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar", "KDV",
                  "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
                 hizalar=["orta", "sol", "sol", "sag", "sag", "sag", "orta", "orta"],
                 oranlar=[1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
-        for satir in _muhasebe_paragraflari(kunye, kendi):
+        for satir in _muhasebe_paragraflari(kunye, tum):
             b.paragraf(satir, girinti=1)
         # Iptal/itiraz kaydi, dahil edilmeyen faturalar icin de yazilir
         for satir in iptal_notlari(tum):
@@ -608,6 +668,8 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
         cevap = (s.get("cevap") or "").strip() or genel_cevap
         _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
+
+    return kapsanan, yazilan_vknler
 
 
 def _muhasebe_paragraflari(kunye, faturalar):
@@ -813,8 +875,11 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
                         belgeye_giren_bulgular(bulgular, donemler))
     # Satici varsa veri/soru ciftleri _fatura_maddesi icinde uretilir; ayrica
     # genel bir soru maddesi acilmaz.
-    _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste,
-                    indirim_yetersiz_donemler(liste, saticilar, donemler))
+    yetersiz = indirim_yetersiz_donemler(liste, saticilar, donemler)
+    kapsanan, yazilan = _fatura_maddesi(b, kunye, sayac, satici_satirlari,
+                                        liste, yetersiz)
+    kalan_iptal_notlari(b, liste, yazilan)
+    kalan_dikkat_notu(b, yetersiz, kapsanan)
     if not satici_satirlari:
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)
         _sorular_maddesi(b, kunye, sayac, satici_satirlari)

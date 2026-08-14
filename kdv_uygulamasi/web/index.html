@@ -3435,7 +3435,7 @@ function faturaSutunSuzgecleri(suz) {
   };
   const kutuStili = "width:100%;padding:2px 4px;font-size:11px;";
 
-  bos(3);                                   // Dahil · Tevsik yok · Fatura No
+  bos(4);                        // Dahil · Tevsik yok · İptal/itiraz · Fatura No
 
   const tdTarih = document.createElement("td");
   const girdi = document.createElement("input");
@@ -3578,8 +3578,8 @@ function faturaListesiniCiz() {
   });
   thDahil.append(hepsi, document.createTextNode(" Dahil"));
   ust.appendChild(thDahil);
-  ["Tevsik\nyok", "Fatura No", "Tarih", "Satıcı VKN", "Yön", "Kayıt Dönemi",
-   "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
+  ["Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih", "Satıcı VKN", "Yön",
+   "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
   tablo.appendChild(faturaSutunSuzgecleri(suz));
@@ -3587,7 +3587,7 @@ function faturaListesiniCiz() {
   if (!gorunen.length) {
     const bos = document.createElement("tr");
     bos.appendChild(hucre("td", "Seçilen yıl ve satıcıya ait fatura yok.",
-                          { className: "sessiz" })).colSpan = 12;
+                          { className: "sessiz" })).colSpan = 13;
     tablo.appendChild(bos);
   }
 
@@ -3614,6 +3614,19 @@ function faturaListesiniCiz() {
     });
     tdTevsik.appendChild(tevsik);
     tr.appendChild(tdTevsik);
+
+    // İptal/itiraz kaydı: portal dökümünde ayrı sayfa varsa kendiliğinden
+    // işaretlenir, yoksa buradan elle işaretlenir. İşaretlenen fatura
+    // tarhiyata girmese de belgede kaydın varlığı açıklanır.
+    const tdIptal = document.createElement("td");
+    const iptal = document.createElement("input");
+    iptal.type = "checkbox"; iptal.checked = !!f.iptal; iptal.style.width = "auto";
+    iptal.title = "Fatura hakkında iptal/itiraz kaydı bulunuyor";
+    iptal.addEventListener("change", async () => {
+      f.iptal = iptal.checked; isaretle(false); await faturalariTazele();
+    });
+    tdIptal.appendChild(iptal);
+    tr.appendChild(tdIptal);
 
     tr.appendChild(hucre("td", f.fatura_no || "—"));
     tr.appendChild(hucre("td", tarihGoster(f.tarih) || "—"));
@@ -3683,7 +3696,7 @@ async function faturaListesiniAktar() {
   if (!gorunen.length) { mesaj("Aktarılacak satır yok.", "hata"); return; }
   const yonAdi = (kod) => ((durum.tanimlar.fatura_yonleri || [])
     .find((y) => y.kod === kod) || {}).etiket || kod || "";
-  const basliklar = ["Dahil", "Tevsik yok", "Fatura No", "Tarih", "Satıcı VKN",
+  const basliklar = ["Dahil", "Tevsik yok", "İptal/itiraz", "Fatura No", "Tarih", "Satıcı VKN",
                      "Satıcı Unvanı", "Yön", "Kayıt Dönemi", "Matrah", "KDV",
                      "Toplam", "Oran (%)", "Not"];
   const satirlar = gorunen.map((f) => {
@@ -3695,6 +3708,7 @@ async function faturaListesiniAktar() {
     return [
       f.dahil ? "Evet" : "Hayır",
       f.tevsik_yok ? "Evet" : "",
+      f.iptal ? "Evet" : "",
       f.fatura_no || "",
       tarihGoster(f.tarih) || "",
       f.satici_vkn || "",
@@ -3718,7 +3732,7 @@ async function faturaListesiniAktar() {
       body: JSON.stringify({
         ad: durum.calisma.ad || durum.calisma.mukellef.ad_unvan || "",
         baslik: "FATURA LİSTESİ" + (kapsam.length ? " — " + kapsam.join(", ") : ""),
-        basliklar, satirlar, sayisal: [8, 9, 10, 11], toplanan: [8, 9, 10],
+        basliklar, satirlar, sayisal: [9, 10, 11, 12], toplanan: [9, 10, 11],
       }),
     });
     if (!yanit.ok) throw new Error((await yanit.json()).hata || "Excel üretilemedi");

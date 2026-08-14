@@ -27,6 +27,7 @@ from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
 from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
+                      kalan_dikkat_notu, kalan_iptal_notlari, yetersiz_donemleri,
                       satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
@@ -380,10 +381,18 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
     # Tutanaktaki veri maddesi numaralari: rapor, her saticiyi kendi maddesine
     # atifla anlatir.
     yetersiz = indirim_yetersiz_donemler(liste, saticilar, donemler)
+    kapsanan, yazilan = set(), set()
     for i, s in enumerate(satici_satirlari, 1):
+        kendi = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
+        kapsanan.update(yetersiz_donemleri(kendi, yetersiz))
+        yazilan.add(s["vkn"])
         _satici_bolumu(b, kunye, s, liste, i,
                        _donem_ifadesi(kunye, donemler), karsilastirmalar,
                        madde_no.get(s["vkn"]), yetersiz)
+    # Faturalari tarhiyat disina alinan saticinin bolumu acilmaz; iptal/itiraz
+    # kaydi ve beyanla celiski yine de raporda gorunmelidir.
+    kalan_iptal_notlari(b, liste, yazilan)
+    kalan_dikkat_notu(b, yetersiz, kapsanan)
 
     # ---- C: mevzuat
     b.baslik("C- İlgili Mevzuat", 2)
@@ -401,6 +410,7 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
             "Bu doğrultuda ilgili dönem beyanlarından çıkarılacak tutarlar "
             "aşağıdaki tabloda gösterilmiştir.", girinti=1)
         _cikarilacak_tablosu(b, liste, saticilar)
+        _tarhiyat_disi_paragrafi(b, kunye, liste, saticilar, yetersiz)
 
     # ---- D: degerlendirme
     b.baslik("D- Tespit Edilen Hususların İlgili Mevzuat Çerçevesinde "
@@ -411,6 +421,72 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
 
     # ---- Ç: tarhiyat oncesi uzlasma
     _uzlasma(b, kunye, satici_satirlari, ceza)
+
+
+def _tarhiyat_disi_gruplari(liste, saticilar, yetersiz):
+    """Cikarilacak KDV tablosuna girmeyen faturalari gerekcesine gore ayirir.
+
+    Doner: [(gerekce metni, [fatura, ...]), ...] - sirasi belgeye yazilis
+    sirasidir.
+    """
+    iptal, duzeltme, asim, diger = [], [], [], []
+    for f in liste or []:
+        if f.get("yon") == F.YON_SATIS or F.sayilir(f, saticilar):
+            continue
+        if f.get("iptal"):
+            iptal.append(f)
+        elif F.duzeltilmis_mi(f.get("satici_vkn"), saticilar):
+            duzeltme.append(f)
+        elif (f.get("kayit_yil"), f.get("kayit_ay")) in (yetersiz or set()):
+            asim.append(f)
+        else:
+            diger.append(f)
+    return [
+        ("%s hakkında iptal/itiraz kaydı bulunduğundan, söz konusu belgelerin "
+         "indirim konusu yapılmadığı anlaşılmış ve tarhiyata dahil "
+         "edilmemiştir.", iptal),
+        ("%s, mükellef tarafından verilen düzeltme beyannameleri ile "
+         "indirilecek KDV tutarlarından çıkarıldığından, mükerrer tarhiyata "
+         "yol açmamak bakımından tarhiyata dahil edilmemiştir.", duzeltme),
+        ("%s, kayıt dönemlerinde beyan edilen yurtiçi alımlara ilişkin KDV "
+         "tutarını aştığından, söz konusu belgelerin ilgili dönemlerde "
+         "indirim konusu yapılmadığı anlaşılmış ve tarhiyata dahil "
+         "edilmemiştir.", asim),
+        ("%s bakımından indirim konusu yapıldığı tespit edilemediğinden, söz "
+         "konusu belgeler tarhiyata dahil edilmemiştir.", diger),
+    ]
+
+
+def _tarhiyat_disi_paragrafi(b, kunye, liste, saticilar, yetersiz):
+    """Listede olup cikarilacak KDV tablosuna girmeyen faturalarin gerekcesi.
+
+    Sahte belge duzenledigi tespit edilen mukelleflerin butun faturalari
+    raporun B bolumunde tablo halinde yer alir; tarhiyat ise yalnizca indirim
+    konusu yapildigi anlasilan faturalar uzerinden kurulur. Iki tablonun
+    toplamlari bu yuzden birbirini tutmaz ve farkin nedeni acikca yazilmazsa
+    raporu okuyan kisi bunu bir hata sanir.
+    """
+    def ad(f):
+        return ("%s tarih ve %s numaralı fatura (%s TL KDV)"
+                % (F.tarih_goster(f.get("tarih")) or "[tarih]",
+                   f.get("fatura_no") or "[fatura no]", _tl(f.get("kdv"))))
+
+    gruplar = [(kalip, fatlar)
+               for kalip, fatlar in _tarhiyat_disi_gruplari(liste, saticilar, yetersiz)
+               if fatlar]
+    if not gruplar:
+        return
+
+    toplam = sum(len(f) for _k, f in gruplar)
+    b.paragraf(
+        "Raporun (B) bölümünde yer alan tablolarda, sahte belge düzenlediği "
+        "tespit edilen mükelleflerin %s adına düzenlediği faturaların tamamına "
+        "yer verilmiştir. Yukarıdaki tabloda ise yalnızca indirim konusu "
+        "yapıldığı anlaşılan faturalar bulunmaktadır. Aradaki %d faturalık "
+        "farkın nedenleri aşağıda açıklanmıştır."
+        % (ik.mukellef_sozu(kunye), toplam), girinti=1)
+    for kalip, fatlar in gruplar:
+        b.paragraf(kalip % turkce.liste([ad(f) for f in fatlar]), girinti=1)
 
 
 def _cikarilacak_tablosu(b, liste, saticilar=None):
@@ -692,13 +768,14 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
         b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
                    "kapsamına alınmıştır." % s["ozel_esaslar"], girinti=1)
 
+    # Saticinin listedeki butun faturalari tabloya girer; tarhiyata
+    # alinmayanlarin neden alinmadigi C bolumunde ayrica aciklanir.
     tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
-    kendi = [f for f in tum if f.get("dahil")]
-    if kendi:
+    if tum:
         # Fatura tablosundan once tutanaga atif: hangi maddede tespit edildigi,
         # faturalari kimin duzenledigi ve hangi donem beyannamelerinde indirim
         # konusu yapildigi.
-        yillar = sorted({f["kayit_yil"] for f in kendi if f.get("kayit_yil")})
+        yillar = sorted({f["kayit_yil"] for f in tum if f.get("kayit_yil")})
         b.paragraf(
             "Rapora ekli vergi inceleme tutanağının %s maddesinde tespit "
             "edildiği üzere, %s, düzenlenen Vergi Tekniği Raporu ile sahte "
@@ -712,14 +789,14 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
                turkce.liste([str(y) for y in yillar]) or "[yıl]"),
             girinti=1)
         tablo = []
-        for f in kendi:
+        for f in tum:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
             tablo.append([F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
                           F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])
-        tablo.append(["TOPLAM", "", "", _tl(s["matrah"]), _tl(s["kdv"]),
-                      _tl(s["toplam"]), "", ""])
+        tablo.append(["TOPLAM", "", "", _tl(s["liste_matrah"]),
+                      _tl(s["liste_kdv"]), _tl(s["liste_toplam"]), "", ""])
         b.tablo(["Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar", "KDV",
                  "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
                 hizalar=["orta", "sol", "sol", "sag", "sag", "sag", "orta", "orta"],
@@ -740,8 +817,8 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
             "hâlihazırda beyanlardan tenzil edilmiş olduğundan, mükerrer "
             "tarhiyata yol açmamak bakımından bu raporda hesaplanan tarhiyata "
             "dahil edilmemiştir."
-            % (_tl(s["kdv"]), M(kunye)), girinti=1)
-        _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no)
+            % (_tl(s["liste_kdv"]), M(kunye)), girinti=1)
+        _duzeltme_bolumu(b, kunye, s, tum, karsilastirmalar, veri_no)
         return
 
     b.paragraf(

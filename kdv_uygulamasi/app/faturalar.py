@@ -236,27 +236,43 @@ def kdv_orani(fatura):
 def satici_ozeti(faturalar, saticilar=None):
     """Satici bazinda fatura adedi ve tutar toplamlari.
 
-    Yalnizca dahil edilen alis faturalari sayilir; rapordaki satici tablosu
-    ile tarhiyat ayni kumeden gelsin.
+    Listedeki BUTUN alis faturalari sayilir ve her satici - tek bir faturasi
+    bile tarhiyata girmese de - ozette yer alir. Sahte belge duzenledigi
+    tespit edilen mukellef ve faturalari tutanakta ve raporda gorunmelidir;
+    hangilerinin tarhiyata girdigi ayri bir sorudur. Bu yuzden iki takim
+    rakam tutulur:
+
+      adet / matrah / kdv / toplam   -> "dahil" isaretli faturalar
+      liste_*                        -> listedeki faturalarin tamami
+
+    Tarhiyat, ceza ve oran hesaplari birincisinden; fatura tablolari ve
+    Ba-Bs bildirim cumlesi ikincisinden beslenir.
     """
     saticilar = saticilar or {}
     gruplar = {}
     for f in faturalar or []:
-        # Duzeltme ile cikarilmis saticinin faturalari da ozette yer alir;
-        # belgede tablosu gosterilip neden tarhiyata girmedigi yazilir.
-        if not f.get("dahil"):
+        if f.get("yon") == YON_SATIS:
             continue
         vkn = f.get("satici_vkn") or ""
         grup = gruplar.setdefault(vkn, {
             "vkn": vkn, "adet": 0, "matrah": 0.0, "kdv": 0.0, "toplam": 0.0,
-            "donemler": set(),
+            "liste_adet": 0, "liste_matrah": 0.0, "liste_kdv": 0.0,
+            "liste_toplam": 0.0, "donemler": set(),
         })
+        grup["liste_adet"] += 1
+        grup["liste_matrah"] += float(f.get("matrah") or 0.0)
+        grup["liste_kdv"] += float(f.get("kdv") or 0.0)
+        grup["liste_toplam"] += float(f.get("toplam") or 0.0)
+        if f.get("kayit_yil") and f.get("kayit_ay"):
+            grup["donemler"].add((f["kayit_yil"], f["kayit_ay"]))
+        # Duzeltme ile cikarilmis saticinin faturalari da bu takima girer:
+        # belgede tutari "duzeltme ile cikarildi" gerekcesiyle anilir.
+        if not f.get("dahil"):
+            continue
         grup["adet"] += 1
         grup["matrah"] += float(f.get("matrah") or 0.0)
         grup["kdv"] += float(f.get("kdv") or 0.0)
         grup["toplam"] += float(f.get("toplam") or 0.0)
-        if f.get("kayit_yil") and f.get("kayit_ay"):
-            grup["donemler"].add((f["kayit_yil"], f["kayit_ay"]))
 
     satirlar = []
     for vkn, grup in gruplar.items():
@@ -276,6 +292,10 @@ def satici_ozeti(faturalar, saticilar=None):
             "matrah": round(grup["matrah"], 2),
             "kdv": round(grup["kdv"], 2),
             "toplam": round(grup["toplam"], 2),
+            "liste_matrah": round(grup["liste_matrah"], 2),
+            "liste_kdv": round(grup["liste_kdv"], 2),
+            "liste_toplam": round(grup["liste_toplam"], 2),
+            "tarhiyat_disi": grup["liste_adet"] - grup["adet"],
             "donem_sayisi": len(donemler),
             "ilk_donem": "%d/%s" % (donemler[0][0], AYLAR[donemler[0][1] - 1])
                          if donemler else "",
@@ -283,7 +303,7 @@ def satici_ozeti(faturalar, saticilar=None):
                          if donemler else "",
         })
         satirlar.append(grup)
-    satirlar.sort(key=lambda s: (-s["kdv"], s["vkn"]))
+    satirlar.sort(key=lambda s: (-s["liste_kdv"], s["vkn"]))
     return satirlar
 
 
