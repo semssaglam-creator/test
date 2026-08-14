@@ -233,14 +233,56 @@ def kdv_orani(fatura):
     return round(float(fatura.get("kdv") or 0.0) / matrah * 100.0, 2)
 
 
+# Satici karti acildiginda bos bir kayit olusuyor; "bilgi girilmis" sayilmasi
+# icin bu alanlardan birinin gercekten doldurulmus olmasi aranir.
+_TESPIT_ALANLARI = ("unvan", "vergi_dairesi", "vtr_no", "vtr_tarihi",
+                    "ozel_esaslar", "not", "cevap", "duzeltme_aciklama")
+
+
+def sahteci_belirlenmis_mi(vkn, saticilar):
+    """Kullanici bu satici icin sahte belge duzenleyicisi bilgisi girmis mi."""
+    bilgi = (saticilar or {}).get(vkn or "") or {}
+    if any(str(bilgi.get(a) or "").strip() for a in _TESPIT_ALANLARI):
+        return True
+    if str(bilgi.get("kullanma") or "Belirlenmedi") != "Belirlenmedi":
+        return True
+    return str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+
+
+def sahteci_vknler(faturalar, saticilar=None):
+    """Belgelere girecek saticilarin VKN'leri.
+
+    Fatura listesi mukellefin butun alislarini tasiyabilir; bunlarin tamami
+    sahte belge degildir. Bir satici belgelere iki yoldan girer:
+
+      - faturalarindan en az biri "Dahil" isaretlidir (kullanici sahte
+        faturalari secerek belirlemistir), ya da
+      - kullanici o satici icin tespit bilgisi girmistir (unvan, VTR, kullanma
+        durumu, duzeltme...). Bu ikincisi olmadan, faturalari beyana oturtma
+        sirasinda tarhiyat disina alinan satici belgelerden dusuyordu; oysa o
+        da sahte belge duzenleyicisi olarak belirlenmis bir mukelleftir.
+
+    Seciminden sonra o saticinin LISTEDEKI BUTUN faturalari belgelere girer;
+    dahil isaretli olmayanlar ve iptal/itiraz kaydi bulunanlar da.
+    """
+    secilenler = set()
+    for f in faturalar or []:
+        if f.get("yon") == YON_SATIS:
+            continue
+        vkn = f.get("satici_vkn") or ""
+        if f.get("dahil") or sahteci_belirlenmis_mi(vkn, saticilar):
+            secilenler.add(vkn)
+    return secilenler
+
+
 def satici_ozeti(faturalar, saticilar=None):
     """Satici bazinda fatura adedi ve tutar toplamlari.
 
-    Listedeki BUTUN alis faturalari sayilir ve her satici - tek bir faturasi
-    bile tarhiyata girmese de - ozette yer alir. Sahte belge duzenledigi
-    tespit edilen mukellef ve faturalari tutanakta ve raporda gorunmelidir;
-    hangilerinin tarhiyata girdigi ayri bir sorudur. Bu yuzden iki takim
-    rakam tutulur:
+Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
+    listedeki BUTUN alis faturalari sayilir. Sahte belge duzenledigi tespit
+    edilen mukellefin faturalari, dahil isaretli olmasa da tutanakta ve
+    raporda gorunmelidir; hangilerinin tarhiyata girdigi ayri bir sorudur.
+    Bu yuzden iki takim rakam tutulur:
 
       adet / matrah / kdv / toplam   -> "dahil" isaretli faturalar
       liste_*                        -> listedeki faturalarin tamami
@@ -249,11 +291,12 @@ def satici_ozeti(faturalar, saticilar=None):
     Ba-Bs bildirim cumlesi ikincisinden beslenir.
     """
     saticilar = saticilar or {}
+    secilenler = sahteci_vknler(faturalar, saticilar)
     gruplar = {}
     for f in faturalar or []:
-        if f.get("yon") == YON_SATIS:
-            continue
         vkn = f.get("satici_vkn") or ""
+        if f.get("yon") == YON_SATIS or vkn not in secilenler:
+            continue
         grup = gruplar.setdefault(vkn, {
             "vkn": vkn, "adet": 0, "matrah": 0.0, "kdv": 0.0, "toplam": 0.0,
             "liste_adet": 0, "liste_matrah": 0.0, "liste_kdv": 0.0,
@@ -720,10 +763,11 @@ def dikkat_dokumu(faturalar, sinirlar, saticilar=None):
     """
     # Satirlar, calismadaki sirasiyla birlikte tutulur: ekran bu sira numarasi
     # uzerinden faturayi bulup "dahil" isaretini kaldirabiliyor.
+    secilenler = sahteci_vknler(faturalar, saticilar)
     donemler = {}
     for sira, f in enumerate(faturalar or []):
         yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
-        if not yil or not ay:
+        if not yil or not ay or (f.get("satici_vkn") or "") not in secilenler:
             continue
         anahtar = (int(yil), int(ay))
         hucre = donemler.setdefault(anahtar, {"tumu": [], "dahil": []})

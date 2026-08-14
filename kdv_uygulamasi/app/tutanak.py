@@ -181,17 +181,16 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
     KDV'sinden az ise faturalarin tamami o donemde indirim konusu yapilmamis
     demektir. Belgede ilgili maddenin basina kirmizi bir not dusulur.
 
-    Olcut bilerek LISTENIN TAMAMIDIR: hangi faturalarin tarhiyata dahil
-    edildigine bakilmaz. Cunku not, tarhiyatin kurulusuna degil, listedeki
-    belgelerle beyan arasindaki celiskiye isaret eder. Aday fatura birlesimi
-    secilip fazla faturalar tarhiyat disina alindiginda tarhiyat beyana oturur
-    ama celiski ortadan kalkmaz - mukellef o alislari beyanina dahil etmemis
-    demektir ve tutanakta bunun gorunmesi gerekir. Iptal/itiraz kaydi bulunan
-    faturalar sayilmaz: onlarin indirim konusu yapilmadigi zaten ayrica
-    belirtiliyor.
-
-    `saticilar` artik kullanilmiyor; cagiranlarin duzeni bozulmasin diye
-    imzada birakildi.
+    Olcut, sahte belge duzenledigi belirlenen saticilarin LISTEDEKI BUTUN
+    faturalaridir; hangilerinin tarhiyata dahil edildigine bakilmaz. Cunku
+    not, tarhiyatin kurulusuna degil, listedeki belgelerle beyan arasindaki
+    celiskiye isaret eder. Aday fatura birlesimi secilip fazla faturalar
+    tarhiyat disina alindiginda tarhiyat beyana oturur ama celiski ortadan
+    kalkmaz - mukellef o alislari beyanina dahil etmemis demektir ve
+    tutanakta bunun gorunmesi gerekir. Sahteci olarak belirlenmemis
+    saticilarin faturalari (mukellefin olagan alislari) sayilmaz; iptal/itiraz
+    kaydi bulunanlar da sayilmaz, onlarin indirim konusu yapilmadigi zaten
+    ayrica belirtiliyor.
 
     Doner: {(yil, ay), ...}
     """
@@ -200,9 +199,12 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
     sinirlar = {(d["yil"], d["ay"]): d["elestirili"].get("indirim_siniri",
                                                          d["beyan"]["bu_donem_indirim"])
                 for d in donemler or []}
+    secilenler = F.sahteci_vknler(liste, saticilar)
     toplamlar = {}
     for f in liste or []:
         if f.get("yon") == F.YON_SATIS or f.get("iptal"):
+            continue
+        if (f.get("satici_vkn") or "") not in secilenler:
             continue
         yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
         if not yil or not ay:
@@ -300,7 +302,7 @@ def dikkat_notu(faturalar, yetersiz):
     return "%s (%s)" % (DIKKAT_NOTU, _donem_adlari(donemler)) if donemler else ""
 
 
-def kalan_iptal_notlari(b, liste, yazilan_vknler):
+def kalan_iptal_notlari(b, liste, yazilan_vknler, saticilar=None):
     """Hicbir satici maddesine girmemis iptal/itiraz kayitlarini yazar.
 
     Bir saticinin butun faturalari tarhiyat disinda kalirsa (hepsi iptal
@@ -309,8 +311,13 @@ def kalan_iptal_notlari(b, liste, yazilan_vknler):
     gorunurken tarhiyatta yer almiyorsa okuyan kisi bunun nedenini
     belgeden anlayabilmelidir.
     """
+    from . import faturalar as F
+
+    secilenler = F.sahteci_vknler(liste, saticilar)
     kalan = [f for f in liste or []
-             if f.get("iptal") and (f.get("satici_vkn") or "") not in (yazilan_vknler or set())]
+             if f.get("iptal")
+             and (f.get("satici_vkn") or "") in secilenler
+             and (f.get("satici_vkn") or "") not in (yazilan_vknler or set())]
     for satir in iptal_notlari(kalan):
         b.paragraf(satir, girinti=1)
 
@@ -964,7 +971,7 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None,
     yetersiz = indirim_yetersiz_donemler(liste, saticilar, donemler)
     kapsanan, yazilan = _fatura_maddesi(b, kunye, sayac, satici_satirlari,
                                         liste, yetersiz, karsilastirmalar)
-    kalan_iptal_notlari(b, liste, yazilan)
+    kalan_iptal_notlari(b, liste, yazilan, saticilar)
     kalan_dikkat_notu(b, yetersiz, kapsanan)
     if not satici_satirlari:
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)

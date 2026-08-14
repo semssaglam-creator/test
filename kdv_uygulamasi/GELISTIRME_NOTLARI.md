@@ -327,10 +327,16 @@ oturumda buradan devam edilir.
       "Tutanağın düzenlendiği yer" kutusundan okunuyor — inceleme dairede ya
       da uzaktan yapıldığında tutanak da zaten o adreste düzenleniyor. Eski
       çalışmalardaki değer aktarılıyor. — *kullanıcı isteği*
-- [x] **Bütün sahteci satıcılar ve bütün faturaları belgelerde.** Tutanak ve
-      raporun fatura tabloları artık listedeki her satıcıyı ve her faturayı
-      gösteriyor; tek faturası tarhiyata girmeyen satıcının da tablosu
-      açılıyor. Tarhiyat yine yalnızca indirim konusu yapıldığı anlaşılan
+- [x] **Seçilen satıcıların bütün faturaları belgelerde.** Fatura listesi
+      mükellefin bütün alışlarını taşıyabildiğinden belgelere yalnızca **sahte
+      belge düzenleyicisi olarak belirlenen** satıcılar giriyor: faturalarından
+      en az biri "Dahil" işaretli olanlar ya da satıcı kartına bilgi
+      (unvan, VTR, kullanma durumu, düzeltme…) girilmiş olanlar. Seçilen
+      satıcının ise listedeki **bütün** faturaları tabloya giriyor — "Dahil"
+      işareti kaldırılmış olanlar ve iptal/itiraz kaydı bulunanlar da.
+      Mükellefin olağan alışları hiçbir yerde görünmüyor (fatura tablosu,
+      DİKKAT notu, iptal açıklamaları, C bölümü dökümü).
+      (`faturalar.sahteci_vknler`) Tarhiyat yine yalnızca indirim konusu yapıldığı anlaşılan
       faturalar üzerinden kuruluyor; aradaki farkın nedeni raporun C
       bölümünde, "İndirilecek KDV Hesabından Çıkarılacak Tutar" tablosunun
       hemen altında dört gerekçeye ayrılarak yazılıyor: iptal/itiraz kaydı,

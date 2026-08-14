@@ -373,7 +373,7 @@ def _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
                        madde_no.get(s["vkn"]), yetersiz)
     # Faturalari tarhiyat disina alinan saticinin bolumu acilmaz; iptal/itiraz
     # kaydi ve beyanla celiski yine de raporda gorunmelidir.
-    kalan_iptal_notlari(b, liste, yazilan)
+    kalan_iptal_notlari(b, liste, yazilan, saticilar)
     kalan_dikkat_notu(b, yetersiz, kapsanan)
 
     # ---- C: mevzuat
@@ -411,8 +411,13 @@ def _tarhiyat_disi_gruplari(liste, saticilar, yetersiz):
     Doner: [(gerekce metni, [fatura, ...]), ...] - sirasi belgeye yazilis
     sirasidir.
     """
+    # Yalnizca sahte belge duzenledigi belirlenen saticilarin faturalari
+    # anlatilir; mukellefin olagan alislarinin burada isi yok.
+    secilenler = F.sahteci_vknler(liste, saticilar)
     iptal, duzeltme, asim, diger = [], [], [], []
     for f in liste or []:
+        if (f.get("satici_vkn") or "") not in secilenler:
+            continue
         if f.get("yon") == F.YON_SATIS or F.sayilir(f, saticilar):
             continue
         if f.get("iptal"):
