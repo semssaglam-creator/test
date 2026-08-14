@@ -12,6 +12,21 @@ rem ===========================================================
 setlocal
 cd /d "%~dp0"
 title KDV Inceleme Calismasi
+
+rem --- 0) Bu dosya uygulama klasorunun icinde mi?
+rem Zip'in ICINDEN cift tiklanirsa Windows yalnizca bu dosyayi gecici bir
+rem klasore cikarir; app\ ve main.py yanina gelmez, pencere aninda kapanir.
+if exist "main.py" goto klasorTamam
+echo.
+echo   Bu baslatici, uygulama klasorunun icinde degil.
+echo   Buyuk olasilikla ZIP dosyasinin icinden calistirdiniz.
+echo.
+echo   COZUM: Zip dosyasina sag tiklayin ^> "Tumunu ayikla" deyin,
+echo   sonra CIKAN KLASORUN icindeki bu dosyaya cift tiklayin.
+echo.
+pause
+exit /b 1
+:klasorTamam
 rem Turkce karakterlerin her Windows dil ayarinda dogru islenmesi icin
 set "PYTHONUTF8=1"
 
