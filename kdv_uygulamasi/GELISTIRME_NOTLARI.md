@@ -349,6 +349,20 @@ oturumda buradan devam edilir.
       sayfa varsa işaretleniyordu). Faturası tarhiyata girmeyen satıcının
       iptal/itiraz açıklaması da artık belgede yer alıyor.
       — *kullanıcı bildirimi*
+- [x] **Satıcıya ilişkin tespitler tutanağa da girdi.** Vergi Tekniği Raporu
+      tarih/sayısı, raporun sonuç bölümündeki tespit (tırnak içinde) ve özel
+      esaslar cümlesi yalnızca rapordaydı; artık tutanakta da her satıcının
+      fatura dökümünden hemen önce yazılıyor. İki belge aynı üreteçten
+      besleniyor (`satici_tespit_paragraflari`), böylece metinler birbirinden
+      ayrışamıyor. — *kullanıcı bildirimi*
+- [x] **Düzeltme beyannamesiyle çıkarılan satıcı tutanakta.** Faturaları
+      düzeltmeyle indirimlerden çıkarılmış satıcı için tutanakta hiçbir şey
+      yazmıyordu; artık hem tespit paragrafı ("… düzeltme beyannameleri ile
+      ilgili dönem indirimlerinden çıkarıldığı tespit edilmiştir"), hem
+      künyeye girilen düzeltme açıklaması, hem de beyannameler yüklüyse hangi
+      dönemde hangi satırdan çıkarıldığının dökümü tutanakta yer alıyor —
+      rapordakiyle aynı üreteçten. Düzeltme beyannamelerinin genel dökümü yine
+      yalnızca raporun III. bölümünde. — *kullanıcı bildirimi*
 - [x] Tutanakta madde numaraları kalın, madde gövdesi ince yazılıyor.
 - [x] **DİKKAT notu.** Bir dönemde listedeki faturaların KDV'si, indirimden
       çıkarılabilecek tutardan (yurtiçi alımlara ilişkin KDV) fazlaysa, o

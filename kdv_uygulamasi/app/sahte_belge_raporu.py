@@ -28,6 +28,7 @@ from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
                       kalan_dikkat_notu, kalan_iptal_notlari, yetersiz_donemleri,
+                      satici_tespit_paragraflari,
                       satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
@@ -62,25 +63,6 @@ def _madde_numaralari_metni(numaralar):
         return "%d." % numaralar[0]
     return "%s ve %d." % (", ".join("%d." % n for n in numaralar[:-1]),
                           numaralar[-1])
-
-
-_TIRNAKLAR = "“”\"'‘’«»"
-
-
-def _alinti_govdesi(metin):
-    """Alinti icine girecek metni hazirlar.
-
-    Kullanicidan gelen metin tirnaklariyla birlikte yapistirilmis olabilir;
-    belgede tirnak iki kez gorunmesin diye bastaki ve sondaki tirnaklar
-    temizlenir. Sondaki nokta da atilir: cumle "... tespitine yer verilmiştir."
-    diye surdugunden alintinin icinde nokta kalmaz.
-    """
-    govde = str(metin or "").strip()
-    while govde and govde[0] in _TIRNAKLAR:
-        govde = govde[1:].lstrip()
-    while govde and govde[-1] in _TIRNAKLAR:
-        govde = govde[:-1].rstrip()
-    return govde.rstrip(".").strip()
 
 
 def _bilerek_mi(satici_satirlari):
@@ -754,19 +736,8 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     # metni tirnaklariyla birlikte yapistirmis olabilir; o zaman tirnak iki kez
     # yazilmasin diye once mevcut tirnaklar temizlenir. Tespit girilmemisse
     # kirmizi yer tutucu tirnaksiz kalir; yer tutucu alinti degildir.
-    tespit = _alinti_govdesi(" ".join(
-        satir.strip() for satir in str(s["not"] or "").split("\n")
-        if satir.strip()))
-    b.paragraf(
-        "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
-        "tanzim edilmiş olup, anılan raporun sonuç bölümünde %s tespitine yer "
-        "verilmiştir."
-        % (s["vtr_tarihi"] or "[VTR tarihi]", s["vtr_no"] or "[VTR no]",
-           ("“%s”" % tespit) if tespit else "[satıcı hakkındaki tespit]"),
-        girinti=1)
-    if s["ozel_esaslar"]:
-        b.paragraf("Söz konusu mükellef %s tarihi itibarıyla özel esaslar "
-                   "kapsamına alınmıştır." % s["ozel_esaslar"], girinti=1)
+    for satir in satici_tespit_paragraflari(s):
+        b.paragraf(satir, girinti=1)
 
     # Saticinin listedeki butun faturalari tabloya girer; tarhiyata
     # alinmayanlarin neden alinmadigi C bolumunde ayrica aciklanir.
@@ -877,7 +848,7 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
             "hesaplamaya ve tarhiyata dahil edilmemiştir."
             % (turkce.liste(["%s (VKN: %s)" % (ik.satici_unvani(s),
                                                s["vkn"] or "—") for s in haric]),
-               _tl(sum(s["kdv"] for s in haric)), M(kunye)),
+               _tl(sum(s["liste_kdv"] for s in haric)), M(kunye)),
             girinti=1)
 
     b.paragraf("Yapılan düzeltmeler sonucunda beyanların aşağıdaki gibi olması "

@@ -608,10 +608,12 @@ class Istekci(BaseHTTPRequestHandler):
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
         inceleme = _inceleme_bilgisi(calisma)
-        # Duzeltme beyannameleri tutanaga girmez; yalnizca raporun III.
-        # bolumunde yer alir.
+        # Duzeltme beyannamelerinin genel dokumu tutanaga girmez (raporun III.
+        # bolumunde yer alir); ancak faturalari duzeltmeyle cikarilmis satici
+        # icin hangi donemde hangi satirdan cikarildigi tutanakta da yazilir.
         belge = tutanak.tutanak_uret(inceleme, calisma.get("kunye"), yillar, sonuc,
-                                     bulgular, calisma)
+                                     bulgular, calisma,
+                                     self._duzeltme_karsilastirmalari(calisma))
         return belge, inceleme
 
     def _rapor_hazirla(self, veri):

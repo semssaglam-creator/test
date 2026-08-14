@@ -13,9 +13,12 @@ Girdi:
     sonuc     : hesap.seri_hesapla ciktisi
     bulgular  : hesap.beyan_tutarlilik_kontrol ciktisi (istege bagli)
 
-Duzeltme beyannameleri tutanaga girmez: tutanak, incelemede tespit edilen
-hususlarin mukellefle birlikte tutulan kaydidir; duzeltme dokumu raporun
-III. bolumunde yer alir.
+Duzeltme beyannamelerinin genel dokumu tutanaga girmez; raporun III.
+bolumunde yer alir. Ancak faturalari duzeltmeyle indirimlerden cikarilmis bir
+satici varsa, bu tespit ve o saticiya iliskin duzeltme dokumu tutanakta da
+yazilir: tutanak, incelemede tespit edilen hususlarin mukellefle birlikte
+tutulan kaydidir ve faturalari tutanakta dokumu verilen bir saticinin neden
+tarhiyata girmedigi tutanaktan anlasilmalidir.
 """
 from . import inceleme_kunyesi as ik
 from . import turkce
@@ -163,6 +166,9 @@ def tarhiyat_toplami(tarhiyatli):
 
 
 
+# Alintilanan metnin kenarindan temizlenecek tirnak isaretleri
+_TIRNAKLAR = "“”\"'‘’«»"
+
 DIKKAT_NOTU = ("DİKKAT: LİSTEDE BULUNAN İNDİRİLECEK KDV TUTARINDAN DAHA AZ "
                "İNDİRİLECEK KDV BEYAN EDİLMİŞTİR.")
 
@@ -205,6 +211,47 @@ def indirim_yetersiz_donemler(liste, saticilar, donemler):
         toplamlar[anahtar] = toplamlar.get(anahtar, 0.0) + float(f.get("kdv") or 0.0)
     return {d for d, kdv in toplamlar.items()
             if d in sinirlar and kdv - sinirlar[d] > 0.005}
+
+
+def _alinti_govdesi(metin):
+    """Alinti icine girecek metni hazirlar.
+
+    Kullanicidan gelen metin tirnaklariyla birlikte yapistirilmis olabilir;
+    belgede tirnak iki kez gorunmesin diye bastaki ve sondaki tirnaklar
+    temizlenir. Sondaki nokta da atilir: cumle "... tespitine yer verilmiştir."
+    diye surdugunden alintinin icinde nokta kalmaz.
+    """
+    govde = str(metin or "").strip()
+    while govde and govde[0] in _TIRNAKLAR:
+        govde = govde[1:].lstrip()
+    while govde and govde[-1] in _TIRNAKLAR:
+        govde = govde[:-1].rstrip()
+    return govde.rstrip(".").strip()
+
+
+def satici_tespit_paragraflari(s):
+    """Satici hakkindaki tespit: Vergi Teknigi Raporu ve ozel esaslar.
+
+    Hem tutanakta hem raporda ayni cumlelerle gecer. Tutanakta da yer almasi
+    gerekir: satici hakkindaki tespit, incelemede varilan ve mukellefe izah
+    edilen bir husustur; tutanak bunun mukellefle birlikte tutulan kaydidir.
+    Eksik tarih ve sayi kirmizi yer tutucu olarak kalir ve doldurulmasi
+    gerektigi belgede gorunur. Vergi Teknigi Raporunun sonuc bolumundeki
+    tespit ayni cumlenin devami olarak, tirnak icinde aktarilir.
+    """
+    tespit = _alinti_govdesi(" ".join(
+        satir.strip() for satir in str(s.get("not") or "").split("\n")
+        if satir.strip()))
+    paragraflar = [
+        "Anılan mükellef hakkında %s tarih ve %s sayılı Vergi Tekniği Raporu "
+        "tanzim edilmiş olup, anılan raporun sonuç bölümünde %s tespitine yer "
+        "verilmiştir."
+        % (s.get("vtr_tarihi") or "[VTR tarihi]", s.get("vtr_no") or "[VTR no]",
+           ("“%s”" % tespit) if tespit else "[satıcı hakkındaki tespit]")]
+    if s.get("ozel_esaslar"):
+        paragraflar.append("Söz konusu mükellef %s tarihi itibarıyla özel "
+                           "esaslar kapsamına alınmıştır." % s["ozel_esaslar"])
+    return paragraflar
 
 
 def iptal_notlari(faturalar):
@@ -593,7 +640,8 @@ def _kdv_beyani_maddesi(b, kunye, sayac, donemler, uyumsuz=None):
         b.madde_listesi([x["mesaj"] for x in uyumsuz], numarali=False)
 
 
-def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
+def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
+                    karsilastirmalar=None):
     """Satici basina VERI maddesi ve hemen ardindan SORU maddesi.
 
     Duzen tutanagin kendi mantigina uyar: once o saticiya ait ba-bs tespiti ve
@@ -644,6 +692,12 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
                s["vkn"] or "[VKN]", ik.satici_unvani(s),
                len(tum), _tl(s["liste_matrah"]), len(tum)))
 
+        # Satici hakkindaki tespit (Vergi Teknigi Raporu, ozel esaslar) fatura
+        # dokumunden once yazilir: once belgeleri kimin duzenledigi ve hakkinda
+        # ne tespit edildigi, sonra o belgelerin dokumu.
+        for satir in satici_tespit_paragraflari(s):
+            b.paragraf(satir, girinti=1)
+
         tablo = []
         for f in tum:
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
@@ -665,11 +719,42 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None):
         for satir in iptal_notlari(tum):
             b.paragraf(satir, girinti=1)
 
+        _duzeltme_tespiti(b, kunye, s, tum, karsilastirmalar, veri_no)
+
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
         cevap = (s.get("cevap") or "").strip() or genel_cevap
         _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
 
     return kapsanan, yazilan_vknler
+
+
+def _duzeltme_tespiti(b, kunye, s, faturalar, karsilastirmalar, veri_no):
+    """Duzeltme beyannamesiyle cikarilmis satici icin tutanak bolumu.
+
+    Bu saticinin faturalarinin duzeltmeyle indirimlerden cikarilmis olmasi,
+    incelemede yapilmis bir TESPITTIR ve mukellefle birlikte tutulan tutanakta
+    yer almalidir; yoksa faturalari tutanakta dokumu verilen bir saticinin
+    neden tarhiyata girmedigi tutanaktan anlasilamaz. Beyannameler
+    yuklenmisse hangi donemde hangi satirdan cikarildiginin dokumu de
+    yazilir - rapordaki ile ayni uretecten, ki iki belge birbirini tutsun.
+    """
+    if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet":
+        return
+    b.paragraf(
+        "Yukarıda dökümü verilen faturalara ait %s TL tutarındaki katma değer "
+        "vergisinin, %s tarafından verilen düzeltme beyannameleri ile ilgili "
+        "dönem indirimlerinden çıkarıldığı tespit edilmiştir. Söz konusu tutar "
+        "beyanlardan hâlihazırda tenzil edilmiş olduğundan, mükerrer tarhiyata "
+        "yol açmamak bakımından bu faturalar tarhiyata dahil edilmemiştir."
+        % (_tl(s.get("liste_kdv")), ik.mukellef_sozu(kunye)), girinti=1)
+    for satir in str(s.get("duzeltme_aciklama") or "").split("\n"):
+        if satir.strip():
+            b.paragraf(satir.strip(), girinti=1)
+    if karsilastirmalar:
+        # Rapordaki dokumun aynisi. Modul dongusune girmemek icin burada
+        # yuklenir: sahte_belge_raporu bu modulu bastan ice aktariyor.
+        from .sahte_belge_raporu import _duzeltme_bolumu
+        _duzeltme_bolumu(b, kunye, s, faturalar, karsilastirmalar, veri_no)
 
 
 def _muhasebe_paragraflari(kunye, faturalar):
@@ -843,7 +928,8 @@ def _kapanis(b, kunye):
 
 
 # ---------------------------------------------------------------------- giris
-def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
+def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None,
+                 karsilastirmalar=None):
     """Tutanak taslagini uretir ve `Belge` nesnesi dondurur."""
     from . import faturalar as F
 
@@ -877,7 +963,7 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None):
     # genel bir soru maddesi acilmaz.
     yetersiz = indirim_yetersiz_donemler(liste, saticilar, donemler)
     kapsanan, yazilan = _fatura_maddesi(b, kunye, sayac, satici_satirlari,
-                                        liste, yetersiz)
+                                        liste, yetersiz, karsilastirmalar)
     kalan_iptal_notlari(b, liste, yazilan)
     kalan_dikkat_notu(b, yetersiz, kapsanan)
     if not satici_satirlari:
