@@ -611,6 +611,29 @@ def _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar):
                 buyukluk=TABLO_PUNTOSU)
 
 
+def _duzeltme_gerekceleri(s, ilgili):
+    """Duzeltme beyannamelerine yazilan gerekce metinleri.
+
+    Bir donem icin birden cok duzeltme verilmisse hepsinin gerekcesi alinir:
+    cikarilan faturayi adiyla anan aciklama cogu zaman ARADAKI duzeltmededir,
+    sonuncusu "devir KDV beyaninin duzeltilmesi" gibi teknik bir not tasir.
+    Beyanname yuklenmemis dosyalarda gerekce, satici kartina elle yazilan
+    duzeltme aciklamasindan okunur.
+    """
+    gerekceler = []
+    for k in ilgili or []:
+        for g in (k.get("gerekceler") or [k.get("gerekce") or ""]):
+            g = (g or "").strip().rstrip(".")
+            if g and g not in gerekceler:
+                gerekceler.append(g)
+    if not gerekceler:
+        for satir in str(s.get("duzeltme_aciklama") or "").split("\n"):
+            satir = satir.strip().rstrip(".")
+            if satir and satir not in gerekceler:
+                gerekceler.append(satir)
+    return gerekceler
+
+
 def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
     """Duzeltmeyle cikarilan satici icin duzeltme anlatisi, tablo ve kapanis.
 
@@ -627,19 +650,21 @@ def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
     takip = B.duzeltme_takibi(karsilastirmalar, aylar, s.get("kdv"),
                               s.get("unvan"))
     ilgili = [d["karsilastirma"] for d in takip["donemler"]]
+    gerekceler = _duzeltme_gerekceleri(s, ilgili)
     if not ilgili:
+        if gerekceler:
+            # Dokum yazilamiyor ama gerekce biliniyorsa en azindan o yazilir;
+            # bu bir tespittir, tutanakta da yeri vardir.
+            b.paragraf(
+                "%s tarafından verilen düzeltme beyannamelerinin Düzeltme "
+                "Gerekçesi kısmına %s yazıldığı anlaşılmıştır."
+                % (M(kunye, buyuk=True),
+                   turkce.liste(["“%s”" % g for g in gerekceler])), girinti=1)
         _duzeltme_ayrinti_tablolari(b, kunye, karsilastirmalar)
         return
 
     yillar = sorted({k["yil"] for k in ilgili})
     donem_metni = turkce.liste(["%s/%s" % (k["ay_adi"], k["yil"]) for k in ilgili])
-    # Gerekce, beyannameden okundugu haliyle bu cumlenin icinde gecer;
-    # ayrica tabloya sutun olarak eklenmez.
-    gerekceler = []
-    for k in ilgili:
-        g = (k.get("gerekce") or "").strip().rstrip(".")
-        if g and g not in gerekceler:
-            gerekceler.append(g)
     gerekce_cumlesi = ""
     if gerekceler:
         gerekce_cumlesi = (" ve düzeltme beyannamelerinin Düzeltme Gerekçesi "

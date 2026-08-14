@@ -545,8 +545,11 @@ def duzeltme_karsilastirmalari(duzen):
     "degisti" bayragindan okunur.
 
     Doner: [{"yil", "ay", "ay_adi", "etiket", "tarih", "gerekce",
-             "satirlar": [{"kod", "etiket", "oncesi", "sonrasi", "fark",
-                           "degisti"}]}]
+             "gerekceler", "satirlar": [{"kod", "etiket", "oncesi", "sonrasi",
+                                         "fark", "degisti"}]}]
+
+    "gerekce" son duzeltmenin nedeni, "gerekceler" ise butun duzeltme
+    surumlerinin nedenleridir (sirali, yinelenmeden).
     """
     adlar = dict(OZET_HEDEF_SECENEKLERI)
     adlar["yurtici_alim_kdv"] = "Yurtiçi Alımlara İlişkin KDV"
@@ -570,10 +573,21 @@ def duzeltme_karsilastirmalari(duzen):
             })
         if not any(s["degisti"] for s in satirlar):
             continue
+        # Gerekce yalnizca son duzeltmeden okunamaz: bir donem icin birden cok
+        # duzeltme verilmisse aranan aciklama (ornegin cikarilan faturanin
+        # kimligi) cogu zaman ARADAKI duzeltmededir; sonuncusu "devir KDV
+        # beyaninin duzeltilmesi" gibi teknik bir not tasir. Bu yuzden butun
+        # duzeltme surumlerinin gerekceleri sirasiyla toplanir.
+        gerekceler = []
+        for s in d["surumler"][1:]:
+            g = (s["duzeltme_nedeni"] or "").strip()
+            if g and g not in gerekceler:
+                gerekceler.append(g)
         sonuc.append({
             "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
             "etiket": d["etiket"], "tarih": _tarih(son["onay_zamani"]),
             "gerekce": son["duzeltme_nedeni"] or "",
+            "gerekceler": gerekceler,
             "satirlar": satirlar,
         })
     return sonuc

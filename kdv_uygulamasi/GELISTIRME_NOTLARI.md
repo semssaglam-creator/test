@@ -72,6 +72,9 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-08-14 — Tutanaktan değerlendirme cümlesi çıkarıldı (tutanak
+      tespit belgesidir); düzeltme gerekçesi artık bütün düzeltme
+      sürümlerinden toplanıp dökümün giriş cümlesinde yazılıyor
 - [x] 2026-08-14 — Düzeltme ayrıntı tablosunda "İade Edilmesi Gereken
       KDV" sütunu, düzeltme öncesinde de sonrasında da tutar yoksa hiç
       açılmıyor

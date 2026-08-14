@@ -58,8 +58,10 @@ SATICI_ALANLARI = [
               "girmez; belgede neden dahil edilmediği açıklanır."},
     {"kod": "duzeltme_aciklama", "etiket": "Düzeltme beyannamesi açıklaması",
      "tur": "uzun",
-     "ipucu": "Düzeltmenin tarihi ve hangi dönemleri kapsadığı. Belgeye olduğu "
-              "gibi girer."},
+     "ipucu": "Düzeltme beyannamesinin Düzeltme Gerekçesi kısmına yazılan "
+              "metin. Belgede, düzeltme dökümünün giriş cümlesinde tırnak "
+              "içinde geçer. Beyannameler yüklenmişse gerekçe oradan "
+              "okunduğundan bu alan boş bırakılabilir."},
     {"kod": "cevap", "etiket": "Mükellefin bu satıcıya ilişkin beyanı", "tur": "uzun",
      "ipucu": "Tutanakta bu satıcının fatura dökümünden hemen sonra gelen soru "
               "maddesinde tırnak içinde yazılır. Boş bırakılırsa künyedeki genel "

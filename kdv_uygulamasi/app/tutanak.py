@@ -741,27 +741,24 @@ def _duzeltme_tespiti(b, kunye, s, faturalar, karsilastirmalar, veri_no):
     Bu saticinin faturalarinin duzeltmeyle indirimlerden cikarilmis olmasi,
     incelemede yapilmis bir TESPITTIR ve mukellefle birlikte tutulan tutanakta
     yer almalidir; yoksa faturalari tutanakta dokumu verilen bir saticinin
-    neden tarhiyata girmedigi tutanaktan anlasilamaz. Beyannameler
-    yuklenmisse hangi donemde hangi satirdan cikarildiginin dokumu de
-    yazilir - rapordaki ile ayni uretecten, ki iki belge birbirini tutsun.
+    neden tarhiyata girmedigi tutanaktan anlasilamaz. Hangi donemde hangi
+    satirdan cikarildiginin dokumu rapordaki ile ayni uretecten yazilir, ki
+    iki belge birbirini tutsun.
+
+    Yalnizca DOKUM yazilir. "Mukerrer tarhiyata yol acmamak bakimindan bu
+    faturalar tarhiyata dahil edilmemistir" gibi bir cumle burada yer almaz:
+    tutanak tespit belgesidir, degerlendirme raporda yapilir. Satici kartina
+    yazilan "duzeltme beyannamesi aciklamasi" da ayri bir paragraf olarak
+    yazilmaz; beyanname gerekcesi dokumun giris cumlesinde tirnak icinde
+    kendi baglaminda geciyor.
     """
     if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet":
         return
-    b.paragraf(
-        "Yukarıda dökümü verilen faturalara ait %s TL tutarındaki katma değer "
-        "vergisinin, %s tarafından verilen düzeltme beyannameleri ile ilgili "
-        "dönem indirimlerinden çıkarıldığı tespit edilmiştir. Söz konusu tutar "
-        "beyanlardan hâlihazırda tenzil edilmiş olduğundan, mükerrer tarhiyata "
-        "yol açmamak bakımından bu faturalar tarhiyata dahil edilmemiştir."
-        % (_tl(s.get("liste_kdv")), ik.mukellef_sozu(kunye)), girinti=1)
-    for satir in str(s.get("duzeltme_aciklama") or "").split("\n"):
-        if satir.strip():
-            b.paragraf(satir.strip(), girinti=1)
-    if karsilastirmalar:
-        # Rapordaki dokumun aynisi. Modul dongusune girmemek icin burada
-        # yuklenir: sahte_belge_raporu bu modulu bastan ice aktariyor.
-        from .sahte_belge_raporu import _duzeltme_bolumu
-        _duzeltme_bolumu(b, kunye, s, faturalar, karsilastirmalar, veri_no)
+    # Modul dongusune girmemek icin burada yuklenir: sahte_belge_raporu bu
+    # modulu bastan ice aktariyor. Beyanname yuklenmemis olsa da cagrilir:
+    # dokum yazilamasa bile duzeltme gerekcesi bir tespittir, tutanakta yazilir.
+    from .sahte_belge_raporu import _duzeltme_bolumu
+    _duzeltme_bolumu(b, kunye, s, faturalar, karsilastirmalar, veri_no)
 
 
 def _muhasebe_paragraflari(kunye, faturalar):
