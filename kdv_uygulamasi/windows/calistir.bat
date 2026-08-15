@@ -29,7 +29,7 @@ exit /b 1
 
 rem --- 1) Python
 call "%~dp0_python_bul.bat"
-if not defined PY (
+if not defined PYEXE (
     pause
     exit /b 1
 )
@@ -40,7 +40,7 @@ echo   KDV Inceleme Calismasi baslatiliyor...
 echo   Adres birazdan asagida yazacak.
 echo.
 
-%PY% main.py
+"%PYEXE%" %PYARG% main.py
 set "SONUC=%ERRORLEVEL%"
 
 echo.

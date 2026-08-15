@@ -27,12 +27,12 @@ echo.
 
 rem --- 1) Python'u simdiden hazirla ki ilk acilis hizli olsun
 call "%~dp0_python_bul.bat"
-if not defined PY (
+if not defined PYEXE (
     echo   Python hazirlanamadi. Yukaridaki aciklamaya bakin.
     pause
     exit /b 1
 )
-echo   Python hazir: %PY%
+echo   Python hazir: %PYEXE% %PYARG%
 
 rem --- 2) Masaustu kisayolu
 set "HEDEF=%~dp0calistir.bat"

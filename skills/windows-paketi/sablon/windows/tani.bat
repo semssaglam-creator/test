@@ -23,7 +23,7 @@ exit /b 1
 :klasorTamam
 
 call "%~dp0_python_bul.bat"
-if not defined PY (
+if not defined PYEXE (
     echo.
     echo   Python bulunamadigi icin tani calistirilamadi.
     echo   Bu ekranin fotografini gonderin: sebep budur.
@@ -33,7 +33,7 @@ if not defined PY (
 )
 
 echo.
-%PY% app\tani.py
+"%PYEXE%" %PYARG% app\tani.py
 echo.
 pause
 endlocal

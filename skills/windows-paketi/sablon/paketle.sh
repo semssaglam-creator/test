@@ -205,6 +205,26 @@ if [[ -n "$PTH" ]] && ! grep -q '^\.\.$' "$PTH"; then
   denetim_basarisiz "._pth uygulama klasorunu gormuyor"
 fi
 
+# (h) .bat icindeki Python cagrilari tirnakli olmali. Uygulama klasorunun
+#     yolunda BOSLUK olabilir ("...\Desktop\KDV Inceleme Calismasi\");
+#     tirnaksiz yazilirsa cmd yolu ilk boslukta keser ve kullanici
+#     "'C:\Users\...\Desktop\KDV' is not recognized" gorur.
+#     Yalnizca CALISTIRMA satirlari onemli: echo/rem icinde tirnaksiz
+#     gecmesi zararsizdir, cmd orada komut aramaz.
+#     Desen satir basini da kapsamali: "%PYEXE% main.py" satirin ilk
+#     sozcuguyse onunde karakter olmaz ve [^"] ile eslesmez.
+tirnaksiz="$(grep -nE '(^|[^"])%PYEXE%' "$PAKET"/*.bat 2>/dev/null \
+  | grep -viE ':[[:space:]]*(echo|rem)\b' || true)"
+if [[ -n "$tirnaksiz" ]]; then
+  denetim_basarisiz "tirnaksiz %PYEXE% kullanimi (bosluklu yolda kirilir):"
+  echo "$tirnaksiz" | sed 's/^/    /'
+fi
+eski_py="$(grep -n '%PY%' "$PAKET"/*.bat 2>/dev/null || true)"
+if [[ -n "$eski_py" ]]; then
+  denetim_basarisiz "eski %PY% degiskeni kalmis (PYEXE/PYARG kullanilmali):"
+  echo "$eski_py" | sed 's/^/    /'
+fi
+
 if [[ $HATA -ne 0 ]]; then
   echo
   kirmizi "Denetimler basarisiz. Paket URETILMEDI."
