@@ -16,9 +16,11 @@ Python uygulamasını kurulum gerektirmeyen bir Windows paketine çevirir.
 
 - `SKILL.md` — sekiz adımlı yöntem (uygunluk, iskelet, kod uyarlama,
   belgeler, üretim, duman testi, gerçek Windows testi)
-- `references/windows-tuzaklari.md` — beş tuzak ve hazır düzeltme kodu:
+- `references/windows-tuzaklari.md` — altı tuzak ve hazır düzeltme kodu:
   `localhost` adresi (proxy), `::1` çift dinleme, `allow_reuse_address`,
-  Chrome önceliği, açık dosya kilidi
+  Chrome önceliği, açık dosya kilidi, `.bat` içinde tırnaksız yol.
+  Başında "Sahadan" bölümü var: gerçek bir kurumsal Windows makinesinden
+  gelen tanı raporunun hangi tuzakları doğruladığı
 - `arac/uyarla.sh` — iskeleti bir projeye kurar
 - `arac/png2ico.py`, `arac/belge_hazirla.py`, `arac/python_indir.sh`
 - `sablon/` — `.bat` başlatıcılar, `app/tani.py`, `paketle.sh`

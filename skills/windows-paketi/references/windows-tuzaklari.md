@@ -1,11 +1,28 @@
 # Windows tuzaklari
 
-Bes tuzak. Dordu ayni belirtiyle ortaya cikar: **uygulama sorunsuz calisir,
+Alti tuzak. Dordu ayni belirtiyle ortaya cikar: **uygulama sorunsuz calisir,
 kullanicida acilmaz.** Sunucu ayaktadir, konsol adresi yazar, hicbir hata
 yoktur; kullanici bos bir tarayici sayfasi gorur. Linux/macOS'ta hicbiri
 gorunmez, o yuzden gelistirici makinesinde test etmek bunlari yakalamaz.
 
-Sirasiyla: adres, IPv6, port, tarayici, dosya kilidi.
+Sirasiyla: adres, IPv6, port, tarayici, dosya kilidi, tirnak.
+
+## Sahadan
+
+Bir vergi inceleme uygulamasi kurumsal bir Windows makinesinde bu yolla
+calistirildi. Oradan gelen tani raporu iki maddeyi dogruladi, birini de
+gereksiz kildi:
+
+- **2 gercek.** `localhost` o makinede once `::1`'e cozuluyordu. Yalnizca
+  `127.0.0.1` dinleyen surum orada tarayicida acilmazdi.
+- **6 gercek ve en pahalisi.** Paket klasorunun adinda bosluk oldugu icin
+  hicbir `.bat` calismadi. Duman testi Linux'ta yapildigindan hic gorunmemisti.
+- **1 o makinede gereksizdi:** proxy kapaliydi (`ProxyEnable 0`), `127.0.0.1`
+  de calisirdi. Yine de `localhost` kullanmanin bedeli yok; proxy'li bir
+  makinede fark yaratacak olan tek sey odur.
+
+Ders: tuzaklarin hangisinin vuracagi makineye gore degisir, o yuzden hepsi
+bastan kapatilir.
 
 ---
 
@@ -302,6 +319,76 @@ basarisizligi yutun.
 
 ---
 
+## 6. `.bat` icinde tirnaksiz yol, ilk boslukta kirilir
+
+**Belirti:** Hicbir `.bat` calismaz. Pencere acilir ve tek satir yazar:
+
+```
+'C:\Users\ad.soyad\Desktop\KDV' is not recognized as an internal or
+external command, operable program or batch file.
+```
+
+Yolun yarisinda kesildigine dikkat edin: `...\Desktop\KDV` — devami
+(`Inceleme Calismasi\python\python.exe`) yok.
+
+**Sebep:** Uygulama klasorunun yolunda bosluk var ve degisken tirnaksiz
+yazilmis:
+
+```bat
+set "PY=%~dp0python\python.exe"
+%PY% main.py
+```
+
+`%~dp0` acildiginda satir soyle olur:
+
+```
+C:\Users\ad.soyad\Desktop\KDV Inceleme Calismasi\python\python.exe main.py
+```
+
+cmd, komut adini **ilk boslukta** biter sayar ve `C:\Users\...\Desktop\KDV`
+adinda bir program arar.
+
+Bu, "bazen olur" turunden bir sey degil: paket klasorunun adinda bosluk varsa
+**her kurulumda** olur. Kullanicinin bir hatasi yoktur, Windows'un
+`Program Files` / `OneDrive - Firma` gibi varsayilan yollarinda da bosluk
+vardir.
+
+**Duzeltme — tirnak tek basina yetmez.** Degisken bazen bir yol
+(`...\python.exe`), bazen argumanli bir komut (`py -3`) olur.
+`"%PY%" main.py` yazarsaniz ikinci durumda cmd bu kez `py -3` **adinda** bir
+dosya arar. Cozum degiskeni ikiye bolmektir:
+
+```bat
+rem _python_bul.bat icinde:
+set "PYEXE=%~dp0python\python.exe"   &  rem  ... ya da:
+set "PYEXE=py"
+set "PYARG=-3"
+
+rem Cagiran tarafta HER ZAMAN:
+"%PYEXE%" %PYARG% main.py
+```
+
+`PYEXE` daima tirnak icinde, `PYARG` daima tirnaksiz. `echo` ve `rem`
+satirlarinda tirnaksiz gecmesi zararsizdir; cmd orada komut aramaz.
+
+**Denetim** (`paketle.sh` icinde):
+
+```bash
+tirnaksiz="$(grep -nE '(^|[^"])%PYEXE%' "$PAKET"/*.bat 2>/dev/null \
+  | grep -viE ':[[:space:]]*(echo|rem)\b' || true)"
+```
+
+Desendeki `(^|...)` onemli: `%PYEXE% main.py` satirin ilk sozcuguyse onunde
+karakter olmaz ve yalnizca `[^"]%PYEXE%` yazan bir desen onu **kacirir**. Bu
+denetim tam da o yuzden bir kez yaniltici bicimde "gecti" dedi; kasitli bozuk
+bir surumle sinamadan dogru kabul etmeyin.
+
+Bu tuzak digerlerinden ayrilir: `.bat` dosyalari duman testinde hic
+calistirilmaz (Linux'ta `python3 main.py` dogrudan cagrilir), bu yuzden
+**yalnizca gercek Windows'ta** ortaya cikar. Tek savunma denetimdir.
+
+---
+
 ## Bunlar neden gelistirici makinesinde gorunmez
 
 | Tuzak | Linux/macOS'ta | Windows'ta |
@@ -311,6 +398,7 @@ basarisizligi yutun.
 | 3 — port | `SO_REUSEADDR` aktif dinleyiciyi engeller | ikinci baglanmaya izin verir |
 | 4 — tarayici | varsayilan tarayici makul | ilke ile IE/Edge'e sabitlenmis olabilir |
 | 5 — dosya | acik dosya silinir/uzerine yazilir | kilitlidir |
+| 6 — tirnak | `.bat` hic calistirilmaz | bosluklu yolda her seferinde kirilir |
 
 Bu yuzden `paketle.sh` denetimleri kaynak kodun uzerinde calisir: gercek
 Windows testi yapilamadigi icin, kurallara uyuldugunu **paket uretilirken**

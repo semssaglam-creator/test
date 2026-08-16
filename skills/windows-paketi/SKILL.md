@@ -37,7 +37,7 @@ parcasidir; sanal ortam ya da kurulum adimi yoktur.
 
 ## Adim 1 — Once oku: Windows tuzaklari
 
-`references/windows-tuzaklari.md` dosyasini **kod yazmadan once** okuyun. Bes
+`references/windows-tuzaklari.md` dosyasini **kod yazmadan once** okuyun. Alti
 tuzagin dordu "uygulama calisiyor ama kullanicida acilmiyor" biciminde ortaya
 cikar; sonradan bulmak saatler alir.
 
@@ -127,6 +127,7 @@ Denetimler:
 - Kilavuzda Linux anlatimi kalmamis
 - Kodda ve belgelerde `http://127.0.0.1:` yok (proxy tuzagi)
 - Sunucu `::1` dinliyor, `allow_reuse_address` kapali, Chrome onceligi var
+- `.bat` dosyalarinda tirnaksiz `%PYEXE%` yok (bosluklu yolda kirilir)
 - Gomulu Python `._pth` dosyasi uygulama klasorlerini goruyor
 
 Bu denetimler yontemin kalbidir: Windows'ta ancak kullanicida gorunen hatalari,
