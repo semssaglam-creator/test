@@ -100,6 +100,7 @@
   table.izgara button.mini { background: #e4e9ef; border: 1px solid #c3ccd6; border-radius: 3px; font-size: 11px; padding: 2px 6px; cursor: pointer; }
   table.izgara button.mini:hover { background: #d4dce5; }
   td.fark-var { background: #fdece8; color: #a33; font-weight: 600; }
+  td.fark-var .fark-alt { display: block; font-weight: 400; font-size: 11px; margin-top: 2px; white-space: nowrap; }
   td.sessiz { color: #8a97a5; font-style: italic; }
   td.duzeltme-satir { padding-left: 18px; }
   tr.donem-basi td { border-top: 2px solid #c3ccd6; }
@@ -2828,9 +2829,16 @@ function bnGenelCiz() {
     kolonlar.forEach((k) => {
       const td = hucre("td", tl(g.ozet[k.kod] || 0));
       td.className = "sayi";
-      // Bir onceki beyannameye gore degisen hucreler vurgulanir
-      if (g.ozet_degisen.includes(k.kod)) td.classList.add("fark-var");
-      else if ((g.ozet[k.kod] || 0) < 0) td.classList.add("negatif");
+      // Bir onceki beyannameye gore degisen hucreler vurgulanir; vurgulanan
+      // tutarin altina o duzeltmenin getirdigi fark kucuk puntoyla yazilir,
+      // boylece yeni tutarla birlikte degisim miktari da okunur
+      if (g.ozet_degisen.includes(k.kod)) {
+        td.classList.add("fark-var");
+        const fark = (g.ozet_fark || {})[k.kod] || 0;
+        const alt = hucre("span", `Fark: ${fark > 0 ? "+" : ""}${tl(fark)}`);
+        alt.className = "fark-alt";
+        td.appendChild(alt);
+      } else if ((g.ozet[k.kod] || 0) < 0) td.classList.add("negatif");
       satir.appendChild(td);
     });
 
