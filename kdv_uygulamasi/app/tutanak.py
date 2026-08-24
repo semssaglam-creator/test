@@ -676,6 +676,13 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
         # ayrica aciklanir.
         tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
         if not tum:
+            # Elle eklenen satici: fatura listesi yok, tutarlar kullanicinin
+            # girdigidir. Madde yine yazilir - o da sahte belge duzenleyicisi
+            # olarak belirlenmis bir mukelleftir ve tutanakta gorunmelidir -
+            # ama dokum tablosu acilmaz, cunku dokulecek fatura satiri yoktur.
+            if str(s.get("elle") or "") == "Evet":
+                yazilan_vknler.add(s["vkn"])
+                _elle_satici_maddesi(b, kunye, sayac, s, sorular, genel_cevap)
             continue
 
         # --- VERI maddesi. Beyan edilen indirim faturalari karsilamiyorsa
@@ -698,6 +705,10 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
                ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                s["vkn"] or "[VKN]", ik.satici_unvani(s),
                len(tum), _tl(s["liste_matrah"]), len(tum)))
+
+        yil_cumlesi = _satici_yil_cumlesi(kunye, s)
+        if yil_cumlesi:
+            b.paragraf(yil_cumlesi, girinti=1)
 
         # Satici hakkindaki tespit (Vergi Teknigi Raporu, ozel esaslar) fatura
         # dokumunden once yazilir: once belgeleri kimin duzenledigi ve hakkinda
@@ -733,6 +744,56 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
         _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
 
     return kapsanan, yazilan_vknler
+
+
+def _elle_satici_maddesi(b, kunye, sayac, s, sorular, genel_cevap):
+    """Fatura listesi bulunmayan, elle eklenen satici icin veri + soru maddesi.
+
+    Fatura dokumu tablosu yazilmaz; tutar ve adet kullanicinin girdigi
+    degerlerden cumle icinde verilir. Yil cumlesi burada da yazilir, cunku
+    maddenin yil sirasindaki yeri ondan okunur.
+    """
+    M = ik.mukellef_sozu
+    dokum = [d for d in (s.get("yil_dokumu") or []) if d.get("yil")]
+    yil_sozu = ("%s takvim yılında" % dokum[0]["yil"]) if dokum else "[yıl] takvim yılında"
+    veri_no = _madde(
+        b, sayac,
+        "%s Ba-Bs analizi sorgulamasında %s %s vergi kimlik numaralı "
+        "mükellefi %s’den %s %d belge ile KDV hariç %s TL tutarında alış "
+        "bildiriminde bulunduğu tespit edilmiştir."
+        % (M(kunye, buyuk=True, ek="in"),
+           ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
+           s["vkn"] or "[VKN]", ik.satici_unvani(s), yil_sozu,
+           s.get("liste_adet") or 0, _tl(s.get("liste_matrah"))))
+
+    yil_cumlesi = _satici_yil_cumlesi(kunye, s)
+    if yil_cumlesi:
+        b.paragraf(yil_cumlesi, girinti=1)
+    for satir in satici_tespit_paragraflari(s):
+        b.paragraf(satir, girinti=1)
+
+    cevap = (s.get("cevap") or "").strip() or genel_cevap
+    _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
+
+
+def _satici_yil_cumlesi(kunye, s):
+    """"Hangi saticidan hangi yil ne kadar belge kullanildigi" cumlesi.
+
+    Ba-Bs bildirim cumlesi saticinin toplamini verir; birden cok yila yayilan
+    bir saticida hangi yil ne kadar kullanildigi o toplamdan okunamiyordu.
+    Tutanagi okuyan kisi bunu metinden gorebilmeli, tabloyu toplamak zorunda
+    kalmamalidir.
+
+    Tek yil varsa da yazilir: cumlenin yili acikca soylemesi, maddelerin yil
+    sirasiyla dizilmesinin karsiligidir.
+    """
+    dokum = [d for d in (s.get("yil_dokumu") or []) if d.get("yil")]
+    if not dokum:
+        return ""
+    parcalar = ["%s takvim yılında %d belge ile KDV hariç %s TL"
+                % (d["yil"], d["adet"], _tl(d["matrah"])) for d in dokum]
+    return ("Buna göre söz konusu mükelleften %s tutarında sahte belge "
+            "kullanıldığı anlaşılmıştır." % turkce.liste(parcalar))
 
 
 def _duzeltme_tespiti(b, kunye, s, faturalar, karsilastirmalar, veri_no):

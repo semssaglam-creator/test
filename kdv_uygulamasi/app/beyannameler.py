@@ -411,6 +411,22 @@ def duzeltme_tablosu(duzen):
 # butun satirlari yazilmaz: turetilmis / tekrarli kalemler (toplam KDV, "bu
 # doneme ait indirilecek KDV", teslim bedelleri) ayni degisikligi ikinci kez
 # gostererek tabloyu okunmaz hale getiriyor.
+# Ayrintili duzeltme tablosunun sutunlari. Hem rapor/tutanak (Word) hem de
+# Excel ciktisi bunu kullanir; iki tablo birebir ayni olsun diye tek yerde
+# tutulur.
+AYRINTI_TABLO_KOLONLARI = [
+    ("onceki_donem_devreden", "Önceki Dönemden\nDevreden KDV"),
+    ("yurtici_alim_kdv", "Yurtiçi Alımlara\nİlişkin KDV"),
+    ("indirimler_toplami", "İndirimler\nToplamı"),
+    ("odenmesi_gereken_kdv", "Ödenmesi Gereken\nKDV"),
+    ("sonraki_donem_devreden", "Son. Dön.\nDev. KDV"),
+    ("iade_edilmesi_gereken_kdv", "İade Edil.\nKDV"),
+]
+
+AYRINTI_TABLO_SATIRLARI = ["Düzeltme Öncesi Beyanname", "Düzeltme Beyannamesi",
+                           "Fark"]
+
+
 AYRINTI_KODLARI = [
     "matrah_toplami",
     "hesaplanan_kdv",
@@ -588,6 +604,85 @@ def duzeltme_karsilastirmalari(duzen):
             "etiket": d["etiket"], "tarih": _tarih(son["onay_zamani"]),
             "gerekce": son["duzeltme_nedeni"] or "",
             "gerekceler": gerekceler,
+            "satirlar": satirlar,
+            # Ayrintili tablo bunu kullanir: bir doneme birden cok duzeltme
+            # verilmisse her biri bir onceki surumle karsilastirilmis olarak
+            # burada durur. Tarhiyat hesabi yine yukaridaki toplam farktan
+            # beslenir.
+            "adimlar": _donem_adimlari(d),
+        })
+    return sonuc
+
+
+def duzeltme_adimlari(duzen):
+    """Her duzeltme beyannamesini BIR ONCEKI surumle karsilastirir.
+
+    `duzeltme_karsilastirmalari` bir donem icin TEK karsilastirma verir:
+    kanuni beyan ile SON duzeltme. Bir doneme birden cok duzeltme verilmisse
+    aradaki adimlar o tabloda kaybolur ve "Duzeltme Oncesi / Duzeltme
+    Beyannamesi" basligi hangi iki beyanname arasindaki farki gosterdigini
+    soylemez. Burasi zinciri adim adim verir: 1. duzeltme kanuni beyanla,
+    2. duzeltme 1. duzeltmeyle karsilastirilir.
+
+    Tarhiyat ve devir takibi bundan DEGIL, toplam farki veren
+    `duzeltme_karsilastirmalari`'ndan beslenir; burasi yalnizca gosterim
+    icindir, yoksa ayni donem birden cok kez sayilirdi.
+
+    Doner: [{"yil", "ay", "ay_adi", "etiket", "sira", "adim_sayisi",
+             "oncesi_etiketi", "sonrasi_etiketi", "tarih", "gerekce",
+             "satirlar": [{"kod", "etiket", "oncesi", "sonrasi", "fark",
+                           "degisti"}]}]
+    """
+    sonuc = []
+    for d in duzen["donemler"]:
+        sonuc.extend(_donem_adimlari(d))
+    return sonuc
+
+
+def _donem_adimlari(d):
+    """Bir donemin duzeltme zincirini adim adim karsilastirir."""
+    adlar = dict(OZET_HEDEF_SECENEKLERI)
+    adlar["yurtici_alim_kdv"] = "Yurtiçi Alımlara İlişkin KDV"
+    sonuc = []
+    surumler = d["surumler"]
+    if len(surumler) < 2:
+        return sonuc
+    adim_sayisi = len(surumler) - 1
+    for sira, (onceki, simdiki) in enumerate(zip(surumler, surumler[1:]), 1):
+        satirlar = []
+        for kod in AYRINTI_KODLARI:
+            oncesi = onceki["degerler"].get(kod) or 0.0
+            sonrasi = simdiki["degerler"].get(kod) or 0.0
+            fark = round(sonrasi - oncesi, 2)
+            satirlar.append({
+                "kod": kod,
+                "etiket": adlar.get(kod) or ETIKETLER.get(kod, kod),
+                "oncesi": round(oncesi, 2),
+                "sonrasi": round(sonrasi, 2),
+                "fark": fark,
+                "degisti": abs(fark) > 0.005,
+            })
+        if not any(x["degisti"] for x in satirlar):
+            # Hicbir kalemi degistirmeyen duzeltme (orn. yalnizca kunye
+            # duzeltmesi) tabloya bos bir blok olarak girmesin.
+            continue
+        # Tek duzeltme varsa basliklar eskisi gibi kalir; boylece dosyalarin
+        # ezici cogunlugunda belge ciktisi degismez. Birden cok duzeltme
+        # varsa hangi ikisinin karsilastirildigi basliktan okunur.
+        if adim_sayisi == 1:
+            oncesi_etiketi, sonrasi_etiketi = ("Düzeltme Öncesi Beyanname",
+                                               "Düzeltme Beyannamesi")
+        else:
+            oncesi_etiketi = ("Düzeltme Öncesi Beyanname" if sira == 1
+                              else "%d. Düzeltme Beyannamesi" % (sira - 1))
+            sonrasi_etiketi = "%d. Düzeltme Beyannamesi" % sira
+        sonuc.append({
+            "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
+            "etiket": d["etiket"], "sira": sira, "adim_sayisi": adim_sayisi,
+            "oncesi_etiketi": oncesi_etiketi,
+            "sonrasi_etiketi": sonrasi_etiketi,
+            "tarih": _tarih(simdiki["onay_zamani"]),
+            "gerekce": simdiki["duzeltme_nedeni"] or "",
             "satirlar": satirlar,
         })
     return sonuc

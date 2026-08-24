@@ -22,7 +22,8 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
-from .excel_export import calisma_olustur, fatura_listesi_olustur
+from .excel_export import (calisma_baytlari, calisma_olustur,
+                           fatura_listesi_olustur)
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
 from .rapor_metni import matrah_farki_ozeti
@@ -786,18 +787,29 @@ class Istekci(BaseHTTPRequestHandler):
         # Duzeltme sayfasi yalnizca beyanname yuklendiyse eklenir; eklenemezse
         # Excel ciktisinin geri kalani yine de uretilir.
         duzeltmeler = None
+        adimlar = None
         if calisma.get("beyannameler"):
             try:
                 beyannameler = _beyanname_modulu()
-                duzeltmeler = beyannameler.duzeltme_tablosu(
-                    beyannameler.duzenle(calisma["beyannameler"]))
+                duzen = beyannameler.duzenle(calisma["beyannameler"])
+                duzeltmeler = beyannameler.duzeltme_tablosu(duzen)
+                adimlar = beyannameler.duzeltme_adimlari(duzen)
             except Exception:
                 duzeltmeler = None
-        calisma_olustur(dosya_yolu, inceleme, _yillari_coz(calisma), sonuc, bulgular,
-                        duzeltmeler, self._fatura_bloku(calisma),
-                        _ziya_kati(calisma))
-        with open(dosya_yolu, "rb") as f:
-            govde = f.read()
+                adimlar = None
+        # Once BELLEKTE uretilir: dosya Excel'de acik kaldiginda uzerine
+        # yazilamiyor ve indirme duserdi (Windows acik dosyayi kilitler).
+        govde = calisma_baytlari(inceleme, _yillari_coz(calisma), sonuc, bulgular,
+                                 duzeltmeler, self._fatura_bloku(calisma),
+                                 _ziya_kati(calisma), adimlar)
+        # Kopyasi ciktilar klasorune de birakilir; basarisiz olmasi indirmeyi
+        # engellemez.
+        try:
+            os.makedirs(CIKTI_DIR, exist_ok=True)
+            with open(dosya_yolu, "wb") as f:
+                f.write(govde)
+        except OSError:
+            pass
         self.send_response(200)
         self.send_header("Content-Type",
                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

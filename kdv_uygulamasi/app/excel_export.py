@@ -15,6 +15,7 @@ sinirini asarak, sayfalar arasi baglantiyla -- kendiliginden yansir.
 
 Formullerin karsiligi hesap.py'deki `_donem_hesapla` fonksiyonudur.
 """
+import io
 import os
 import sys
 
@@ -785,9 +786,99 @@ def _fatura_sayfasi(wb, fatura_bloku):
     return ws
 
 
+def _duzeltme_ayrinti_sayfasi(wb, adimlar):
+    """Rapor ve tutanaktaki "ayrintili duzeltme tablosu"nun Excel karsiligi.
+
+    Ayni veriden ve ayni sutun duzeninden uretilir; amaci tabloyu belgeye
+    elle yapistirmak isteyen kullaniciya kopyalanabilir bir kaynak vermektir.
+
+    Bir doneme birden cok duzeltme verilmisse her duzeltme AYRI bir blok
+    olarak yazilir ve bir onceki surumle karsilastirilir; satir basliklari
+    hangi iki beyannamenin karsilastirildigini soyler.
+    """
+    from .beyannameler import AYRINTI_TABLO_KOLONLARI, AYRINTI_TABLO_SATIRLARI
+
+    if not adimlar:
+        return None
+    ws = wb.create_sheet("Düzeltme Ayrıntısı")
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 26
+    for i in range(3, len(AYRINTI_TABLO_KOLONLARI) + 3):
+        ws.column_dimensions[get_column_letter(i)].width = 18
+
+    genislik = len(AYRINTI_TABLO_KOLONLARI) + 2
+    satir = 1
+    for yil in sorted({a["yil"] for a in adimlar}):
+        yildakiler = [a for a in adimlar if a["yil"] == yil]
+        _yaz(ws, satir, 1, "DÜZELTME BEYANNAMELERİNDE YAPILAN DÜZELTMELER",
+             FONT_BASLIK, SOL, DOLGU_BASLIK, bicim=None)
+        ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                       end_column=genislik)
+        satir += 1
+
+        basliklar = ["Dönemi\n%s" % yil, ""] + [e for _k, e
+                                                in AYRINTI_TABLO_KOLONLARI]
+        for i, baslik in enumerate(basliklar):
+            h = _yaz(ws, satir, i + 1, baslik, FONT_BOLD, ORTA, DOLGU_BASLIK,
+                     bicim=None)
+            h.alignment = Alignment(horizontal="center", vertical="center",
+                                    wrap_text=True)
+        ws.row_dimensions[satir].height = 30
+        satir += 1
+
+        for adim in sorted(yildakiler, key=lambda a: (a["ay"], a["sira"])):
+            degerler = {x["kod"]: x for x in adim["satirlar"]}
+            etiketler = [adim["oncesi_etiketi"], adim["sonrasi_etiketi"],
+                         AYRINTI_TABLO_SATIRLARI[2]]
+            for i, etiket in enumerate(etiketler):
+                _yaz(ws, satir, 1, adim["ay_adi"] if i == 0 else "",
+                     FONT, ORTA, bicim=None)
+                _yaz(ws, satir, 2, etiket, FONT, SOL, bicim=None)
+                for j, (kod, _e) in enumerate(AYRINTI_TABLO_KOLONLARI):
+                    kayit = degerler.get(kod) or {}
+                    if i == 2:
+                        # Dairenin tablosunda "Fark", duzeltmeyle beyandan
+                        # CIKARILAN tutardir; bu yuzden oncesi - sonrasi.
+                        deger = -(kayit.get("fark") or 0.0)
+                    else:
+                        deger = kayit.get("oncesi" if i == 0 else "sonrasi") or 0.0
+                    _yaz(ws, satir, j + 3, float(deger), FONT, SAG)
+                satir += 1
+        satir += 1
+    return ws
+
+
+def calisma_baytlari(inceleme, yillar, sonuc, bulgular=None,
+                     duzeltme_bloklari=None, fatura_bloku=None, ziya_kati=1,
+                     duzeltme_adimlari=None):
+    """Excel calisma dosyasini BELLEKTE uretir ve baytlarini dondurur.
+
+    Diske yazip geri okumak Windows'ta guvenilir degil: dosya Excel'de acik
+    kaldiginda ya da virus tarayici tuttugunda uzerine yazilamaz ve indirme
+    PermissionError ile duser. Cikti dogrudan bellekten gonderilir.
+    """
+    tampon = io.BytesIO()
+    _calisma_defteri(inceleme, yillar, sonuc, bulgular, duzeltme_bloklari,
+                     fatura_bloku, ziya_kati, duzeltme_adimlari).save(tampon)
+    return tampon.getvalue()
+
+
 def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
-                    duzeltme_bloklari=None, fatura_bloku=None, ziya_kati=1):
+                    duzeltme_bloklari=None, fatura_bloku=None, ziya_kati=1,
+                    duzeltme_adimlari=None):
     """Excel calisma dosyasini uretir ve yola yazar."""
+    os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
+    with open(dosya_yolu, "wb") as f:
+        f.write(calisma_baytlari(inceleme, yillar, sonuc, bulgular,
+                                 duzeltme_bloklari, fatura_bloku, ziya_kati,
+                                 duzeltme_adimlari))
+    return dosya_yolu
+
+
+def _calisma_defteri(inceleme, yillar, sonuc, bulgular=None,
+                     duzeltme_bloklari=None, fatura_bloku=None, ziya_kati=1,
+                     duzeltme_adimlari=None):
+    """Calisma defterini kurar (kaydetmez)."""
     wb = Workbook()
     wb.remove(wb.active)
     duzen = None
@@ -796,6 +887,7 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
         duzen = _yil_sayfasi(wb, yil_kaydi, sonuc["donemler"], onceki)
         onceki = (duzen["yil"], duzen["ay_sayisi"])
     _duzeltme_sayfasi(wb, duzeltme_bloklari or [])
+    _duzeltme_ayrinti_sayfasi(wb, duzeltme_adimlari or [])
     _fatura_sayfasi(wb, fatura_bloku)
     _etki_sayfasi(wb, sonuc)
     _yil_uyum_sayfasi(wb, sonuc)
@@ -803,9 +895,7 @@ def calisma_olustur(dosya_yolu, inceleme, yillar, sonuc, bulgular=None,
         # Satir duzeni butun yil sayfalarinda aynidir; sonuncusu yeterlidir
         _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati)
         _ozet_sayfasi(wb, inceleme, sonuc, bulgular or [], duzen)
-    os.makedirs(os.path.dirname(dosya_yolu), exist_ok=True)
-    wb.save(dosya_yolu)
-    return dosya_yolu
+    return wb
 
 
 def fatura_listesi_olustur(dosya_yolu, baslik, basliklar, satirlar, sayisal=(),

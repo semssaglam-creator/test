@@ -281,12 +281,17 @@ class Belge:
         cerceve = "".join(
             '<w:%s w:val="single" w:sz="4" w:space="0" w:color="808080"/>' % kenar
             for kenar in ("top", "left", "bottom", "right", "insideH", "insideV"))
-        kenar_boslugu = ""
-        if dar:
-            kenar_boslugu = (
-                '<w:tblCellMar>'
-                '<w:left w:w="43" w:type="dxa"/><w:right w:w="43" w:type="dxa"/>'
-                '</w:tblCellMar>')
+        # Hucre ic bosluklari HER ZAMAN yazilir. Word'un varsayilani sutun
+        # basina 108 twip (~0,19 cm) yer birakir; bu, her hucrede metnin ve
+        # rakamin onunde bir bosluk varmis gibi gorunur ve tablo baska bir
+        # belgeye yapistirildiginda ilk goze carpan sey odur. Bosluk bir
+        # KARAKTER degildir - metnin icinde bosluk yoktur - hucrenin ic
+        # kenar payidir; tek kaldirma yolu budur.
+        pay = 14 if dar else 28
+        kenar_boslugu = (
+            '<w:tblCellMar>'
+            '<w:left w:w="%d" w:type="dxa"/><w:right w:w="%d" w:type="dxa"/>'
+            '</w:tblCellMar>' % (pay, pay))
         parcalar = [
             # Sira onemli: OOXML semasinda tblCellMar, tblLayout'tan sonra
             # gelir; ters yazildiginda Word belgeyi bozuk sayar.

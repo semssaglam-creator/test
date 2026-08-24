@@ -67,7 +67,23 @@ SATICI_ALANLARI = [
               "maddesinde tırnak içinde yazılır. Boş bırakılırsa künyedeki genel "
               "beyan kullanılır."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
+    # Asagidakiler YALNIZCA elle eklenen saticilarda gorunur. Fatura listesi
+    # bulunmayan bir sahteci mukellefin tutari baska yoldan bilinemez; bu
+    # alanlar olmadan satici belgelere giremez, yil sirasina da yerlesemez.
+    {"kod": "elle_yil", "etiket": "Belgelerin ait olduğu yıl", "tur": "metin",
+     "yalniz_elle": True,
+     "ipucu": "Tutanakta maddeler yıl sırasına göre dizilir; bu satıcının "
+              "hangi sıraya gireceğini bu yıl belirler."},
+    {"kod": "elle_adet", "etiket": "Belge adedi", "tur": "metin",
+     "yalniz_elle": True},
+    {"kod": "elle_matrah", "etiket": "Matrah (KDV hariç)", "tur": "metin",
+     "yalniz_elle": True},
+    {"kod": "elle_kdv", "etiket": "KDV", "tur": "metin", "yalniz_elle": True},
 ]
+
+# Satici kartinda "elle eklendi" isareti; fatura listesi olmayan saticilar
+# icin kullanicinin actigi kayittir.
+ELLE_ISARETI = "elle"
 
 
 def tarih_goster(deger):
@@ -274,7 +290,82 @@ def sahteci_vknler(faturalar, saticilar=None):
         vkn = f.get("satici_vkn") or ""
         if f.get("dahil") or sahteci_belirlenmis_mi(vkn, saticilar):
             secilenler.add(vkn)
+    # Fatura listesinde hic gorunmeyen, kullanicinin elle actigi saticilar.
+    secilenler.update(elle_vknler(saticilar))
     return secilenler
+
+
+def elle_eklenmis_mi(bilgi):
+    """Bu satici kaydi kullanici tarafindan elle mi acilmis."""
+    return str((bilgi or {}).get(ELLE_ISARETI) or "") == "Evet"
+
+
+def elle_vknler(saticilar):
+    """Elle eklenmis saticilarin VKN'leri."""
+    return {vkn for vkn, bilgi in (saticilar or {}).items()
+            if elle_eklenmis_mi(bilgi)}
+
+
+def _elle_sayi(deger):
+    """Elle yazilan tutari sayiya cevirir; "1.234,56" da kabul edilir."""
+    metin = str(deger or "").strip()
+    if not metin:
+        return 0.0
+    metin = metin.replace(" ", "")
+    # Turkce yazim: binlik nokta, ondalik virgul. Virgul yoksa noktalar
+    # binlik ayiricidir ("1.200" -> 1200), cunku tutarlar bu bicimde girilir.
+    if "," in metin:
+        metin = metin.replace(".", "").replace(",", ".")
+    else:
+        metin = metin.replace(".", "")
+    try:
+        return round(float(metin), 2)
+    except ValueError:
+        return 0.0
+
+
+def _elle_satiri(vkn, bilgi):
+    """Elle eklenen satici icin `satici_ozeti` bicimine uygun satir.
+
+    Faturasi olmadigindan butun tutarlar kullanicinin girdigidir; "dahil"
+    takimi ile "liste" takimi ayni degeri tasir, cunku ayirt edecek bir
+    fatura satiri yoktur.
+    """
+    yil_metni = str(bilgi.get("elle_yil") or "").strip()
+    try:
+        yil = int(yil_metni[:4])
+    except (ValueError, TypeError):
+        yil = None
+    matrah = _elle_sayi(bilgi.get("elle_matrah"))
+    kdv = _elle_sayi(bilgi.get("elle_kdv"))
+    try:
+        adet = int(str(bilgi.get("elle_adet") or "0").strip() or 0)
+    except ValueError:
+        adet = 0
+    toplam = round(matrah + kdv, 2)
+    return {
+        "vkn": vkn, "elle": "Evet",
+        "adet": adet, "matrah": matrah, "kdv": kdv, "toplam": toplam,
+        "liste_adet": adet, "liste_matrah": matrah, "liste_kdv": kdv,
+        "liste_toplam": toplam,
+        "unvan": bilgi.get("unvan") or "",
+        "vergi_dairesi": bilgi.get("vergi_dairesi") or "",
+        "kullanma": bilgi.get("kullanma") or "Belirlenmedi",
+        "vtr_no": bilgi.get("vtr_no") or "",
+        "vtr_tarihi": bilgi.get("vtr_tarihi") or "",
+        "ozel_esaslar": bilgi.get("ozel_esaslar") or "",
+        "not": bilgi.get("not") or "",
+        "cevap": bilgi.get("cevap") or "",
+        "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
+        "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
+        "tarhiyat_disi": 0,
+        "donem_sayisi": 1 if yil else 0,
+        "ilk_donem": str(yil) if yil else "",
+        "son_donem": str(yil) if yil else "",
+        "ilk_yil": yil,
+        "yil_dokumu": ([{"yil": yil, "adet": adet, "matrah": matrah, "kdv": kdv}]
+                       if yil else []),
+    }
 
 
 def satici_ozeti(faturalar, saticilar=None):
@@ -342,14 +433,57 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
             "liste_toplam": round(grup["liste_toplam"], 2),
             "tarhiyat_disi": grup["liste_adet"] - grup["adet"],
             "donem_sayisi": len(donemler),
+            # Belgelerdeki sira bundan kurulur (bkz. asagidaki sort).
+            "ilk_yil": donemler[0][0] if donemler else None,
+            "yil_dokumu": _yil_dokumu(faturalar, vkn),
             "ilk_donem": "%d/%s" % (donemler[0][0], AYLAR[donemler[0][1] - 1])
                          if donemler else "",
             "son_donem": "%d/%s" % (donemler[-1][0], AYLAR[donemler[-1][1] - 1])
                          if donemler else "",
         })
         satirlar.append(grup)
-    satirlar.sort(key=lambda s: (-s["liste_kdv"], s["vkn"]))
+
+    # Elle eklenen saticilarin fatura satiri yoktur; ozet satirlari
+    # kullanicinin girdigi tutarlardan kurulur. Ayni VKN hem listede hem elle
+    # varsa listedeki kazanir: gercek fatura verisi her zaman onceliklidir.
+    yazilanlar = {g["vkn"] for g in satirlar}
+    for vkn in sorted(elle_vknler(saticilar)):
+        if vkn not in yazilanlar:
+            satirlar.append(_elle_satiri(vkn, saticilar.get(vkn) or {}))
+
+    # Sira once YILA, sonra buyuklige gore kurulur. Tutanakta maddeler bu
+    # sirayla yazildigi icin okuyan kisi donemi takip edebilsin: 2021'de
+    # kullanilan belgelere iliskin tespitler basta, 2023'tekiler sonda olur.
+    # Kayit donemi cozulememis saticiler en sona birakilir (yil None).
+    satirlar.sort(key=lambda s: (s["ilk_yil"] is None, s["ilk_yil"] or 0,
+                                 -s["liste_kdv"], s["vkn"]))
     return satirlar
+
+
+def _yil_dokumu(faturalar, vkn):
+    """Bir saticinin faturalarinin yil yil adedi ve tutari.
+
+    Tutanakta "hangi saticidan hangi yil ne kadar belge kullanildigi"
+    cumlesi bundan kurulur. Satici ozetindeki liste_* takimiyla ayni kumeyi
+    sayar (dahil isaretli olmayanlar da dahil), ki cumle hemen altindaki
+    fatura tablosunun toplamiyla tutsun.
+
+    Doner: [{"yil", "adet", "matrah", "kdv"}] - yila gore sirali.
+    """
+    gruplar = {}
+    for f in faturalar or []:
+        if (f.get("satici_vkn") or "") != vkn or f.get("yon") == YON_SATIS:
+            continue
+        yil = f.get("kayit_yil")
+        g = gruplar.setdefault(yil, {"yil": yil, "adet": 0,
+                                     "matrah": 0.0, "kdv": 0.0})
+        g["adet"] += 1
+        g["matrah"] += float(f.get("matrah") or 0.0)
+        g["kdv"] += float(f.get("kdv") or 0.0)
+    for g in gruplar.values():
+        g["matrah"] = round(g["matrah"], 2)
+        g["kdv"] = round(g["kdv"], 2)
+    return [gruplar[y] for y in sorted(gruplar, key=lambda y: (y is None, y or 0))]
 
 
 def donem_ozeti(faturalar, saticilar=None):

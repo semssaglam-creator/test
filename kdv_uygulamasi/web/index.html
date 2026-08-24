@@ -468,6 +468,14 @@
       bilerek kullanmada VUK 359 kapsamında 3 kat uygulanır ve suç duyurusu
       gerekir. Bu yüzden varsayılanı yoktur.
     </div>
+    <div style="margin-bottom:10px;">
+      <button class="btn ikincil" id="fatSaticiEkle">+ Satıcı ekle</button>
+      <span class="yardim" style="margin-left:8px;">
+        Fatura listesinde görünmeyen bir sahteci mükellefi elle ekler. Belge
+        adedi ve tutarı siz girersiniz; tutanakta girdiğiniz yılın sırasına
+        yerleşir.
+      </span>
+    </div>
     <div class="kaydir"><table class="tablo" id="fatSaticiTablo"></table></div>
     <div id="fatSaticiDetay"></div>
   </div>
@@ -3239,8 +3247,15 @@ async function faturaYukle(dosyalar) {
 }
 
 /** Fatura ozetini sunucudan alir ve ekrani yeniden cizer. */
+function elleSaticiVarMi() {
+  return Object.values(durum.calisma.saticilar || {})
+    .some((b) => (b || {}).elle === "Evet");
+}
+
 async function faturalariTazele() {
-  if (!(durum.calisma.faturalar || []).length) {
+  // Fatura yoksa bile elle eklenmis satici varsa ozet istenir: o saticilar
+  // fatura listesinden degil, satici kartlarindan uretiliyor.
+  if (!(durum.calisma.faturalar || []).length && !elleSaticiVarMi()) {
     durum.fatOzet = null;
     faturaEkraniniCiz();
     return;
@@ -3256,12 +3271,15 @@ async function faturalariTazele() {
 
 function faturaEkraniniCiz() {
   const varMi = !!(durum.fatOzet && durum.calisma.faturalar.length);
-  ["fatOzetKart", "fatListeKart", "fatAktarKart", "fatBulguKart"].forEach((id) => {
+  ["fatListeKart", "fatAktarKart", "fatBulguKart"].forEach((id) => {
     $(id).style.display = varMi ? "" : "none";
   });
+  // Satici dokumu HER ZAMAN acik durur: "Satici ekle" dugmesi orada ve fatura
+  // listesi hic olmayan dosyalarda da satici eklenebilmelidir.
+  $("fatOzetKart").style.display = "";
   $("fatTemizle").style.display = (durum.calisma.faturalar || []).length ? "" : "none";
-  if (!varMi) return;
   faturaSaticiTablosunuCiz();
+  if (!varMi) return;
   faturaListesiniCiz();
   faturaAktarimiCiz();
   faturaBulgulariniCiz();
@@ -3276,7 +3294,16 @@ function faturaSaticiTablosunuCiz() {
   bas.forEach((b) => ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
 
-  durum.fatOzet.saticilar.forEach((s) => {
+  const saticiSatirlari = (durum.fatOzet && durum.fatOzet.saticilar) || [];
+  if (!saticiSatirlari.length) {
+    const bos = document.createElement("tr");
+    const td = hucre("td", "Henüz satıcı yok. Fatura listesi yükleyin ya da "
+      + "“+ Satıcı ekle” ile elle girin.", { className: "sessiz" });
+    td.colSpan = bas.length;
+    bos.appendChild(td);
+    tablo.appendChild(bos);
+  }
+  saticiSatirlari.forEach((s) => {
     const tr = document.createElement("tr");
     tr.appendChild(hucre("td", s.vkn || "—"));
     tr.appendChild(hucre("td", s.unvan || "—", { className: s.unvan ? "" : "sessiz" }));
@@ -3318,7 +3345,13 @@ function faturaSaticiDetayiniCiz() {
   baslik.textContent = `${vkn} VKN'li satıcı`;
   const izgara = document.createElement("div");
   izgara.className = "kunye-izgara";
-  (durum.tanimlar.satici_alanlari || []).forEach((alan) => {
+  // "yalniz_elle" alanlari (yil, adet, tutar) yalnizca elle eklenen
+  // saticilarda anlamlidir: fatura listesi olan bir saticida bu degerler
+  // faturalardan gelir, elle girilen bir sayi onlarla celisirdi.
+  const elleMi = bilgi.elle === "Evet";
+  (durum.tanimlar.satici_alanlari || [])
+    .filter((alan) => elleMi || !alan.yalniz_elle)
+    .forEach((alan) => {
     const sar = document.createElement("div");
     if (alan.tur === "uzun") sar.className = "genis";
     const etiket = document.createElement("label");
@@ -3349,6 +3382,50 @@ function faturaSaticiDetayiniCiz() {
     izgara.appendChild(sar);
   });
   kap.append(baslik, izgara);
+
+  if (elleMi) {
+    const uyari = document.createElement("div");
+    uyari.className = "yardim";
+    uyari.style.marginTop = "8px";
+    uyari.textContent = "Bu satıcı elle eklendi; fatura listesi bulunmadığı "
+      + "için tutanakta fatura dökümü tablosu açılmaz, tutar ve adet "
+      + "yukarıda girdiğiniz değerlerden yazılır.";
+    const sil = document.createElement("button");
+    sil.className = "btn ikincil";
+    sil.style.marginTop = "8px";
+    sil.textContent = "Bu satıcıyı sil";
+    sil.addEventListener("click", async () => {
+      if (!confirm(`${vkn} VKN'li elle eklenen satıcı silinsin mi?`)) return;
+      delete durum.calisma.saticilar[vkn];
+      durum.fatSatici = null;
+      isaretle(false);
+      await faturalariTazele();
+    });
+    kap.append(uyari, sil);
+  }
+}
+
+/**
+ * Fatura listesinde görünmeyen bir sahteci mükellefi elle ekler.
+ *
+ * Kayıt satıcı kartlarına yazılır (`saticilar[vkn].elle = "Evet"`); tutar ve
+ * adet oradan okunur. VKN, kaydın anahtarı olduğu için zorunludur.
+ */
+async function saticiElleEkle() {
+  const ham = prompt("Eklenecek satıcının VKN / TCKN'si:");
+  if (ham === null) return;
+  const vkn = (ham || "").replace(/[^0-9]/g, "");
+  if (!vkn) { mesaj("VKN girilmedi; satıcı eklenmedi.", "hata"); return; }
+  durum.calisma.saticilar = durum.calisma.saticilar || {};
+  if (durum.calisma.saticilar[vkn]) {
+    mesaj(`${vkn} zaten kayıtlı; kartı açıldı.`);
+  } else {
+    durum.calisma.saticilar[vkn] = { elle: "Evet" };
+    mesaj(`${vkn} VKN'li satıcı eklendi. Unvan, yıl, adet ve tutarı girin.`);
+  }
+  durum.fatSatici = vkn;
+  isaretle(false);
+  await faturalariTazele();
 }
 
 /**
@@ -3814,6 +3891,8 @@ async function faturalariIndirimeAktar(sessiz) {
   return true;
 }
 $("fatAktar").addEventListener("click", () => faturalariIndirimeAktar());
+
+$("fatSaticiEkle").addEventListener("click", saticiElleEkle);
 
 $("fatTemizle").addEventListener("click", async () => {
   if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;

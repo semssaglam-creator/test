@@ -24,6 +24,10 @@ from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
 from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
+# Ayrintili duzeltme tablosunun duzeni beyannameler modulunde tanimlidir;
+# Excel ciktisi da ayni tanimi kullanir ki iki tablo birebir ayni olsun.
+from .beyannameler import (AYRINTI_TABLO_KOLONLARI as DUZELTME_AYRINTI_KOLONLARI,
+                           AYRINTI_TABLO_SATIRLARI as DUZELTME_AYRINTI_SATIRLARI)
 from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
@@ -500,19 +504,6 @@ def _cikarilacak_tablosu(b, liste, saticilar=None):
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
-# Ayrintili duzeltme tablosunun sutunlari (ornek rapordaki duzen)
-DUZELTME_AYRINTI_KOLONLARI = [
-    ("onceki_donem_devreden", "Önceki Dönemden\nDevreden KDV"),
-    ("yurtici_alim_kdv", "Yurtiçi Alımlara\nİlişkin KDV"),
-    ("indirimler_toplami", "İndirimler\nToplamı"),
-    ("odenmesi_gereken_kdv", "Ödenmesi Gereken\nKDV"),
-    ("sonraki_donem_devreden", "Son. Dön.\nDev. KDV"),
-    ("iade_edilmesi_gereken_kdv", "İade Edil.\nKDV"),
-]
-
-DUZELTME_AYRINTI_SATIRLARI = ["Düzeltme Öncesi Beyanname", "Düzeltme Beyannamesi",
-                              "Fark"]
-
 
 def _donem_listesi(kunye):
     """Kunyeye elle yazilan duzeltme donemlerini ayristirir.
@@ -558,20 +549,30 @@ def _duzeltme_ayrinti_tablosu(b, karsilastirmalar):
     for yil in yillar:
         satirlar = []
         for k in [x for x in karsilastirmalar if x["yil"] == yil]:
-            degerler = {s["kod"]: s for s in k["satirlar"]}
-            for i, etiket in enumerate(DUZELTME_AYRINTI_SATIRLARI):
-                hucreler = []
-                for kod, _e in kolonlar:
-                    satir = degerler.get(kod) or {}
-                    if i == 2:
-                        # Dairenin tablosunda "Fark", duzeltmeyle beyandan
-                        # CIKARILAN tutardir; bu yuzden oncesi - sonrasi.
-                        hucreler.append(_tl(-(satir.get("fark") or 0.0)))
-                    else:
-                        hucreler.append(_tl(satir.get(
-                            "oncesi" if i == 0 else "sonrasi")))
-                satirlar.append([k["ay_adi"] if i == 0 else "", etiket]
-                                + hucreler)
+            # Bir doneme birden cok duzeltme verilmisse her biri BIR ONCEKI
+            # surumle karsilastirilarak ayri ayri yazilir; tek duzeltme varsa
+            # "adimlar" tek ogelidir ve tablo eskisiyle ayni cikar.
+            for adim in (k.get("adimlar") or [k]):
+                etiketler = [adim.get("oncesi_etiketi")
+                             or DUZELTME_AYRINTI_SATIRLARI[0],
+                             adim.get("sonrasi_etiketi")
+                             or DUZELTME_AYRINTI_SATIRLARI[1],
+                             DUZELTME_AYRINTI_SATIRLARI[2]]
+                degerler = {s["kod"]: s for s in adim["satirlar"]}
+                for i, etiket in enumerate(etiketler):
+                    hucreler = []
+                    for kod, _e in kolonlar:
+                        satir = degerler.get(kod) or {}
+                        if i == 2:
+                            # Dairenin tablosunda "Fark", duzeltmeyle beyandan
+                            # CIKARILAN tutardir; bu yuzden oncesi - sonrasi.
+                            hucreler.append(_tl(-(satir.get("fark") or 0.0)))
+                        else:
+                            hucreler.append(_tl(satir.get(
+                                "oncesi" if i == 0 else "sonrasi")))
+                    ay_yazilsin = i == 0 and adim is (k.get("adimlar") or [k])[0]
+                    satirlar.append([k["ay_adi"] if ay_yazilsin else "", etiket]
+                                    + hucreler)
         b.tablo(["Dönemi\n%s" % yil, ""] + [e for _k, e in kolonlar], satirlar,
                 hizalar=["orta", "sol"] + ["sag"] * len(kolonlar),
                 oranlar=[0.7, 1.6] + [1.1] * len(kolonlar),
