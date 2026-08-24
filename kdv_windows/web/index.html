@@ -1,0 +1,4271 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KDV İnceleme Çalışması</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "DejaVu Sans", Arial, sans-serif; margin: 0; background: #f0f2f5; color: #1c2733; }
+  header { background: #1f3a5f; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  header h1 { margin: 0; font-size: 19px; }
+  header .durum-bilgi { font-size: 13px; color: #cfd9e6; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  header .kaydet-grup { display: flex; gap: 6px; align-items: center; }
+  header button { background: #2b4a73; color: #fff; border: 1px solid #47698f; border-radius: 5px; padding: 6px 13px; font-size: 13px; cursor: pointer; }
+  header button:hover { background: #3a5c88; }
+  header button.birincil { background: #2c7a3f; border-color: #2c7a3f; font-weight: 600; }
+  header button.birincil:hover { background: #35924b; }
+  .kayit-rozeti { font-size: 12px; padding: 2px 9px; border-radius: 10px; background: #47698f; }
+  .kayit-rozeti.degisti { background: #b8860b; color: #fff; }
+  .kayit-rozeti.kayitli { background: #2c7a3f; }
+  nav { display: flex; gap: 4px; background: #2b4a73; padding: 0 12px; flex-wrap: wrap; }
+  nav button { background: none; border: none; color: #cfd9e6; padding: 11px 16px; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; }
+  nav button.aktif { color: #fff; border-bottom-color: #ffb347; font-weight: 600; }
+  main { padding: 18px; max-width: 1600px; margin: 0 auto; }
+  .sekme { display: none; }
+  .sekme.aktif { display: block; }
+  .kart { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .kart h2 { margin: 0 0 12px; font-size: 16px; color: #1f3a5f; }
+  .kart h3 { margin: 18px 0 8px; font-size: 14px; color: #2b4a73; }
+  label { display: block; font-size: 12px; color: #5a6b7d; margin-bottom: 2px; }
+  input[type=text], input[type=number], textarea, select { width: 100%; padding: 7px 9px; border: 1px solid #c3ccd6; border-radius: 5px; font-size: 14px; font-family: inherit; }
+  textarea { resize: vertical; font-family: "Consolas", "DejaVu Sans Mono", monospace; font-size: 12px; }
+  .satir { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; align-items: flex-end; }
+  .satir > div { flex: 1; min-width: 150px; }
+  .satir > div.dar { flex: 0 0 140px; min-width: 120px; }
+  .satir > div.otomatik { flex: 0 0 auto; min-width: 0; }
+  button.btn { background: #1f3a5f; color: #fff; border: none; border-radius: 5px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+  button.btn:hover { background: #2b4a73; }
+  button.btn.ikincil { background: #e4e9ef; color: #1c2733; }
+  button.btn.ikincil:hover { background: #d4dce5; }
+  button.btn.tehlike { background: #a33; }
+  button.btn:disabled { background: #c3ccd6; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid #dde3ea; padding: 5px 7px; text-align: left; }
+  th { background: #eef2f6; font-weight: 600; }
+  .sag, td.sayi { text-align: right; font-variant-numeric: tabular-nums; }
+  .mesaj { position: fixed; bottom: 18px; right: 18px; padding: 12px 18px; border-radius: 6px; color: #fff; font-size: 14px; display: none; z-index: 50; max-width: 460px; box-shadow: 0 3px 10px rgba(0,0,0,.25); white-space: pre-wrap; }
+  .mesaj.hata { background: #a33; }
+  .mesaj.basari { background: #2c7a3f; }
+  .mesaj.uyari { background: #b8860b; }
+  .liste { list-style: none; padding: 0; margin: 0; }
+  .liste li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid #eef2f6; font-size: 14px; }
+  .liste li:hover { background: #f6f9fc; }
+  .liste li.secili { background: #fff6e3; }
+  .liste li small { color: #5a6b7d; }
+  .liste li .ad { flex: 1; cursor: pointer; }
+
+  /* Yil kulakciklari */
+  .suzgec-satir td { background: #f4f7fa; padding: 3px 4px; }
+  .yil-sekmeler { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; border-bottom: 2px solid #c3ccd6; padding-bottom: 0; }
+  .yil-kulak { display: flex; align-items: center; background: #e4e9ef; border: 1px solid #c3ccd6; border-bottom: none; border-radius: 6px 6px 0 0; overflow: hidden; position: relative; bottom: -2px; }
+  .yil-kulak.aktif { background: #1f3a5f; border-color: #1f3a5f; }
+  .yil-kulak > button.ad { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 14px; color: #1c2733; }
+  .yil-kulak.aktif > button.ad { color: #fff; font-weight: 600; }
+  .yil-kulak > button.kapat { background: none; border: none; padding: 8px 9px 8px 2px; cursor: pointer; color: #8b98a6; font-size: 15px; line-height: 1; }
+  .yil-kulak > button.kapat:hover { color: #a33; }
+  .yil-kulak.aktif > button.kapat { color: #9fb3c8; }
+  .yil-kulak.aktif > button.kapat:hover { color: #ff8b7d; }
+  .yil-kulak.tumu > button.ad { font-style: italic; }
+  .yil-kulak.bos > button.ad { color: #9aa7b4; }
+  .yil-kulak.bos.aktif > button.ad { color: #cfd9e6; }
+
+  .kaydir { overflow-x: auto; }
+  table.izgara { font-size: 12px; }
+  table.izgara th, table.izgara td { padding: 2px 4px; white-space: nowrap; }
+  table.izgara th.etiket, table.izgara td.etiket { position: sticky; left: 0; background: #fff; z-index: 2; min-width: 300px; max-width: 300px; white-space: normal; font-size: 11px; line-height: 1.3; }
+  table.izgara th.etiket { background: #eef2f6; z-index: 3; }
+  table.izgara tr.grup td { background: #dbe4ee; font-weight: 600; font-size: 11px; text-transform: uppercase; }
+  table.izgara tr.grup td.etiket { background: #dbe4ee; }
+  table.izgara input { width: 96px; border: 1px solid transparent; background: transparent; padding: 3px 4px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; border-radius: 3px; }
+  table.izgara input:hover { border-color: #c3ccd6; }
+  table.izgara input:focus { border-color: #1f3a5f; background: #fff; outline: none; }
+  table.izgara tr.elestiri input { background: #fff9e6; border-color: #e8d9a8; }
+  table.izgara tr.elestiri td.etiket { background: #fdf3d8; }
+  table.izgara td.satir-yapistir { position: sticky; left: 300px; background: #fff; z-index: 2; }
+  .uyari-satir { background: #fdecea; border: 1px solid #f5c6cb; color: #8a1f2b; border-radius: 5px; padding: 7px 10px; margin: 6px 0; font-size: 13px; }
+  .birakma { border: 2px dashed #c3ccd6; border-radius: 8px; padding: 22px; text-align: center; cursor: pointer; color: #5a6b7d; background: #fafbfc; }
+  .birakma:hover, .birakma.uzerinde { border-color: #1f3a5f; background: #eef2f6; color: #1f3a5f; }
+  .yuklu-liste { margin-top: 10px; }
+  .oge { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid #dde3ea; border-radius: 6px; margin-bottom: 6px; font-size: 13px; flex-wrap: wrap; }
+  .rozet.kanuni { background: #d9e1f2; color: #1f3a5f; }
+  .rozet.duzeltme { background: #fff2cc; color: #8a6d1b; }
+  table.duzeltme-tablo td.gerekce { max-width: 320px; white-space: normal; font-size: 11px; line-height: 1.35; }
+  table.duzeltme-tablo th { vertical-align: middle; }
+  td.degisti { background: #fff6e5; font-weight: 600; }
+  tr.onemli td { background: #f2f7ff; }
+  table.izgara th.satir-toplam, table.izgara td.satir-toplam { position: sticky; right: 0; background: #e2efda; z-index: 2; font-weight: 600; border-left: 2px solid #9bbb8a; min-width: 104px; }
+  table.izgara th.satir-toplam { background: #cfe3c2; }
+  table.izgara tr.grup td.satir-toplam { background: #cfe3c2; }
+  table.izgara button.mini { background: #e4e9ef; border: 1px solid #c3ccd6; border-radius: 3px; font-size: 11px; padding: 2px 6px; cursor: pointer; }
+  table.izgara button.mini:hover { background: #d4dce5; }
+  td.fark-var { background: #fdece8; color: #a33; font-weight: 600; }
+  td.sessiz { color: #8a97a5; font-style: italic; }
+  td.duzeltme-satir { padding-left: 18px; }
+  tr.donem-basi td { border-top: 2px solid #c3ccd6; }
+  td.gerekce { max-width: 320px; white-space: normal; font-size: 12px; color: #4a5a6a; }
+  td.negatif { color: #a33; }
+  tr.toplam td { background: #e2efda; font-weight: 700; }
+  tr.yil-ayirac td { background: #dbe4ee; font-weight: 600; }
+  .bulgu { border-left: 4px solid #b8860b; background: #fdf6e3; padding: 8px 12px; margin-bottom: 8px; font-size: 13px; border-radius: 0 4px 4px 0; }
+  .bulgu strong { color: #8a6d1a; }
+  .bos-durum { color: #5a6b7d; font-size: 14px; padding: 20px; text-align: center; }
+  .yardim { font-size: 12px; color: #5a6b7d; margin-top: 4px; line-height: 1.5; }
+  .modal-arka { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 60; padding: 20px; }
+  .modal-arka.acik { display: flex; }
+  .modal { background: #fff; border-radius: 8px; padding: 18px; max-width: 720px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { margin: 0 0 12px; font-size: 16px; color: #1f3a5f; }
+  pre.rapor { background: #f6f9fc; border: 1px solid #dde3ea; border-radius: 5px; padding: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: inherit; max-height: 60vh; overflow-y: auto; }
+  .rozet { display: inline-block; background: #e4e9ef; border-radius: 10px; padding: 1px 9px; font-size: 11px; color: #5a6b7d; margin-left: 6px; }
+  .rozet.uyari { background: #fdf3d8; color: #8a6d1a; }
+  td.aciklanabilir { cursor: help; }
+  td.aciklanabilir:hover { outline: 2px solid #1f3a5f; outline-offset: -2px; }
+  .balon { position: absolute; z-index: 80; background: #1c2733; color: #fff; border-radius: 6px; padding: 12px 14px; font-size: 12.5px; line-height: 1.65; box-shadow: 0 6px 20px rgba(0,0,0,.35); max-width: 460px; display: none; }
+  .balon.acik { display: block; }
+  .balon h4 { margin: 0 0 8px; font-size: 13px; color: #ffb347; }
+  .balon table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .balon td { border: none; padding: 2px 0; color: #dfe6ee; }
+  .balon td.bsag { text-align: right; font-variant-numeric: tabular-nums; padding-left: 14px; white-space: nowrap; }
+  .balon tr.bsonuc td { border-top: 1px solid #4a5a6b; padding-top: 5px; font-weight: 700; color: #fff; }
+  .balon .bformul { color: #9fb3c8; font-family: "Consolas", monospace; font-size: 11.5px; margin-bottom: 8px; }
+  .balon .bnot { color: #9fb3c8; margin-top: 8px; font-size: 11.5px; }
+  .balon .bkapat { position: absolute; top: 6px; right: 9px; cursor: pointer; color: #7f8fa0; font-size: 15px; }
+  .balon .bkapat:hover { color: #fff; }
+  .kunye-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px 14px; }
+  .kunye-izgara .genis { grid-column: 1 / -1; }
+  .kunye-izgara textarea { font-family: inherit; font-size: 13px; line-height: 1.5; }
+  .kunye-izgara .yardim { margin-top: 3px; }
+  table.satir-alani { width: 100%; margin: 4px 0 8px; }
+  table.satir-alani th { font-size: 12px; white-space: nowrap; }
+  table.satir-alani td { padding: 3px 4px; }
+  table.satir-alani td.sira { text-align: center; color: #5a6b7d; width: 46px; }
+  table.satir-alani input { width: 100%; box-sizing: border-box; padding: 4px 6px; font-size: 13px; }
+  table.satir-alani td:last-child { width: 34px; text-align: center; }
+  table.satir-alani td:last-child button { padding: 2px 8px; line-height: 1.2; }
+  .kaynak-etiket { display: inline-block; background: #eef2f6; border: 1px solid #dde3ea; border-radius: 4px; padding: 2px 8px; font-size: 11.5px; margin: 2px 4px 2px 0; color: #5a6b7d; }
+</style>
+</head>
+<body>
+<header>
+  <h1>KDV İnceleme Çalışması</h1>
+  <div class="durum-bilgi">
+    <span id="calismaAdi">Yeni çalışma</span>
+    <span class="kayit-rozeti" id="kayitRozeti">boş</span>
+    <span class="kaydet-grup">
+      <button class="birincil" id="hKaydet">Kaydet</button>
+      <button id="hFarkliKaydet">Farklı Kaydet</button>
+      <button id="hYeni">Yeni</button>
+    </span>
+  </div>
+</header>
+<nav>
+  <button data-sekme="beyanname">Beyannameler</button>
+  <button data-sekme="beyan" class="aktif">Beyan Verisi</button>
+  <button data-sekme="elestiri">İnceleme Tespitleri</button>
+  <button data-sekme="sonuc">Sonuç ve Fark</button>
+  <button data-sekme="tarhiyat">Tarhiyat Özeti</button>
+  <button data-sekme="etki">Tespit Etkisi</button>
+  <button data-sekme="fatura">Sahte Belge / Faturalar</button>
+  <button data-sekme="kunye">İnceleme Bilgileri</button>
+  <button data-sekme="kayitlar">Kayıtlı Çalışmalar</button>
+</nav>
+<main>
+
+<!-- ------------------------------------------------------------- BEYAN -->
+<section class="sekme aktif" id="sekme-beyan">
+  <div class="kart">
+    <h2>Sistem Sorgusunu Yapıştır</h2>
+    <div class="satir">
+      <div class="dar">
+        <label>Yıl (künyede yoksa kullanılır)</label>
+        <select id="beyanYilSec"></select>
+      </div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">Sorgunun üstündeki VERGİ NO / UNVAN / VERGİ DAİRESİ /<br>
+        YIL / RAPOR TARİHİ satırlarını da yapıştırabilirsiniz.</span>
+      </div>
+    </div>
+    <label>Sorgunun tamamını buraya yapıştırın</label>
+    <textarea id="beyanMetin" rows="7" placeholder="VERGİ NO:&#9;...&#10;UNVAN:&#9;...&#10;YIL:&#9;2022&#10;DÖNEMİ&#9;OCAK&#9;ŞUBAT&#9;...&#10;MATRAH TOPLAMI&#9;...">
+</textarea>
+    <div class="satir" style="margin-top:10px;">
+      <div class="otomatik"><button class="btn" id="beyanYapistir">Bloğu Aktar</button></div>
+      <div class="otomatik"><label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1c2733;">
+        <input type="checkbox" id="ayOtomatik" checked style="width:16px;height:16px;"> Ay sayısını veriye göre ayarla</label></div>
+    </div>
+    <div class="yardim">
+      <strong>İki biçim tanınır, hangisini yapıştırdığınız kendiliğinden anlaşılır:</strong><br>
+      • <strong>Sistem sorgusu</strong> — satırlar beyan kalemleri, sütunlar aylar.
+      Aynı yıla ait ikinci bir sorgu yapıştırırsanız (mükellef yıl içinde vergi dairesi
+      değiştirmişse) veriler <strong>tek yılda birleştirilir</strong>: yeni sorgu yalnızca
+      kendi dolu aylarını günceller.<br>
+      • <strong>Özet tablo</strong> — satırlar dönemler, sütunlar büyüklükler. Rapordaki
+      tablo mahkeme kararıyla değiştiyse buraya yapıştırıp beyan verisine geri
+      yazabilirsiniz. Sütunlar <em>başlıklarına göre</em> eşleştirilir; sıraları değişebilir,
+      eksik sütun olabilir. Tanınmayan başlık çıkarsa elle eşleştirme sorulur.
+    </div>
+    <div id="kunyeKarti" style="display:none;margin-top:12px;"></div>
+  </div>
+
+  <div class="kart">
+    <h2>Beyan Verisi <span class="rozet">elle düzenlenebilir</span></h2>
+    <div class="yil-sekmeler" id="beyanYilSekme"></div>
+    <div id="yilKaynaklari"></div>
+    <div class="satir">
+      <div class="dar"><label>Ay sayısı</label><input type="number" id="ayS" min="1" max="12"></div>
+      <div class="dar"><label>Yılı değiştir</label><input type="number" id="yilDegistir" min="2000" max="2100"></div>
+      <div class="otomatik"><button class="btn tehlike" id="veriTemizle">Verileri Temizle</button></div>
+    </div>
+    <div class="yardim" style="margin-bottom:10px;">
+      Her hücreyi doğrudan değiştirebilirsiniz. Bir satırın tamamını değiştirmek için
+      satır başındaki <strong>⇥</strong> düğmesiyle 12 aylık değeri tek seferde yapıştırın.
+      Kulakçıklardaki <strong>×</strong> ile yılı çalışmadan çıkarabilirsiniz.
+    </div>
+    <div class="kaydir"><table class="izgara" id="beyanIzgara"></table></div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------- ELESTIRI -->
+<section class="sekme" id="sekme-elestiri">
+  <div class="kart">
+    <h2>İnceleme Tespitleri (Eleştiri)</h2>
+    <div class="yil-sekmeler" id="elestiriYilSekme"></div>
+    <div class="yardim" style="margin-bottom:10px;">
+      Matraha ilave girdiğinizde hesaplanan KDV ilavesi, dönemin KDV oranıyla otomatik
+      hesaplanır. Farklı oranlı teslimlerde oranı değiştirebilir veya
+      <strong>Oto</strong> kutusunu kaldırıp tutarı elle girebilirsiniz.
+    </div>
+    <div class="satir" style="margin-bottom:10px;">
+      <div class="otomatik">
+        <button class="btn ikincil" id="tumIndirimReddi">Bu dönemin indirilecek KDV'sini tümüyle reddet</button>
+      </div>
+      <div class="genis"><div class="yardim">Defter ve belgeler ibraz edilmediğinde
+        kullanılır: seçili yılın her ayında beyan edilen <strong>bu döneme ait
+        indirilecek KDV</strong> tutarı, indirim reddi satırına yazılır. Girilmiş
+        tutarların üzerine yazar; ay ay değiştirebilirsiniz.</div></div>
+    </div>
+    <div id="asimUyari"></div>
+    <div class="kaydir"><table class="izgara" id="elestiriIzgara"></table></div>
+  </div>
+  <div class="kart">
+    <h2 id="devirBaslik">Başlangıç Devri</h2>
+    <div class="satir">
+      <div class="dar"><label id="devirEtiket">Önceki yıldan devreden KDV</label>
+        <input type="text" id="devredenBaslangic" placeholder="boş = zincirden gelen"></div>
+      <div class="otomatik"><button class="btn ikincil" id="devirSifirla">Zincire Bırak</button></div>
+      <div style="min-width:280px;"><div class="yardim" id="devirAciklama" style="margin:0;"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------------------- SONUC -->
+<section class="sekme" id="sekme-sonuc">
+  <div class="kart">
+    <h2>Sonuç ve Fark</h2>
+    <div class="yil-sekmeler" id="sonucYilSekme"></div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="excelIndir">Excel'e Aktar</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="raporGoster">Rapor Metnini Üret</button></div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">Excel dosyası her yıl için sonuç/fark tablolarını,<br>
+        tarhiyat özetini ve tespit etkisini birlikte içerir.</span>
+      </div>
+    </div>
+    <div id="sonucIcerik"></div>
+  </div>
+  <div class="kart" id="dikkatKart" style="display:none;">
+    <h2>Dikkat Edilmesi Gerekenler</h2>
+    <div id="dikkatIcerik"></div>
+  </div>
+  <div class="kart" id="bulguKart" style="display:none;">
+    <h2>Beyan Tutarlılık Bulguları</h2>
+    <div id="bulguListe"></div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------- TARHIYAT -->
+<section class="sekme" id="sekme-tarhiyat">
+  <div class="kart">
+    <h2>Tarhiyat Özeti</h2>
+    <div class="yil-sekmeler" id="tarhiyatYilSekme"></div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="excelIndir2">Excel'e Aktar</button></div>
+      <div class="dar">
+        <label for="ziyaKati">Vergi ziyaı cezası</label>
+        <select id="ziyaKati">
+          <option value="1">1 kat (VUK 344)</option>
+          <option value="3">3 kat (VUK 359 kapsamında)</option>
+        </select>
+      </div>
+    </div>
+    <div class="yardim" style="margin-bottom:12px;">
+      <strong>(1)</strong> re'sen tarhı gereken KDV, <strong>(2)</strong> haksız iade
+      talebi nedeniyle aranması gereken KDV, <strong>(3)</strong> iade gerçekleşmişse
+      haksız olarak iade edilen KDV. Sütunlar yalnızca mükellef aleyhine olan yönü taşır.
+      Tutar taşımayan iade sütunları gösterilmez.
+    </div>
+    <div class="kaydir"><table id="tarhiyatTablo"></table></div>
+    <div id="tarhiyatNot"></div>
+  </div>
+  <div class="kart">
+    <h2>Yıllara Göre Beyan Uyumu</h2>
+    <div class="kaydir"><table id="yilUyumTablo"></table></div>
+  </div>
+</section>
+
+<!-- --------------------------------------------------------------- ETKI -->
+<section class="sekme" id="sekme-etki">
+  <div class="kart">
+    <h2>Tespitlerimin Kaynak Bazında Etkisi</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Bir tespit yalnızca girildiği dönemi değil, devir zinciri yoluyla izleyen tüm
+      dönemleri etkiler. Her tespitin katkısı ayrı sütunda gösterilir.
+    </div>
+    <div id="kaynakListe"></div>
+  </div>
+  <div class="kart">
+    <h2>Dönem × Kaynak Dağılımı</h2>
+    <div class="satir">
+      <div class="dar">
+        <label>Gösterilecek büyüklük</label>
+        <select id="etkiAlan">
+          <option value="odenecek">Ödenmesi gereken KDV</option>
+          <option value="sonraki_devir">Sonraki döneme devreden KDV</option>
+          <option value="iade">İade edilmesi gereken KDV</option>
+          <option value="indirimler">İndirimler toplamı</option>
+          <option value="matrah">Matrah</option>
+        </select>
+      </div>
+      <div class="dar"><label>Yıl</label><select id="etkiYil"></select></div>
+      <div class="otomatik">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#1c2733;">
+          <input type="checkbox" id="etkiSadeceDolu" checked style="width:16px;height:16px;">
+          Yalnızca etkilenen dönemler</label>
+      </div>
+    </div>
+    <div class="kaydir"><table id="etkiTablo"></table></div>
+    <div id="etkiNot"></div>
+  </div>
+</section>
+
+
+<!-- -------------------------------------------------------- BEYANNAMELER -->
+<section class="sekme" id="sekme-beyanname">
+  <div class="kart">
+    <h2>Beyanname PDF'lerini Yükleyin</h2>
+    <div id="pdfBirakma" class="birakma">
+      <div style="font-size:26px;">📄</div>
+      <div><strong>PDF dosyalarını buraya sürükleyin</strong> ya da seçmek için tıklayın</div>
+      <div class="yardim" style="margin:6px 0 0;">
+        Kanuni süresinde verilen beyannameler ve düzeltme beyannameleri birlikte
+        yüklenebilir. Hangisinin ne olduğu, beyannamenin üzerindeki
+        <em>Düzeltme Nedeni</em> satırı ve <em>Onay Zamanı</em> damgasından
+        anlaşılır; sırayla yüklemeniz gerekmez.
+      </div>
+      <input type="file" id="pdfSecici" accept="application/pdf,.pdf" multiple hidden>
+    </div>
+    <div id="pdfDurum"></div>
+    <div id="pdfListe" class="yuklu-liste"></div>
+    <div class="satir" style="margin-top:10px;">
+      <button class="btn tehlike" id="pdfTemizle" style="display:none;">Yüklenenleri temizle</button>
+    </div>
+  </div>
+
+  <div class="kart" id="beyannameKart" style="display:none;">
+    <h2>Genel Bakış</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Her beyanname ayrı satırda: kanuni süresinde verilen beyan ve ardından
+      her düzeltme. Sütunlar Sonuç ve Fark sekmesindekilerle aynıdır; tutarlar
+      o beyannamenin kendi rakamlarıdır. Bir önceki beyannameye göre değişen
+      hücreler vurgulanır. Hiçbir tutarı değiştirmeyen düzeltmeler de
+      listelenir; o satırda "değişiklik yok" yazar.
+    </div>
+    <div class="yil-sekmeler" id="bnGenelYilSekme"></div>
+    <div class="kaydir"><table class="tablo" id="bnGenelTablo"></table></div>
+  </div>
+
+  <div class="kart" id="beyannameDetayKart" style="display:none;">
+    <h2>Dönem Detayı — İlk Beyan / Düzeltmeler / Son Hal</h2>
+    <div class="yil-sekmeler" id="bnDonemSekme"></div>
+    <div class="satir" style="margin:8px 0;">
+      <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:13px;">
+        <input type="checkbox" id="bnYalnizDegisen" checked style="width:auto;">
+        Yalnızca değişen satırları göster
+      </label>
+    </div>
+    <div id="bnSurumBilgi"></div>
+    <div class="kaydir"><table class="tablo" id="bnDetayTablo"></table></div>
+    <div id="bnAdimlar"></div>
+  </div>
+
+  <div class="kart" id="duzeltmeKart" style="display:none;">
+    <h2>Düzeltme Beyannameleri — Rapor Tablosu</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Rapora yapıştırmak için. Yalnızca düzeltme beyannameleri yer alır; kanuni
+      süresinde verilen ilk beyanname bu tabloya girmez. Tutarlar o düzeltme
+      beyannamesinin kendi rakamlarıdır.
+    </div>
+    <div class="satir" style="margin-bottom:10px;">
+      <div><button class="btn" id="duzeltmeKopyala">Tabloyu kopyala</button></div>
+      <div><button class="btn ikincil" id="duzeltmeExcel">Excel'e aktar</button></div>
+    </div>
+    <div id="duzeltmeTablolar"></div>
+  </div>
+
+  <div class="kart" id="beyannameSecimKart" style="display:none;">
+    <h2>İnceleme Hangi Beyan Üzerinden Yapılsın?</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Seçtiğiniz beyannameler <strong>Beyan Verisi</strong> sekmesine asıl veri olarak
+      yazılır; inceleme tespitleriniz bunun üzerine uygulanır.
+    </div>
+    <div class="satir">
+      <div class="dar">
+        <label>Kullanılacak beyan</label>
+        <select id="bnMod">
+          <option value="ilk">Kanuni süresinde verilen ilk beyan</option>
+          <option value="son" selected>Son hal (düzeltmeler dahil)</option>
+          <option value="elle">Dönem dönem seçeyim</option>
+        </select>
+      </div>
+      <div><button class="btn" id="bnUygula">Asıl veri olarak kullan</button></div>
+    </div>
+    <div id="bnElleSecim" style="display:none;"></div>
+    <div id="bnSecimOzet"></div>
+  </div>
+</section>
+
+<!-- ---------------------------------------------------------- KAYITLAR -->
+<!-- ------------------------------------------------------ SAHTE BELGE / FATURA -->
+<section class="sekme" id="sekme-fatura">
+  <div class="kart">
+    <h2>Fatura Dökümlerini Yükleyin</h2>
+    <div id="fatBirakma" class="birakma">
+      <div style="font-size:26px;">📊</div>
+      <div><strong>Excel dökümlerini buraya sürükleyin</strong> ya da seçmek için tıklayın</div>
+      <div class="yardim" style="margin:6px 0 0;">
+        e-Arşiv portal dökümü, e-Fatura portal dökümü ve elle hazırlanan fatura
+        listesi tanınır; hangisi olduğu kendiliğinden anlaşılır, sırayla
+        yüklemeniz gerekmez. İptal/itiraz sayfaları da okunur ve orada geçen
+        faturalar işaretlenir.
+      </div>
+      <input type="file" id="fatSecici" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple hidden>
+    </div>
+    <div class="satir" style="margin-top:10px;">
+      <div><label>VKN taşımayan dökümler için satıcı VKN'si</label>
+        <input type="text" id="fatSaticiVkn" placeholder="elle hazırlanan listelerde kullanılır"></div>
+      <div class="otomatik"><button class="btn tehlike" id="fatTemizle" style="display:none;">Yüklenenleri temizle</button></div>
+    </div>
+    <div id="fatDurum"></div>
+  </div>
+
+  <div class="kart" id="fatOzetKart" style="display:none;">
+    <h2>Satıcı Dökümü</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Portal dökümü satıcının yalnızca VKN'sini taşır; dökümdeki unvan alanı
+      <em>alıcının</em> unvanıdır. Satıcı unvanını ve hakkındaki tespiti siz
+      girersiniz. <strong>Bilerek / bilmeden kullanma</strong> seçimi sonucu
+      bütünüyle değiştirir: vergi ziyaı cezası bilmeden kullanmada 1 kat,
+      bilerek kullanmada VUK 359 kapsamında 3 kat uygulanır ve suç duyurusu
+      gerekir. Bu yüzden varsayılanı yoktur.
+    </div>
+    <div style="margin-bottom:10px;">
+      <button class="btn ikincil" id="fatSaticiEkle">+ Satıcı ekle</button>
+      <span class="yardim" style="margin-left:8px;">
+        Fatura listesinde görünmeyen bir sahteci mükellefi elle ekler. Belge
+        adedi ve tutarı siz girersiniz; tutanakta girdiğiniz yılın sırasına
+        yerleşir.
+      </span>
+    </div>
+    <div class="kaydir"><table class="tablo" id="fatSaticiTablo"></table></div>
+    <div id="fatSaticiDetay"></div>
+  </div>
+
+  <div class="kart" id="fatListeKart" style="display:none;">
+    <h2>Fatura Listesi</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      <strong>Kayıt dönemi</strong>, tarhiyatın yazılacağı dönemdir; yevmiye
+      tarihi varsa oradan, yoksa fatura tarihinden alınır ve elle
+      değiştirilebilir. <strong>Dahil</strong> işareti kaldırılan satır
+      toplamlara ve tarhiyata girmez.
+    </div>
+    <div class="yil-sekmeler" id="fatYilSekme"></div>
+    <div id="fatToplam"></div>
+    <div class="satir" style="margin-bottom:10px;">
+      <div class="otomatik"><button class="btn ikincil" id="fatExcel">Listeyi Excel'e Aktar</button></div>
+      <div class="genis"><div class="yardim">Ekranda görünen satırlar, aynı sütun
+        düzeniyle tek sayfalık bir Excel dosyasına yazılır; yıl kulakçığı ve
+        satıcı süzgeci neyi gösteriyorsa o aktarılır.</div></div>
+    </div>
+    <div id="fatSuzgec" class="satir" style="margin-bottom:10px;"></div>
+    <div class="kaydir"><table class="tablo" id="fatListeTablo"></table></div>
+  </div>
+
+  <div class="kart" id="fatAktarKart" style="display:none;">
+    <h2>Tespitlere Aktar</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Dahil edilen faturaların KDV'si dönem dönem toplanıp
+      <strong>İndirilecek KDV'den çıkarılacak</strong> satırına yazılır. Böylece
+      rapordaki fatura tablosu ile tarhiyat özeti aynı veriden gelir. Elle
+      girilmiş bir tutar varsa aşağıda gösterilir; aktarım onu değiştirir.
+    </div>
+    <div id="fatFark"></div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn birincil" id="fatAktar">İndirim Reddine Aktar</button></div>
+    </div>
+  </div>
+
+  <div class="kart" id="fatBulguKart" style="display:none;">
+    <h2>Dikkat Edilecek Noktalar</h2>
+    <div id="fatBulgular"></div>
+  </div>
+</section>
+
+<!-- --------------------------------------------------------- INCELEME BILGILERI -->
+<section class="sekme" id="sekme-kunye">
+  <div class="kart">
+    <h2>Taslak Belgeler</h2>
+    <div class="yardim" style="margin-bottom:12px;">
+      Aşağıdaki bilgiler, uygulamadaki beyan ve tespit verisiyle birleştirilerek
+      <strong>taslak</strong> belge üretmekte kullanılır. Üretilen belge imzaya hazır
+      nihai belge değildir; hukuki nitelendirme ve değerlendirme size aittir.
+      Doldurulmayan alanlar belgede <em>[köşeli parantez]</em> içinde bırakılır ki
+      gözden kaçmasın. Bu bilgiler çalışmayla birlikte kaydedilir.
+      <br>Tutanak bütün inceleme dönemi için tek düzenlenir; rapor ise
+      <strong>her yıl için ayrı</strong> düzenlenir. Birden fazla yıl incelendiyse
+      raporlar tek bir zip dosyası içinde iner.
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn birincil" id="tutanakIndir">Tutanak Taslağı (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="tutanakOnizle">Önizle</button></div>
+      <div class="otomatik"><button class="btn birincil" id="raporIndir">Sahte Belge Raporu Taslağı (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="raporOnizle">Önizle</button></div>
+    </div>
+    <div id="kunyeEksik"></div>
+  </div>
+
+  <div class="kart">
+    <h2>Gelir / Kurumlar Vergisi Beyannamesinden Okut</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Tutanaktaki <strong>beyanname özeti</strong> tablosunu elle girmek yerine
+      yıllık Gelir veya Kurumlar Vergisi beyannamesinin PDF'ini yükleyin.
+      Okunan kalemler önce burada gösterilir; onaylarsanız künyedeki alana
+      yazılır. Uygulama beyannameyi kendiliğinden tutanağa işlemez.
+      <input type="file" id="vbSecici" accept="application/pdf,.pdf" hidden>
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="vbSec">Beyanname PDF'i Seç</button></div>
+      <div class="otomatik"><button class="btn birincil" id="vbAktar" style="display:none;">Künyeye Aktar</button></div>
+    </div>
+    <div id="vbDurum"></div>
+  </div>
+
+  <div id="kunyeFormu"></div>
+</section>
+
+<section class="sekme" id="sekme-kayitlar">
+  <div class="kart">
+    <h2>Kayıtlı Çalışmalar</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Üzerinde çalıştığınız veri, siz <strong>Kaydet</strong> demedikçe saklanmaz.
+      Kaydedilen çalışmalar burada listelenir; açabilir veya silebilirsiniz.
+    </div>
+    <ul class="liste" id="kayitListe"></ul>
+  </div>
+  <div class="kart">
+    <h2>Çalışma Bilgileri</h2>
+    <div class="satir">
+      <div><label>Çalışma adı</label><input type="text" id="cAd" placeholder="boş bırakılırsa mükellef adı ve yıllardan üretilir"></div>
+    </div>
+    <div class="satir">
+      <div><label>Mükellef adı / ünvanı</label><input type="text" id="cMukellefAd"></div>
+      <div class="dar"><label>VKN / TCKN</label><input type="text" id="cVkn"></div>
+    </div>
+    <div class="satir">
+      <div><label>Vergi dairesi</label><input type="text" id="cVergiDairesi"></div>
+    </div>
+    <div class="satir">
+      <div><label>Adres</label><input type="text" id="cAdres" placeholder="tutanak ve rapor taslaklarında kullanılır"></div>
+    </div>
+  </div>
+  <div class="kart">
+    <h2>Yedekleme</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Yedek, kayıtlı çalışmaların tamamının kopyasıdır. Kaydedilmemiş veriler yedeğe girmez.
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="yedekAl">Yedek Al</button></div>
+    </div>
+    <table id="yedekTablo"></table>
+  </div>
+</section>
+</main>
+
+<div class="mesaj" id="mesaj"></div>
+<div class="balon" id="balon"></div>
+
+<div class="modal-arka" id="eslemeModal">
+  <div class="modal" style="max-width:640px;">
+    <h2>Sütunları Eşleştir</h2>
+    <div class="yardim" style="margin-bottom:14px;">
+      Yapıştırdığınız özet tablonun bazı sütun başlıkları tanınamadı. Her birini
+      hangi beyan kalemine yazacağınızı seçin. Boş bırakılan sütunlar atlanır.
+    </div>
+    <table id="eslemeTablo"></table>
+    <div class="satir" style="margin-top:16px;">
+      <div class="otomatik"><button class="btn" id="eslemeUygula">Aktar</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="eslemeAtla">Tanınmayanları Atla</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="eslemeKapat">Vazgeç</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-arka" id="temizleModal">
+  <div class="modal" style="max-width:560px;">
+    <h2>Verileri Temizle</h2>
+    <div class="yardim" style="margin-bottom:14px;">
+      Ne kadarının sıfırlanacağını seçin. Bu işlem yalnızca üzerinde çalıştığınız
+      veriyi etkiler; kayıtlı çalışmalar Kaydet demediğiniz sürece değişmez.
+    </div>
+    <div id="temizleSecenekler"></div>
+    <div class="satir" style="margin-top:16px;">
+      <div class="otomatik"><button class="btn ikincil" id="temizleKapat">Vazgeç</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-arka" id="raporModal">
+  <div class="modal">
+    <h2 id="raporBaslik">Rapor Metni Taslağı</h2>
+    <pre class="rapor" id="raporMetin"></pre>
+    <div class="satir" style="margin-top:12px;">
+      <div class="otomatik"><button class="btn" id="raporKopyala">Panoya Kopyala</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="raporKapat">Kapat</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// Calisma verisi yalnizca burada, bellekte tutulur. Sunucu hesaplar; kayit
+// islemi ancak kullanici "Kaydet" dediginde yapilir.
+const durum = {
+  tanimlar: null,
+  calisma: null,
+  kayitliId: null,
+  degisti: false,
+  sonuc: null,
+  bulgular: [],
+  aktifYil: null,       // Beyan / Tespit sekmeleri
+  sonucYil: "tumu",
+  tarhiyatYil: "tumu",
+  kayitlar: [],
+  // Beyannameler sekmesi (beyannameler calismanin icinde tutulur)
+  bnOzet: null,         // sunucudan gelen duzen + karsilastirma
+  bnDonem: null,        // detayda gosterilen donem anahtari
+  bnGenelYil: "tumu",   // Genel Bakis'ta secili yil ("tumu" ya da yil)
+  bnSecimler: {},       // elle secimde donem -> surum sirasi
+  // Sahte belge / fatura sekmesi
+  fatOzet: null,        // sunucudan gelen satici, toplam, bulgu ozeti
+  fatSatici: null,      // detay panelinde acik olan satici VKN'si
+  fatSuzgec: "",        // fatura listesinde suzulen satici VKN'si ("" = tumu)
+  fatYil: "tumu",       // fatura listesinde secili kayit yili ("tumu" = hepsi)
+  fatGorunen: [],       // listede o an gorunen faturalar (Excel aktarimi)
+  fatSuzgecler: { tarih: "", donem: "", oran: "" },   // sutun suzgecleri
+};
+
+const $ = (id) => document.getElementById(id);
+
+function bosCalisma() {
+  return {
+    ad: "",
+    mukellef: { ad_unvan: "", vkn_tckn: "", vergi_dairesi: "", adres: "" },
+    devreden_baslangic: null,
+    yillar: [],
+    beyannameler: [],     // PDF'ten okunan beyanname surumleri
+    kunye: {},            // Inceleme kunyesi (tutanak / rapor taslaklari icin)
+    faturalar: [],        // Excel dokumlerinden okunan fatura satirlari
+    saticilar: {},        // VKN -> {unvan, kullanma, vtr_no, ...}
+  };
+}
+
+function bosBeyan() {
+  const b = {};
+  durum.tanimlar.satirlar.forEach((s) => { if (!s.baslik) b[s.kod] = new Array(12).fill(0); });
+  return b;
+}
+
+function varsayilanOran(yil, ay) {
+  if (yil > 2023) return 20;
+  if (yil < 2023) return 18;
+  return ay >= 7 ? 20 : 18;
+}
+
+function bosElestiri(yil) {
+  return {
+    matrah_ilave: new Array(12).fill(0),
+    hesaplanan_kdv_ilave: new Array(12).fill(0),
+    devir_cikar: new Array(12).fill(0),
+    indirim_cikar: new Array(12).fill(0),
+    yuklenilen_cikar: new Array(12).fill(0),
+    kdv_orani: Array.from({ length: 12 }, (_, i) => varsayilanOran(yil, i + 1)),
+    hesaplanan_otomatik: new Array(12).fill(true),
+    indirim_sinirla: new Array(12).fill(false),
+  };
+}
+
+/**
+ * Bir dönemde indirimden çıkarılabilecek en yüksek tutar.
+ *
+ * Sahte belgelerin KDV'si "yurtiçi alımlara ilişkin KDV" içinden çıkarılır;
+ * sınır odur. O satır okunmamışsa "bu döneme ait indirilecek KDV"ye düşülür.
+ */
+function indirimSiniri(yil, ay) {
+  const yurtici = Number((yil.beyan.yurtici_alim_kdv || [])[ay] || 0);
+  return yurtici > 0.005 ? yurtici
+                         : Number((yil.beyan.bu_donem_indirilecek || [])[ay] || 0);
+}
+
+/** Sınırı aşan çıkarma yapılan aylar: [{ay, sinir, cikan, asim, yurticiMi}] */
+function indirimAsimlari(yil) {
+  const liste = [];
+  if (!yil) return liste;
+  for (let ay = 0; ay < yil.ay_sayisi; ay++) {
+    const beyanIndirim = Number((yil.beyan.bu_donem_indirilecek || [])[ay] || 0);
+    const cikan = Number((yil.elestiri.indirim_cikar || [])[ay] || 0);
+    // İndirimin tamamının reddi bilinçli bir iştir; aşım sayılmaz.
+    if (beyanIndirim > 0.005 && Math.abs(cikan - beyanIndirim) <= 0.005) continue;
+    const sinir = indirimSiniri(yil, ay);
+    if (cikan - sinir > 0.005) {
+      liste.push({ ay, sinir, cikan, asim: cikan - sinir,
+                   yurticiMi: Number((yil.beyan.yurtici_alim_kdv || [])[ay] || 0) > 0.005 });
+    }
+  }
+  return liste;
+}
+
+// ------------------------------------------------------------------ yardimci
+function mesaj(metin, tur = "basari") {
+  const el = $("mesaj");
+  el.textContent = metin;
+  el.className = "mesaj " + tur;
+  el.style.display = "block";
+  clearTimeout(el._zaman);
+  el._zaman = setTimeout(() => { el.style.display = "none"; }, tur === "hata" ? 8000 : 5000);
+}
+
+/**
+ * Yakalanmamis bir hata olursa sessiz kalmasin: mevcut bildirim seridinde
+ * gosterilir. Aksi halde uygulama "aciliyor ama calismiyor" gorunur.
+ */
+window.addEventListener("error", (e) => {
+  mesaj("Beklenmedik hata: " + (e.message || "bilinmeyen"), "hata");
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const s = e.reason;
+  mesaj("Beklenmedik hata: " + ((s && s.message) || String(s)), "hata");
+});
+
+async function api(yol, govde) {
+  const secenekler = govde
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) }
+    : {};
+  const yanit = await fetch(yol, secenekler);
+  const veri = await yanit.json();
+  if (!yanit.ok || veri.hata) throw new Error(veri.hata || "İstek başarısız");
+  return veri;
+}
+
+function tl(sayi) {
+  if (sayi === null || sayi === undefined || sayi === "") return "";
+  return Number(sayi).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * Tarihi GG.AA.YYYY biçiminde gösterir. Portal dökümlerinden gelen tarih
+ * "2023-01-03" biçiminde saklanır (sıralama ve karşılaştırma bu biçime
+ * dayanır); dönüşüm yalnızca gösterimde yapılır. Çözülemeyen değer olduğu
+ * gibi kalır.
+ */
+function tarihGoster(deger) {
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(deger || "").trim());
+  if (!m) return String(deger || "");
+  return `${m[3].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[1]}`;
+}
+
+function sayiCoz(metin) {
+  if (metin === null || metin === undefined) return 0;
+  let m = String(metin).trim().replace(/\s/g, "");
+  if (!m) return 0;
+  if (m.includes(",") && m.includes(".")) {
+    m = m.lastIndexOf(",") > m.lastIndexOf(".") ? m.replace(/\./g, "").replace(",", ".") : m.replace(/,/g, "");
+  } else if (m.includes(",")) {
+    m = m.replace(",", ".");
+  } else if ((m.match(/\./g) || []).length > 1) {
+    m = m.replace(/\./g, "");
+  }
+  const d = parseFloat(m);
+  return isNaN(d) ? 0 : d;
+}
+
+function yillar() { return durum.calisma.yillar.slice().sort((a, b) => a.yil - b.yil); }
+function yilBul(yil) { return durum.calisma.yillar.find((y) => y.yil === Number(yil)) || null; }
+function aktifYilKaydi() { return yilBul(durum.aktifYil) || yillar()[0] || null; }
+
+/** Degisiklik isaretler ve yeniden hesaplar. */
+function isaretle(yenidenHesapla = true) {
+  durum.degisti = true;
+  rozetiTazele();
+  if (yenidenHesapla) hesaplaGecikmeli();
+}
+
+let hesapZaman = null;
+function hesaplaGecikmeli() {
+  clearTimeout(hesapZaman);
+  hesapZaman = setTimeout(hesapla, 150);
+}
+
+async function hesapla() {
+  if (!durum.calisma.yillar.length) {
+    durum.sonuc = null; durum.bulgular = [];
+    ekraniCiz();
+    return;
+  }
+  try {
+    const y = await api("/api/hesapla", { calisma: durum.calisma });
+    durum.sonuc = y.sonuc;
+    durum.bulgular = y.bulgular;
+  } catch (hata) { mesaj("Hesaplama hatası: " + hata.message, "hata"); }
+  ekraniCiz();
+}
+
+function rozetiTazele() {
+  const rozet = $("kayitRozeti");
+  const ad = durum.calisma.ad || (durum.calisma.mukellef.ad_unvan || "Yeni çalışma");
+  $("calismaAdi").textContent = ad;
+  if (!durum.calisma.yillar.length) {
+    rozet.textContent = "boş"; rozet.className = "kayit-rozeti";
+  } else if (durum.degisti) {
+    rozet.textContent = durum.kayitliId ? "kaydedilmemiş değişiklik" : "kaydedilmedi";
+    rozet.className = "kayit-rozeti degisti";
+  } else {
+    rozet.textContent = "kayıtlı"; rozet.className = "kayit-rozeti kayitli";
+  }
+}
+
+window.addEventListener("beforeunload", (olay) => {
+  if (durum.degisti && durum.calisma.yillar.length) {
+    olay.preventDefault();
+    olay.returnValue = "";
+  }
+});
+
+// --------------------------------------------------------------- gezinme
+document.querySelectorAll("nav button").forEach((dugme) => {
+  dugme.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach((d) => d.classList.remove("aktif"));
+    document.querySelectorAll(".sekme").forEach((s) => s.classList.remove("aktif"));
+    dugme.classList.add("aktif");
+    $("sekme-" + dugme.dataset.sekme).classList.add("aktif");
+    balonKapat();
+  });
+});
+
+// --------------------------------------------------------- yil kulakciklari
+/**
+ * Yil kulakciklarini cizer.
+ * @param kapsayici hedef elemanin id'si
+ * @param secili    secili yil ("tumu" olabilir)
+ * @param sec       yil secildiginde cagrilir
+ * @param tumuVar   "Tümü" kulakcigi gosterilsin mi
+ * @param kapatilir kulakciklarda x (yili cikar) olsun mu
+ */
+function yilKulaklariniCiz(kapsayici, secili, sec, tumuVar, kapatilir) {
+  const kap = $(kapsayici);
+  kap.innerHTML = "";
+  const liste = yillar();
+  if (tumuVar && liste.length) {
+    const k = document.createElement("div");
+    k.className = "yil-kulak tumu" + (String(secili) === "tumu" ? " aktif" : "");
+    const b = document.createElement("button");
+    b.className = "ad"; b.textContent = "Tümü";
+    b.title = "Bütün yılları tek tabloda göster";
+    b.addEventListener("click", () => sec("tumu"));
+    k.appendChild(b);
+    kap.appendChild(k);
+  }
+  liste.forEach((y) => {
+    const doluAy = doluAySayisi(y);
+    const k = document.createElement("div");
+    k.className = "yil-kulak" + (String(secili) === String(y.yil) ? " aktif" : "")
+      + (doluAy === 0 ? " bos" : "");
+    const b = document.createElement("button");
+    b.className = "ad";
+    b.textContent = y.yil + (doluAy === 0 ? " (boş)" : "");
+    b.title = doluAy === 0 ? "Bu yıla henüz veri yapıştırılmadı"
+      : `${doluAy} ayda veri var`;
+    b.addEventListener("click", () => sec(y.yil));
+    k.appendChild(b);
+    if (kapatilir) {
+      const x = document.createElement("button");
+      x.className = "kapat";
+      x.textContent = "×";
+      x.title = `${y.yil} yılını çalışmadan çıkar`;
+      x.addEventListener("click", (olay) => { olay.stopPropagation(); yiliKapat(y.yil); });
+      k.appendChild(x);
+    }
+    kap.appendChild(k);
+  });
+  if (!liste.length) {
+    const bos = document.createElement("span");
+    bos.className = "yardim";
+    bos.style.padding = "6px 2px";
+    bos.textContent = "Henüz yıl yok — yukarıdaki kutuya sistem sorgusunu yapıştırın.";
+    kap.appendChild(bos);
+  }
+}
+
+function doluAySayisi(yilKaydi) {
+  let n = 0;
+  for (let ay = 0; ay < 12; ay++) {
+    const dolu = Object.keys(yilKaydi.beyan).some((k) => Math.abs(yilKaydi.beyan[k][ay] || 0) > 0);
+    if (dolu) n++;
+  }
+  return n;
+}
+
+function yiliKapat(yil) {
+  const kayit = yilBul(yil);
+  const doluAy = kayit ? doluAySayisi(kayit) : 0;
+  const soru = doluAy === 0
+    ? `${yil} yılı (boş) çalışmadan çıkarılsın mı?`
+    : `${yil} yılı ve ${doluAy} aylık verisi çalışmadan çıkarılsın mı?`;
+  if (!confirm(soru)) return;
+  durum.calisma.yillar = durum.calisma.yillar.filter((y) => y.yil !== Number(yil));
+  if (durum.aktifYil === Number(yil)) durum.aktifYil = yillar().length ? yillar()[0].yil : null;
+  if (String(durum.sonucYil) === String(yil)) durum.sonucYil = "tumu";
+  if (String(durum.tarhiyatYil) === String(yil)) durum.tarhiyatYil = "tumu";
+  isaretle();
+  mesaj(`${yil} yılı çıkarıldı. Kalıcı olması için Kaydet deyin.`, "uyari");
+}
+
+// ------------------------------------------------------------ yil listesi
+function yilSecimListesiniCiz() {
+  const sec = $("beyanYilSec");
+  const buYil = durum.tanimlar.bu_yil;
+  const onceki = sec.value;
+  const adaylar = [];
+  for (let y = buYil + 1; y >= buYil - 12; y--) adaylar.push(y);
+  yillar().forEach((y) => { if (!adaylar.includes(y.yil)) adaylar.push(y.yil); });
+  adaylar.sort((a, b) => b - a);
+  const mevcut = yillar().map((y) => y.yil);
+  sec.innerHTML = "";
+  adaylar.forEach((y) => {
+    const o = document.createElement("option");
+    o.value = y;
+    o.textContent = mevcut.includes(y) ? `${y} (çalışmada var)` : String(y);
+    sec.appendChild(o);
+  });
+  sec.value = onceki || (durum.aktifYil || buYil - 1);
+}
+
+// -------------------------------------------------------------- yapistirma
+$("beyanYapistir").addEventListener("click", () => yapistirmayiIsle());
+
+/** Yapıştırılan metni ayrıştırıp uygular. esleme: elle eşleştirilen sütunlar. */
+async function yapistirmayiIsle(esleme) {
+  const metin = $("beyanMetin").value;
+  if (!metin.trim()) { mesaj("Yapıştırılacak metin boş.", "hata"); return; }
+  try {
+    const y = await api("/api/ayristir", { metin, esleme });
+    if (y.tur === "ozet") { ozetiUygula(y, metin); return; }
+    const kunye = y.kunye || {};
+    const hedefYil = kunye.yil || parseInt($("beyanYilSec").value, 10) || durum.tanimlar.bu_yil - 1;
+    const uyarilar = (y.uyarilar || []).slice();
+    const bilgiler = [];
+
+    // Mukellef bilgisi
+    const m = durum.calisma.mukellef;
+    const gelenVkn = kunye.vkn || kunye.tckn || "";
+    if (gelenVkn && m.vkn_tckn && gelenVkn !== m.vkn_tckn) {
+      uyarilar.push(`Yapıştırılan veri ${gelenVkn} numaralı mükellefe ait; çalışmadaki ` +
+        `mükellef ise ${m.vkn_tckn} (${m.ad_unvan}). Mükellef bilgisi değiştirilmedi.`);
+    } else {
+      if (kunye.unvan) m.ad_unvan = kunye.unvan;
+      if (gelenVkn) m.vkn_tckn = gelenVkn;
+      if (kunye.vergi_dairesi) m.vergi_dairesi = kunye.vergi_dairesi;
+      if (kunye.unvan || gelenVkn) bilgiler.push("Mükellef bilgisi sorgudan alındı.");
+    }
+
+    // Yil: varsa birlestir, yoksa olustur
+    let kayit = yilBul(hedefYil);
+    const doluAylar = (y.dolu_aylar && y.dolu_aylar.length)
+      ? y.dolu_aylar : Array.from({ length: 12 }, (_, i) => i + 1);
+    if (!kayit) {
+      kayit = { yil: hedefYil, ay_sayisi: 12, devir_baslangic: null,
+                beyan: bosBeyan(), elestiri: bosElestiri(hedefYil), kaynaklar: [] };
+      durum.calisma.yillar.push(kayit);
+      bilgiler.push(kunye.yil ? `Dönem yılı sorgudan alındı: ${hedefYil}.`
+                              : `${hedefYil} yılı oluşturuldu.`);
+      Object.keys(y.degerler).forEach((kod) => {
+        if (kayit.beyan[kod]) kayit.beyan[kod] = y.degerler[kod].slice(0, 12);
+      });
+      if ($("ayOtomatik").checked) kayit.ay_sayisi = y.ay_sayisi;
+    } else {
+      // Birlestir: yalnizca yeni sorgunun dolu aylari guncellenir
+      const cakisan = (kayit.kaynaklar || [])
+        .flatMap((k) => k.aylar || [])
+        .filter((ay) => doluAylar.includes(ay));
+      Object.keys(y.degerler).forEach((kod) => {
+        if (!kayit.beyan[kod]) return;
+        doluAylar.forEach((ay) => { kayit.beyan[kod][ay - 1] = y.degerler[kod][ay - 1]; });
+      });
+      if ($("ayOtomatik").checked) {
+        kayit.ay_sayisi = Math.max(kayit.ay_sayisi, y.ay_sayisi, Math.max(...doluAylar));
+      }
+      const adlar = doluAylar.map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+      bilgiler.push(`${hedefYil} yılına birleştirildi — güncellenen aylar: ${adlar}.`);
+      if (cakisan.length) {
+        const c = cakisan.map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+        uyarilar.push(`Şu aylar daha önce başka bir sorgudan gelmişti ve üzerine yazıldı: ${c}.`);
+      }
+    }
+
+    kayit.kaynaklar = kayit.kaynaklar || [];
+    kayit.kaynaklar.push({
+      vergi_dairesi: kunye.vergi_dairesi || "",
+      rapor_tarihi: kunye.rapor_tarihi || "",
+      aylar: doluAylar,
+    });
+
+    durum.aktifYil = hedefYil;
+    $("beyanYilSec").value = hedefYil;
+    $("beyanMetin").value = "";
+    kunyeKartiniCiz(kunye);
+    isaretle();
+    if (uyarilar.length) mesaj(`${hedefYil} aktarıldı.\n` + uyarilar.join("\n"), "uyari");
+    else mesaj(`${hedefYil} beyan verisi aktarıldı.` +
+               (bilgiler.length ? "\n" + bilgiler.join("\n") : ""));
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+/**
+ * Özet tabloyu beyan satırlarına yazar.
+ *
+ * Sonuç ve Fark tablosu rapora yapıştırılıyor; dava sonucunda mahkeme
+ * tutarları değiştirebiliyor. Değişmiş tablo buraya yapıştırıldığında yalnızca
+ * tablonun taşıdığı kalemler güncellenir; ihraç kayıtlı teslimler, istisna ve
+ * tevkifat gibi satırlar olduğu gibi kalır.
+ */
+function ozetiUygula(y, metin) {
+  // Tanınmayan sütun varsa önce eşleştirme sorulur
+  if (y.tanimsiz && y.tanimsiz.length) {
+    eslemeSor(y, metin);
+    return;
+  }
+  const uyarilar = (y.uyarilar || []).slice();
+  const yeniYillar = [];
+  let yazilan = 0;
+  const etkilenen = new Set();
+
+  y.satirlar.forEach((s) => {
+    const hedefYil = s.yil || parseInt($("beyanYilSec").value, 10) || durum.tanimlar.bu_yil - 1;
+    let kayit = yilBul(hedefYil);
+    if (!kayit) {
+      kayit = { yil: hedefYil, ay_sayisi: 12, devir_baslangic: null,
+                beyan: bosBeyan(), elestiri: bosElestiri(hedefYil), kaynaklar: [] };
+      durum.calisma.yillar.push(kayit);
+      yeniYillar.push(hedefYil);
+    }
+    Object.keys(s.degerler).forEach((kod) => {
+      if (!kayit.beyan[kod]) return;
+      kayit.beyan[kod][s.ay - 1] = s.degerler[kod];
+      yazilan++;
+    });
+    etkilenen.add(hedefYil);
+  });
+
+  // Yeni oluşan yıllarda ay sayısını tablonun kapsamına çek
+  yeniYillar.forEach((yil) => {
+    const kayit = yilBul(yil);
+    const aylar = y.satirlar.filter((s) => (s.yil || yil) === yil).map((s) => s.ay);
+    if (kayit && aylar.length) kayit.ay_sayisi = Math.max(...aylar);
+  });
+
+  const hedefler = [...etkilenen].sort();
+  durum.aktifYil = hedefler[0];
+  $("beyanMetin").value = "";
+  $("kunyeKarti").style.display = "none";
+  $("eslemeModal").classList.remove("acik");
+
+  // Tespiti olan yıla özet yazmak çift sayıma yol açabilir; sessiz kalmayalım
+  const tespitli = hedefler.filter((yil) => {
+    const k = yilBul(yil);
+    // Yalnizca tutar tasiyan alanlar sayilir; oran, otomatik isareti ve
+    // 0,00 kabul isareti tespit degildir.
+    return k && Object.keys(k.elestiri).some((alan) =>
+      Array.isArray(k.elestiri[alan]) && alan.indexOf("kdv_orani") < 0
+      && alan.indexOf("otomatik") < 0 && alan.indexOf("sifirla") < 0
+      && k.elestiri[alan].some((v) => typeof v === "number" && Math.abs(v) > 0.005));
+  });
+  if (tespitli.length) {
+    uyarilar.push(`${tespitli.join(", ")} yılında girilmiş inceleme tespitleri duruyor. ` +
+      "Yapıştırdığınız tablo bu tespitleri zaten içeriyorsa, tespitler ikinci kez " +
+      "uygulanacağı için Verileri Temizle ile sıfırlamanız gerekir.");
+  }
+
+  const turetilen = y.satirlar[0] && y.satirlar[0].turetilen ? y.satirlar[0].turetilen : [];
+  const bilgi = `${hedefler.join(", ")} — ${y.satirlar.length} dönem, ${yazilan} değer aktarıldı.` +
+    (turetilen.length ? "\nİlave edilecek KDV ve 103+104+105 toplamı tablodan türetildi." : "");
+  isaretle();
+  if (uyarilar.length) mesaj(bilgi + "\n" + uyarilar.join("\n"), "uyari");
+  else mesaj(bilgi);
+}
+
+/** Tanınmayan sütunlar için eşleştirme penceresini açar. */
+function eslemeSor(y, metin) {
+  const tablo = $("eslemeTablo");
+  tablo.innerHTML = "<tr><th>Tablodaki sütun</th><th>Örnek değer</th>" +
+    "<th>Yazılacağı beyan kalemi</th></tr>";
+  const ilk = y.satirlar[0] || { ham_degerler: {} };
+  y.tanimsiz.forEach((t) => {
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", t.baslik));
+    const ornek = (ilk.ham_degerler || {})[t.sira];
+    const tdOrnek = hucre("td", ornek != null ? tl(ornek) : "0,00");
+    tdOrnek.className = "sayi";
+    tr.appendChild(tdOrnek);
+    const td = document.createElement("td");
+    const sec = document.createElement("select");
+    sec.dataset.sira = t.sira;
+    sec.innerHTML = '<option value="">(atla)</option>' +
+      durum.tanimlar.ozet_hedefleri.map((o) => `<option value="${o.kod}">${o.etiket}</option>`).join("");
+    td.appendChild(sec);
+    tr.appendChild(td);
+    tablo.appendChild(tr);
+  });
+  $("eslemeModal")._metin = metin;
+  $("eslemeModal").classList.add("acik");
+}
+
+$("eslemeUygula").addEventListener("click", () => {
+  const esleme = {};
+  $("eslemeTablo").querySelectorAll("select").forEach((s) => {
+    if (s.value) esleme[s.dataset.sira] = s.value;
+  });
+  if (!Object.keys(esleme).length) {
+    mesaj("Hiçbir sütun eşleştirilmedi; atlamak için 'Tanınmayanları Atla' deyin.", "hata");
+    return;
+  }
+  yapistirmayiIsle(esleme);
+});
+
+$("eslemeAtla").addEventListener("click", () => {
+  // Tanınmayanları boş eşleştirmeyle geçir: sunucu onları atlar
+  const esleme = {};
+  $("eslemeTablo").querySelectorAll("select").forEach((s) => { esleme[s.dataset.sira] = null; });
+  $("eslemeModal").classList.remove("acik");
+  yapistirmayiIsleAtlayarak();
+});
+
+/** Tanınmayan sütunları yok sayarak uygular. */
+async function yapistirmayiIsleAtlayarak() {
+  const metin = $("eslemeModal")._metin || $("beyanMetin").value;
+  try {
+    const y = await api("/api/ayristir", { metin });
+    y.tanimsiz = [];
+    ozetiUygula(y, metin);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("eslemeKapat").addEventListener("click", () => $("eslemeModal").classList.remove("acik"));
+
+function kunyeKartiniCiz(kunye) {
+  const kap = $("kunyeKarti");
+  if (!kunye || !Object.keys(kunye).length) { kap.style.display = "none"; return; }
+  const alanlar = [
+    ["Ünvan", kunye.unvan], ["Vergi No", kunye.vkn], ["T.C. Kimlik No", kunye.tckn],
+    ["Vergi Dairesi", kunye.vergi_dairesi], ["Yıl", kunye.yil],
+    ["Rapor Tarihi", kunye.rapor_tarihi],
+  ].filter(([, v]) => v);
+  kap.innerHTML =
+    '<div style="border-left:4px solid #2c7a3f;background:#f2f9f4;padding:10px 14px;' +
+    'border-radius:0 4px 4px 0;font-size:13px;">' +
+    '<strong style="color:#2c7a3f;">Sorgudan okunan bilgiler</strong>' +
+    '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px 24px;">' +
+    alanlar.map(([e, v]) =>
+      `<span><span style="color:#5a6b7d;">${e}:</span> <strong>${v}</strong></span>`).join("") +
+    "</div></div>";
+  kap.style.display = "block";
+}
+
+// ------------------------------------------------------------ beyan izgara
+function beyanIzgarasiniCiz() {
+  const tablo = $("beyanIzgara");
+  const yil = aktifYilKaydi();
+  tablo.innerHTML = "";
+  const kaynakKap = $("yilKaynaklari");
+  if (!yil) {
+    kaynakKap.innerHTML = "";
+    tablo.innerHTML = '<tr><td class="bos-durum">Yukarıdaki kutuya sistem sorgusunu ' +
+      'yapıştırın; yıl kendiliğinden oluşturulur.</td></tr>';
+    $("ayS").value = ""; $("yilDegistir").value = "";
+    return;
+  }
+  $("ayS").value = yil.ay_sayisi;
+  $("yilDegistir").value = yil.yil;
+
+  // Bu yila hangi sorgulardan veri geldigi
+  const kaynaklar = yil.kaynaklar || [];
+  kaynakKap.innerHTML = kaynaklar.length
+    ? '<div style="margin-bottom:10px;">' + kaynaklar.map((k) => {
+        const ay = (k.aylar || []).map((a) => durum.tanimlar.aylar[a - 1]).join(", ");
+        const vd = k.vergi_dairesi || "vergi dairesi belirtilmemiş";
+        return `<span class="kaynak-etiket" title="${ay}">${vd}` +
+               (k.rapor_tarihi ? ` · ${k.rapor_tarihi}` : "") +
+               ` · ${(k.aylar || []).length} ay</span>`;
+      }).join("") + "</div>"
+    : "";
+
+  const baslik = document.createElement("tr");
+  baslik.innerHTML = '<th class="etiket">DÖNEMİ</th><th></th>' +
+    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("") +
+    '<th class="sag satir-toplam" title="Satırın yıllık toplamı">TOPLAM</th>';
+  tablo.appendChild(baslik);
+
+  durum.tanimlar.satirlar.forEach((s) => {
+    const tr = document.createElement("tr");
+    if (s.baslik) {
+      tr.className = "grup";
+      tr.innerHTML = `<td class="etiket">${s.etiket}</td><td colspan="13"></td>` +
+        '<td class="satir-toplam"></td>';
+      tablo.appendChild(tr);
+      return;
+    }
+    const tdEtiket = document.createElement("td");
+    tdEtiket.className = "etiket";
+    tdEtiket.textContent = s.etiket;
+    tdEtiket.title = s.etiket;
+
+    const tdYapistir = document.createElement("td");
+    tdYapistir.className = "satir-yapistir";
+    const dugme = document.createElement("button");
+    dugme.className = "mini"; dugme.textContent = "⇥";
+    dugme.title = "Bu satırın 12 aylık değerini tek seferde yapıştır";
+    dugme.addEventListener("click", () => satirYapistir(yil, s));
+    tdYapistir.appendChild(dugme);
+
+    tr.append(tdEtiket, tdYapistir);
+    // Satirin yillik toplami: matrah toplaminin teslim ve hizmet bedeliyle
+    // karsilastirilabilmesi icin her satirin sonunda gosterilir
+    const tdToplam = document.createElement("td");
+    tdToplam.className = "sag satir-toplam";
+    const toplamiTazele = () => {
+      const dizi = yil.beyan[s.kod] || [];
+      const t = dizi.slice(0, 12).reduce((a, b) => a + (Number(b) || 0), 0);
+      tdToplam.textContent = tl(t);
+      tdToplam.title = satirToplamAciklamasi(s, dizi, yil);
+    };
+
+    const degerler = yil.beyan[s.kod] || new Array(12).fill(0);
+    for (let ay = 0; ay < 12; ay++) {
+      const td = document.createElement("td");
+      const giris = document.createElement("input");
+      giris.type = "text";
+      giris.value = tl(degerler[ay] || 0);
+      if (!degerler[ay]) giris.style.color = "#9aa7b4";
+      if (ay >= yil.ay_sayisi) giris.style.opacity = "0.45";
+      giris.addEventListener("focus", () => giris.select());
+      giris.addEventListener("change", () => {
+        const sayi = sayiCoz(giris.value);
+        yil.beyan[s.kod][ay] = sayi;
+        giris.value = tl(sayi);
+        giris.style.color = sayi ? "" : "#9aa7b4";
+        toplamiTazele();
+        isaretle();
+      });
+      giris.addEventListener("keydown", (e) => { if (e.key === "Enter") giris.blur(); });
+      td.appendChild(giris);
+      tr.appendChild(td);
+    }
+    toplamiTazele();
+    tr.appendChild(tdToplam);
+    tablo.appendChild(tr);
+  });
+}
+
+// Devir ve kumulatif satirlarda duz toplam stok kalemini tekrar tekrar sayar;
+// toplam yine de gosterilir, ne anlama geldigi baloncukta belirtilir.
+function satirToplamAciklamasi(satir, dizi, yil) {
+  const ay = Math.max(1, Math.min(yil.ay_sayisi || 12, 12));
+  const acilis = Number(dizi[0]) || 0;
+  const kapanis = Number(dizi[ay - 1]) || 0;
+  if (satir.toplam_turu === "acilis") {
+    return `${satir.etiket}\nSütunun düz toplamı. Bu bir stok kalemidir; ` +
+      `açılış (Ocak) değeri: ${tl(acilis)} TL`;
+  }
+  if (satir.toplam_turu === "kapanis") {
+    return `${satir.etiket}\nSütunun düz toplamı. Bu bir stok/kümülatif kalemdir; ` +
+      `kapanış (${durum.tanimlar.aylar[ay - 1]}) değeri: ${tl(kapanis)} TL`;
+  }
+  if (satir.toplam_turu === "duzeltilmis") {
+    return `${satir.etiket}\nSütunun düz toplamı. İndirimler toplamı her ay ` +
+      `önceki dönemden devreden KDV'yi de içerdiğinden taşınan devir bu ` +
+      `toplamda tekrar tekrar sayılır.`;
+  }
+  return `${satir.etiket}\n${ay} aylık toplam`;
+}
+
+async function satirYapistir(yil, satir) {
+  const metin = prompt(`"${satir.etiket}" satırının 12 aylık değerini yapıştırın:\n` +
+    "(sekme, boşluk veya alt alta ayrılmış olabilir)");
+  if (metin === null || !metin.trim()) return;
+  try {
+    const y = await api("/api/satir_ayristir", { metin });
+    yil.beyan[satir.kod] = y.degerler.slice(0, 12);
+    isaretle();
+    mesaj("Satır güncellendi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("ayS").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
+  yil.ay_sayisi = Math.max(1, Math.min(parseInt($("ayS").value, 10) || 12, 12));
+  isaretle();
+});
+
+$("yilDegistir").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
+  const yeni = parseInt($("yilDegistir").value, 10);
+  if (!yeni || yeni < 2000 || yeni > 2100) { $("yilDegistir").value = yil.yil; return; }
+  if (yeni !== yil.yil && yilBul(yeni)) {
+    mesaj(`${yeni} yılı çalışmada zaten var.`, "hata");
+    $("yilDegistir").value = yil.yil;
+    return;
+  }
+  const eski = yil.yil;
+  yil.yil = yeni;
+  // Oran elle degistirilmemisse yeni yilin varsayilanina cek
+  const eskiVarsayilan = Array.from({ length: 12 }, (_, i) => varsayilanOran(eski, i + 1));
+  if (JSON.stringify(yil.elestiri.kdv_orani) === JSON.stringify(eskiVarsayilan)) {
+    yil.elestiri.kdv_orani = Array.from({ length: 12 }, (_, i) => varsayilanOran(yeni, i + 1));
+  }
+  durum.aktifYil = yeni;
+  isaretle();
+  mesaj(`Yıl ${yeni} olarak değiştirildi; KDV oranları da buna göre ayarlandı.`);
+});
+
+// -------------------------------------------------------- veri temizleme
+$("veriTemizle").addEventListener("click", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) { mesaj("Temizlenecek veri yok.", "hata"); return; }
+  const secenekler = [
+    { kapsam: "yil", baslik: `${yil.yil} beyan verisi`,
+      aciklama: "Yalnızca bu yılın beyan satırları sıfırlanır; tespitleriniz korunur." },
+    { kapsam: "yil_tespit", baslik: `${yil.yil} beyan verisi + tespitleri`,
+      aciklama: "Bu yılın beyan satırları ve inceleme tespitleri sıfırlanır." },
+  ];
+  if (durum.calisma.yillar.length > 1) {
+    secenekler.push({ kapsam: "tumu", baslik: `Tüm yıllar (${durum.calisma.yillar.length} yıl)`,
+      aciklama: "Bütün yılların beyan verisi ve tespitleri sıfırlanır; yıllar boş kalır." });
+  }
+  const kap = $("temizleSecenekler");
+  kap.innerHTML = "";
+  secenekler.forEach((s) => {
+    const kutu = document.createElement("div");
+    kutu.style.cssText = "border:1px solid #dde3ea;border-radius:6px;padding:12px;" +
+                         "margin-bottom:10px;display:flex;gap:12px;align-items:center;";
+    const metin = document.createElement("div");
+    metin.style.flex = "1";
+    const b = document.createElement("div");
+    b.textContent = s.baslik;
+    b.style.cssText = "font-weight:600;font-size:14px;margin-bottom:3px;";
+    const a = document.createElement("div");
+    a.className = "yardim"; a.style.margin = "0"; a.textContent = s.aciklama;
+    metin.append(b, a);
+    const dugme = document.createElement("button");
+    dugme.className = "btn tehlike"; dugme.textContent = "Temizle";
+    dugme.addEventListener("click", () => veriTemizle(s.kapsam, s.baslik));
+    kutu.append(metin, dugme);
+    kap.appendChild(kutu);
+  });
+  $("temizleModal").classList.add("acik");
+});
+
+$("temizleKapat").addEventListener("click", () => $("temizleModal").classList.remove("acik"));
+
+function veriTemizle(kapsam, baslik) {
+  if (!confirm(`"${baslik}" temizlenecek. Onaylıyor musunuz?`)) return;
+  const hedefler = kapsam === "tumu" ? durum.calisma.yillar : [aktifYilKaydi()];
+  hedefler.forEach((y) => {
+    if (!y) return;
+    y.beyan = bosBeyan();
+    y.kaynaklar = [];
+    if (kapsam !== "yil") y.elestiri = bosElestiri(y.yil);
+  });
+  $("temizleModal").classList.remove("acik");
+  isaretle();
+  mesaj(`${baslik} temizlendi.`);
+}
+
+// --------------------------------------------------------- elestiri izgara
+function elestiriIzgarasiniCiz() {
+  const tablo = $("elestiriIzgara");
+  const yil = aktifYilKaydi();
+  tablo.innerHTML = "";
+  if (!yil) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Önce Beyan Verisi sekmesinden ' +
+      'sorguyu yapıştırın.</td></tr>';
+    return;
+  }
+  // Eski kayitlarda bulunmayan alan: cizim sirasinda tamamlanir, boylece
+  // normalleştirmeden gecmeden atanan calismalar da acilir.
+  if (!Array.isArray(yil.elestiri.indirim_sinirla)) {
+    // "indirim_sifirla" bu alanin onceki adiydi; eski kayitlar tasinir.
+    yil.elestiri.indirim_sinirla = Array.isArray(yil.elestiri.indirim_sifirla)
+      ? yil.elestiri.indirim_sifirla.slice(0, 12)
+      : new Array(12).fill(false);
+  }
+  const baslik = document.createElement("tr");
+  baslik.innerHTML = '<th class="etiket">TESPİT</th>' +
+    durum.tanimlar.aylar.map((a) => `<th class="sag">${a}</th>`).join("") +
+    '<th class="sag satir-toplam" title="Tespitin yıllık toplamı">TOPLAM</th>';
+  tablo.appendChild(baslik);
+
+  durum.tanimlar.elestiri_alanlari.forEach((alan) => {
+    const tr = document.createElement("tr");
+    tr.className = "elestiri";
+    const td = document.createElement("td");
+    td.className = "etiket"; td.textContent = alan.etiket;
+    tr.appendChild(td);
+    for (let ay = 0; ay < 12; ay++) {
+      const hucre = document.createElement("td");
+      const giris = document.createElement("input");
+      giris.type = "text";
+      giris.dataset.alan = alan.kod; giris.dataset.ay = ay;
+      const d = yil.elestiri[alan.kod][ay];
+      giris.value = d ? tl(d) : "";
+      if (ay >= yil.ay_sayisi) giris.style.opacity = "0.45";
+      giris.addEventListener("focus", () => giris.select());
+      giris.addEventListener("change", () => {
+        yil.elestiri[alan.kod][ay] = sayiCoz(giris.value);
+        giris.value = yil.elestiri[alan.kod][ay] ? tl(yil.elestiri[alan.kod][ay]) : "";
+        otomatikKdvGuncelle(yil);
+        isaretle();
+        if (alan.kod === "indirim_cikar") asimUyarisiniCiz();
+      });
+      if (alan.kod === "matrah_ilave") {
+        giris.addEventListener("input", () => otomatikKdvGuncelle(yil, true));
+      }
+      hucre.appendChild(giris);
+      tr.appendChild(hucre);
+    }
+    const tdToplam = document.createElement("td");
+    tdToplam.className = "sag satir-toplam";
+    tdToplam.dataset.toplam = alan.kod;
+    tr.appendChild(tdToplam);
+    tablo.appendChild(tr);
+  });
+
+  const trOran = document.createElement("tr");
+  trOran.className = "elestiri";
+  trOran.innerHTML = '<td class="etiket">Uygulanan KDV Oranı (%)</td>';
+  for (let ay = 0; ay < 12; ay++) {
+    const td = document.createElement("td");
+    const giris = document.createElement("input");
+    giris.type = "text";
+    giris.dataset.alan = "kdv_orani"; giris.dataset.ay = ay;
+    const o = yil.elestiri.kdv_orani[ay];
+    giris.value = o != null ? String(o).replace(".", ",") : "";
+    giris.addEventListener("change", () => {
+      const v = giris.value.trim();
+      yil.elestiri.kdv_orani[ay] = v === "" ? null : sayiCoz(v);
+      otomatikKdvGuncelle(yil);
+      isaretle();
+    });
+    td.appendChild(giris);
+    trOran.appendChild(td);
+  }
+  trOran.appendChild(document.createElement("td")).className = "satir-toplam";
+  tablo.appendChild(trOran);
+
+  const trOto = document.createElement("tr");
+  trOto.className = "elestiri";
+  trOto.innerHTML = '<td class="etiket">Hesaplanan KDV ilavesi otomatik</td>';
+  for (let ay = 0; ay < 12; ay++) {
+    const td = document.createElement("td");
+    td.style.textAlign = "center";
+    const kutu = document.createElement("input");
+    kutu.type = "checkbox";
+    kutu.checked = yil.elestiri.hesaplanan_otomatik[ay] !== false;
+    kutu.dataset.alan = "hesaplanan_otomatik"; kutu.dataset.ay = ay;
+    kutu.style.width = "16px"; kutu.style.height = "16px";
+    kutu.addEventListener("change", () => {
+      yil.elestiri.hesaplanan_otomatik[ay] = kutu.checked;
+      otomatikKdvGuncelle(yil);
+      isaretle();
+    });
+    td.appendChild(kutu);
+    trOto.appendChild(td);
+  }
+  trOto.appendChild(document.createElement("td")).className = "satir-toplam";
+  tablo.appendChild(trOto);
+
+  // Cikarmayi yurtici alimlar tutariyla sinirlayan isaret. Yalnizca asim
+  // varken anlamli oldugundan diger aylarda kutu soluk gosterilir.
+  const asimAylari = new Set(indirimAsimlari(yil).map((a) => a.ay));
+  const trSifir = document.createElement("tr");
+  trSifir.className = "elestiri";
+  trSifir.innerHTML = '<td class="etiket" title="Sahte belgelerin KDV\'si ' +
+    'yurtiçi alımlara ilişkin KDV içinden çıkarılır; işaretli dönemde çıkarma ' +
+    'en fazla o tutar kadar uygulanır.">ÇIKARMAYI YURTİÇİ ALIMLARLA SINIRLA</td>';
+  for (let ay = 0; ay < 12; ay++) {
+    const td = document.createElement("td");
+    td.style.textAlign = "center";
+    const kutu = document.createElement("input");
+    kutu.type = "checkbox";
+    kutu.checked = yil.elestiri.indirim_sinirla[ay] === true;
+    kutu.dataset.alan = "indirim_sinirla"; kutu.dataset.ay = ay;
+    kutu.style.width = "16px"; kutu.style.height = "16px";
+    if (!asimAylari.has(ay)) kutu.style.opacity = "0.35";
+    kutu.addEventListener("change", () => {
+      yil.elestiri.indirim_sinirla[ay] = kutu.checked;
+      isaretle();
+      asimUyarisiniCiz();
+    });
+    td.appendChild(kutu);
+    trSifir.appendChild(td);
+  }
+  trSifir.appendChild(document.createElement("td")).className = "satir-toplam";
+  tablo.appendChild(trSifir);
+
+  otomatikKdvGuncelle(yil, true);
+  asimUyarisiniCiz();
+}
+
+/** Indirim asimi uyarisi ve "0,00 olarak belirle" secenegi. */
+function asimUyarisiniCiz() {
+  const kap = $("asimUyari");
+  if (!kap) return;
+  const yil = aktifYilKaydi();
+  const asimlar = yil ? indirimAsimlari(yil) : [];
+  if (!asimlar.length) { kap.innerHTML = ""; return; }
+  const isaretler = yil.elestiri.indirim_sinirla || [];
+  const aylar = durum.tanimlar.aylar;
+  const acik = asimlar.filter((a) => isaretler[a.ay] !== true);
+  const satirlar = asimlar.map((a) => {
+    const durumu = isaretler[a.ay] === true
+      ? " <em>(bu tutarla sınırlandı)</em>" : "";
+    const ad = a.yurticiMi ? "yurtiçi alımlara ilişkin KDV"
+                           : "beyan edilen bu döneme ait indirilecek KDV";
+    return `<div>${yil.yil}/${aylar[a.ay]} — çıkarılan ${tl(a.cikan)} TL, ` +
+      `${ad} ${tl(a.sinir)} TL, <strong>${tl(a.asim)} TL fazla</strong>${durumu}</div>`;
+  }).join("");
+  kap.innerHTML =
+    '<div class="uyari-satir"><strong>İndirimden çıkarılabilecek tutar aşılıyor.</strong> ' +
+    'Sahte belgelerin KDV\'si yurtiçi alımlara ilişkin KDV içinden çıkarılır; ' +
+    'en fazla o tutar kadar çıkarılabilir. Aşan dönemler:' + satirlar +
+    '<div style="margin-top:6px;">Faturalar başka bir dönemde indirim konusu yapılmış ' +
+    'ya da beyan rakamı eksik girilmiş olabilir. Tarhiyatı kurmadan önce ' +
+    'değerlendirin.</div>' +
+    (acik.length < asimlar.length
+      ? '<div style="margin-top:6px;">Sınırlanan dönemlerde aşan tutar indirimden ' +
+        'çıkarılmış sayılmaz; o kısım tarhiyata girmez.</div>'
+      : "") +
+    (acik.length
+      ? '<div style="margin-top:8px;"><button class="btn ikincil" id="asimSifirla">' +
+        'Aşan dönemleri en fazla bu tutarla sınırla</button></div>'
+      : "") +
+    "</div>";
+  const dugme = $("asimSifirla");
+  if (dugme) {
+    dugme.addEventListener("click", () => {
+      acik.forEach((a) => { isaretler[a.ay] = true; });
+      isaretle();
+      elestiriIzgarasiniCiz();
+      mesaj(`${acik.length} dönemde çıkarma, indirilebilecek tutarla sınırlandı. ` +
+            "Kalıcı olması için Kaydet deyin.", "uyari");
+    });
+  }
+}
+
+/** Otomatik isaretli donemlerde hesaplanan KDV ilavesini matrah x orandan turetir. */
+function otomatikKdvGuncelle(yil, yalnizGorunum) {
+  const tablo = $("elestiriIzgara");
+  for (let ay = 0; ay < 12; ay++) {
+    const hedef = tablo.querySelector(`input[data-alan="hesaplanan_kdv_ilave"][data-ay="${ay}"]`);
+    if (!hedef) continue;
+    if (yil.elestiri.hesaplanan_otomatik[ay] !== false) {
+      const matrahGiris = tablo.querySelector(`input[data-alan="matrah_ilave"][data-ay="${ay}"]`);
+      const matrah = yalnizGorunum && matrahGiris ? sayiCoz(matrahGiris.value)
+                                                  : yil.elestiri.matrah_ilave[ay];
+      const oran = yil.elestiri.kdv_orani[ay] != null ? yil.elestiri.kdv_orani[ay]
+                                                      : varsayilanOran(yil.yil, ay + 1);
+      const tutar = Math.round(matrah * oran) / 100;
+      yil.elestiri.hesaplanan_kdv_ilave[ay] = tutar;
+      hedef.value = tutar ? tl(tutar) : "";
+      hedef.readOnly = true;
+      hedef.style.background = "#f0f2f5"; hedef.style.color = "#5a6b7d";
+    } else {
+      hedef.readOnly = false;
+      hedef.style.background = ""; hedef.style.color = "";
+    }
+  }
+  elestiriToplamlariniTazele(yil);
+}
+
+/** Tespit izgarasindaki satir sonu toplamlarini modelden tazeler. */
+function elestiriToplamlariniTazele(yil) {
+  $("elestiriIzgara").querySelectorAll("td[data-toplam]").forEach((td) => {
+    const dizi = yil.elestiri[td.dataset.toplam] || [];
+    const t = dizi.slice(0, 12).reduce((a, b) => a + (Number(b) || 0), 0);
+    td.textContent = tl(t);
+  });
+}
+
+$("devredenBaslangic").addEventListener("change", () => {
+  const yil = aktifYilKaydi();
+  if (!yil) return;
+  const v = $("devredenBaslangic").value.trim();
+  yil.devir_baslangic = v === "" ? null : sayiCoz(v);
+  $("devredenBaslangic").value = v === "" ? "" : tl(yil.devir_baslangic);
+  isaretle();
+});
+
+$("devirSifirla").addEventListener("click", () => {
+  const yil = aktifYilKaydi();
+  if (!yil || yil.devir_baslangic == null) return;
+  yil.devir_baslangic = null;
+  $("devredenBaslangic").value = "";
+  isaretle();
+  mesaj(`${yil.yil} açılış devri zincire bırakıldı.`);
+});
+
+/** Secili yilin baslangic devri kutusunu ve aciklamasini tazeler. */
+function devirKutusunuCiz() {
+  const yil = aktifYilKaydi();
+  const giris = $("devredenBaslangic");
+  const aciklama = $("devirAciklama");
+  const sifirla = $("devirSifirla");
+  if (!yil) {
+    $("devirBaslik").textContent = "Başlangıç Devri";
+    $("devirEtiket").textContent = "Önceki yıldan devreden KDV";
+    giris.value = ""; giris.disabled = true; sifirla.disabled = true;
+    aciklama.textContent = "Önce beyan verisi yapıştırın.";
+    return;
+  }
+  giris.disabled = false;
+  $("devirBaslik").textContent = `${yil.yil} Açılış Devri`;
+  $("devirEtiket").textContent = `${yil.yil} Ocak'a önceki yıldan devreden KDV`;
+  giris.value = yil.devir_baslangic != null ? tl(yil.devir_baslangic) : "";
+  sifirla.disabled = yil.devir_baslangic == null;
+
+  // Zincirin bu yila kendiliginden tasidigi tutar (karsilastirma icin)
+  const oncekiYil = yillar().filter((y) => y.yil < yil.yil).pop();
+  const beyanDevir = (yil.beyan.onceki_donem_devreden || [])[0] || 0;
+  let metin;
+  if (yil.devir_baslangic != null) {
+    metin = `Bu yıl ${tl(yil.devir_baslangic)} TL ile başlatılıyor; ` +
+      (oncekiYil ? `${oncekiYil.yil} Aralık'tan gelen devir dikkate alınmıyor. ` +
+                   "Önceki yıllarda yaptığınız tespitler bu noktadan sonrasına yansımaz."
+                 : "beyandaki açılış devri dikkate alınmıyor.");
+  } else if (oncekiYil) {
+    const zincir = durum.sonuc
+      ? (durum.sonuc.donemler.find((d) => d.yil === yil.yil && d.ay === 1) || {})
+      : {};
+    const gelen = zincir.elestirili ? zincir.elestirili.onceki_devir : null;
+    metin = `Zincirden geliyor: ${oncekiYil.yil} Aralık'ın yeniden hesaplanan devri` +
+      (gelen != null ? ` (${tl(gelen)} TL)` : "") +
+      `. Beyanda ${tl(beyanDevir)} TL yazıyor. Farklı bir tutarla başlatmak isterseniz ` +
+      "kutuya yazın.";
+  } else {
+    metin = `Serinin ilk yılı. Boş bırakılırsa beyandaki açılış devri ` +
+      `(${tl(beyanDevir)} TL) kullanılır. İnceleme öncesi dönemden gelen düzeltilmiş ` +
+      "devir varsa kutuya yazın.";
+  }
+  aciklama.textContent = metin;
+}
+
+// -------------------------------------------------- hesap açıklama balonu
+function hesapAciklamasi(donem, blok, kod) {
+  const e = donem.elestirili;
+  const b = donem.beyan;
+  const fark = e.toplam_kdv - e.indirimler;
+
+  if (blok === "beyan") {
+    const kaynaklar = {
+      matrah: "MATRAH TOPLAMI", toplam_kdv: "TOPLAM KDV",
+      onceki_devir: "ÖNCEKİ DÖN. DEVR. İND. KDV",
+      bu_donem_indirim_toplam: "BU DÖN. AİT İND. KDV + 103+104+105 TOP.",
+      indirimler: "İNDİRİMLER TOPLAMI", odenecek: "ÖDENMESİ GEREKEN KDV",
+      sonraki_devir: "SONRAKİ DÖN. DEVREDEN KDV", iade: "İADE EDİLMESİ GEREKEN KDV",
+      tecil_edilecek: "TECİL EDİLECEK KDV",
+      ihracat_iade: "İHRACATIN GERÇ. DÖN. İADE EDİLECEK TECİL EDİLEMEYEN KDV",
+    };
+    return {
+      baslik: "Beyan edilen değer", formul: null,
+      satirlar: [[`Beyannamedeki "${kaynaklar[kod] || kod}" satırı`, b[kod]]],
+      sonuc: ["Beyan edilen", b[kod]],
+      not: "Bu tutar mükellefin beyanından alınmıştır; hesaplanmamıştır.",
+    };
+  }
+  if (blok === "fark") {
+    return {
+      baslik: "Fark", formul: "Fark = Olması gereken − Beyan edilen",
+      satirlar: [["Olması gereken (yeniden hesaplanan)", e[kod]], ["Beyan edilen", -b[kod]]],
+      sonuc: ["Fark", donem.fark[kod]],
+      not: donem.fark_tespit && Math.abs(donem.fark_tespit[kod] || 0) > 0.005
+        ? `Bunun ${tl(donem.fark_tespit[kod])} TL'si bu dönemin tespitinden, ` +
+          `${tl(donem.fark_devir[kod] || 0)} TL'si devirden geliyor.`
+        : "Bu fark tümüyle önceki dönemlerden devir yoluyla taşınmıştır.",
+    };
+  }
+  const tanimlar = {
+    matrah: () => ({
+      formul: "Matrah = Beyan edilen matrah + Matraha ilave",
+      satirlar: [["Beyan edilen matrah", b.matrah], ["Matraha ilave (tespit)", e.matrah - b.matrah]],
+    }),
+    toplam_kdv: () => ({
+      formul: "Toplam KDV = Hesaplanan KDV + İlave edilecek KDV",
+      satirlar: [["Hesaplanan KDV (matrah × oran)", e.hesaplanan],
+                 ["İlave edilecek KDV", e.ilave_edilecek]],
+    }),
+    onceki_devir: () => ({
+      formul: "Önceki devir = Bir önceki dönemin devreden KDV'si (− devir çıkarması)",
+      satirlar: [["Önceki dönemin (yeniden hesaplanan) devri", e.onceki_devir]],
+      not: "Devir zinciri yıl sınırında kesilmez; bir önceki dönemin düzeltilmiş " +
+           "devri buraya taşınır.",
+    }),
+    bu_donem_indirim_toplam: () => ({
+      formul: "Bu dönem indirimi = (Beyan edilen indirilecek KDV − İndirim reddi) "
+              + "+ Diğer indirimler",
+      satirlar: [["Beyan edilen bu dönem indirilecek KDV", b.bu_donem_indirim],
+                 ["İndirim reddi (tespit)", e.bu_donem_indirim - b.bu_donem_indirim],
+                 ["Diğer indirimler (103+104+105)", e.diger_indirim]],
+    }),
+    indirimler: () => ({
+      formul: "İndirimler = Önceki devir + Bu dönem indirimi + Diğer indirimler",
+      satirlar: [["Önceki dönemden devreden", e.onceki_devir],
+                 ["Bu döneme ait indirilecek KDV", e.bu_donem_indirim],
+                 ["Diğer indirimler (103+104+105)", e.diger_indirim]],
+    }),
+    odenecek: () => (fark > 0 ? {
+      formul: "Ödenecek = (Toplam KDV − İndirimler) − Tecil edilecek KDV",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler],
+                 ["Tecil edilecek KDV", -e.tecil_edilecek]],
+    } : {
+      formul: "İndirimler toplamı KDV'yi aştığı için ödenecek vergi doğmaz.",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler]],
+      not: `İndirimler toplamı KDV'yi ${tl(-fark)} TL aşıyor; bu tutar devreden ` +
+           "KDV olarak sonraki döneme taşınır.",
+    }),
+    sonraki_devir: () => (fark < 0 ? {
+      formul: "Devreden = (İndirimler − Toplam KDV) − İade edilecek KDV",
+      satirlar: [["İndirimler toplamı", e.indirimler], ["Toplam KDV", -e.toplam_kdv],
+                 ["İade edilmesi gereken KDV", -e.iade]],
+    } : {
+      formul: "Toplam KDV indirimleri aştığı için devreden KDV oluşmaz.",
+      satirlar: [["Toplam KDV", e.toplam_kdv], ["İndirimler toplamı", -e.indirimler]],
+      not: `Aradaki ${tl(fark)} TL ödenecek vergi olarak sonuçlanır.`,
+    }),
+    iade: () => ({
+      formul: "İade = En küçüğü (Devir fazlası ; İade hakkı doğuran işlem yüklenimi)",
+      satirlar: [["Devir fazlası (indirimler − KDV)", Math.max(-fark, 0)],
+                 ["İade hakkı doğuran işlemlerde yüklenilen KDV", e.iade_yuklenilen]],
+      not: "İade, bu iki tutarın küçüğü kadar olabilir.",
+    }),
+    tecil_edilecek: () => ({
+      formul: "Tecil = En küçüğü (Ödenecek fark ; Tecil edilebilir KDV)",
+      satirlar: [["Ödenecek fark (KDV − indirimler)", Math.max(fark, 0)],
+                 ["Tecil edilebilir KDV (ihraç kayıtlı)", e.tecil_edilebilir]],
+    }),
+    ihracat_iade: () => ({
+      formul: "İhracatın gerçekleştiği dönemde iade = Tecil edilebilir − Tecil edilen",
+      satirlar: [["Tecil edilebilir KDV", e.tecil_edilebilir],
+                 ["Tecil edilecek KDV", -e.tecil_edilecek]],
+    }),
+  };
+  const uret = tanimlar[kod];
+  if (!uret) return null;
+  const c = uret();
+  const kolon = durum.tanimlar.ozet_kolonlari.find((k) => k.kod === kod);
+  return { baslik: (kolon ? kolon.etiket : kod) + " — olması gereken", formul: c.formul,
+           satirlar: c.satirlar, sonuc: ["Sonuç", e[kod]], not: c.not };
+}
+
+function tarhiyatAciklamasi(donem, kod) {
+  const t = donem.tarhiyat;
+  const tanimlar = {
+    resen_tarhi_gereken: {
+      baslik: "Re'sen Tarhı Gereken KDV",
+      formul: "= Olması gereken ödenecek KDV − Beyan edilen ödenecek KDV",
+      satirlar: [["Olması gereken ödenecek KDV", t.odenecek_olmasi_gereken],
+                 ["Beyan edilen ödenecek KDV", -t.odenecek_beyan]],
+      sonuc: ["Re'sen tarhı gereken", t.resen_tarhi_gereken],
+      not: t.fazla_beyan_odenecek > 0.005
+        ? `Bu dönemde mükellef ${tl(t.fazla_beyan_odenecek)} TL fazla beyan etmiş; ` +
+          "tarhiyata dahil edilmez."
+        : "Sonuç eksi çıkarsa tarhiyat doğmaz; sütun sıfır gösterilir.",
+    },
+    aranmasi_gereken: {
+      baslik: "Aranması Gereken KDV",
+      formul: "= Beyan edilen iade − Olması gereken iade",
+      satirlar: [["Beyan edilen iade edilecek KDV", t.iade_beyan],
+                 ["Olması gereken iade", -t.iade_olmasi_gereken]],
+      sonuc: ["Aranması gereken", t.aranmasi_gereken],
+      not: "Mükellefin hak etmediği hâlde talep ettiği iade tutarıdır.",
+    },
+    resen_toplam: {
+      baslik: "Re'sen Tarhı Gereken Toplam (1+2)",
+      formul: "= Re'sen tarhı gereken + Aranması gereken",
+      satirlar: [["(1) Re'sen tarhı gereken KDV", t.resen_tarhi_gereken],
+                 ["(2) Aranması gereken KDV", t.aranmasi_gereken]],
+      sonuc: ["Toplam", t.resen_toplam],
+    },
+    haksiz_iade: {
+      baslik: "Haksız Olarak İade Edilen KDV",
+      formul: "= Beyan edilen ihracat iadesi − Olması gereken",
+      satirlar: [["Beyan edilen (ihr. gerç. dön. iade edilecek)", t.ihracat_iade_beyan],
+                 ["Olması gereken", -t.ihracat_iade_olmasi_gereken]],
+      sonuc: ["Haksız iade", t.haksiz_iade],
+      not: "Yalnızca iade fiilen gerçekleşmişse aranır.",
+    },
+    toplam_fark: {
+      baslik: "Toplam Fark (1+2+3)",
+      formul: "= Re'sen tarhı gereken + Aranması gereken + Haksız iade",
+      satirlar: [["(1) Re'sen tarhı gereken KDV", t.resen_tarhi_gereken],
+                 ["(2) Aranması gereken KDV", t.aranmasi_gereken],
+                 ["(3) Haksız olarak iade edilen KDV", t.haksiz_iade]],
+      sonuc: ["Toplam fark", t.toplam_fark],
+    },
+  };
+  const esler = {
+    odenecek_olmasi_gereken: ["elestirili", "odenecek"],
+    odenecek_beyan: ["beyan", "odenecek"],
+    iade_olmasi_gereken: ["elestirili", "iade"],
+    iade_beyan: ["beyan", "iade"],
+    ihracat_iade_olmasi_gereken: ["elestirili", "ihracat_iade"],
+    ihracat_iade_beyan: ["beyan", "ihracat_iade"],
+  };
+  if (esler[kod]) return hesapAciklamasi(donem, esler[kod][0], esler[kod][1]);
+  return tanimlar[kod] || null;
+}
+
+function balonGoster(hedef, aciklama, donemEtiketi) {
+  if (!aciklama) return;
+  const balon = $("balon");
+  const satirlar = aciklama.satirlar.map(([ad, deger]) =>
+    `<tr><td>${ad}</td><td class="bsag">${tl(deger)}</td></tr>`).join("");
+  balon.innerHTML =
+    '<span class="bkapat" title="Kapat">×</span>' +
+    `<h4>${donemEtiketi} — ${aciklama.baslik}</h4>` +
+    (aciklama.formul ? `<div class="bformul">${aciklama.formul}</div>` : "") +
+    `<table>${satirlar}` +
+    `<tr class="bsonuc"><td>${aciklama.sonuc[0]}</td>` +
+    `<td class="bsag">${tl(aciklama.sonuc[1])}</td></tr></table>` +
+    (aciklama.not ? `<div class="bnot">${aciklama.not}</div>` : "");
+  balon.classList.add("acik");
+  const k = hedef.getBoundingClientRect();
+  let sol = window.scrollX + k.left;
+  if (sol + balon.offsetWidth > window.scrollX + document.documentElement.clientWidth - 12) {
+    sol = window.scrollX + document.documentElement.clientWidth - balon.offsetWidth - 12;
+  }
+  balon.style.left = Math.max(window.scrollX + 8, sol) + "px";
+  let ust = window.scrollY + k.bottom + 6;
+  if (k.bottom + balon.offsetHeight + 20 > document.documentElement.clientHeight) {
+    ust = window.scrollY + k.top - balon.offsetHeight - 6;
+  }
+  balon.style.top = Math.max(window.scrollY + 8, ust) + "px";
+  balon._hedef = hedef;
+}
+
+function balonKapat() {
+  const balon = $("balon");
+  balon.classList.remove("acik");
+  balon._hedef = null;
+}
+
+document.addEventListener("click", (olay) => {
+  const balon = $("balon");
+  if (!balon.classList.contains("acik")) return;
+  if (olay.target.classList.contains("bkapat")) { balonKapat(); return; }
+  if (balon.contains(olay.target)) return;
+  if (olay.target.closest("td.aciklanabilir") === balon._hedef) return;
+  balonKapat();
+});
+document.addEventListener("keydown", (olay) => { if (olay.key === "Escape") balonKapat(); });
+window.addEventListener("resize", balonKapat);
+
+function aciklamaBagla(td, uret, donemEtiketi) {
+  td.classList.add("aciklanabilir");
+  td.title = "Bu tutarın nasıl hesaplandığını görmek için tıklayın";
+  td.addEventListener("click", (olay) => {
+    olay.stopPropagation();
+    if ($("balon").classList.contains("acik") && $("balon")._hedef === td) { balonKapat(); return; }
+    balonGoster(td, uret(), donemEtiketi);
+  });
+}
+
+function hucre(tur, metin, ozellikler) {
+  const el = document.createElement(tur);
+  el.textContent = metin;
+  if (ozellikler) Object.assign(el, ozellikler);
+  return el;
+}
+
+/** Secili yila gore donemleri suzer. */
+function suzulmusDonemler(yilSecim) {
+  if (!durum.sonuc || !durum.sonuc.donemler) return [];
+  if (String(yilSecim) === "tumu") return durum.sonuc.donemler;
+  return durum.sonuc.donemler.filter((d) => String(d.yil) === String(yilSecim));
+}
+
+// -------------------------------------------------------------------- sonuc
+function sonucuCiz() {
+  yilKulaklariniCiz("sonucYilSekme", durum.sonucYil, (y) => {
+    durum.sonucYil = y;
+    sonucuCiz();
+  }, true, false);
+
+  const kap = $("sonucIcerik");
+  kap.innerHTML = "";
+  const donemler = suzulmusDonemler(durum.sonucYil);
+  if (!donemler.length) {
+    kap.innerHTML = '<div class="bos-durum">Önce Beyan Verisi sekmesinden sorguyu yapıştırın.</div>';
+    $("bulguKart").style.display = "none";
+    return;
+  }
+  const toplam = String(durum.sonucYil) === "tumu"
+    ? durum.sonuc.genel_toplam
+    : (durum.sonuc.yil_toplamlari.find((y) => String(y.yil) === String(durum.sonucYil))
+       || durum.sonuc.genel_toplam);
+  kap.appendChild(karsilastirmaTablosu("Olması Gereken (Yeniden Hesaplanmış)", donemler, "elestirili", toplam));
+  kap.appendChild(karsilastirmaTablosu("Beyan Edilen", donemler, "beyan", toplam));
+  kap.appendChild(karsilastirmaTablosu("Fark (Olması Gereken − Beyan)", donemler, "fark", toplam, true));
+
+  dikkatKartiniCiz();
+  const bulgular = durum.bulgular || [];
+  $("bulguKart").style.display = bulgular.length ? "block" : "none";
+  $("bulguListe").innerHTML = bulgular.map((b) =>
+    `<div class="bulgu"><strong>${b.donem}</strong> — ${b.mesaj}</div>`).join("");
+}
+
+/**
+ * "Dikkat Edilmesi Gerekenler" kartı.
+ *
+ * Bir dönemde listedeki faturaların KDV'si, beyan edilen yurtiçi alımlara
+ * ilişkin KDV'yi aşıyorsa faturaların tamamı o dönemde indirim konusu yapılmış
+ * olamaz. Hangilerinin yapıldığı ancak defter kaydından kesin belirlenir;
+ * uygulama beyan tutarına oturan adayları gösterir.
+ */
+function dikkatKartiniCiz() {
+  const kap = $("dikkatIcerik");
+  const dokum = (durum.sonuc && durum.sonuc.dikkat) || [];
+  const gorunen = String(durum.sonucYil) === "tumu" ? dokum
+    : dokum.filter((d) => String(d.yil) === String(durum.sonucYil));
+  $("dikkatKart").style.display = gorunen.length ? "block" : "none";
+  if (!gorunen.length) { kap.innerHTML = ""; return; }
+
+  kap.innerHTML =
+    '<div class="bulgu">Aşağıdaki dönemlerde <strong>listedeki faturaların ' +
+    "KDV'si, beyan edilen yurtiçi alımlara ilişkin KDV'den fazla</strong>. " +
+    'Mükellef bu alışların bir kısmını beyanına dahil etmemiş olabilir; o hâlde ' +
+    'dahil edilmeyen faturalar indirim konusu yapılmadığından tarhiyata da ' +
+    'girmemelidir. Hangi faturaların indirime girdiği <strong>ancak defter ' +
+    'kaydından</strong> kesin olarak belirlenir — aşağıdaki birleşimler adaydır, ' +
+    'tespit değildir.</div>';
+
+  gorunen.forEach((d) => {
+    const kutu = document.createElement("div");
+    kutu.className = "uyari-satir";
+    const secililer = d.faturalar.filter((f) => f.secili);
+    const disardakiler = d.faturalar.filter((f) => !f.secili);
+    const fatAdi = (f) => `${f.tarih} tarihli ${f.fatura_no || "—"} (${tl(f.kdv)} TL)`;
+    let ic =
+      `<strong>${d.donem}</strong><div>Beyan edilen yurtiçi alımlara ilişkin KDV: ` +
+      `<strong>${tl(d.sinir)}</strong> TL &nbsp;·&nbsp; listedeki faturaların KDV'si: ` +
+      `<strong>${tl(d.dahil_kdv)}</strong> TL &nbsp;·&nbsp; fazla: ` +
+      `<strong>${tl(d.asim)}</strong> TL</div>` +
+      `<div style="margin-top:6px;">Satıcı bütünlüğü korunarak beyana oturan en ` +
+      `yüksek birleşim: <strong>${tl(d.secim_toplami)}</strong> TL — ` +
+      (secililer.length ? secililer.map(fatAdi).join(", ") : "hiçbir fatura sığmıyor") +
+      "</div>";
+    if (disardakiler.length) {
+      ic += `<div style="margin-top:4px;">Bu birleşimin dışında kalan: ` +
+        disardakiler.map(fatAdi).join(", ") + "</div>";
+    }
+    if (d.alternatif > 0) {
+      ic += `<div style="margin-top:4px;"><strong>Aynı tutarı veren ${d.alternatif} ` +
+        `farklı satıcı birleşimi daha var</strong>; hangisinin beyana girdiği ` +
+        `aritmetikle belirlenemez.</div>`;
+    }
+    if (d.fatura_secim_toplami > d.secim_toplami + 0.005) {
+      ic += `<div style="margin-top:4px;">Satıcı bütünlüğü gözetilmezse fatura ` +
+        `bazında en çok <strong>${tl(d.fatura_secim_toplami)}</strong> TL oturuyor; ` +
+        `bu, bir satıcının faturalarını bölmek anlamına gelir.</div>`;
+    }
+    if (d.yaklasik) {
+      ic += '<div style="margin-top:4px;">Kalem sayısı çok olduğundan birleşim ' +
+        'büyükten küçüğe yerleştirmeyle bulundu; kesin en iyi çözüm olmayabilir.</div>';
+    }
+    kutu.innerHTML = ic;
+    kap.appendChild(kutu);
+  });
+
+  const dugme = document.createElement("button");
+  dugme.className = "btn ikincil";
+  dugme.id = "dikkatOturt";
+  dugme.textContent = "Faturaları beyana oturt";
+  dugme.title = "Birleşim dışında kalan faturaların “Dahil” işaretini kaldırır "
+    + "ve indirim reddini yeniden aktarır";
+  dugme.addEventListener("click", () => faturalariBeyanaOturt(gorunen));
+  const sar = document.createElement("div");
+  sar.style.marginTop = "10px";
+  sar.appendChild(dugme);
+  kap.appendChild(sar);
+}
+
+/** Birleşim dışında kalan faturaları tarhiyat dışına alır ve yeniden aktarır. */
+async function faturalariBeyanaOturt(dokum) {
+  const cikarilan = [];
+  dokum.forEach((d) => {
+    d.faturalar.filter((f) => !f.secili).forEach((f) => {
+      const fatura = durum.calisma.faturalar[f.sira];
+      if (fatura && fatura.dahil) {
+        fatura.dahil = false;
+        cikarilan.push(`${d.donem} ${f.fatura_no || "—"}`);
+      }
+    });
+  });
+  if (!cikarilan.length) { mesaj("Çıkarılacak fatura kalmadı.", "uyari"); return; }
+  isaretle(false);
+  await faturalariTazele();
+  await faturalariIndirimeAktar(true);
+  mesaj(`${cikarilan.length} fatura tarhiyat dışına alındı ve indirim reddi ` +
+        `yeniden aktarıldı: ${cikarilan.join(", ")}. Kalıcı olması için Kaydet ` +
+        "deyin.", "uyari");
+}
+
+function karsilastirmaTablosu(baslik, donemler, blok, toplam, farkMi) {
+  const kap = document.createElement("div");
+  kap.appendChild(hucre("h3", baslik));
+  const sar = document.createElement("div");
+  sar.className = "kaydir";
+  const tablo = document.createElement("table");
+  const kolonlar = durum.tanimlar.ozet_kolonlari;
+  tablo.innerHTML = "<tr><th>Dönem</th>" +
+    kolonlar.map((k) => `<th class="sag">${k.etiket}</th>`).join("") + "</tr>";
+  let oncekiYil = null;
+  const cokYil = String(durum.sonucYil) === "tumu";
+  donemler.forEach((d) => {
+    if (cokYil && d.yil !== oncekiYil) {
+      const ayirac = document.createElement("tr");
+      ayirac.className = "yil-ayirac";
+      ayirac.appendChild(hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 }));
+      tablo.appendChild(ayirac);
+      oncekiYil = d.yil;
+    }
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.textContent = cokYil ? `${d.yil}/${d.ay_adi}` : d.ay_adi;
+    if (d.elestiri_var) td.innerHTML += ' <span class="rozet uyari">tespit</span>';
+    tr.appendChild(td);
+    kolonlar.forEach((k) => {
+      const h = document.createElement("td");
+      const deger = d[blok][k.kod];
+      h.className = "sayi";
+      if (farkMi && Math.abs(deger || 0) > 0.005) h.classList.add("fark-var");
+      else if ((deger || 0) < 0) h.classList.add("negatif");
+      h.textContent = tl(deger || 0);
+      aciklamaBagla(h, () => hesapAciklamasi(d, blok, k.kod), `${d.yil}/${d.ay_adi}`);
+      tr.appendChild(h);
+    });
+    tablo.appendChild(tr);
+  });
+  const trT = document.createElement("tr");
+  trT.className = "toplam";
+  trT.appendChild(hucre("td", "Toplam"));
+  const turler = durum.tanimlar.toplam_turleri || {};
+  const aciklamalar = durum.tanimlar.toplam_aciklamalari || {};
+  const ekBilgi = durum.tanimlar.toplam_ek_bilgi || {};
+  kolonlar.forEach((k) => {
+    const h = document.createElement("td");
+    h.className = "sayi";
+    const satirDegerleri = toplam[blok] || {};
+    const tur = turler[k.kod];
+    // Butun sutunlar duz toplanir; stok bileseni tasiyan kolonlarda referans
+    // deger (acilis / kapanis / devir bir kez sayilmis hali) altta belirtilir
+    h.textContent = tl(satirDegerleri[k.kod] || 0);
+    const ek = ekBilgi[k.kod];
+    if (ek && satirDegerleri[ek.alan] !== undefined) {
+      const alt = document.createElement("div");
+      alt.style.cssText = "font-weight:400;font-size:11px;color:#5a6b7d;margin-top:2px;";
+      alt.textContent = `${ek.etiket}: ${tl(satirDegerleri[ek.alan] || 0)}`;
+      h.appendChild(alt);
+    }
+    if (aciklamalar[tur]) h.title = aciklamalar[tur];
+    trT.appendChild(h);
+  });
+  tablo.appendChild(trT);
+  sar.appendChild(tablo);
+  kap.appendChild(sar);
+  return kap;
+}
+
+// ---------------------------------------------------------- tarhiyat ozeti
+/**
+ * Tarhiyat tablosunda gösterilecek sütunlar. Ödenecek KDV, re'sen tarhı
+ * gereken vergi ve ceza her zaman görünür; iade sütunları yalnızca tutar
+ * taşıdıklarında yazılır. Boş sütunlar tabloyu Word'e sığmayacak kadar
+ * genişletiyordu. Aynı ölçüt sunucu tarafında da uygulanır
+ * (satirlar.gorunen_tarhiyat_kolonlari).
+ */
+const TARHIYAT_ZORUNLU = ["odenecek_olmasi_gereken", "odenecek_beyan",
+  "resen_tarhi_gereken", "vergi_ziyai_cezasi"];
+
+function gorunenTarhiyatKolonlari(donemler) {
+  const dolu = new Set();
+  donemler.forEach((d) => {
+    Object.entries(d.tarhiyat || {}).forEach(([kod, deger]) => {
+      if (Math.abs(Number(deger) || 0) > 0.005) dolu.add(kod);
+    });
+  });
+  const gorunen = (durum.tanimlar.tarhiyat_kolonlari || []).filter(
+    (k) => TARHIYAT_ZORUNLU.includes(k.kod) || dolu.has(k.kod));
+  const kodlar = new Set(gorunen.map((k) => k.kod));
+  // Bileşenleri gizlenmişse toplam sütunları re'sen tarhı gereken vergiyi
+  // tekrar eder; onları da yazmaya gerek yok.
+  const atilacak = new Set();
+  if (!kodlar.has("aranmasi_gereken")) atilacak.add("resen_toplam");
+  if (!kodlar.has("aranmasi_gereken") && !kodlar.has("haksiz_iade")) atilacak.add("toplam_fark");
+  return gorunen.filter((k) => !atilacak.has(k.kod));
+}
+
+function tarhiyatiCiz() {
+  const kutu = $("ziyaKati");
+  if (kutu) kutu.value = String(durum.calisma.ziya_kati || 1);
+  yilKulaklariniCiz("tarhiyatYilSekme", durum.tarhiyatYil, (y) => {
+    durum.tarhiyatYil = y; tarhiyatiCiz();
+  }, true, false);
+
+  const tablo = $("tarhiyatTablo");
+  const not = $("tarhiyatNot");
+  tablo.innerHTML = ""; not.innerHTML = "";
+  const donemler = suzulmusDonemler(durum.tarhiyatYil);
+  if (!donemler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Önce Beyan Verisi sekmesinden ' +
+      'sorguyu yapıştırın.</td></tr>';
+    return;
+  }
+  const kolonlar = gorunenTarhiyatKolonlari(donemler);
+
+  const ust = document.createElement("tr");
+  ust.appendChild(hucre("th", "Dönemi", { rowSpan: 2 }));
+  let i = 0;
+  while (i < kolonlar.length) {
+    let j = i;
+    while (j + 1 < kolonlar.length && kolonlar[j + 1].grup === kolonlar[i].grup) j++;
+    const th = hucre("th", kolonlar[i].grup, { colSpan: j - i + 1 });
+    th.style.textAlign = "center";
+    if (kolonlar[i].vurgu === "vurgu1") th.style.background = "#ffff99";
+    if (kolonlar[i].vurgu === "vurgu2") th.style.background = "#c6e0b4";
+    ust.appendChild(th);
+    i = j + 1;
+  }
+  tablo.appendChild(ust);
+
+  const alt = document.createElement("tr");
+  kolonlar.forEach((k) => {
+    const th = hucre("th", k.grup === k.etiket ? "" : k.etiket);
+    th.style.textAlign = "center"; th.style.fontSize = "11px";
+    if (k.vurgu === "vurgu1") th.style.background = "#ffff99";
+    if (k.vurgu === "vurgu2") th.style.background = "#c6e0b4";
+    alt.appendChild(th);
+  });
+  tablo.appendChild(alt);
+
+  let oncekiYil = null;
+  const cokYil = String(durum.tarhiyatYil) === "tumu";
+  donemler.forEach((d) => {
+    if (cokYil && d.yil !== oncekiYil) {
+      const ayirac = document.createElement("tr");
+      ayirac.className = "yil-ayirac";
+      ayirac.appendChild(hucre("td", `${d.yil} Dönemi`, { colSpan: kolonlar.length + 1 }));
+      tablo.appendChild(ayirac);
+      oncekiYil = d.yil;
+    }
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", cokYil ? `${d.yil}/${d.ay_adi}` : d.ay_adi));
+    kolonlar.forEach((k) => {
+      const deger = d.tarhiyat[k.kod];
+      const td = hucre("td", deger ? tl(deger) : "0,00");
+      td.className = "sayi";
+      if (k.vurgu === "vurgu1") { td.style.background = "#ffff99"; td.style.color = "#c00"; }
+      if (k.vurgu === "vurgu2") { td.style.background = "#c6e0b4"; td.style.fontWeight = "600"; }
+      aciklamaBagla(td, () => tarhiyatAciklamasi(d, k.kod), `${d.yil}/${d.ay_adi}`);
+      tr.appendChild(td);
+    });
+    tablo.appendChild(tr);
+  });
+
+  // Toplam: secili kapsama gore hesaplanir
+  const t = {};
+  kolonlar.forEach((k) => {
+    t[k.kod] = donemler.reduce((a, d) => a + (d.tarhiyat[k.kod] || 0), 0);
+  });
+  ["fazla_beyan_odenecek", "eksik_talep_iade"].forEach((kod) => {
+    t[kod] = donemler.reduce((a, d) => a + (d.tarhiyat[kod] || 0), 0);
+  });
+  const trT = document.createElement("tr");
+  trT.className = "toplam";
+  trT.appendChild(hucre("td", "Toplam"));
+  kolonlar.forEach((k) => {
+    const td = hucre("td", t[k.kod] ? tl(t[k.kod]) : "0,00");
+    td.className = "sayi";
+    if (k.vurgu === "vurgu1") { td.style.background = "#ffe066"; td.style.color = "#c00"; }
+    if (k.vurgu === "vurgu2") { td.style.background = "#a9d08e"; }
+    trT.appendChild(td);
+  });
+  tablo.appendChild(trT);
+
+  const uyarilar = [];
+  if (t.fazla_beyan_odenecek > 0.005) {
+    uyarilar.push(`Mükellefin fazladan beyan ettiği ödenecek KDV toplamı ` +
+      `${tl(t.fazla_beyan_odenecek)} TL'dir. Tarhiyata dahil edilmemiştir.`);
+  }
+  if (t.eksik_talep_iade > 0.005) {
+    uyarilar.push(`Mükellefin talep etmediği hâlde hak kazandığı iade tutarı ` +
+      `${tl(t.eksik_talep_iade)} TL'dir. Tarhiyata dahil edilmemiştir.`);
+  }
+  not.innerHTML = uyarilar.map((u) => `<div class="bulgu">${u}</div>`).join("");
+}
+
+function yilUyumunuCiz() {
+  const tablo = $("yilUyumTablo");
+  tablo.innerHTML = "";
+  const satirlar = durum.sonuc ? (durum.sonuc.yil_uyumu || []) : [];
+  if (!satirlar.length) { tablo.innerHTML = '<tr><td class="bos-durum">Henüz veri yok.</td></tr>'; return; }
+  const basliklar = ["Yıl", "Dönem", "Tespitli dönem", "Beyan matrah", "Olması gereken matrah",
+                     "Matrah farkı", "Beyan ödenecek", "Olması gereken ödenecek",
+                     "Re'sen tarhı gereken", "Tespit etkisi", "Devir etkisi",
+                     "Yıl sonu devir (beyan)", "Yıl sonu devir (olması gereken)"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  tablo.appendChild(tr);
+  satirlar.forEach((s) => {
+    const r = document.createElement("tr");
+    [s.yil, s.donem_sayisi, s.tespit_donem_sayisi].forEach((v) => r.appendChild(hucre("td", v)));
+    [["matrah_beyan"], ["matrah_olmasi_gereken"], ["matrah_farki", true],
+     ["odenecek_beyan"], ["odenecek_olmasi_gereken"], ["resen_tarhi_gereken", true],
+     ["tespit_etkisi", true], ["devir_etkisi", true],
+     ["devir_cikis_beyan"], ["devir_cikis"]].forEach(([kod, vurgu]) => {
+      const td = hucre("td", tl(s[kod] || 0));
+      td.className = "sayi";
+      if (vurgu && Math.abs(s[kod] || 0) > 0.005) td.classList.add("fark-var");
+      r.appendChild(td);
+    });
+    tablo.appendChild(r);
+  });
+}
+
+// ----------------------------------------------------------- tespit etkisi
+function kaynaklariCiz() {
+  const kap = $("kaynakListe");
+  kap.innerHTML = "";
+  const ka = durum.sonuc ? durum.sonuc.kaynak_analizi : null;
+  if (!ka || !ka.kaynaklar.length) {
+    kap.innerHTML = '<div class="bos-durum">Henüz tespit girilmedi. ' +
+      'İnceleme Tespitleri sekmesinden matrah ilavesi veya indirim reddi girin.</div>';
+    return;
+  }
+  const tablo = document.createElement("table");
+  const basliklar = ["Tespit dönemi", "Matrah ilavesi", "Hesaplanan KDV ilavesi",
+                     "İndirim reddi", "Devir çıkarması", "Yüklenilen reddi",
+                     "Etkilediği dönem", "İlk–son etki", "Seri geneli ödenecek etkisi"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  tablo.appendChild(tr);
+  ka.kaynaklar.forEach((k) => {
+    const r = document.createElement("tr");
+    const td0 = hucre("td", k.etiket); td0.style.fontWeight = "600";
+    r.appendChild(td0);
+    ["matrah_ilave", "hesaplanan_kdv_ilave", "indirim_cikar", "devir_cikar",
+     "yuklenilen_cikar"].forEach((kod) => {
+      const td = hucre("td", tl(k[kod] || 0));
+      td.className = "sayi";
+      r.appendChild(td);
+    });
+    r.appendChild(hucre("td", `${k.etkilenen_donem_sayisi} dönem`));
+    r.appendChild(hucre("td", k.ilk_etki ? `${k.ilk_etki} → ${k.son_etki}` : "—"));
+    const tdE = hucre("td", tl(k.toplam_odenecek_etkisi || 0));
+    tdE.className = "sayi";
+    if (Math.abs(k.toplam_odenecek_etkisi || 0) > 0.005) tdE.classList.add("fark-var");
+    r.appendChild(tdE);
+    tablo.appendChild(r);
+  });
+  const sar = document.createElement("div");
+  sar.className = "kaydir";
+  sar.appendChild(tablo);
+  kap.appendChild(sar);
+}
+
+function etkiTablosunuCiz() {
+  const tablo = $("etkiTablo");
+  const not = $("etkiNot");
+  tablo.innerHTML = ""; not.innerHTML = "";
+  const ka = durum.sonuc ? durum.sonuc.kaynak_analizi : null;
+  if (!ka || !ka.kaynaklar.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Henüz tespit girilmedi.</td></tr>';
+    return;
+  }
+  const alan = $("etkiAlan").value;
+  const yilSecim = $("etkiYil").value;
+  const sadeceDolu = $("etkiSadeceDolu").checked;
+  let donemler = ka.donemler;
+  if (yilSecim !== "hepsi") donemler = donemler.filter((d) => String(d.yil) === yilSecim);
+  if (sadeceDolu) {
+    donemler = donemler.filter((d) => Math.abs(d.toplam[alan] || 0) > 0.005
+      || ka.kaynaklar.some((k) => Math.abs(d.paylar[k.anahtar][alan] || 0) > 0.005));
+  }
+  if (!donemler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Seçilen ölçüte göre etkilenen dönem yok.</td></tr>';
+    return;
+  }
+  const tr = document.createElement("tr");
+  tr.appendChild(hucre("th", "Dönem"));
+  ka.kaynaklar.forEach((k) => {
+    const th = hucre("th", k.etiket);
+    th.style.textAlign = "right";
+    th.title = `Matrah ilavesi ${tl(k.matrah_ilave)} / indirim reddi ${tl(k.indirim_cikar)}`;
+    tr.appendChild(th);
+  });
+  if (ka.etkilesim_var) {
+    const th = hucre("th", "Etkileşim");
+    th.style.textAlign = "right";
+    th.title = "Tespitlerin birlikte uygulanmasından doğan, tek tek atfedilemeyen bakiye";
+    tr.appendChild(th);
+  }
+  const thT = hucre("th", "Toplam");
+  thT.style.textAlign = "right";
+  tr.appendChild(thT);
+  tablo.appendChild(tr);
+
+  donemler.forEach((d) => {
+    const r = document.createElement("tr");
+    r.appendChild(hucre("td", d.etiket));
+    ka.kaynaklar.forEach((k) => {
+      const v = d.paylar[k.anahtar][alan];
+      const td = hucre("td", tl(v || 0));
+      td.className = "sayi";
+      if (v < -0.005) td.classList.add("negatif");
+      r.appendChild(td);
+    });
+    if (ka.etkilesim_var) {
+      const v = d.etkilesim[alan];
+      const td = hucre("td", tl(v || 0));
+      td.className = "sayi";
+      r.appendChild(td);
+    }
+    const v = d.toplam[alan];
+    const tdT = hucre("td", tl(v || 0));
+    tdT.className = "sayi";
+    if (Math.abs(v || 0) > 0.005) tdT.classList.add("fark-var");
+    r.appendChild(tdT);
+    tablo.appendChild(r);
+  });
+
+  if (ka.etkilesim_var) {
+    not.innerHTML = '<div class="bulgu"><strong>Etkileşim sütunu nedir?</strong> ' +
+      'KDV hesabı doğrusal değildir: ödenecek ile devreden arasındaki eşikte alt/üst sınır ' +
+      'uygulanır. Bu nedenle tespitler tek tek uygulandığındaki etkilerin toplamı, hepsi ' +
+      'birlikte uygulandığındaki farkı tam vermeyebilir. Aradaki bakiye kaynaklara ' +
+      'dağıtılmaz, bu sütunda ayrıca gösterilir.</div>';
+  }
+}
+
+function etkiYilListesiniCiz() {
+  const sec = $("etkiYil");
+  const onceki = sec.value;
+  sec.innerHTML = '<option value="hepsi">Tümü</option>';
+  yillar().forEach((y) => {
+    const o = document.createElement("option");
+    o.value = y.yil; o.textContent = y.yil;
+    sec.appendChild(o);
+  });
+  sec.value = onceki || "hepsi";
+  if (!sec.value) sec.value = "hepsi";
+}
+
+["etkiAlan", "etkiYil"].forEach((id) => $(id).addEventListener("change", etkiTablosunuCiz));
+$("etkiSadeceDolu").addEventListener("change", etkiTablosunuCiz);
+
+// ------------------------------------------------------------ excel / rapor
+async function excelIndir() {
+  if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
+  try {
+    const yanit = await fetch("/api/excel", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ calisma: durum.calisma }),
+    });
+    if (!yanit.ok) {
+      const h = await yanit.json();
+      throw new Error(h.hata || "Excel üretilemedi");
+    }
+    const blob = await yanit.blob();
+    const bag = document.createElement("a");
+    bag.href = URL.createObjectURL(blob);
+    const ad = (durum.calisma.ad || durum.calisma.mukellef.ad_unvan || "kdv")
+      .replace(/[^\wğüşiöçĞÜŞİÖÇ -]/g, "").trim() || "kdv";
+    bag.download = `KDV_calisma_${ad}.xlsx`.replace(/\s+/g, "_");
+    document.body.appendChild(bag);
+    bag.click();
+    document.body.removeChild(bag);
+    URL.revokeObjectURL(bag.href);
+    mesaj("Excel dosyası indirildi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+$("excelIndir").addEventListener("click", excelIndir);
+$("excelIndir2").addEventListener("click", excelIndir);
+
+$("raporGoster").addEventListener("click", async () => {
+  if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
+  try {
+    const y = await api("/api/rapor_metni", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Rapor Metni Taslağı";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+// --------------------------------------------------------- taslak belgeler
+/** Sunucudan bir belge indirir ve tarayiciya kaydettirir. */
+async function belgeIndir(yol, varsayilanAd, basarili) {
+  const yanit = await fetch(yol, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ calisma: durum.calisma }),
+  });
+  if (!yanit.ok) {
+    const h = await yanit.json().catch(() => ({}));
+    throw new Error(h.hata || "Belge üretilemedi");
+  }
+  const blob = await yanit.blob();
+  const bag = document.createElement("a");
+  bag.href = URL.createObjectURL(blob);
+  // Sunucu adi bildirmisse o kullanilir: birden fazla yilin raporu tek zip
+  // olarak indigi icin uzanti burada degisebiliyor.
+  bag.download = sunucuDosyaAdi(yanit) || varsayilanAd;
+  document.body.appendChild(bag);
+  bag.click();
+  document.body.removeChild(bag);
+  URL.revokeObjectURL(bag.href);
+  mesaj(basarili);
+}
+
+/** Content-Disposition başlığındaki dosya adını çözer; yoksa boş döner. */
+function sunucuDosyaAdi(yanit) {
+  const bas = yanit.headers.get("Content-Disposition") || "";
+  const yildizli = bas.match(/filename\*=UTF-8''([^;]+)/i);
+  if (yildizli) {
+    try { return decodeURIComponent(yildizli[1]); } catch { return ""; }
+  }
+  const duz = bas.match(/filename="([^"]+)"/i);
+  return duz ? duz[1] : "";
+}
+
+function belgeDosyaAdi(on) {
+  const ad = (durum.calisma.mukellef.ad_unvan || durum.calisma.ad || "taslak")
+    .replace(/[^\wğüşıöçĞÜŞİÖÇ -]/g, "").trim() || "taslak";
+  return `${on}_${ad}.docx`.replace(/\s+/g, "_");
+}
+
+$("tutanakIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/tutanak", belgeDosyaAdi("Tutanak_taslagi"),
+                     "Tutanak taslağı indirildi. Bir kopyası ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("tutanakOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/tutanak_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Tutanak Taslağı — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+    eksikleriCiz(y.eksikler || []);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("raporIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/sahte_belge_raporu", belgeDosyaAdi("Sahte_belge_raporu"),
+                     "Rapor taslağı indirildi. İncelenen her yıl için ayrı rapor " +
+                     "üretilir; kopyaları ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("raporOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/sahte_belge_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Sahte Belge Kullanma Raporu — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+    eksikleriCiz(y.eksikler || []);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("raporKapat").addEventListener("click", () => $("raporModal").classList.remove("acik"));
+$("raporKopyala").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("raporMetin").textContent); mesaj("Panoya kopyalandı."); }
+  catch { mesaj("Kopyalanamadı; metni seçip elle kopyalayın.", "hata"); }
+});
+
+// ------------------------------------------------------- kaydet / ac / sil
+async function kaydet(yeniKayit) {
+  if (!durum.calisma.yillar.length) {
+    mesaj("Kaydedilecek veri yok; önce sorguyu yapıştırın.", "hata");
+    return;
+  }
+  durum.calisma.ad = $("cAd").value.trim();
+  try {
+    const y = await api("/api/kaydet", {
+      calisma: durum.calisma,
+      id: yeniKayit ? null : durum.kayitliId,
+    });
+    durum.kayitliId = y.id;
+    durum.kayitlar = y.calismalar;
+    durum.degisti = false;
+    const kayit = y.calismalar.find((k) => k.id === y.id);
+    if (kayit) { durum.calisma.ad = kayit.ad; $("cAd").value = kayit.ad; }
+    rozetiTazele();
+    kayitlariCiz();
+    mesaj(yeniKayit ? "Yeni kayıt olarak kaydedildi." : "Çalışma kaydedildi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+$("hKaydet").addEventListener("click", () => kaydet(false));
+$("hFarkliKaydet").addEventListener("click", () => kaydet(true));
+
+$("hYeni").addEventListener("click", () => {
+  if (durum.degisti && durum.calisma.yillar.length &&
+      !confirm("Kaydedilmemiş değişiklikler var. Yeni çalışmaya geçilsin mi?")) return;
+  durum.calisma = bosCalisma();
+  durum.kayitliId = null;
+  durum.degisti = false;
+  durum.aktifYil = null;
+  durum.sonuc = null; durum.bulgular = [];
+  durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
+  durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
+  durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+  $("cAd").value = ""; $("kunyeKarti").style.display = "none";
+  $("fatDurum").innerHTML = "";
+  faturaEkraniniCiz();
+  ekraniCiz();
+  mesaj("Yeni boş çalışma açıldı.");
+});
+
+async function calismaAc(id) {
+  if (durum.degisti && durum.calisma.yillar.length &&
+      !confirm("Kaydedilmemiş değişiklikler var. Kayıtlı çalışma açılsın mı?")) return;
+  try {
+    const y = await api(`/api/calisma?id=${id}`);
+    const c = y.calisma;
+    durum.calisma = {
+      ad: c.ad || "",
+      mukellef: Object.assign({ ad_unvan: "", vkn_tckn: "", vergi_dairesi: "", adres: "" },
+                              c.mukellef || {}),
+      devreden_baslangic: c.devreden_baslangic ?? null,
+      yillar: (c.yillar || []).map((yk) => ({
+        yil: yk.yil,
+        ay_sayisi: yk.ay_sayisi || 12,
+        devir_baslangic: yk.devir_baslangic ?? null,
+        beyan: Object.assign(bosBeyan(), yk.beyan || {}),
+        elestiri: Object.assign(bosElestiri(yk.yil), yk.elestiri || {}),
+        kaynaklar: yk.kaynaklar || [],
+      })),
+      beyannameler: c.beyannameler || [],
+      kunye: c.kunye || {},
+      faturalar: c.faturalar || [],
+      saticilar: c.saticilar || {},
+    };
+    // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
+    if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
+      const ilk = durum.calisma.yillar.reduce((a, b) => (a.yil <= b.yil ? a : b));
+      if (ilk.devir_baslangic == null) ilk.devir_baslangic = durum.calisma.devreden_baslangic;
+      durum.calisma.devreden_baslangic = null;
+    }
+    durum.kayitliId = id;
+    durum.degisti = false;
+    durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
+    durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+    durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
+    durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
+    $("cAd").value = durum.calisma.ad;
+    await hesapla();
+    mesaj(`"${durum.calisma.ad || "Çalışma"}" açıldı.`);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+async function calismaSil(id, ad) {
+  if (!confirm(`"${ad}" kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`)) return;
+  try {
+    const y = await api("/api/calisma/sil", { id });
+    durum.kayitlar = y.calismalar;
+    if (durum.kayitliId === id) { durum.kayitliId = null; durum.degisti = true; }
+    rozetiTazele();
+    kayitlariCiz();
+    mesaj("Kayıt silindi.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+
+// ======================================================== BEYANNAMELER (PDF)
+//
+// Bir donem icin kanuni suresinde verilen beyanname ve ardindan verilen
+// duzeltme beyannameleri ayri ayri tutulur. Duzeltme beyannamesi onceki beyani
+// tumuyle yeniler; bu yuzden her surum kendi basina eksiksiz bir beyandir ve
+// inceleme istenen surum uzerinden yurutulebilir.
+
+function pdfKutusunuKur() {
+  const kutu = $("pdfBirakma");
+  const secici = $("pdfSecici");
+  kutu.addEventListener("click", () => secici.click());
+  secici.addEventListener("change", () => {
+    pdfYukle(Array.from(secici.files));
+    secici.value = "";
+  });
+  ["dragenter", "dragover"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.add("uzerinde");
+  }));
+  ["dragleave", "drop"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.remove("uzerinde");
+  }));
+  kutu.addEventListener("drop", (e) => {
+    const dosyalar = Array.from(e.dataTransfer.files || [])
+      .filter((f) => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+    if (!dosyalar.length) { mesaj("PDF dosyası bulunamadı.", "hata"); return; }
+    pdfYukle(dosyalar);
+  });
+}
+
+function dosyayiOku(dosya) {
+  return new Promise((coz, red) => {
+    const okuyucu = new FileReader();
+    okuyucu.onload = () => coz(String(okuyucu.result).split(",")[1] || "");
+    okuyucu.onerror = () => red(new Error(dosya.name + " okunamadı."));
+    okuyucu.readAsDataURL(dosya);
+  });
+}
+
+async function pdfYukle(dosyalar) {
+  if (!dosyalar.length) return;
+  $("pdfDurum").innerHTML =
+    `<div class="yardim">${dosyalar.length} dosya okunuyor...</div>`;
+  try {
+    const yuk = [];
+    for (const d of dosyalar) yuk.push({ ad: d.name, veri: await dosyayiOku(d) });
+    const y = await api("/api/pdf_oku", { dosyalar: yuk });
+    durum.calisma.beyannameler = durum.calisma.beyannameler.concat(y.beyannameler || []);
+    const hatalar = (y.hatalar || []).map((h) =>
+      `<div class="uyari-satir">${h.ad}: ${h.mesaj}</div>`).join("");
+    $("pdfDurum").innerHTML = hatalar;
+    if (y.beyannameler.length) {
+      mesaj(`${y.beyannameler.length} beyanname okundu.`);
+      mukellefiTazele(y.beyannameler);
+    }
+    await beyannameleriTazele();
+  } catch (hata) {
+    $("pdfDurum").innerHTML = `<div class="uyari-satir">${hata.message}</div>`;
+    mesaj(hata.message, "hata");
+  }
+}
+
+/** Calismada mukellef bilgisi bos ise beyannameden doldurulur. */
+function mukellefiTazele(yeniler) {
+  const m = durum.calisma.mukellef;
+  const ilk = yeniler.find((b) => b.vkn || b.unvan);
+  if (!ilk) return;
+  if (!m.vkn_tckn && ilk.vkn) m.vkn_tckn = ilk.vkn;
+  if (!m.ad_unvan && ilk.unvan) m.ad_unvan = ilk.unvan;
+  if (!m.vergi_dairesi && ilk.vergi_dairesi) m.vergi_dairesi = ilk.vergi_dairesi;
+}
+
+async function beyannameleriTazele() {
+  const kartlar = ["beyannameKart", "beyannameDetayKart", "beyannameSecimKart"];
+  if (!durum.calisma.beyannameler.length) $("duzeltmeKart").style.display = "none";
+  if (!durum.calisma.beyannameler.length) {
+    durum.bnOzet = null;
+    kartlar.forEach((k) => { $(k).style.display = "none"; });
+    $("pdfListe").innerHTML = "";
+    $("pdfTemizle").style.display = "none";
+    return;
+  }
+  durum.bnOzet = await api("/api/beyanname_ozet", {
+    beyannameler: durum.calisma.beyannameler,
+    secim: { mod: $("bnMod").value, secimler: durum.bnSecimler },
+    yalniz_degisen: $("bnYalnizDegisen").checked,
+  });
+  kartlar.forEach((k) => { $(k).style.display = ""; });
+  $("pdfTemizle").style.display = "";
+  const donemler = durum.bnOzet.duzen.donemler;
+  if (!durum.bnDonem || !donemler.some((d) => d.anahtar === durum.bnDonem)) {
+    durum.bnDonem = donemler.length ? donemler[0].anahtar : null;
+  }
+  yuklenenleriCiz();
+  bnGenelCiz();
+  bnDetayCiz();
+  duzeltmeTablosunuCiz();
+  bnSecimCiz();
+}
+
+function yuklenenleriCiz() {
+  const kap = $("pdfListe");
+  kap.innerHTML = "";
+  const uyarilar = durum.bnOzet.duzen.uyarilar || [];
+  uyarilar.forEach((u) => {
+    const d = document.createElement("div");
+    d.className = "uyari-satir";
+    d.textContent = u;
+    kap.appendChild(d);
+  });
+  durum.calisma.beyannameler.forEach((b, i) => {
+    const oge = document.createElement("div");
+    oge.className = "oge";
+    const rozet = b.tur === "duzeltme" ? "duzeltme" : "kanuni";
+    const etiket = b.tur === "duzeltme" ? "düzeltme" : "kanuni süresinde";
+    oge.innerHTML =
+      `<span class="rozet ${rozet}">${etiket}</span>` +
+      `<strong>${b.yil}/${durum.tanimlar.aylar[b.ay - 1]}</strong>` +
+      `<span style="color:#5a6b7d;">${b.onay_zamani || "onay zamanı yok"}</span>` +
+      `<span style="color:#8899aa;flex:1;overflow:hidden;text-overflow:ellipsis;` +
+      `white-space:nowrap;" title="${b.kaynak}">${b.kaynak}</span>`;
+    if ((b.uyarilar || []).length) {
+      const u = document.createElement("span");
+      u.className = "rozet uyari";
+      u.textContent = b.uyarilar.length + " uyarı";
+      u.title = b.uyarilar.join("\n");
+      oge.appendChild(u);
+    }
+    const sil = document.createElement("button");
+    sil.className = "mini";
+    sil.textContent = "×";
+    sil.title = "Bu beyannameyi çıkar";
+    sil.addEventListener("click", async () => {
+      durum.calisma.beyannameler.splice(i, 1);
+      await beyannameleriTazele();
+    });
+    oge.appendChild(sil);
+    kap.appendChild(oge);
+  });
+}
+
+function bnGenelCiz() {
+  // Yil sekmeleri: beyanname yuklenen yillar. Sonuc ve Fark sekmesindeki
+  // mantikla ayni; "Tümü" butun yillari tek tabloda gosterir.
+  const tumSatirlar = durum.bnOzet.genel_bakis;
+  const yilListesi = [];
+  tumSatirlar.forEach((g) => { if (!yilListesi.includes(g.yil)) yilListesi.push(g.yil); });
+  yilListesi.sort((a, b) => a - b);
+  if (durum.bnGenelYil !== "tumu" && !yilListesi.includes(durum.bnGenelYil)) {
+    durum.bnGenelYil = yilListesi.length > 1 ? "tumu" : (yilListesi[0] ?? "tumu");
+  }
+  const sekmeKap = $("bnGenelYilSekme");
+  sekmeKap.innerHTML = "";
+  sekmeKap.style.display = yilListesi.length > 1 ? "" : "none";
+  if (yilListesi.length > 1) {
+    [["tumu", "Tümü"]].concat(yilListesi.map((y) => [y, String(y)]))
+      .forEach(([deger, ad]) => {
+        const d = document.createElement("button");
+        d.className = "yil-sekme" + (String(durum.bnGenelYil) === String(deger) ? " aktif" : "");
+        d.textContent = ad;
+        d.addEventListener("click", () => { durum.bnGenelYil = deger; bnGenelCiz(); });
+        sekmeKap.appendChild(d);
+      });
+  }
+  const satirlar = String(durum.bnGenelYil) === "tumu"
+    ? tumSatirlar
+    : tumSatirlar.filter((g) => String(g.yil) === String(durum.bnGenelYil));
+
+  const tablo = $("bnGenelTablo");
+  tablo.innerHTML = "";
+  // Tutar kolonlari Sonuc ve Fark sekmesiyle ayni tanimdan gelir.
+  const kolonlar = durum.tanimlar.ozet_kolonlari;
+  const basliklar = ["Dönem", "Beyanname", "Tarih", "Değişen satır"];
+  const tr = document.createElement("tr");
+  basliklar.forEach((b) => tr.appendChild(hucre("th", b)));
+  kolonlar.forEach((k) => {
+    const th = hucre("th", k.etiket);
+    th.className = "sag";
+    tr.appendChild(th);
+  });
+  tr.appendChild(hucre("th", "Düzeltme gerekçesi"));
+  tablo.appendChild(tr);
+
+  const cokYil = String(durum.bnGenelYil) === "tumu" && yilListesi.length > 1;
+  let oncekiDonem = null;
+  satirlar.forEach((g) => {
+    const satir = document.createElement("tr");
+    // Ayni donemin ikinci ve sonraki beyannamelerinde donem adi tekrarlanmaz;
+    // boylece bir donemin kac beyannamesi oldugu bir bakista gorunur.
+    const yeniDonem = g.anahtar !== oncekiDonem;
+    if (yeniDonem && oncekiDonem !== null) satir.classList.add("donem-basi");
+    const ad = hucre("td", yeniDonem ? (cokYil ? g.etiket : g.ay_adi) : "");
+    if (yeniDonem) {
+      ad.style.cursor = "pointer";
+      ad.title = "Dönem detayına git";
+      ad.addEventListener("click", () => {
+        durum.bnDonem = g.anahtar; bnDetayCiz();
+        $("beyannameDetayKart").scrollIntoView({ behavior: "smooth" });
+      });
+    }
+    satir.appendChild(ad);
+    oncekiDonem = g.anahtar;
+
+    const surum = hucre("td", g.surum_etiketi);
+    if (g.tur === "duzeltme") surum.classList.add("duzeltme-satir");
+    satir.appendChild(surum);
+    satir.appendChild(hucre("td", g.tarih || "—"));
+
+    const degisen = hucre("td", g.ilk_mi ? "—"
+                          : (g.degisen_satir ? String(g.degisen_satir) : "değişiklik yok"));
+    if (!g.ilk_mi && !g.degisen_satir) degisen.classList.add("sessiz");
+    satir.appendChild(degisen);
+
+    kolonlar.forEach((k) => {
+      const td = hucre("td", tl(g.ozet[k.kod] || 0));
+      td.className = "sayi";
+      // Bir onceki beyannameye gore degisen hucreler vurgulanir
+      if (g.ozet_degisen.includes(k.kod)) td.classList.add("fark-var");
+      else if ((g.ozet[k.kod] || 0) < 0) td.classList.add("negatif");
+      satir.appendChild(td);
+    });
+
+    const gerekce = hucre("td", g.gerekce || "");
+    gerekce.className = "gerekce";
+    satir.appendChild(gerekce);
+    tablo.appendChild(satir);
+  });
+}
+
+function bnDetayCiz() {
+  const donemler = durum.bnOzet.duzen.donemler;
+  const kap = $("bnDonemSekme");
+  kap.innerHTML = "";
+  donemler.forEach((d) => {
+    const dugme = document.createElement("button");
+    dugme.className = "yil-sekme" + (d.anahtar === durum.bnDonem ? " aktif" : "");
+    dugme.textContent = d.etiket + (d.surum_sayisi > 1 ? ` (${d.surum_sayisi})` : "");
+    dugme.addEventListener("click", () => { durum.bnDonem = d.anahtar; bnDetayCiz(); });
+    kap.appendChild(dugme);
+  });
+
+  const donem = donemler.find((d) => d.anahtar === durum.bnDonem);
+  const tablo = $("bnDetayTablo");
+  const bilgi = $("bnSurumBilgi");
+  const adimKap = $("bnAdimlar");
+  tablo.innerHTML = ""; bilgi.innerHTML = ""; adimKap.innerHTML = "";
+  if (!donem) return;
+
+  bilgi.innerHTML = donem.surumler.map((s) =>
+    `<div class="oge"><span class="rozet ${s.tur === "duzeltme" ? "duzeltme" : "kanuni"}">` +
+    `${s.etiket}</span><span>${s.onay_zamani || "onay zamanı yok"}</span>` +
+    (s.duzeltme_nedeni ? `<span style="color:#8a6d1b;">${s.duzeltme_nedeni}</span>` : "") +
+    `<span style="color:#8899aa;flex:1;">${s.kaynak}</span></div>`).join("");
+
+  const satirlar = durum.bnOzet.tablolar[donem.anahtar] || [];
+  const basliklar = ["Beyanname satırı"].concat(donem.surumler.map((s) => s.etiket));
+  if (donem.surum_sayisi > 1) basliklar.push("Fark (son − ilk)");
+  const tr = document.createElement("tr");
+  basliklar.forEach((b, i) => {
+    const th = hucre("th", b);
+    if (i > 0) th.className = "sag";
+    tr.appendChild(th);
+  });
+  tablo.appendChild(tr);
+
+  if (!satirlar.length) {
+    const bos = document.createElement("tr");
+    bos.appendChild(hucre("td", $("bnYalnizDegisen").checked
+      ? "Sürümler arasında değişen satır yok."
+      : "Gösterilecek satır yok.", { colSpan: basliklar.length }));
+    bos.firstChild.className = "bos-durum";
+    tablo.appendChild(bos);
+  }
+
+  satirlar.forEach((s) => {
+    const satir = document.createElement("tr");
+    if (s.onemli) satir.className = "onemli";
+    satir.appendChild(hucre("td", s.etiket));
+    s.degerler.forEach((deger, i) => {
+      const td = hucre("td", tl(deger));
+      td.className = "sayi";
+      if (i > 0 && Math.abs(deger - s.degerler[i - 1]) > 0.005) td.classList.add("degisti");
+      satir.appendChild(td);
+    });
+    if (donem.surum_sayisi > 1) {
+      const td = hucre("td", tl(s.fark));
+      td.className = "sayi";
+      if (Math.abs(s.fark) > 0.005) td.classList.add("fark-var");
+      satir.appendChild(td);
+    }
+    tablo.appendChild(satir);
+  });
+
+  if ((donem.adim_adim || []).length) {
+    adimKap.innerHTML = "<h3>Her düzeltmede ne değişti</h3>" +
+      donem.adim_adim.map((a) => {
+        const liste = a.degisen.length
+          ? a.degisen.map((x) =>
+              `<li>${x.etiket}: ${tl(x.ilk)} → <strong>${tl(x.son)}</strong> ` +
+              `(${x.fark > 0 ? "+" : ""}${tl(x.fark)})</li>`).join("")
+          : "<li>Tutarlarda değişiklik yok.</li>";
+        return `<div style="margin-bottom:12px;"><div><strong>${a.etiket}</strong> ` +
+               `<span style="color:#5a6b7d;">${a.onay_zamani}</span>` +
+               (a.duzeltme_nedeni ? ` — <em>${a.duzeltme_nedeni}</em>` : "") +
+               `</div><ul style="margin:4px 0 0 18px;font-size:13px;">${liste}</ul></div>`;
+      }).join("");
+  }
+}
+
+/**
+ * Duzeltme beyannameleri tablosu (rapora yapistirilan bicim).
+ *
+ * Basligi "Dönemi <yil>" oldugu icin her yil ayri bir tablo olarak cizilir;
+ * elde kullanilan tablonun duzeni budur.
+ */
+function duzeltmeTablosunuCiz() {
+  const kap = $("duzeltmeTablolar");
+  const kolonlar = durum.bnOzet.duzeltme_kolonlari || [];
+  const bloklar = durum.bnOzet.duzeltme_tablosu || [];
+  kap.innerHTML = "";
+  $("duzeltmeKart").style.display = bloklar.length ? "" : "none";
+  if (!bloklar.length) return;
+
+  bloklar.forEach((blok) => {
+    const sar = document.createElement("div");
+    sar.className = "kaydir";
+    sar.style.marginBottom = "14px";
+    const tablo = document.createElement("table");
+    tablo.className = "tablo duzeltme-tablo";
+
+    const bas = document.createElement("tr");
+    kolonlar.forEach((k) => {
+      const th = hucre("th", k.kod === "donem" ? `Dönemi\n${blok.yil}` : k.etiket);
+      if (k.kod === "donem") th.style.whiteSpace = "pre-line";
+      if (!["donem", "tarih", "gerekce"].includes(k.kod)) th.className = "sag";
+      bas.appendChild(th);
+    });
+    tablo.appendChild(bas);
+
+    blok.satirlar.forEach((satir) => {
+      const tr = document.createElement("tr");
+      kolonlar.forEach((k) => {
+        const deger = satir[k.kod];
+        if (k.kod === "gerekce") {
+          const td = hucre("td", deger || "—");
+          td.className = "gerekce";
+          tr.appendChild(td);
+        } else if (typeof deger === "number") {
+          const td = hucre("td", tl(deger));
+          td.className = "sayi";
+          tr.appendChild(td);
+        } else {
+          tr.appendChild(hucre("td", String(deger || "")));
+        }
+      });
+      tablo.appendChild(tr);
+    });
+    sar.appendChild(tablo);
+    kap.appendChild(sar);
+  });
+}
+
+/** Tabloyu panoya sekmeyle ayrilmis olarak kopyalar (Word/Excel'e yapistirilir). */
+function duzeltmeMetni() {
+  const kolonlar = durum.bnOzet.duzeltme_kolonlari || [];
+  const satirlar = [];
+  (durum.bnOzet.duzeltme_tablosu || []).forEach((blok) => {
+    satirlar.push(kolonlar.map((k) => k.kod === "donem"
+      ? `Dönemi ${blok.yil}` : k.etiket).join("\t"));
+    blok.satirlar.forEach((s) => {
+      satirlar.push(kolonlar.map((k) => {
+        const d = s[k.kod];
+        return typeof d === "number" ? tl(d) : String(d || "");
+      }).join("\t"));
+    });
+    satirlar.push("");
+  });
+  return satirlar.join("\n").trim();
+}
+
+$("duzeltmeKopyala").addEventListener("click", () => {
+  const metin = duzeltmeMetni();
+  navigator.clipboard.writeText(metin).then(
+    () => mesaj("Tablo panoya kopyalandı; rapora yapıştırabilirsiniz."),
+    () => mesaj("Kopyalanamadı. Tabloyu seçip Ctrl+C ile alabilirsiniz.", "hata"));
+});
+
+$("duzeltmeExcel").addEventListener("click", () => excelIndir());
+
+function bnSecimCiz() {
+  const elle = $("bnMod").value === "elle";
+  const kap = $("bnElleSecim");
+  kap.style.display = elle ? "" : "none";
+  kap.innerHTML = "";
+  if (elle) {
+    durum.bnOzet.duzen.donemler.forEach((d) => {
+      const kutu = document.createElement("div");
+      kutu.className = "oge";
+      const etiket = document.createElement("strong");
+      etiket.textContent = d.etiket;
+      etiket.style.minWidth = "120px";
+      const sec = document.createElement("select");
+      sec.style.maxWidth = "320px";
+      d.surumler.forEach((s) => {
+        const o = document.createElement("option");
+        o.value = String(s.sira);
+        o.textContent = `${s.etiket}${s.onay_zamani ? " · " + s.onay_zamani : ""}`;
+        sec.appendChild(o);
+      });
+      const secili = durum.bnSecimler[d.anahtar];
+      sec.value = String(secili === undefined ? d.surum_sayisi - 1 : secili);
+      durum.bnSecimler[d.anahtar] = Number(sec.value);
+      sec.addEventListener("change", () => {
+        durum.bnSecimler[d.anahtar] = Number(sec.value);
+      });
+      kutu.append(etiket, sec);
+      kap.appendChild(kutu);
+    });
+  }
+  $("bnSecimOzet").innerHTML = "";
+}
+
+async function beyannameyiUygula() {
+  try {
+    const y = await api("/api/beyanname_uygula", {
+      beyannameler: durum.calisma.beyannameler,
+      secim: { mod: $("bnMod").value, secimler: durum.bnSecimler },
+    });
+    if (!y.yillar.length) { mesaj("Uygulanacak beyanname yok.", "hata"); return; }
+
+    const dokunulan = [];
+    y.yillar.forEach((yeni) => {
+      let kayit = yilBul(yeni.yil);
+      if (!kayit) {
+        kayit = { yil: yeni.yil, ay_sayisi: yeni.ay_sayisi, devir_baslangic: null,
+                  beyan: bosBeyan(), elestiri: bosElestiri(yeni.yil), kaynaklar: [] };
+        durum.calisma.yillar.push(kayit);
+      }
+      // Yalnizca beyannamesi yuklenen aylar yazilir; digerleri korunur
+      Object.keys(yeni.beyan).forEach((kod) => {
+        if (!kayit.beyan[kod]) kayit.beyan[kod] = new Array(12).fill(0);
+        yeni.dolu_aylar.forEach((ay) => {
+          kayit.beyan[kod][ay - 1] = yeni.beyan[kod][ay - 1];
+        });
+      });
+      kayit.ay_sayisi = Math.max(kayit.ay_sayisi || 0, yeni.ay_sayisi);
+      (kayit.kaynaklar = kayit.kaynaklar || []).push({
+        vergi_dairesi: "beyanname PDF",
+        rapor_tarihi: new Date().toLocaleDateString("tr-TR"),
+        aylar: yeni.dolu_aylar.slice(),
+      });
+      dokunulan.push(yeni.yil);
+      if (durum.aktifYil == null) durum.aktifYil = yeni.yil;
+    });
+
+    // Beyanname mükellefin kimliğini de taşır; boş alanlar oradan doldurulur.
+    // Kullanıcının kendi yazdığı değer korunur.
+    const yazilanKimlik = [];
+    if (y.mukellef) {
+      Object.entries({ vkn_tckn: "VKN", ad_unvan: "unvan",
+                       vergi_dairesi: "vergi dairesi" }).forEach(([kod, ad]) => {
+        if (y.mukellef[kod] && !String(durum.calisma.mukellef[kod] || "").trim()) {
+          durum.calisma.mukellef[kod] = y.mukellef[kod];
+          yazilanKimlik.push(ad);
+        }
+      });
+      $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
+      $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
+      $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
+    }
+
+    $("bnSecimOzet").innerHTML =
+      '<div class="yardim" style="margin-top:10px;"><strong>Beyan verisine yazıldı:</strong><ul style="margin:4px 0 0 18px;">' +
+      y.kullanilan.map((k) => `<li>${k.donem} — ${k.surum}` +
+        (k.onay_zamani ? ` (${k.onay_zamani})` : "") + `</li>`).join("") +
+      "</ul></div>" +
+      (yazilanKimlik.length
+        ? `<div class="yardim">Mükellef bilgilerinden ${yazilanKimlik.join(", ")} ` +
+          "beyannameden alındı.</div>" : "") +
+      (y.uyarilar || []).map((u) =>
+        `<div class="uyari-satir" style="margin-top:8px;">${u.replace(/[<>]/g, "")}</div>`).join("");
+    isaretle();
+    mesaj(`${y.kullanilan.length} dönem beyan verisine yazıldı.`);
+    if ((y.uyarilar || []).length) {
+      mesaj("Yüklenen beyannameler tek mükellefe ait değil; uyarıya bakın.", "hata");
+    }
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+
+/**
+ * Defter ve belge ibraz edilmediğinde dönemin indirilecek KDV'sinin tamamı
+ * reddedilir (VUK 30/3). Seçili yılın beyan satırındaki "bu döneme ait
+ * indirilecek KDV" tutarları, indirim reddi satırına olduğu gibi yazılır.
+ */
+$("tumIndirimReddi").addEventListener("click", async () => {
+  const yil = aktifYilKaydi();
+  if (!yil) { mesaj("Önce beyan verisini yükleyin.", "hata"); return; }
+  const kaynak = (yil.beyan && yil.beyan.bu_donem_indirilecek) || [];
+  const dolu = kaynak.filter((v) => Math.abs(Number(v) || 0) > 0.005).length;
+  if (!dolu) { mesaj("Bu yılda indirilecek KDV beyanı bulunamadı.", "hata"); return; }
+  if (!confirm(`${yil.yil} yılında beyan edilen indirilecek KDV tutarlarının ` +
+               `tamamı (${dolu} dönem) reddedilecek. Girilmiş indirim reddi ` +
+               "tutarlarının üzerine yazılacak. Sürdürülsün mü?")) return;
+  for (let ay = 0; ay < 12; ay++) {
+    yil.elestiri.indirim_cikar[ay] = ay < yil.ay_sayisi
+      ? Number(kaynak[ay] || 0) : yil.elestiri.indirim_cikar[ay];
+  }
+  isaretle();
+  elestiriIzgarasiniCiz();
+  mesaj(`${dolu} dönemin indirilecek KDV'si tümüyle reddedildi.`);
+});
+
+$("ziyaKati").addEventListener("change", async () => {
+  durum.calisma.ziya_kati = Number($("ziyaKati").value) === 3 ? 3 : 1;
+  isaretle(false);
+  await hesapla();
+});
+
+$("bnMod").addEventListener("change", () => { bnSecimCiz(); });
+$("bnYalnizDegisen").addEventListener("change", () => { beyannameleriTazele(); });
+$("bnUygula").addEventListener("click", beyannameyiUygula);
+$("pdfTemizle").addEventListener("click", async () => {
+  if (!confirm("Yüklenen bütün beyannameler listeden çıkarılacak. " +
+               "Beyan Verisine yazdıklarınız kalır. Onaylıyor musunuz?")) return;
+  durum.calisma.beyannameler = [];
+  durum.bnSecimler = {};
+  await beyannameleriTazele();
+  $("pdfDurum").innerHTML = "";
+  mesaj("Beyanname listesi temizlendi.");
+});
+
+function kayitlariCiz() {
+  const liste = $("kayitListe");
+  liste.innerHTML = "";
+  if (!durum.kayitlar.length) {
+    liste.innerHTML = '<li class="bos-durum">Henüz kaydedilmiş çalışma yok.</li>';
+    return;
+  }
+  durum.kayitlar.forEach((k) => {
+    const li = document.createElement("li");
+    if (k.id === durum.kayitliId) li.className = "secili";
+    const ad = document.createElement("span");
+    ad.className = "ad";
+    ad.innerHTML = `<strong>${k.ad}</strong><br><small>` +
+      `${k.mukellef_ad || "—"}${k.vkn_tckn ? " · " + k.vkn_tckn : ""}` +
+      `${k.yillar.length ? " · " + k.yillar.join(", ") : ""} · ${k.guncelleme_tarihi}</small>`;
+    ad.addEventListener("click", () => calismaAc(k.id));
+    const dugmeler = document.createElement("span");
+    const ac = document.createElement("button");
+    ac.className = "btn ikincil"; ac.style.cssText = "padding:4px 10px;font-size:12px;margin-right:6px;";
+    ac.textContent = "Aç";
+    ac.addEventListener("click", () => calismaAc(k.id));
+    const sil = document.createElement("button");
+    sil.className = "btn tehlike"; sil.style.cssText = "padding:4px 10px;font-size:12px;";
+    sil.textContent = "Sil";
+    sil.addEventListener("click", () => calismaSil(k.id, k.ad));
+    dugmeler.append(ac, sil);
+    li.append(ad, dugmeler);
+    liste.appendChild(li);
+  });
+}
+
+["cAd", "cMukellefAd", "cVkn", "cVergiDairesi", "cAdres"].forEach((id) => {
+  $(id).addEventListener("change", () => {
+    if (id === "cAd") durum.calisma.ad = $(id).value.trim();
+    if (id === "cMukellefAd") durum.calisma.mukellef.ad_unvan = $(id).value.trim();
+    if (id === "cVkn") durum.calisma.mukellef.vkn_tckn = $(id).value.trim();
+    if (id === "cVergiDairesi") durum.calisma.mukellef.vergi_dairesi = $(id).value.trim();
+    if (id === "cAdres") durum.calisma.mukellef.adres = $(id).value.trim();
+    isaretle(false);
+  });
+});
+
+// ------------------------------------------------- sahte belge / faturalar
+function faturaKutusunuKur() {
+  const kutu = $("fatBirakma");
+  const secici = $("fatSecici");
+  kutu.addEventListener("click", () => secici.click());
+  secici.addEventListener("change", () => {
+    faturaYukle(Array.from(secici.files));
+    secici.value = "";
+  });
+  ["dragenter", "dragover"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.add("uzerinde");
+  }));
+  ["dragleave", "drop"].forEach((o) => kutu.addEventListener(o, (e) => {
+    e.preventDefault(); kutu.classList.remove("uzerinde");
+  }));
+  kutu.addEventListener("drop", (e) => {
+    const dosyalar = Array.from(e.dataTransfer.files || [])
+      .filter((f) => /\.xlsx$/i.test(f.name));
+    if (!dosyalar.length) { mesaj("Excel (.xlsx) dosyası bulunamadı.", "hata"); return; }
+    faturaYukle(dosyalar);
+  });
+}
+
+async function faturaYukle(dosyalar) {
+  if (!dosyalar.length) return;
+  $("fatDurum").innerHTML = `<div class="yardim">${dosyalar.length} dosya okunuyor...</div>`;
+  try {
+    const yuk = [];
+    for (const d of dosyalar) yuk.push({ ad: d.name, veri: await dosyayiOku(d) });
+    const y = await api("/api/fatura_oku", {
+      dosyalar: yuk,
+      satici_vkn: $("fatSaticiVkn").value.trim(),
+      mukellef_vkn: durum.calisma.mukellef.vkn_tckn || "",
+      calisma: durum.calisma,
+    });
+    durum.calisma.faturalar = (durum.calisma.faturalar || []).concat(y.faturalar || []);
+    const satirlar = (y.sayfalar || []).map((s) =>
+      `<div class="yardim">${s.dosya} · ${s.ad}: ${s.adet} satır (${s.durum})</div>`);
+    (y.uyarilar || []).forEach((u) => satirlar.push(`<div class="uyari-satir">${u}</div>`));
+    (y.hatalar || []).forEach((h) =>
+      satirlar.push(`<div class="uyari-satir">${h.ad}: ${h.mesaj}</div>`));
+    $("fatDurum").innerHTML = satirlar.join("");
+    if ((y.faturalar || []).length) {
+      mesaj(`${y.faturalar.length} fatura okundu.`);
+      isaretle(false);
+    }
+    await faturalariTazele();
+  } catch (hata) {
+    $("fatDurum").innerHTML = "";
+    mesaj(hata.message, "hata");
+  }
+}
+
+/** Fatura ozetini sunucudan alir ve ekrani yeniden cizer. */
+function elleSaticiVarMi() {
+  return Object.values(durum.calisma.saticilar || {})
+    .some((b) => (b || {}).elle === "Evet");
+}
+
+async function faturalariTazele() {
+  // Fatura yoksa bile elle eklenmis satici varsa ozet istenir: o saticilar
+  // fatura listesinden degil, satici kartlarindan uretiliyor.
+  if (!(durum.calisma.faturalar || []).length && !elleSaticiVarMi()) {
+    durum.fatOzet = null;
+    faturaEkraniniCiz();
+    return;
+  }
+  try {
+    durum.fatOzet = await api("/api/fatura_ozet", { calisma: durum.calisma });
+    // Sunucu yonu ve kayit donemini turetmis olabilir; calismaya geri yaz ki
+    // kaydedildiginde de ayni bilgi dursun.
+    durum.calisma.faturalar = durum.fatOzet.faturalar;
+  } catch (hata) { mesaj(hata.message, "hata"); }
+  faturaEkraniniCiz();
+}
+
+function faturaEkraniniCiz() {
+  const varMi = !!(durum.fatOzet && durum.calisma.faturalar.length);
+  ["fatListeKart", "fatAktarKart", "fatBulguKart"].forEach((id) => {
+    $(id).style.display = varMi ? "" : "none";
+  });
+  // Satici dokumu HER ZAMAN acik durur: "Satici ekle" dugmesi orada ve fatura
+  // listesi hic olmayan dosyalarda da satici eklenebilmelidir.
+  $("fatOzetKart").style.display = "";
+  $("fatTemizle").style.display = (durum.calisma.faturalar || []).length ? "" : "none";
+  faturaSaticiTablosunuCiz();
+  if (!varMi) return;
+  faturaListesiniCiz();
+  faturaAktarimiCiz();
+  faturaBulgulariniCiz();
+}
+
+function faturaSaticiTablosunuCiz() {
+  const tablo = $("fatSaticiTablo");
+  tablo.innerHTML = "";
+  const bas = ["VKN", "Unvan", "Kullanma Durumu", "Fatura", "Matrah", "KDV",
+               "Dönem Aralığı", "Tarhiyat", ""];
+  const ust = document.createElement("tr");
+  bas.forEach((b) => ust.appendChild(hucre("th", b)));
+  tablo.appendChild(ust);
+
+  const saticiSatirlari = (durum.fatOzet && durum.fatOzet.saticilar) || [];
+  if (!saticiSatirlari.length) {
+    const bos = document.createElement("tr");
+    const td = hucre("td", "Henüz satıcı yok. Fatura listesi yükleyin ya da "
+      + "“+ Satıcı ekle” ile elle girin.", { className: "sessiz" });
+    td.colSpan = bas.length;
+    bos.appendChild(td);
+    tablo.appendChild(bos);
+  }
+  saticiSatirlari.forEach((s) => {
+    const tr = document.createElement("tr");
+    tr.appendChild(hucre("td", s.vkn || "—"));
+    tr.appendChild(hucre("td", s.unvan || "—", { className: s.unvan ? "" : "sessiz" }));
+    const durumHucre = hucre("td", s.kullanma,
+      { className: s.kullanma === "Belirlenmedi" ? "fark-var" : "" });
+    tr.appendChild(durumHucre);
+    tr.appendChild(hucre("td", String(s.adet), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(s.matrah), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(s.kdv), { className: "sag" }));
+    tr.appendChild(hucre("td", s.ilk_donem === s.son_donem
+      ? s.ilk_donem : `${s.ilk_donem} – ${s.son_donem}`));
+    tr.appendChild(hucre("td",
+      s.duzeltme_ile_cikarildi === "Evet" ? "düzeltme ile çıkarılmış" : "tarhiyata dahil",
+      { className: s.duzeltme_ile_cikarildi === "Evet" ? "sessiz" : "" }));
+    const tdD = document.createElement("td");
+    const dugme = document.createElement("button");
+    dugme.className = "btn ikincil";
+    dugme.style.cssText = "padding:3px 9px;font-size:12px;";
+    dugme.textContent = durum.fatSatici === s.vkn ? "Kapat" : "Düzenle";
+    dugme.addEventListener("click", () => {
+      durum.fatSatici = durum.fatSatici === s.vkn ? null : s.vkn;
+      faturaEkraniniCiz();
+    });
+    tdD.appendChild(dugme);
+    tr.appendChild(tdD);
+    tablo.appendChild(tr);
+  });
+  faturaSaticiDetayiniCiz();
+}
+
+function faturaSaticiDetayiniCiz() {
+  const kap = $("fatSaticiDetay");
+  kap.innerHTML = "";
+  if (!durum.fatSatici) return;
+  const vkn = durum.fatSatici;
+  const bilgi = durum.calisma.saticilar[vkn] || (durum.calisma.saticilar[vkn] = {});
+
+  const baslik = document.createElement("h3");
+  baslik.textContent = `${vkn} VKN'li satıcı`;
+  const izgara = document.createElement("div");
+  izgara.className = "kunye-izgara";
+  // "yalniz_elle" alanlari (yil, adet, tutar) yalnizca elle eklenen
+  // saticilarda anlamlidir: fatura listesi olan bir saticida bu degerler
+  // faturalardan gelir, elle girilen bir sayi onlarla celisirdi.
+  const elleMi = bilgi.elle === "Evet";
+  (durum.tanimlar.satici_alanlari || [])
+    .filter((alan) => elleMi || !alan.yalniz_elle)
+    .forEach((alan) => {
+    const sar = document.createElement("div");
+    if (alan.tur === "uzun") sar.className = "genis";
+    const etiket = document.createElement("label");
+    etiket.textContent = alan.etiket;
+    let girdi;
+    if (alan.tur === "secim") {
+      girdi = document.createElement("select");
+      (alan.secenekler || []).forEach((s) => {
+        const o = document.createElement("option");
+        o.value = s; o.textContent = s;
+        girdi.appendChild(o);
+      });
+    } else if (alan.tur === "uzun") {
+      girdi = document.createElement("textarea");
+      girdi.rows = 3;
+    } else {
+      girdi = document.createElement("input");
+      girdi.type = "text";
+      if (alan.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+    }
+    girdi.value = bilgi[alan.kod] || alan.varsayilan || "";
+    girdi.addEventListener("change", async () => {
+      bilgi[alan.kod] = girdi.value;
+      isaretle(false);
+      await faturalariTazele();
+    });
+    sar.append(etiket, girdi);
+    izgara.appendChild(sar);
+  });
+  kap.append(baslik, izgara);
+
+  if (elleMi) {
+    const uyari = document.createElement("div");
+    uyari.className = "yardim";
+    uyari.style.marginTop = "8px";
+    uyari.textContent = "Bu satıcı elle eklendi; fatura listesi bulunmadığı "
+      + "için tutanakta fatura dökümü tablosu açılmaz, tutar ve adet "
+      + "yukarıda girdiğiniz değerlerden yazılır.";
+    const sil = document.createElement("button");
+    sil.className = "btn ikincil";
+    sil.style.marginTop = "8px";
+    sil.textContent = "Bu satıcıyı sil";
+    sil.addEventListener("click", async () => {
+      if (!confirm(`${vkn} VKN'li elle eklenen satıcı silinsin mi?`)) return;
+      delete durum.calisma.saticilar[vkn];
+      durum.fatSatici = null;
+      isaretle(false);
+      await faturalariTazele();
+    });
+    kap.append(uyari, sil);
+  }
+}
+
+/**
+ * Fatura listesinde görünmeyen bir sahteci mükellefi elle ekler.
+ *
+ * Kayıt satıcı kartlarına yazılır (`saticilar[vkn].elle = "Evet"`); tutar ve
+ * adet oradan okunur. VKN, kaydın anahtarı olduğu için zorunludur.
+ */
+async function saticiElleEkle() {
+  const ham = prompt("Eklenecek satıcının VKN / TCKN'si:");
+  if (ham === null) return;
+  const vkn = (ham || "").replace(/[^0-9]/g, "");
+  if (!vkn) { mesaj("VKN girilmedi; satıcı eklenmedi.", "hata"); return; }
+  durum.calisma.saticilar = durum.calisma.saticilar || {};
+  if (durum.calisma.saticilar[vkn]) {
+    mesaj(`${vkn} zaten kayıtlı; kartı açıldı.`);
+  } else {
+    durum.calisma.saticilar[vkn] = { elle: "Evet" };
+    mesaj(`${vkn} VKN'li satıcı eklendi. Unvan, yıl, adet ve tutarı girin.`);
+  }
+  durum.fatSatici = vkn;
+  isaretle(false);
+  await faturalariTazele();
+}
+
+/**
+ * Fatura listesinin satıcı VKN süzgecini kurar. Bir sahtecinin faturaları
+ * genellikle toplu işlenir; süzülen satırlar başlıktaki kutucukla tek seferde
+ * dahil edilip çıkarılabilsin diye süzme ile toplu seçim birlikte çalışır.
+ */
+function faturaSuzgeciniCiz(gorunen, yildakiler) {
+  const kap = $("fatSuzgec");
+  const kapsam = yildakiler || durum.calisma.faturalar;
+  const sayaclar = new Map();
+  kapsam.forEach((f) => {
+    const vkn = f.satici_vkn || "";
+    sayaclar.set(vkn, (sayaclar.get(vkn) || 0) + 1);
+  });
+  // Süzgeçteki satıcı listeden düşmüşse (dosya değişmiş olabilir) süzgeç açılır
+  if (durum.fatSuzgec && !sayaclar.has(durum.fatSuzgec)) durum.fatSuzgec = "";
+
+  kap.innerHTML = "";
+  const sar = document.createElement("div");
+  sar.className = "otomatik";
+  const etiket = document.createElement("label");
+  etiket.textContent = "Satıcı VKN'ye göre süz";
+  etiket.htmlFor = "fatSuzgecSecim";
+  const sec = document.createElement("select");
+  sec.id = "fatSuzgecSecim";
+  const unvan = (vkn) => ((durum.calisma.saticilar || {})[vkn] || {}).unvan || "";
+  const secenekler = [["", `Tümü (${kapsam.length} satır)`]];
+  Array.from(sayaclar.keys()).sort().forEach((vkn) => {
+    const ad = unvan(vkn);
+    secenekler.push([vkn, `${vkn || "VKN yok"}${ad ? " — " + ad : ""} (${sayaclar.get(vkn)} satır)`]);
+  });
+  secenekler.forEach(([deger, metin]) => {
+    const o = document.createElement("option");
+    o.value = deger; o.textContent = metin;
+    sec.appendChild(o);
+  });
+  sec.value = durum.fatSuzgec || "";
+  sec.addEventListener("change", () => {
+    durum.fatSuzgec = sec.value;
+    faturaListesiniCiz();
+  });
+  sar.append(etiket, sec);
+  kap.appendChild(sar);
+
+  if (durum.fatSuzgec || durum.fatYil !== "tumu") {
+    const bilgi = document.createElement("div");
+    bilgi.className = "otomatik";
+    const dahil = gorunen.filter((f) => f.dahil).length;
+    bilgi.innerHTML =
+      `<label>&nbsp;</label><div class="yardim">Süzülen ${gorunen.length} satırın ` +
+      `<strong>${dahil}</strong> tanesi dahil. Başlıktaki kutucuk süzülen ` +
+      `satırların tamamını birden seçer.</div>`;
+    kap.appendChild(bilgi);
+  }
+}
+
+// --- Sütun süzgeçlerinin okuduğu değerler: tabloda görünen biçimin aynısı
+function faturaTarihi(f) { return tarihGoster(f.tarih) || ""; }
+
+function faturaDonemi(f) {
+  return (f.kayit_yil && f.kayit_ay)
+    ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+}
+
+function faturaOrani(f) {
+  return f.matrah ? "%" + (f.kdv / f.matrah * 100).toFixed(1).replace(".", ",") : "";
+}
+
+/**
+ * Başlığın altındaki süzgeç satırı.
+ *
+ * Tarih serbest metinle süzülür: "05.2023" yazınca o ayın, "2023" yazınca o
+ * yılın faturaları kalır. Satıcı VKN, kayıt dönemi ve oran için seçenek
+ * listesi verinin kendisinden kurulur. Süzgeçler görünen kümeyi daralttığı
+ * için başlıktaki toplu seçim kutucuğu ve Excel aktarımı da aynı kümeye
+ * uyar.
+ */
+function faturaSutunSuzgecleri(suz) {
+  const tr = document.createElement("tr");
+  tr.className = "suzgec-satir";
+  const bos = (sayi) => {
+    for (let i = 0; i < sayi; i++) tr.appendChild(document.createElement("td"));
+  };
+  const kutuStili = "width:100%;padding:2px 4px;font-size:11px;";
+
+  bos(4);                        // Dahil · Tevsik yok · İptal/itiraz · Fatura No
+
+  const tdTarih = document.createElement("td");
+  const girdi = document.createElement("input");
+  girdi.type = "text";
+  girdi.placeholder = "gg.aa.yyyy";
+  girdi.title = "Tarihin bir parçasını yazın: 05.2023 o ayı, 2023 o yılı süzer";
+  girdi.style.cssText = kutuStili;
+  girdi.value = durum.fatSuzgecler.tarih;
+  girdi.addEventListener("input", () => {
+    durum.fatSuzgecler.tarih = girdi.value.trim();
+    faturaListesiniCiz();
+    const yeni = document.querySelector('.suzgec-satir input[type="text"]');
+    if (yeni) { yeni.focus(); yeni.setSelectionRange(yeni.value.length, yeni.value.length); }
+  });
+  tdTarih.appendChild(girdi);
+  tr.appendChild(tdTarih);
+
+  const secim = (deger, secenekler, etiket, uygula) => {
+    const td = document.createElement("td");
+    const sec = document.createElement("select");
+    sec.style.cssText = kutuStili;
+    const tumu = document.createElement("option");
+    tumu.value = ""; tumu.textContent = etiket;
+    sec.appendChild(tumu);
+    secenekler.forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v || "(boş)";
+      sec.appendChild(o);
+    });
+    sec.value = deger;
+    sec.addEventListener("change", () => { uygula(sec.value); faturaListesiniCiz(); });
+    td.appendChild(sec);
+    tr.appendChild(td);
+  };
+  const dizi = (haric, oku) => Array.from(new Set(suz(haric).map(oku))).sort();
+
+  secim(durum.fatSuzgec, dizi("vkn", (f) => f.satici_vkn || ""), "tümü",
+        (v) => { durum.fatSuzgec = v; });
+  bos(1);                                   // Yön
+  secim(durum.fatSuzgecler.donem, dizi("donem", faturaDonemi), "tümü",
+        (v) => { durum.fatSuzgecler.donem = v; });
+  bos(3);                                   // Matrah · KDV · Toplam
+  secim(durum.fatSuzgecler.oran, dizi("oran", faturaOrani), "tümü",
+        (v) => { durum.fatSuzgecler.oran = v; });
+
+  const tdSon = document.createElement("td");
+  if (durum.fatSuzgec || durum.fatSuzgecler.tarih || durum.fatSuzgecler.donem
+      || durum.fatSuzgecler.oran) {
+    const sil = document.createElement("button");
+    sil.className = "btn ikincil";
+    sil.textContent = "Süzgeçleri temizle";
+    sil.style.cssText = "padding:2px 6px;font-size:11px;";
+    sil.addEventListener("click", () => {
+      durum.fatSuzgec = "";
+      durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+      faturaListesiniCiz();
+    });
+    tdSon.appendChild(sil);
+  }
+  tr.appendChild(tdSon);
+  return tr;
+}
+
+/** Fatura listesinin kayit yili kulakciklari. */
+function faturaYilKulaklariniCiz() {
+  const kap = $("fatYilSekme");
+  const sayaclar = new Map();
+  durum.calisma.faturalar.forEach((f) => {
+    const y = String(f.kayit_yil || "");
+    sayaclar.set(y, (sayaclar.get(y) || 0) + 1);
+  });
+  // Secili yil listeden dusmusse (dosya degismis olabilir) kulak tumune doner
+  if (durum.fatYil !== "tumu" && !sayaclar.has(String(durum.fatYil))) {
+    durum.fatYil = "tumu";
+  }
+  kap.innerHTML = "";
+  const kulak = (deger, metin, baslik) => {
+    const k = document.createElement("div");
+    k.className = "yil-kulak" + (String(durum.fatYil) === String(deger) ? " aktif" : "")
+      + (deger === "tumu" ? " tumu" : "");
+    const b = document.createElement("button");
+    b.className = "ad"; b.textContent = metin; b.title = baslik;
+    b.addEventListener("click", () => {
+      durum.fatYil = deger;
+      faturaListesiniCiz();
+    });
+    k.appendChild(b);
+    kap.appendChild(k);
+  };
+  kulak("tumu", `Tümü (${durum.calisma.faturalar.length})`,
+        "Bütün kayıt yıllarını tek listede göster");
+  Array.from(sayaclar.keys()).sort().forEach((y) => {
+    kulak(y, `${y || "yılsız"} (${sayaclar.get(y)})`,
+          y ? `${y} kayıt dönemine ait faturalar`
+            : "Kayıt dönemi belirlenemeyen faturalar");
+  });
+}
+
+function faturaListesiniCiz() {
+  const t = durum.fatOzet.toplamlar;
+  $("fatToplam").innerHTML =
+    `<div class="yardim" style="margin-bottom:8px;">Toplam ${t.toplam_satir} satır; ` +
+    `<strong>${t.adet}</strong> tanesi tarhiyata dahil. ` +
+    `Matrah <strong>${tl(t.matrah)}</strong> TL, ` +
+    `KDV <strong>${tl(t.kdv)}</strong> TL.</div>`;
+
+  faturaYilKulaklariniCiz();
+  const yildakiler = durum.fatYil === "tumu"
+    ? durum.calisma.faturalar
+    : durum.calisma.faturalar.filter((f) => String(f.kayit_yil || "") === String(durum.fatYil));
+  // Sütun süzgeçleri; "haric" verilen süzgeç uygulanmaz. Bir süzgecin seçenek
+  // listesi, diğer süzgeçlerden geçen satırlardan kurulur; böylece seçim
+  // yapıldıkça diğer listeler daralır ama boş kalmaz.
+  const suz = (haric) => yildakiler.filter((f) =>
+    (haric === "vkn" || !durum.fatSuzgec || (f.satici_vkn || "") === durum.fatSuzgec)
+    && (haric === "tarih" || !durum.fatSuzgecler.tarih
+        || faturaTarihi(f).includes(durum.fatSuzgecler.tarih))
+    && (haric === "donem" || !durum.fatSuzgecler.donem
+        || faturaDonemi(f) === durum.fatSuzgecler.donem)
+    && (haric === "oran" || !durum.fatSuzgecler.oran
+        || faturaOrani(f) === durum.fatSuzgecler.oran));
+  const gorunen = suz(null);
+  faturaSuzgeciniCiz(gorunen, suz("vkn"));
+  durum.fatGorunen = gorunen;
+
+  const tablo = $("fatListeTablo");
+  tablo.innerHTML = "";
+  const ust = document.createElement("tr");
+  const thDahil = document.createElement("th");
+  const hepsi = document.createElement("input");
+  hepsi.type = "checkbox";
+  hepsi.style.width = "auto";
+  hepsi.id = "fatHepsiSec";
+  hepsi.title = "Görünen satırların tamamını dahil et / çıkar";
+  hepsi.checked = gorunen.length > 0 && gorunen.every((f) => f.dahil);
+  hepsi.addEventListener("change", async () => {
+    gorunen.forEach((f) => { f.dahil = hepsi.checked; });
+    isaretle(false);
+    await faturalariTazele();
+  });
+  thDahil.append(hepsi, document.createTextNode(" Dahil"));
+  ust.appendChild(thDahil);
+  ["Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih", "Satıcı VKN", "Yön",
+   "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
+    ust.appendChild(hucre("th", b)));
+  tablo.appendChild(ust);
+  tablo.appendChild(faturaSutunSuzgecleri(suz));
+
+  if (!gorunen.length) {
+    const bos = document.createElement("tr");
+    bos.appendChild(hucre("td", "Seçilen yıl ve satıcıya ait fatura yok.",
+                          { className: "sessiz" })).colSpan = 13;
+    tablo.appendChild(bos);
+  }
+
+  gorunen.forEach((f, i) => {
+    const tr = document.createElement("tr");
+
+    const tdDahil = document.createElement("td");
+    const kutu = document.createElement("input");
+    kutu.type = "checkbox"; kutu.checked = !!f.dahil; kutu.style.width = "auto";
+    kutu.addEventListener("change", async () => {
+      f.dahil = kutu.checked; isaretle(false); await faturalariTazele();
+    });
+    tdDahil.appendChild(kutu);
+    tr.appendChild(tdDahil);
+
+    // Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş faturalar:
+    // VUK mükerrer 355 özel usulsüzlük cezasının matrahını oluşturur.
+    const tdTevsik = document.createElement("td");
+    const tevsik = document.createElement("input");
+    tevsik.type = "checkbox"; tevsik.checked = !!f.tevsik_yok; tevsik.style.width = "auto";
+    tevsik.title = "Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş";
+    tevsik.addEventListener("change", async () => {
+      f.tevsik_yok = tevsik.checked; isaretle(false); await faturalariTazele();
+    });
+    tdTevsik.appendChild(tevsik);
+    tr.appendChild(tdTevsik);
+
+    // İptal/itiraz kaydı: portal dökümünde ayrı sayfa varsa kendiliğinden
+    // işaretlenir, yoksa buradan elle işaretlenir. İşaretlenen fatura
+    // tarhiyata girmese de belgede kaydın varlığı açıklanır.
+    const tdIptal = document.createElement("td");
+    const iptal = document.createElement("input");
+    iptal.type = "checkbox"; iptal.checked = !!f.iptal; iptal.style.width = "auto";
+    iptal.title = "Fatura hakkında iptal/itiraz kaydı bulunuyor";
+    iptal.addEventListener("change", async () => {
+      f.iptal = iptal.checked; isaretle(false); await faturalariTazele();
+    });
+    tdIptal.appendChild(iptal);
+    tr.appendChild(tdIptal);
+
+    tr.appendChild(hucre("td", f.fatura_no || "—"));
+    tr.appendChild(hucre("td", tarihGoster(f.tarih) || "—"));
+    tr.appendChild(hucre("td", f.satici_vkn || "—", { className: f.satici_vkn ? "" : "sessiz" }));
+
+    const tdYon = document.createElement("td");
+    const secYon = document.createElement("select");
+    (durum.tanimlar.fatura_yonleri || []).forEach((y) => {
+      const o = document.createElement("option");
+      o.value = y.kod; o.textContent = y.etiket;
+      secYon.appendChild(o);
+    });
+    secYon.value = f.yon;
+    secYon.addEventListener("change", async () => {
+      f.yon = secYon.value; isaretle(false); await faturalariTazele();
+    });
+    tdYon.appendChild(secYon);
+    tr.appendChild(tdYon);
+
+    const tdDonem = document.createElement("td");
+    const girdiDonem = document.createElement("input");
+    girdiDonem.type = "text";
+    girdiDonem.style.cssText = "width:96px;padding:3px 6px;font-size:12px;";
+    girdiDonem.placeholder = "yyyy/aa";
+    girdiDonem.value = (f.kayit_yil && f.kayit_ay)
+      ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+    girdiDonem.addEventListener("change", async () => {
+      const e = /^(\d{4})[\/.-](\d{1,2})$/.exec(girdiDonem.value.trim());
+      if (!e) {
+        mesaj("Kayıt dönemini yyyy/aa biçiminde yazın (örn 2023/06).", "hata");
+        girdiDonem.value = (f.kayit_yil && f.kayit_ay)
+          ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "";
+        return;
+      }
+      f.kayit_yil = Number(e[1]); f.kayit_ay = Number(e[2]);
+      isaretle(false); await faturalariTazele();
+    });
+    tdDonem.appendChild(girdiDonem);
+    tr.appendChild(tdDonem);
+
+    tr.appendChild(hucre("td", tl(f.matrah), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(f.kdv), { className: "sag" }));
+    tr.appendChild(hucre("td", tl(f.toplam), { className: "sag" }));
+    // Süzgeç seçenekleriyle birebir aynı biçim kullanılır
+    tr.appendChild(hucre("td", faturaOrani(f) || "—", { className: "sag" }));
+
+    const notlar = [];
+    if (f.iptal) notlar.push("iptal/itiraz");
+    if (f.mal_cinsi) notlar.push(f.mal_cinsi);
+    if (f.yevmiye_no) notlar.push("yev. " + f.yevmiye_no);
+    tr.appendChild(hucre("td", notlar.join(" · ") || "", { className: f.iptal ? "fark-var" : "sessiz" }));
+
+    if (!f.dahil) tr.style.opacity = "0.55";
+    tablo.appendChild(tr);
+  });
+}
+
+/**
+ * Fatura listesini ekranda göründüğü hâliyle Excel'e aktarır.
+ *
+ * Sütun düzeni tablonunkiyle aynıdır; tutarlar sayı olarak yazılır ki
+ * Excel'de toplanabilsinler. Yıl kulakçığı ve satıcı süzgeci neyi
+ * gösteriyorsa o küme aktarılır.
+ */
+async function faturaListesiniAktar() {
+  const gorunen = durum.fatGorunen || [];
+  if (!gorunen.length) { mesaj("Aktarılacak satır yok.", "hata"); return; }
+  const yonAdi = (kod) => ((durum.tanimlar.fatura_yonleri || [])
+    .find((y) => y.kod === kod) || {}).etiket || kod || "";
+  const basliklar = ["Dahil", "Tevsik yok", "İptal/itiraz", "Fatura No", "Tarih", "Satıcı VKN",
+                     "Satıcı Unvanı", "Yön", "Kayıt Dönemi", "Matrah", "KDV",
+                     "Toplam", "Oran (%)", "Not"];
+  const satirlar = gorunen.map((f) => {
+    const notlar = [];
+    if (f.iptal) notlar.push("iptal/itiraz");
+    if (f.mal_cinsi) notlar.push(f.mal_cinsi);
+    if (f.yevmiye_no) notlar.push("yev. " + f.yevmiye_no);
+    const satici = (durum.calisma.saticilar || {})[f.satici_vkn || ""] || {};
+    return [
+      f.dahil ? "Evet" : "Hayır",
+      f.tevsik_yok ? "Evet" : "",
+      f.iptal ? "Evet" : "",
+      f.fatura_no || "",
+      tarihGoster(f.tarih) || "",
+      f.satici_vkn || "",
+      satici.unvan || "",
+      yonAdi(f.yon),
+      (f.kayit_yil && f.kayit_ay)
+        ? `${f.kayit_yil}/${String(f.kayit_ay).padStart(2, "0")}` : "",
+      Number(f.matrah || 0),
+      Number(f.kdv || 0),
+      Number(f.toplam || 0),
+      f.matrah ? Number((f.kdv / f.matrah * 100).toFixed(1)) : 0,
+      notlar.join(" · "),
+    ];
+  });
+  const kapsam = [];
+  if (durum.fatYil !== "tumu") kapsam.push(`${durum.fatYil} kayıt dönemi`);
+  if (durum.fatSuzgec) kapsam.push(`satıcı ${durum.fatSuzgec}`);
+  try {
+    const yanit = await fetch("/api/fatura_excel", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ad: durum.calisma.ad || durum.calisma.mukellef.ad_unvan || "",
+        baslik: "FATURA LİSTESİ" + (kapsam.length ? " — " + kapsam.join(", ") : ""),
+        basliklar, satirlar, sayisal: [9, 10, 11, 12], toplanan: [9, 10, 11],
+      }),
+    });
+    if (!yanit.ok) throw new Error((await yanit.json()).hata || "Excel üretilemedi");
+    const bag = document.createElement("a");
+    bag.href = URL.createObjectURL(await yanit.blob());
+    bag.download = "Fatura_listesi.xlsx";
+    document.body.appendChild(bag);
+    bag.click();
+    document.body.removeChild(bag);
+    URL.revokeObjectURL(bag.href);
+    mesaj(`${satirlar.length} satır Excel'e aktarıldı.`);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+}
+$("fatExcel").addEventListener("click", faturaListesiniAktar);
+
+function faturaAktarimiCiz() {
+  const farklar = durum.fatOzet.uygulama_farki || [];
+  const kap = $("fatFark");
+  if (!farklar.length) {
+    kap.innerHTML = '<div class="yardim">Fatura toplamları, tespitlerde girili ' +
+      'indirim reddi tutarlarıyla birebir aynı. Aktarmaya gerek yok.</div>';
+    return;
+  }
+  const eksikYil = farklar.some((f) => !f.yil_var);
+  kap.innerHTML =
+    '<table class="tablo"><tr><th>Dönem</th><th>Fatura Toplamı</th>' +
+    '<th>Tespitlerde Girili</th><th>Fark</th></tr>' +
+    farklar.map((f) =>
+      `<tr><td>${f.yil}/${f.ay_adi}</td><td class="sag">${tl(f.fatura)}</td>` +
+      `<td class="sag">${tl(f.mevcut)}</td>` +
+      `<td class="sag fark-var">${tl(f.fark)}</td></tr>`).join("") +
+    "</table>" +
+    (eksikYil ? '<div class="uyari-satir" style="margin-top:8px;">Bazı ' +
+      'faturaların kayıt dönemi, beyan verisi yüklenmemiş bir yıla ait. O ' +
+      'yıllar aktarılamaz; önce beyannameyi yükleyin.</div>' : "");
+}
+
+function faturaBulgulariniCiz() {
+  const bulgular = durum.fatOzet.bulgular || [];
+  $("fatBulguKart").style.display = bulgular.length ? "" : "none";
+  $("fatBulgular").innerHTML = bulgular.map((b) =>
+    `<div class="bulgu">${b.mesaj.replace(/[<>]/g, "")}</div>`).join("");
+}
+
+/**
+ * Dahil edilen faturaların dönem toplamlarını indirim reddi satırına yazar.
+ *
+ * "Faturaları beyana oturt" da aynı yolu kullanır; böylece tarhiyat her zaman
+ * o an tarhiyata dahil olan faturaların toplamına eşit kalır.
+ */
+async function faturalariIndirimeAktar(sessiz) {
+  const diziler = (durum.fatOzet && durum.fatOzet.indirim_dizileri) || {};
+  const yillar = Object.keys(diziler);
+  if (!yillar.length) {
+    if (!sessiz) mesaj("Aktarılacak fatura yok.", "hata");
+    return false;
+  }
+  let yazilan = 0; const atlanan = [];
+  yillar.forEach((y) => {
+    const kayit = durum.calisma.yillar.find((k) => Number(k.yil) === Number(y));
+    if (!kayit) { atlanan.push(y); return; }
+    kayit.elestiri.indirim_cikar = diziler[y].slice();
+    yazilan += 1;
+  });
+  if (!yazilan) {
+    if (!sessiz) {
+      mesaj(`Beyan verisi yüklenmemiş yıl: ${atlanan.join(", ")}. Önce beyannameyi yükleyin.`, "hata");
+    }
+    return false;
+  }
+  isaretle(false);
+  await hesapla();
+  await faturalariTazele();
+  if (!sessiz) {
+    mesaj(atlanan.length
+      ? `${yazilan} yıl aktarıldı; ${atlanan.join(", ")} yılı beyan verisi olmadığı için atlandı.`
+      : `${yazilan} yılın indirim reddi fatura toplamlarından yazıldı.`);
+  }
+  return true;
+}
+$("fatAktar").addEventListener("click", () => faturalariIndirimeAktar());
+
+$("fatSaticiEkle").addEventListener("click", saticiElleEkle);
+
+$("fatTemizle").addEventListener("click", async () => {
+  if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;
+  durum.calisma.faturalar = [];
+  durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+  $("fatDurum").innerHTML = "";
+  isaretle(false);
+  faturaEkraniniCiz();
+  mesaj("Fatura listesi temizlendi.");
+});
+
+// ------------------------- gelir / kurumlar vergisi beyannamesinden okuma
+let vbOkunan = null;
+
+$("vbSec").addEventListener("click", () => $("vbSecici").click());
+$("vbSecici").addEventListener("change", async () => {
+  const dosya = $("vbSecici").files[0];
+  $("vbSecici").value = "";
+  if (!dosya) return;
+  $("vbDurum").innerHTML = '<div class="yardim">Okunuyor...</div>';
+  $("vbAktar").style.display = "none";
+  vbOkunan = null;
+  try {
+    const y = await api("/api/vergi_beyani_oku",
+                        { dosyalar: [{ ad: dosya.name, veri: await dosyayiOku(dosya) }] });
+    vbOkunan = y;
+    const bilgi = [y.tur || "türü anlaşılamadı", y.yil ? y.yil + " dönemi" : ""]
+      .filter(Boolean).join(" · ");
+    $("vbDurum").innerHTML =
+      `<div class="yardim" style="margin-bottom:8px;">${dosya.name} — ${bilgi}; ` +
+      `${y.kalemler.length} kalem okundu.</div>` +
+      '<table class="tablo"><tr><th>Açıklama</th><th>Tutar</th></tr>' +
+      y.kalemler.map((k) =>
+        `<tr><td>${k.etiket}</td><td class="sag">${tl(k.tutar)}</td></tr>`).join("") +
+      "</table>" +
+      (y.uyarilar || []).map((u) => `<div class="uyari-satir">${u}</div>`).join("");
+    $("vbAktar").style.display = "";
+  } catch (hata) {
+    $("vbDurum").innerHTML = `<div class="uyari-satir">${hata.message}</div>`;
+  }
+});
+
+$("vbAktar").addEventListener("click", () => {
+  if (!vbOkunan) return;
+  // Künyedeki özet yıl yıl tutulur: yeni beyanname öncekilerin üzerine
+  // yazmaz, yalnızca kendi yılının satırlarını yeniler. Böylece incelenen
+  // her yılın beyannamesi ayrı ayrı yüklenebiliyor.
+  const yil = String(vbOkunan.yil || "").trim();
+  const eski = String(durum.calisma.kunye.vergi_beyan_ozeti || "")
+    .split("\n").map((s) => s.trim()).filter(Boolean);
+  const kalan = yil
+    ? eski.filter((s) => s.split("|")[0].trim() !== yil)
+    : eski;
+  const yeni = kalan.concat(vbOkunan.metin.split("\n").filter(Boolean));
+  // Yıla göre sırala; yılsız (eski) satırlar başta kalsın
+  yeni.sort((a, b) => (a.split("|")[0].trim() || "").localeCompare(
+    b.split("|")[0].trim() || "", "tr"));
+  const metin = yeni.join("\n");
+  durum.calisma.kunye.vergi_beyan_ozeti = metin;
+  const girdi = $("k_vergi_beyan_ozeti");
+  if (girdi) girdi.value = metin;
+  isaretle(false);
+  const yillar = new Set(yeni.map((s) => s.split("|")[0].trim()).filter(Boolean));
+  mesaj(`Beyanname özeti künyeye aktarıldı (künyede ${yillar.size} yıl var).`);
+});
+
+// --------------------------------------------------- inceleme kunyesi formu
+// Not: yukaridaki "kunyeKarti", sistem sorgusundan okunan mukellef kunyesidir.
+// Buradaki kunye, tutanak ve rapor taslaklarinin gerektirdigi INCELEME
+// kunyesidir; alan tanimlari sunucudan (app/inceleme_kunyesi.py) gelir.
+/**
+ * "satirlar" türündeki alanı küçük bir tablo olarak kurar: her satır bir
+ * kutucuk dizisi, sıra no kendiliğinden verilir, (+) düğmesi yeni satır açar.
+ * Çalışmada yine tek metin olarak saklanır (satır başına bir kayıt, hücreler
+ * dikey çizgiyle ayrılmış); böylece eski çalışmalar da okunur.
+ */
+function kunyeSatirAlaniKur(alan) {
+  const sar = document.createElement("div");
+  sar.className = "genis";
+  const etiket = document.createElement("label");
+  etiket.textContent = alan.etiket;
+  const tablo = document.createElement("table");
+  tablo.className = "tablo satir-alani";
+  tablo.id = "k_" + alan.kod;
+  const bas = document.createElement("thead");
+  const basSatir = document.createElement("tr");
+  ["Sıra No"].concat(alan.kolonlar.map((k) => k.etiket)).concat([""])
+    .forEach((m) => {
+      const th = document.createElement("th");
+      th.textContent = m;
+      basSatir.appendChild(th);
+    });
+  bas.appendChild(basSatir);
+  const govde = document.createElement("tbody");
+  tablo.append(bas, govde);
+
+  const ekle = document.createElement("button");
+  ekle.type = "button";
+  ekle.className = "btn ikincil";
+  ekle.textContent = alan.ekle_etiketi || "+ Satır ekle";
+  ekle.addEventListener("click", () => {
+    satirAlaniSatirEkle(govde, alan, alan.kolonlar.map(
+      (k) => k.varsayilan || ""));
+    satirAlaniYaz(govde, alan);
+  });
+
+  sar.append(etiket, tablo, ekle);
+  if (alan.ipucu) {
+    const y = document.createElement("div");
+    y.className = "yardim";
+    y.textContent = alan.ipucu;
+    sar.appendChild(y);
+  }
+  return sar;
+}
+
+/** Bir satır ekler; değerleri verilen dizi doldurur. */
+function satirAlaniSatirEkle(govde, alan, degerler) {
+  const tr = document.createElement("tr");
+  const sira = document.createElement("td");
+  sira.className = "sira";
+  tr.appendChild(sira);
+  alan.kolonlar.forEach((k, i) => {
+    const td = document.createElement("td");
+    const girdi = document.createElement("input");
+    girdi.type = "text";
+    girdi.value = (degerler && degerler[i]) || "";
+    if (k.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+    girdi.addEventListener("change", () => satirAlaniYaz(govde, alan));
+    td.appendChild(girdi);
+    tr.appendChild(td);
+  });
+  const silHucre = document.createElement("td");
+  const sil = document.createElement("button");
+  sil.type = "button";
+  sil.className = "btn ikincil";
+  sil.textContent = "×";
+  sil.title = "Satırı sil";
+  sil.addEventListener("click", () => {
+    tr.remove();
+    satirAlaniYaz(govde, alan);
+  });
+  silHucre.appendChild(sil);
+  tr.appendChild(silHucre);
+  govde.appendChild(tr);
+  satirAlaniNumarala(govde);
+}
+
+function satirAlaniNumarala(govde) {
+  Array.from(govde.rows).forEach((tr, i) => {
+    tr.cells[0].textContent = String(i + 1);
+  });
+}
+
+/** Tablodaki satırları çalışmaya tek metin olarak yazar. */
+function satirAlaniYaz(govde, alan) {
+  satirAlaniNumarala(govde);
+  const satirlar = Array.from(govde.rows).map((tr) =>
+    Array.from(tr.querySelectorAll("input")).map((g) => g.value.trim()).join(" | "))
+    .filter((s) => s.replace(/[|\s]/g, ""));
+  durum.calisma.kunye[alan.kod] = satirlar.join("\n");
+  isaretle(false);
+  eksikleriCiz();
+}
+
+/** Çalışmadaki metni tabloya döker (kullanıcı yazarken dokunmaz). */
+function satirAlaniCiz(alan, deger) {
+  const tablo = $("k_" + alan.kod);
+  if (!tablo) return;
+  const govde = tablo.tBodies[0];
+  if (govde.contains(document.activeElement)) return;
+  govde.innerHTML = "";
+  String(deger || "").split("\n").filter((s) => s.trim()).forEach((satir) => {
+    satirAlaniSatirEkle(govde, alan, satir.split("|").map((p) => p.trim()));
+  });
+  if (!govde.rows.length) {
+    satirAlaniSatirEkle(govde, alan, alan.kolonlar.map((k) => k.varsayilan || ""));
+  }
+}
+
+function kunyeAlaniKur(alan) {
+  if (alan.tur === "satirlar") return kunyeSatirAlaniKur(alan);
+  const sar = document.createElement("div");
+  if (alan.tur === "uzun") sar.className = "genis";
+  const etiket = document.createElement("label");
+  etiket.textContent = alan.etiket;
+  etiket.htmlFor = "k_" + alan.kod;
+
+  let girdi;
+  if (alan.tur === "secim") {
+    girdi = document.createElement("select");
+    (alan.secenekler || []).forEach((s) => {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      girdi.appendChild(o);
+    });
+  } else if (alan.tur === "uzun") {
+    girdi = document.createElement("textarea");
+    girdi.rows = 3;
+  } else {
+    girdi = document.createElement("input");
+    girdi.type = alan.tur === "sayi" ? "number" : "text";
+    if (alan.tur === "tarih") girdi.placeholder = "gg.aa.yyyy";
+  }
+  girdi.id = "k_" + alan.kod;
+  girdi.addEventListener("change", () => {
+    durum.calisma.kunye[alan.kod] = girdi.value;
+    isaretle(false);
+    eksikleriCiz();
+  });
+
+  sar.append(etiket, girdi);
+  if (alan.ipucu) {
+    const y = document.createElement("div");
+    y.className = "yardim";
+    y.textContent = alan.ipucu;
+    sar.appendChild(y);
+  }
+  return sar;
+}
+
+function kunyeFormunuKur() {
+  const kap = $("kunyeFormu");
+  if (kap.dataset.kurulu === "1") return;
+  (durum.tanimlar.kunye_bolumleri || []).forEach((bolum) => {
+    const kart = document.createElement("div");
+    kart.className = "kart";
+    const baslik = document.createElement("h2");
+    baslik.textContent = bolum.baslik;
+    const izgara = document.createElement("div");
+    izgara.className = "kunye-izgara";
+    bolum.alanlar.forEach((a) => izgara.appendChild(kunyeAlaniKur(a)));
+    kart.append(baslik, izgara);
+    kap.appendChild(kart);
+  });
+  kap.dataset.kurulu = "1";
+}
+
+/** Form alanlarina calismadaki degerleri yazar (yazilan alana dokunmadan). */
+function kunyeFormunuCiz() {
+  if (!durum.tanimlar || !durum.tanimlar.kunye_bolumleri) return;
+  kunyeFormunuKur();
+  const kunye = durum.calisma.kunye || (durum.calisma.kunye = {});
+  durum.tanimlar.kunye_bolumleri.forEach((bolum) => {
+    bolum.alanlar.forEach((a) => {
+      if (a.tur === "satirlar") { satirAlaniCiz(a, kunye[a.kod]); return; }
+      const girdi = $("k_" + a.kod);
+      if (!girdi || girdi === document.activeElement) return;
+      const deger = kunye[a.kod];
+      girdi.value = deger === undefined || deger === null
+        ? (a.varsayilan === undefined ? "" : a.varsayilan)
+        : deger;
+    });
+  });
+  eksikleriCiz();
+}
+
+/** Belge taslagini eksik birakacak alanlari kullaniciya onceden gosterir. */
+function eksikleriCiz(eksikler) {
+  const kap = $("kunyeEksik");
+  if (!kap) return;
+  if (eksikler === undefined) {
+    // Sunucuya gitmeden, ONEMLI_ALANLAR ile ayni olcutu yerelde uygular
+    const kunye = durum.calisma.kunye || {};
+    const onemli = ["is_emirleri", "nezdinde_ad", "eleman_ad", "tutanak_tarihi",
+      "tutanak_yeri", "faaliyet_konulari"];
+    const etiketler = {};
+    (durum.tanimlar.kunye_bolumleri || []).forEach((b) =>
+      b.alanlar.forEach((a) => { etiketler[a.kod] = a.etiket; }));
+    eksikler = onemli.filter((k) => !String(kunye[k] || "").trim())
+                     .map((k) => etiketler[k] || k);
+  }
+  if (!eksikler.length) { kap.innerHTML = ""; return; }
+  kap.innerHTML = '<div class="bulgu"><strong>Doldurulmamış alanlar:</strong> ' +
+    eksikler.map((e) => e.replace(/[<>&]/g, "")).join(", ") +
+    '. Belge yine üretilir; bu alanlar köşeli parantez içinde bırakılır.</div>';
+}
+
+// ----------------------------------------------------------------- yedekler
+async function yedekleriYukle() {
+  const veri = await api("/api/yedekler");
+  const tablo = $("yedekTablo");
+  if (!veri.yedekler.length) {
+    tablo.innerHTML = '<tr><td class="bos-durum">Yedek yok.</td></tr>';
+    return;
+  }
+  tablo.innerHTML = "<tr><th>Dosya</th><th></th></tr>";
+  veri.yedekler.forEach((d) => {
+    const tr = document.createElement("tr");
+    const td = hucre("td", d);
+    const tdD = document.createElement("td");
+    const dugme = document.createElement("button");
+    dugme.className = "btn ikincil";
+    dugme.style.cssText = "padding:3px 9px;font-size:12px;";
+    dugme.textContent = "Geri Yükle";
+    dugme.addEventListener("click", async () => {
+      if (!confirm("Kayıtlı çalışmaların tamamı bu yedekle değiştirilsin mi?")) return;
+      try {
+        const y = await api("/api/geri_yukle", { dosya: d });
+        durum.kayitlar = y.calismalar;
+        kayitlariCiz();
+        mesaj("Geri yüklendi.");
+      } catch (hata) { mesaj(hata.message, "hata"); }
+    });
+    tdD.appendChild(dugme);
+    tr.append(td, tdD);
+    tablo.appendChild(tr);
+  });
+}
+
+$("yedekAl").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/yedek_al", {});
+    mesaj("Yedek alındı: " + y.dosya);
+    await yedekleriYukle();
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+// ------------------------------------------------------------------- cizim
+function ekraniCiz() {
+  rozetiTazele();
+  if (durum.calisma && (durum.calisma.beyannameler || []).length && !durum.bnOzet) {
+    beyannameleriTazele();          // kayitli calismadan gelen beyannameler
+  }
+  if (durum.calisma && (durum.calisma.faturalar || []).length && !durum.fatOzet) {
+    faturalariTazele();             // kayitli calismadan gelen faturalar
+  }
+  yilSecimListesiniCiz();
+  yilKulaklariniCiz("beyanYilSekme", durum.aktifYil, (y) => {
+    durum.aktifYil = Number(y); ekraniCiz();
+  }, false, true);
+  yilKulaklariniCiz("elestiriYilSekme", durum.aktifYil, (y) => {
+    durum.aktifYil = Number(y); ekraniCiz();
+  }, false, true);
+  beyanIzgarasiniCiz();
+  elestiriIzgarasiniCiz();
+  devirKutusunuCiz();
+  $("cMukellefAd").value = durum.calisma.mukellef.ad_unvan || "";
+  $("cVkn").value = durum.calisma.mukellef.vkn_tckn || "";
+  $("cVergiDairesi").value = durum.calisma.mukellef.vergi_dairesi || "";
+  $("cAdres").value = durum.calisma.mukellef.adres || "";
+  kunyeFormunuCiz();
+  sonucuCiz();
+  tarhiyatiCiz();
+  yilUyumunuCiz();
+  kaynaklariCiz();
+  etkiYilListesiniCiz();
+  etkiTablosunuCiz();
+  kayitlariCiz();
+}
+
+// ------------------------------------------------------------------ baslat
+(async function baslat() {
+  try {
+    durum.tanimlar = await api("/api/tanimlar");
+    durum.calisma = bosCalisma();
+    const k = await api("/api/calismalar");
+    durum.kayitlar = k.calismalar;
+    await yedekleriYukle();
+    pdfKutusunuKur();
+    faturaKutusunuKur();
+    // Satici dokumu karti acilista da cizilir: "+ Satici ekle" dugmesi orada
+    // ve fatura listesi hic yuklenmemis bir dosyada da kullanilabilmelidir.
+    // Onceden bu cagri yalnizca fatura yuklendiginde yapiliyordu, dolayisiyla
+    // kart HTML'deki display:none ile gizli kaliyor ve dugmeye ulasilamiyordu.
+    faturaEkraniniCiz();
+    ekraniCiz();
+    $("beyanMetin").focus();
+  } catch (hata) {
+    mesaj("Başlatma hatası: " + hata.message, "hata");
+  }
+})();
+</script>
+</body>
+</html>

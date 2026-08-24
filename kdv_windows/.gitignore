@@ -1,0 +1,12 @@
+veritabani/
+ciktilar/*.xlsx
+ciktilar/*.docx
+yedekler/*.db
+__pycache__/
+*.pyc
+arac/onbellek/
+/KDV Inceleme Calismasi/
+/KDV_Inceleme_Calismasi_Windows.zip
+ACILIS KAYDI.txt
+TANI RAPORU - BUNU GONDERIN.txt
+KDV HATA - BUNU GONDERIN.txt
