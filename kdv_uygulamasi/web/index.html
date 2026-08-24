@@ -4255,6 +4255,11 @@ function ekraniCiz() {
     await yedekleriYukle();
     pdfKutusunuKur();
     faturaKutusunuKur();
+    // Satici dokumu karti acilista da cizilir: "+ Satici ekle" dugmesi orada
+    // ve fatura listesi hic yuklenmemis bir dosyada da kullanilabilmelidir.
+    // Onceden bu cagri yalnizca fatura yuklendiginde yapiliyordu, dolayisiyla
+    // kart HTML'deki display:none ile gizli kaliyor ve dugmeye ulasilamiyordu.
+    faturaEkraniniCiz();
     ekraniCiz();
     $("beyanMetin").focus();
   } catch (hata) {
