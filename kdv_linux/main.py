@@ -142,7 +142,19 @@ def main():
         except OSError:
             continue
     if sunucu is None:
+        # Buraya gelmenin en olagan sebebi, onceki denemelerin arka planda
+        # calisir halde kalmasidir: uygulama masaustu kisayolundan acildiginda
+        # konsol olmadigi icin gorunmez, kullanici "acilmadi" sanip yeniden
+        # dener ve her deneme bir portu daha tutar.
         print(f"Uygun port bulunamadi ({PORT}-{PORT + 9} dolu).")
+        print()
+        print("En olagan sebep: uygulamanin onceki kopyalari halen calisiyor.")
+        print("Acik pencereleri kapatin. Pencere gorunmuyorsa arka planda")
+        print("calisiyor olabilir; su komut hepsini kapatir:")
+        print()
+        print("    pkill -f 'python3 main.py'")
+        print()
+        print("Sonra uygulamayi yeniden baslatin.")
         sys.exit(1)
 
     # Adres BILEREK localhost; 127.0.0.1 degil. Windows'un "yerel adresler

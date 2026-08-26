@@ -62,9 +62,24 @@ for yol in "${ORTAK[@]}"; do
   fi
 
   if [[ -d "$kaynak" ]]; then
-    rm -rf "$hedef"
+    # Hedef klasor SILINMEZ. Silinirse hedefe ozgu dosyalar (app/tani.py
+    # yalnizca Windows surumunde vardir) yok olur; HARIC listesi onlari
+    # uzerine yazilmaktan korur ama silinmekten korumaz.
     mkdir -p "$hedef"
     tar -cf - "${haric_args[@]}" -C "$kaynak" . | (cd "$hedef" && tar -xf -)
+    # Kaynakta artik olmayan dosyalari hedeften temizle (haric tutulanlar
+    # ile __pycache__ disinda); yoksa silinen bir modul hedefte yasamaya
+    # devam eder.
+    while IFS= read -r goreli; do
+      [[ -n "$goreli" ]] || continue
+      ad="$(basename "$goreli")"
+      atla=0
+      for h in "${HARIC[@]}"; do [[ "$ad" == "$h" ]] && atla=1; done
+      [[ "$goreli" == *__pycache__* || "$ad" == *.pyc ]] && atla=1
+      [[ $atla -eq 1 ]] && continue
+      [[ -e "$kaynak/$goreli" ]] || { rm -f "$hedef/$goreli"
+                                      echo "    silindi: $yol/$goreli"; }
+    done < <(cd "$hedef" && find . -type f -printf '%P\n' 2>/dev/null || true)
   else
     mkdir -p "$(dirname "$hedef")"
     cp "$kaynak" "$hedef"

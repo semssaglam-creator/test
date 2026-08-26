@@ -11,6 +11,7 @@ disaridan erisime acilmaz.
 """
 import base64
 import binascii
+import errno
 import io
 import json
 import os
@@ -846,11 +847,15 @@ class Istekci(BaseHTTPRequestHandler):
 
 
 def _ipv6_var():
-    """Makine gercekten IPv6 soketi acabiliyor mu?
+    """Makine IPv6 soketi ACABILIYOR mu?
 
     socket.has_ipv6 bu soruyu cevaplamaz: Python'un IPv6 destegiyle
     derlendigini soyler ve cekirdekte IPv6 kapatilmis olsa bile True kalir.
     Boyle bir makinede AF_INET6 soketi acmak dogrudan OSError verir.
+
+    DIKKAT: bu denetim yalnizca soket ACMAYI sinar, BAGLANMAYI degil. IPv6
+    cekirdekte acik olup ::1 adresi lo arayuzune atanmamis olabilir; o zaman
+    soket acilir ama bind basarisiz olur. Bu ayrimi `sunucu_baslat` yapar.
     """
     if not socket.has_ipv6:
         return False
@@ -914,7 +919,25 @@ def sunucu_baslat(port=8766):
     sunucular = []
     try:
         if _ipv6_var():
-            sunucular.append(_SunucuV6(("::1", port), Istekci))
+            try:
+                sunucular.append(_SunucuV6(("::1", port), Istekci))
+            except OSError as hata:
+                # ::1'e baglanamamanin IKI ayri sebebi var ve ayirmak sart:
+                #
+                #   EADDRINUSE  -> portu baska bir kopya tutuyor. Gercek
+                #                  catisma; cagirana bildirilir, sonraki port
+                #                  denenir.
+                #   digerleri   -> IPv6 bu makinede kullanilamiyor (ornegin
+                #                  ::1 lo arayuzune atanmamis). Port ile
+                #                  ilgisi yok; sonraki portu denemek de ayni
+                #                  hatayi verir.
+                #
+                # Ayrim yapilmazsa ikinci durumda ON PORTUN ONU da "dolu"
+                # sanilir ve uygulama "Uygun port bulunamadi" diyip kapanir;
+                # oysa portlarin hicbiri dolu degildir.
+                if hata.errno == errno.EADDRINUSE:
+                    raise
+                sunucular = []
         sunucular.append(_Sunucu(("127.0.0.1", port), Istekci))
     except OSError:
         for s in sunucular:
