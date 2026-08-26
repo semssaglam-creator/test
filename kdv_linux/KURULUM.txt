@@ -4,9 +4,10 @@ KDV İNCELEME ÇALIŞMASI — KURULUM
 Gereken tek şey Python 3'tür. Hemen her Linux dağıtımında kurulu gelir;
 kurulu değilse aşağıdaki "Sorun giderme" bölümüne bakın.
 
-Windows kullanıyorsanız bu dosya yerine KURULUM_WINDOWS.txt dosyasına bakın;
-orada başlatıcı "KDV Uygulamasini Baslat.bat" dosyasıdır ve Python kurulu
-değilse kendisi taşınabilir bir Python indirir.
+Bu paket LINUX içindir. Windows sürümü ayrı bir pakettir
+(KDV_Inceleme_Calismasi_Windows.zip); orada başlatıcılar .bat dosyalarıdır
+ve Python kurulu değilse kendisi taşınabilir bir Python indirir. İki paketi
+karıştırmayın: bu pakette .bat, Windows paketinde .sh dosyası yoktur.
 
 
 1. ARŞİVİ AÇIN
