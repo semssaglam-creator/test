@@ -428,6 +428,19 @@ def _yil_bazli_alis_metni(kunye, satici_satirlari, liste, donemler):
     return "%s alışları, %s" % (" alışları, ".join(parcalar[:-1]), parcalar[-1])
 
 
+def _satici_yillari(s):
+    """Saticinin belgelerinin ait oldugu yil(lar).
+
+    Birden cok yila yayilmis bir satici tek bir yila sikistirilmaz; hepsi
+    yazilir. Kayit donemi hic cozulememisse kirmizi yer tutucu birakilir,
+    boylece doldurulmasi gerektigi belgede gorunur.
+    """
+    yillar = [str(d["yil"]) for d in (s.get("yil_dokumu") or []) if d.get("yil")]
+    if not yillar:
+        return "[yıl]"
+    return ", ".join(yillar)
+
+
 def is_emrisiz_satici_bolumu(b, kunye, satici_satirlari):
     """Is emrinde adi gecmeyen saticilar icin gerekce paragrafi ve listesi.
 
@@ -451,14 +464,18 @@ def is_emrisiz_satici_bolumu(b, kunye, satici_satirlari):
         "yönünde vergi tekniği raporu bulunduğu tespit edildiğinden, söz "
         "konusu mükellefler de incelememiz kapsamına alınmıştır."
         % ik.mukellef_sozu(kunye, ek="in"), girinti=1)
-    b.tablo(["Sıra No", "Vergi Dairesi", "Vergi Kimlik No", "Unvanı"],
+    b.tablo(["Sıra No", "Yılı", "Vergi Dairesi", "Vergi Kimlik No", "Unvanı",
+             "Vergi Tekniği Raporu\nTarih ve Sayısı"],
             [[str(i),
+              _satici_yillari(x),
               ik.vergi_dairesi(x["vergi_dairesi"], "[Satıcının vergi dairesi]"),
               x["vkn"] or "[VKN]",
-              ik.satici_unvani(x)]
+              ik.satici_unvani(x),
+              "%s tarih ve %s" % (x.get("vtr_tarihi") or "[VTR tarihi]",
+                                  x.get("vtr_no") or "[VTR no]")]
              for i, x in enumerate(sonradan, 1)],
-            hizalar=["orta", "sol", "orta", "sol"],
-            oranlar=[0.5, 1.6, 1, 2], buyukluk=TABLO_PUNTOSU)
+            hizalar=["orta", "orta", "sol", "orta", "sol", "orta"],
+            oranlar=[0.45, 0.6, 1.5, 1, 1.9, 1.5], buyukluk=TABLO_PUNTOSU)
 
 
 def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
