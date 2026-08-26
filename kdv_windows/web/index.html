@@ -3288,8 +3288,8 @@ function faturaEkraniniCiz() {
 function faturaSaticiTablosunuCiz() {
   const tablo = $("fatSaticiTablo");
   tablo.innerHTML = "";
-  const bas = ["VKN", "Unvan", "Kullanma Durumu", "Fatura", "Matrah", "KDV",
-               "Dönem Aralığı", "Tarhiyat", ""];
+  const bas = ["VKN", "Unvan", "Kullanma Durumu", "İş Emri", "Fatura", "Matrah",
+               "KDV", "Dönem Aralığı", "Tarhiyat", ""];
   const ust = document.createElement("tr");
   bas.forEach((b) => ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
@@ -3310,6 +3310,27 @@ function faturaSaticiTablosunuCiz() {
     const durumHucre = hucre("td", s.kullanma,
       { className: s.kullanma === "Belirlenmedi" ? "fark-var" : "" });
     tr.appendChild(durumHucre);
+
+    // İş emri tiki. İşaretli = görevlendirme yazısında adı geçiyor.
+    // İşaretsiz olanlar belgede ayrı bir paragrafla gerekçelendirilir:
+    // inceleme sırasında haklarında tespit bulunduğu için kapsama alınmış
+    // sayılırlar.
+    const tdEmri = document.createElement("td");
+    tdEmri.className = "orta";
+    const kutu = document.createElement("input");
+    kutu.type = "checkbox";
+    kutu.checked = (s.is_emri || "Var") !== "Yok";
+    kutu.title = "İş emrinde adı geçiyorsa işaretli bırakın";
+    kutu.addEventListener("change", async () => {
+      const bilgi = durum.calisma.saticilar[s.vkn]
+        || (durum.calisma.saticilar[s.vkn] = {});
+      bilgi.is_emri = kutu.checked ? "Var" : "Yok";
+      isaretle(false);
+      await faturalariTazele();
+    });
+    tdEmri.appendChild(kutu);
+    tr.appendChild(tdEmri);
+
     tr.appendChild(hucre("td", String(s.adet), { className: "sag" }));
     tr.appendChild(hucre("td", tl(s.matrah), { className: "sag" }));
     tr.appendChild(hucre("td", tl(s.kdv), { className: "sag" }));

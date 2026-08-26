@@ -66,6 +66,11 @@ SATICI_ALANLARI = [
      "ipucu": "Tutanakta bu satıcının fatura dökümünden hemen sonra gelen soru "
               "maddesinde tırnak içinde yazılır. Boş bırakılırsa künyedeki genel "
               "beyan kullanılır."},
+    {"kod": "is_emri", "etiket": "Görevlendirme yazısı (iş emri) var",
+     "tur": "secim", "secenekler": ["Var", "Yok"], "varsayilan": "Var",
+     "ipucu": "İnceleme sırasında hakkında sahte belge düzenleme tespiti "
+              "bulunduğu için kapsama alınan satıcıların iş emri yoktur; "
+              "“Yok” seçilenler belgede ayrı bir paragrafla gerekçelendirilir."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
     # Asagidakiler YALNIZCA elle eklenen saticilarda gorunur. Fatura listesi
     # bulunmayan bir sahteci mukellefin tutari baska yoldan bilinemez; bu
@@ -358,6 +363,10 @@ def _elle_satiri(vkn, bilgi):
         "cevap": bilgi.get("cevap") or "",
         "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
         "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
+        # Elle eklenen satici, is emrinde adi gecmedigi halde inceleme
+        # sirasinda hakkinda tespit bulundugu icin kapsama alinmistir;
+        # varsayilani bu yuzden "Yok"tur. Kullanici degistirebilir.
+        "is_emri": bilgi.get("is_emri") or "Yok",
         "tarhiyat_disi": 0,
         "donem_sayisi": 1 if yil else 0,
         "ilk_donem": str(yil) if yil else "",
@@ -366,6 +375,23 @@ def _elle_satiri(vkn, bilgi):
         "yil_dokumu": ([{"yil": yil, "adet": adet, "matrah": matrah, "kdv": kdv}]
                        if yil else []),
     }
+
+
+def is_emri_var(s):
+    """Bu satici is emrinde adi gecen saticilardan mi."""
+    return str((s or {}).get("is_emri") or "Var") != "Yok"
+
+
+def is_emrine_gore_ayir(satici_satirlari):
+    """Saticilari (is emri olanlar, sonradan kapsama alinanlar) diye ayirir.
+
+    Belgede ikisi ayri gerekcelendirilir: birinciler is emri geregi, ikinciler
+    inceleme sirasinda haklarinda sahte belge duzenleme tespiti bulundugu icin
+    kapsama alinmistir.
+    """
+    olanlar = [s for s in satici_satirlari or [] if is_emri_var(s)]
+    sonradan = [s for s in satici_satirlari or [] if not is_emri_var(s)]
+    return olanlar, sonradan
 
 
 def satici_ozeti(faturalar, saticilar=None):
@@ -425,6 +451,7 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
             "cevap": bilgi.get("cevap") or "",
             "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
             "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
+            "is_emri": bilgi.get("is_emri") or "Var",
             "matrah": round(grup["matrah"], 2),
             "kdv": round(grup["kdv"], 2),
             "toplam": round(grup["toplam"], 2),

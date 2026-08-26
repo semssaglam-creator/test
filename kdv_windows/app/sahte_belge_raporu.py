@@ -29,6 +29,7 @@ from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
 from .beyannameler import (AYRINTI_TABLO_KOLONLARI as DUZELTME_AYRINTI_KOLONLARI,
                            AYRINTI_TABLO_SATIRLARI as DUZELTME_AYRINTI_SATIRLARI)
 from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
+                      is_emrisiz_satici_bolumu,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
                       kalan_dikkat_notu, kalan_iptal_notlari, yetersiz_donemleri,
@@ -134,11 +135,15 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
                M(kunye, ek="in"), _donem_ifadesi(kunye, donemler)),
             girinti=1)
 
-    if satici_satirlari:
+    # "Is emri gerekcelerinde ... yer almaktadir" cumlesi yalnizca IS EMRINDE
+    # adi gecen saticilari sayabilir; sonradan kapsama alinanlar is emrinde
+    # yer almadigi icin bu cumleye giremez, ayri paragrafla yazilir.
+    is_emrili, _sonradan = F.is_emrine_gore_ayir(satici_satirlari)
+    if is_emrili:
         adlar = ["%s %s vergi kimlik numaralı mükellefi %s’den"
                  % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]", "in"),
                     s["vkn"] or "[VKN]", ik.satici_unvani(s))
-                 for s in satici_satirlari]
+                 for s in is_emrili]
         b.paragraf(
             "İş emri gerekçelerinde; %s %s %s olan alışlarının sahte belge "
             "kullanma kapsamında sınırlı olarak incelenmesi gerektiği yer "
@@ -146,6 +151,8 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
             % (M(kunye, ek="in"), _donem_ifadesi(kunye, donemler, "bulunma"),
                turkce.liste(adlar)),
             girinti=1)
+
+    is_emrisiz_satici_bolumu(b, kunye, satici_satirlari)
 
     for satir in ik.satirlar(kunye, "imzaya_davet"):
         b.paragraf(satir, girinti=1)

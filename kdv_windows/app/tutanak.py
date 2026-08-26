@@ -428,6 +428,39 @@ def _yil_bazli_alis_metni(kunye, satici_satirlari, liste, donemler):
     return "%s alışları, %s" % (" alışları, ".join(parcalar[:-1]), parcalar[-1])
 
 
+def is_emrisiz_satici_bolumu(b, kunye, satici_satirlari):
+    """Is emrinde adi gecmeyen saticilar icin gerekce paragrafi ve listesi.
+
+    Bu saticilar gorevlendirme yazisinda yer almaz; inceleme sirasinda
+    haklarinda sahte belge duzenledigi yonunde vergi teknigi raporu
+    bulundugu tespit edildigi icin kapsama alinmislardir. Belgede neden
+    incelendiklerinin yazili olmasi gerekir, yoksa is emri disinda bir
+    saticinin raporda ne aradigi anlasilmaz.
+
+    Tutanak ve rapor ayni metni yazsin diye tek yerde uretilir; rapor bu
+    islevi buradan cagirir.
+    """
+    from . import faturalar as F
+
+    _olanlar, sonradan = F.is_emrine_gore_ayir(satici_satirlari)
+    if not sonradan:
+        return
+    b.paragraf(
+        "Müfettişliğimizce yapılan inceleme esnasında, %s alış yaptığı "
+        "aşağıda listelenen mükellefler hakkında da sahte belge düzenlediği "
+        "yönünde vergi tekniği raporu bulunduğu tespit edildiğinden, söz "
+        "konusu mükellefler de incelememiz kapsamına alınmıştır."
+        % ik.mukellef_sozu(kunye, ek="in"), girinti=1)
+    b.tablo(["Sıra No", "Vergi Dairesi", "Vergi Kimlik No", "Unvanı"],
+            [[str(i),
+              ik.vergi_dairesi(x["vergi_dairesi"], "[Satıcının vergi dairesi]"),
+              x["vkn"] or "[VKN]",
+              ik.satici_unvani(x)]
+             for i, x in enumerate(sonradan, 1)],
+            hizalar=["orta", "sol", "orta", "sol"],
+            oranlar=[0.5, 1.6, 1, 2], buyukluk=TABLO_PUNTOSU)
+
+
 def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
                         liste=None):
     M = ik.mukellef_sozu
@@ -445,12 +478,16 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
                 "e-tebligata tabidir." % M(kunye, buyuk=True))
     b.paragraf(tanitim, girinti=1)
 
-    if satici_satirlari:
+    # Kapsam cumlesi yalnizca IS EMRINDE adi gecen saticilari sayar; sonradan
+    # kapsama alinanlar ayri bir paragrafla gerekcelendirilir (asagida).
+    from . import faturalar as _F
+    is_emrili, _sonradan = _F.is_emrine_gore_ayir(satici_satirlari)
+    if is_emrili:
         alis = (" %s %s olan alışlarının sahte belge kullanma kapsamında "
                 "sınırlı olarak incelenmesi neticesinde aşağıdaki hususlar "
                 "mükellef ile birlikte tespit edilmiştir."
                 % (M(kunye, buyuk=True, ek="in"),
-                   _yil_bazli_alis_metni(kunye, satici_satirlari, liste or [],
+                   _yil_bazli_alis_metni(kunye, is_emrili, liste or [],
                                          donemler)))
     else:
         alis = (" İnceleme neticesinde aşağıdaki hususlar mükellef ile birlikte "
@@ -488,6 +525,8 @@ def _giris_paragraflari(b, inceleme, kunye, donemler, satici_satirlari,
                ik.gorevlendirme_ifadesi(emirler),
                _donem_ifadesi(kunye, donemler), alis),
             girinti=1)
+
+    is_emrisiz_satici_bolumu(b, kunye, satici_satirlari)
 
 
 def _donem_ifadesi(kunye, donemler, hal="yalin"):
