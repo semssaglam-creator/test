@@ -1,0 +1,72 @@
+KDV İNCELEME ÇALIŞMASI — LINUX
+================================
+
+Bu paket LINUX içindir. (Windows sürümü ayrı bir pakettir; onda .sh yerine
+.bat dosyaları vardır. İkisini karıştırmayın.)
+
+
+EN KESİN YOL — TEK KOMUT
+------------------------
+
+Klasöre sağ tıklayıp "Terminalde aç" deyin ve şunu yapıştırın:
+
+    ./kur.sh
+
+Bu, masaüstüne kısayol koyar ve uygulamayı menüye ekler. Bundan sonra
+kısayola çift tıklamanız yeter.
+
+Yalnızca bir kez açmak isterseniz:
+
+    ./calistir.sh
+
+
+ÇİFT TIKLAMA NEDEN HİÇBİR ŞEY YAPMAYABİLİR
+-------------------------------------------
+
+Linux masaüstlerinde bu çok olağandır ve uygulamayla ilgisi yoktur:
+
+  1. Dosya yöneticileri (Nautilus/Files, Nemo, Dolphin) .sh dosyalarını
+     çift tıklayınca ÇALIŞTIRMAZ. Çoğu ya metin düzenleyicide açar ya da
+     hiçbir şey yapmaz.
+
+     Nautilus'ta açmak için: Ayarlar > Davranış >
+     "Çalıştırılabilir metin dosyaları" > "Ne yapılacağını sor".
+
+  2. Masaüstüne konan kısayol (.desktop) "güvenilir" işaretlenmemişse
+     sessizce hiçbir şey yapmaz. Kısayola sağ tıklayıp
+     "Çalıştırmaya izin ver" (Allow Launching) deyin.
+
+     kur.sh bunu kendisi yapmayı dener, ama bazı masaüstlerinde
+     kullanıcının elle onaylaması gerekir.
+
+  3. Arşiv "Buraya Çıkar" yerine sürükle-bırak ile açıldıysa çalıştırma
+     izni kaybolmuş olabilir. Terminalde şu izni geri verir:
+
+         chmod +x calistir.sh kur.sh kaldir.sh
+
+
+HİÇBİR ŞEY OLMUYORSA — NE GÖNDERECEKSİNİZ
+------------------------------------------
+
+Uygulama artık her açılışta bu klasöre şu dosyayı yazar:
+
+    ACILIS KAYDI.txt
+
+  • Dosya OLUŞTUYSA: içeriğini gönderin. Uygulama çalışmış, hata varsa
+    orada yazıyor.
+
+  • Dosya HİÇ OLUŞMADIYSA: betik hiç çalıştırılamamış demektir. Sebep
+    yukarıdaki 1, 2 veya 3 numaralı maddedir — büyük olasılıkla dosya
+    yöneticisi .sh dosyasını çalıştırmıyor. Bu durumda yukarıdaki
+    "TEK KOMUT" yolunu deneyin.
+
+Bu ayrım önemlidir: dosyanın olmaması da bir cevaptır, sorunun nerede
+olduğunu tek başına söyler.
+
+
+GEREKEN
+-------
+
+Python 3. Hemen her dağıtımda kurulu gelir. Kurulu değilse calistir.sh
+bunu bir pencerede söyler; o pencere de açılmıyorsa ACILIS KAYDI.txt'ye
+yazar.

@@ -33,6 +33,7 @@ GEREKLI_DOSYALAR=(
   "calistir.sh" "kur.sh" "kaldir.sh"
   "KDV Uygulamasini Baslat.desktop"
   "KURULUM.txt" "KULLANIM.md"
+  "OKUBENI - ONCE BUNU OKUYUN.txt"
 )
 
 # Calistirilabilir olmasi ZORUNLU olanlar. Bu isaret kaybolursa masaustu
@@ -54,7 +55,7 @@ DISARIDA=(
   '.git' '__pycache__' '*.pyc' '.DS_Store' '*.tar.gz' '*.zip' '*.tmp'
   '.gitignore' 'paketle.sh' 'skill' 'GELISTIRME_NOTLARI.md'
   "$PAKET" 'ciktilar/*' 'yedekler/*' 'veritabani/*' '*.db'
-  '*BUNU GONDERIN*'
+  '*BUNU GONDERIN*' 'ACILIS KAYDI.txt'
 )
 haric=()
 for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done
