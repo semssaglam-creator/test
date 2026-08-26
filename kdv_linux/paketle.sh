@@ -114,6 +114,15 @@ sizinti="$(grep -rn 'http://127\.0\.0\.1:' "$PAKET" --include='*.py' \
 [[ -z "$sizinti" ]] || { denetim_basarisiz "adres 127.0.0.1:"
                          echo "$sizinti" | sed 's/^/    /'; }
 
+# (i) ::1 dinleyen kod, "IPv6 yok" ile "port dolu" durumlarini AYIRMALI.
+#     Ayrilmazsa ::1'e baglanamayan bir makinede butun portlar dolu gorunur
+#     ve uygulama "Uygun port bulunamadi" diyip kapanir. Bu, tuzagi kapatan
+#     duzeltmenin kendisinin actigi bir arizadir; sahada boyle cikti.
+if grep -rq '"::1"' "$PAKET/app" 2>/dev/null \
+   && ! grep -rq 'EADDRINUSE' "$PAKET/app" 2>/dev/null; then
+  denetim_basarisiz "::1 dinleniyor ama EADDRINUSE ayrimi yok (butun portlar dolu gorunur)"
+fi
+
 if [[ $HATA -ne 0 ]]; then
   echo
   kirmizi "Denetimler basarisiz. Paket URETILMEDI."

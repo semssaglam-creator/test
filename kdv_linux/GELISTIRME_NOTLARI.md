@@ -72,6 +72,33 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-08-26 — **Linux sürümü çalışır durumda doğrulandı.** Uzun süren
+      "hiç açılmıyor" arızasının sebebi bulundu: `::1` çift dinleme
+      eklenirken "IPv6 yok" ile "port dolu" ayrılmamıştı. `_ipv6_var()`
+      yalnızca soket AÇILABİLİYOR mu diye bakıyor; IPv6 çekirdekte açık
+      olup `::1` adresi `lo` arayüzüne atanmamışsa soket açılıyor ama
+      `bind` `EADDRNOTAVAIL` ile düşüyor. Bu hata "port dolu" sayıldığı
+      için on portun onu birden dolu görünüyor ve uygulama
+      "Uygun port bulunamadı (8766-8775 dolu)" deyip kapanıyordu.
+      Artık `EADDRINUSE` gerçek çakışma sayılıp yukarı bildiriliyor,
+      başka hata IPv6'nın kullanılamadığı anlamına geliyor ve IPv4 ile
+      devam ediliyor. İki durum da zorlanarak sınandı.
+
+      Ders: tuzağı kapatmak için yazılan düzeltmenin kendisi, kapattığı
+      şeyden geniş bir arıza açabiliyor. Kural üç paketleyiciye de
+      denetim olarak eklendi (`::1` varsa `EADDRINUSE` de olmalı).
+
+- [x] 2026-08-26 — Linux ve Windows ayrı ağaçlara bölündü (`kdv_linux`,
+      `kdv_windows`); ortak uygulama kodu `esitle.sh` ile eşitleniyor,
+      `--denetle` fark olup olmadığını söylüyor. Her ağacın kendi
+      paketleyicisi ve kendi denetimleri var. Linux paketi `.tar.gz`
+      (zip çalıştırma iznini korumuyor), Windows paketi `.zip`.
+
+- [x] 2026-08-26 — Başlatıcılar sessizce başarısız olmuyor: konsol
+      yokken (masaüstü kısayolu) çıktı `ACILIS KAYDI.txt` dosyasına
+      yazılıyor. Dosyanın hiç oluşmaması da bilgi: betik hiç
+      çalıştırılamamış demektir.
+
 - [x] 2026-08-14 — Windows başlatıcısı geri geldi: "KDV Uygulamasini
       Baslat.bat" ve KURULUM_WINDOWS.txt. Linux açılış yoluna
       dokunmuyor; Python yoksa taşınabilir Python'u kendisi indiriyor

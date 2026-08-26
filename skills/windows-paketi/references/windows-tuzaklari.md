@@ -21,8 +21,17 @@ gereksiz kildi:
   de calisirdi. Yine de `localhost` kullanmanin bedeli yok; proxy'li bir
   makinede fark yaratacak olan tek sey odur.
 
+Sonradan ayni kurulumun LINUX tarafinda bir sey daha cikti ve dersi
+degistirdi:
+
+- **2. maddenin duzeltmesi, yanlis yazilirsa tuzagin kendisinden kotudur.**
+  `::1`'e baglanamama iki ayri sebepten olur ve ayrilmazsa butun portlar
+  "dolu" gorunur (bkz. 2. maddedeki uyari kutusu). Yani bu tuzagi kapatan
+  kod, kapatmaya calistigi seyden daha genis bir arizaya yol acabiliyor.
+
 Ders: tuzaklarin hangisinin vuracagi makineye gore degisir, o yuzden hepsi
-bastan kapatilir.
+bastan kapatilir. Ikinci ders: duzeltmenin kendisi de bir tuzak acabilir,
+o yuzden her duzeltme kendi hata yollariyla birlikte sinanmalidir.
 
 ---
 
@@ -77,6 +86,7 @@ kapatip hata firlatin — yarim baglanmis sunucu, "port bos" sanildigi icin
 3. maddedeki hataya yol acar.
 
 ```python
+import errno
 import socket
 import threading
 from http.server import ThreadingHTTPServer
@@ -137,20 +147,36 @@ def ipv6_var():
 def sunucu_baslat(port, istekci):
     """Verilen portu iki loopback ailesinde birden acar.
 
-    IPv6 KULLANILABILIYORSA iki aile de zorunludur: biri acilip digeri
-    acilamazsa acilan da kapatilir ve OSError firlatilir. Boylece cagiran
-    taraf portu "dolu" sayip sonrakini dener; yarim acik sunucu kalmaz.
+    ::1 baglanamadiginda "IPv6 yok" ile "portu baskasi tutuyor" AYNI
+    istisnayi verir; ayrimi errno yapar.
 
-    Bu ayrim onemli: ::1 baglanamadiginda "IPv6 yok" ile "portu baskasi
-    tutuyor" ayni istisnayi verir. Ikincisini gormezden gelirsek, calisan
-    bir kopya varken ikincisi yalnizca IPv4'te ayaga kalkar; localhost once
-    ::1'e cozuldugu icin tarayici ESKI kopyaya baglanir ve kullanici
-    kaydettigi verinin kayboldugunu sanir.
+    Port gercekten doluysa hata yukari bildirilir: cagiran taraf sonraki
+    portu dener ve yarim acik sunucu kalmaz. Aksi halde calisan bir kopya
+    varken ikincisi yalnizca IPv4'te ayaga kalkar; localhost once ::1'e
+    cozuldugu icin tarayici ESKI kopyaya baglanir ve kullanici kaydettigi
+    verinin kayboldugunu sanir.
+
+    IPv6 kullanilamiyorsa hata YUTULUR ve yalnizca IPv4 dinlenir; yoksa
+    butun portlar dolu gorunur (asagidaki uyari kutusu).
     """
     sunucular = []
     try:
         if ipv6_var():
-            sunucular.append(_SunucuV6(("::1", port), istekci))
+            try:
+                sunucular.append(_SunucuV6(("::1", port), istekci))
+            except OSError as hata:
+                # ::1'e BAGLANAMAMANIN iki ayri sebebi var ve ayirmak SART:
+                #
+                #   EADDRINUSE -> portu baska bir kopya tutuyor. Gercek
+                #                 catisma; yukari bildirilir, cagiran sonraki
+                #                 portu dener.
+                #   digerleri  -> IPv6 bu makinede kullanilamiyor (ornegin
+                #                 ::1 lo arayuzune atanmamis). Port ile
+                #                 ilgisi yok; sonraki portu denemek ayni
+                #                 hatayi verir.
+                if hata.errno == errno.EADDRINUSE:
+                    raise
+                sunucular = []
         sunucular.append(_Sunucu(("127.0.0.1", port), istekci))
     except OSError:
         for s in sunucular:
@@ -158,6 +184,21 @@ def sunucu_baslat(port, istekci):
         raise
     return CiftSunucu(sunucular)
 ```
+
+> **Bu ayrimi atlamak, tuzagin kendisinden daha kotu bir hataya yol acar.**
+> `ipv6_var()` yalnizca soket ACMAYI sinar, BAGLANMAYI degil. IPv6 cekirdekte
+> acik olup `::1` adresi `lo` arayuzune atanmamissa soket acilir, `bind`
+> `EADDRNOTAVAIL` ile duser. Ayrim yapilmazsa bu, "port dolu" sayilir; cagiran
+> sonraki portu dener, orada da ayni sey olur ve **on portun onu birden dolu
+> gorunur**. Kullanicinin gordugu:
+>
+> ```
+> Uygun port bulunamadi (8766-8775 dolu).
+> ```
+>
+> Portlarin hicbiri dolu degildir. Bu hata sahada bir kullanicinin Linux
+> makinesinde ortaya cikti; belirti, sebebe hic benzemedigi icin bulunmasi
+> uzun surdu. `import errno` eklemeyi unutmayin.
 
 `_SunucuV6` icin `IPV6_V6ONLY` ayarina dokunulmaz: Windows'ta varsayilan zaten
 1'dir, yani `::1` soketi IPv4 baglantilarini almaz ve ayni portu 127.0.0.1

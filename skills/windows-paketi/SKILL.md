@@ -82,7 +82,11 @@ orada duzenlenir.
 
 `references/windows-tuzaklari.md` icindeki dort duzeltmeyi uygulayin:
 `localhost` adresi, `::1` cift dinleme, `allow_reuse_address = False`, Chrome
-onceligi. Hazir kod parcalari o dosyada.
+onceligi. Hazir kod parcalari o dosyada — **oradaki kodu oldugu gibi alin.**
+
+`::1` cift dinlemede kod parcasini kisaltmayin: `::1`'e baglanamama iki ayri
+sebepten olur ve `errno` ile ayrilmazsa, tuzagi kapatmak icin yazdiginiz kod
+butun portlari dolu gosterir. Sahada boyle oldu; ayrintisi 2. maddede.
 
 Ayrica gozden gecirin:
 
@@ -128,6 +132,8 @@ Denetimler:
 - Kodda ve belgelerde `http://127.0.0.1:` yok (proxy tuzagi)
 - Sunucu `::1` dinliyor, `allow_reuse_address` kapali, Chrome onceligi var
 - `.bat` dosyalarinda tirnaksiz `%PYEXE%` yok (bosluklu yolda kirilir)
+- `::1` dinleyen kod "IPv6 yok" ile "port dolu"yu ayiriyor (`EADDRINUSE`);
+  ayirmazsa butun portlar dolu gorunur
 - Gomulu Python `._pth` dosyasi uygulama klasorlerini goruyor
 
 Bu denetimler yontemin kalbidir: Windows'ta ancak kullanicida gorunen hatalari,
