@@ -94,6 +94,7 @@ FONT_IMZA = Font(name=AD, size=PUNTO)
 
 SARI = PatternFill("solid", fgColor="FFFF00")
 KIRMIZI = PatternFill("solid", fgColor="FF6D6D")
+ACIK_GRI = PatternFill("solid", fgColor="D9D9D9")
 
 INCE = Side(style="hair", color="000000")
 KALIN = Side(style="double", color="000000")
@@ -175,23 +176,33 @@ def _ay_basligi(ws, satir):
         hucre.border = _kenar(2 + i)
 
 
-def _veri_satiri(ws, satir, etiket, degerler, ay_sayisi, etiket_dolgu=None,
-                 alt_kalin=False):
-    """Etiket + 12 aylik tutar. ay_sayisi disindaki aylar bos birakilir."""
+def _veri_satiri(ws, satir, etiket, degerler, ay_sayisi, dolgu=None,
+                 alt_kalin=False, kalin=False, vurgu=None):
+    """Etiket + 12 aylik tutar. ay_sayisi disindaki aylar bos birakilir.
+
+    dolgu verilirse etiketiyle tutarlariyla satirin tamamina uygulanir;
+    kalin ise tutarlar da etiket gibi kalin yazilir. vurgu verilirse
+    yalnizca SIFIRDAN FARKLI tutar tasiyan aylara uygulanir; boylece hangi
+    donemde tarhiyat ciktigi tabloya bakar bakmaz gorulur.
+    """
     hucre = ws.cell(row=satir, column=1, value=etiket)
     hucre.font = FONT_ETIKET
     hucre.alignment = SOL
     hucre.border = _kenar(1, alt_kalin=alt_kalin)
-    if etiket_dolgu is not None:
-        hucre.fill = etiket_dolgu
+    if dolgu is not None:
+        hucre.fill = dolgu
     for ay in range(12):
         hucre = ws.cell(row=satir, column=2 + ay)
         if ay < ay_sayisi:
             hucre.value = degerler[ay]
-        hucre.font = FONT_DEGER
+        hucre.font = FONT_ETIKET if kalin else FONT_DEGER
         hucre.alignment = SAG
         hucre.number_format = SAYI_BICIMI
         hucre.border = _kenar(2 + ay, alt_kalin=alt_kalin)
+        if vurgu is not None and ay < ay_sayisi and abs(degerler[ay]) > 0.005:
+            hucre.fill = vurgu
+        elif dolgu is not None:
+            hucre.fill = dolgu
 
 
 def _imzalari_coz(ham):
@@ -238,10 +249,14 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
     ws.sheet_view.showGridLines = False
 
     # Genislikler 10 puntoya gore secildi. Ay sutunu "123.456.789,00"
-    # genisligindedir: daha dar yapilirsa buyuk tutarlar ##### olarak basilir,
-    # daha genis yapilirsa Excel'in sigdirma olcegi ve dolayisiyla baskidaki
-    # yazi boyu duser.
-    ws.column_dimensions["A"].width = 24.0
+    # genisligindedir: daha dar yapilirsa buyuk tutarlar ##### olarak basilir.
+    #
+    # Etiket sutunu, beyanname satir adlarinin cogu tek satira sigacak
+    # genisliktedir. Bunun ikinci bir islevi var: tablonun toplam eni,
+    # sigdirmada BOY degil EN sinirlayici olacak kadar buyur. Boy sinirlayici
+    # olsaydi Excel sayfayi boya gore kucultur, en tam dolmaz ve sayfanin
+    # saginda solunda bosluk kalirdi.
+    ws.column_dimensions["A"].width = 32.0
     for sutun in range(2, SON_SUTUN + 1):
         ws.column_dimensions[get_column_letter(sutun)].width = 12.5
 
@@ -288,9 +303,11 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
         _veri_satiri(ws, 22 + sira, etiket, al("elestirili", alan), ay_sayisi)
 
     # Tarhiyat Ozeti'ndeki "Re'sen Tarhi Gereken KDV" sutununun aynisi
+    # Fisin sonucunu tasiyan satir: tamami kalin ve acik gri zeminli; tarhiyat
+    # cikan aylar ayrica kirmizi zeminle isaretlenir.
     _veri_satiri(ws, 33, "TARHI GEREKEN VERGİ",
                  [d["tarhiyat"]["resen_tarhi_gereken"] for d in donemler],
-                 ay_sayisi, etiket_dolgu=KIRMIZI)
+                 ay_sayisi, dolgu=ACIK_GRI, kalin=True, vurgu=KIRMIZI)
     # Fazla ve yersiz devredilen KDV: beyan edilen devir - olmasi gereken devir.
     # fark["sonraki_devir"] ters yonde (elestirili - beyan) tutuldugu icin
     # isareti cevrilir; boylece fazla devir pozitif cikar.
@@ -334,11 +351,13 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
     # Yukseklikler formun kendi oranlarini korur, ancak A4 yatay tek sayfaya
     # sigdirma olcegini yukseltmek icin bir miktar sikistirilmistir; 34. satir
     # etiketi iki satira tastigi icin daha yuksektir.
-    yukseklikler = {1: 18.0, 2: 16.0, 3: 16.0, 4: 20.0, 5: 26.0, 6: 18.0,
-                    7: 18.0, 19: 7.0, 20: 18.0, 21: 16.0, 34: 24.0,
+    # Yukseklik YALNIZCA birlesik hucre tasiyan satirlara ve bosluklara verilir.
+    # Geri kalan satirlar yuksekliksiz birakilir; Excel onlari icerige gore
+    # kendiliginden buyutur, boylece iki satira tasan bir etiket kirpilmaz.
+    # Birlesik hucrelerde bu kendiliginden buyume calismadigi icin oradaki
+    # yukseklikler elle verilmek zorundadir.
+    yukseklikler = {5: 26.0, 6: 18.0, 19: 7.0, 20: 18.0,
                     35: 8.0, 36: 38.0, 37: 38.0, 38: 10.0, 39: 14.0, 40: 14.0}
-    for satir in list(range(8, 19)) + list(range(22, 34)):
-        yukseklikler.setdefault(satir, 14.0)
     for satir, yukseklik in yukseklikler.items():
         ws.row_dimensions[satir].height = yukseklik
 
@@ -354,10 +373,15 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
     ws.page_setup.scale = None
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.print_options.horizontalCentered = True
-    ws.page_margins.left = 0.26
+    ws.page_margins.left = 0.25
     ws.page_margins.right = 0.25
     ws.page_margins.top = 0.26
-    ws.page_margins.bottom = 0.48
+    ws.page_margins.bottom = 0.30
+    # Ustbilgi/altbilgi payi varsayilan olarak 0.5 inch gelir ve ust/alt kenar
+    # boslugundan buyuk oldugunda basilabilir yuksekligi o kadar kisar. Fis
+    # ustbilgi tasimadigi icin bu pay kucultulur.
+    ws.page_margins.header = 0.2
+    ws.page_margins.footer = 0.2
     ws.print_area = "A1:%s40" % get_column_letter(SON_SUTUN)
     return ws
 

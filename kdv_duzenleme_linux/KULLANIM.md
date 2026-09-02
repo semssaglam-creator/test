@@ -436,11 +436,19 @@ imza sayfa genişliğine **eşit olarak** dağıtılır (B:E · F:I · J:M sütu
 biri aynı genişlikte).
 
 Fişin tamamı **Times New Roman 10 punto**dur; başlık, sarı bantlar ve satır
-etiketleri punto ile değil **kalın yazı** ile ayrılır.
+etiketleri punto ile değil **kalın yazı** ile ayrılır. *Tarhı gereken vergi*
+satırının tamamı kalın ve açık gri zeminlidir; **tarhiyat çıkan aylar ayrıca
+kırmızı zeminle** işaretlenir, böylece hangi dönemde vergi tarh edileceği
+tabloya bakar bakmaz görülür.
+
+Satır adlarının bulunduğu sol sütun, adların çoğu tek satıra sığacak
+genişliktedir. Sığmayan bir ad alt satıra taştığında **satır kendiliğinden
+yükselir**, yazı kırpılmaz.
 
 Sayfa **A4 yatay** olarak ayarlıdır ve **tek sayfaya tam sığar** (Excel'in "sayfaya
-sığdır" ölçeği kullanılır, ölçek yaklaşık %83'tür). Her yıl ayrı sayfada olduğu için
-her fiş tek yaprak çıkar; doğrudan yazdırabilirsiniz.
+sığdır" ölçeği kullanılır, ölçek yaklaşık %80'dir). Tablo sayfa enini tam doldurur;
+sağda solda boşluk kalmaz. Her yıl ayrı sayfada olduğu için her fiş tek yaprak
+çıkar; doğrudan yazdırabilirsiniz.
 
 ### 5. Tespit Etkisi sekmesi
 
