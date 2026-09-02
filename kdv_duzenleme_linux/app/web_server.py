@@ -18,7 +18,8 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
-from .duzeltme_fisi import (VARSAYILAN_ACIKLAMA, VARSAYILAN_IMZALAR,
+from .duzeltme_fisi import (ACIKLAMA_KALIBI, NEDEN_SECENEKLERI,
+                            VARSAYILAN_ACIKLAMA, VARSAYILAN_IMZALAR,
                             VARSAYILAN_NEDEN, fis_olustur)
 from .excel_export import calisma_olustur
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
@@ -191,6 +192,10 @@ class Istekci(BaseHTTPRequestHandler):
                         "neden": VARSAYILAN_NEDEN,
                         "aciklama": VARSAYILAN_ACIKLAMA,
                         "imzalar": VARSAYILAN_IMZALAR,
+                        # Neden ve ona ait gerekce metni birlikte gonderilir;
+                        # arayuz neden degisince metni de degistirebilsin diye
+                        "nedenler": [{"neden": n, "aciklama": ACIKLAMA_KALIBI % d}
+                                     for n, d in NEDEN_SECENEKLERI],
                     },
                 })
             elif yol == "/api/calismalar":

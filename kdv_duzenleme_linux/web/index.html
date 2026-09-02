@@ -288,10 +288,7 @@
       <div>
         <label>Devir tablosunun düzenlenme nedeni</label>
         <input type="text" id="fisNeden" list="fisNedenListe">
-        <datalist id="fisNedenListe">
-          <option value="VERGİ İNCELEME RAPORUNA İSTİNADEN"></option>
-          <option value="TAKDİR KOMİSYONU KARARINA İSTİNADEN"></option>
-        </datalist>
+        <datalist id="fisNedenListe"></datalist>
       </div>
       <div class="dar"><label>Cilt/Sıra No</label><input type="text" id="fisCilt"></div>
       <div class="dar"><label>Fiş tarihi</label>
@@ -2070,8 +2067,24 @@ const FIS_ALANLARI = {
   fisNeden: "neden", fisCilt: "cilt_sira", fisTarih: "tarih", fisAciklama: "aciklama",
 };
 
+/** Duzenlenme nedeni onerilerini sunucudan gelen listeden kurar. */
+function fisNedenleriniCiz() {
+  const liste = $("fisNedenListe");
+  if (liste.children.length) return;
+  fisNedenleri().forEach((n) => {
+    const o = document.createElement("option");
+    o.value = n.neden;
+    liste.appendChild(o);
+  });
+}
+
+function fisNedenleri() {
+  return ((durum.tanimlar || {}).fis_varsayilan || {}).nedenler || [];
+}
+
 /** Fis kunye alanlarini calismadaki degerlerle doldurur. */
 function fisFormunuDoldur() {
+  fisNedenleriniCiz();
   const f = durum.calisma.fis || (durum.calisma.fis = bosFis());
   Object.entries(FIS_ALANLARI).forEach(([id, alan]) => { $(id).value = f[alan] || ""; });
   const imzalar = (f.imzalar || []).map(imzaCoz);
@@ -2085,10 +2098,27 @@ function fisFormunuDoldur() {
 const FIS_IMZA_ALANLARI = ["fisAd1", "fisAd2", "fisAd3",
                            "fisImza1", "fisImza2", "fisImza3"];
 
+/** Duzenlenme nedeni degisince gerekce metnini de gunceller.
+ *
+ *  Yalnizca metin HENUZ ELLE DEGISTIRILMEMISSE degistirilir: icerideki metin
+ *  seceneklerden birinin hazir metniyle birebir ayniysa kullanici ona
+ *  dokunmamis demektir. Kendi yazdigi bir gerekce varsa korunur. */
+function fisGerekcesiniUyarla(f) {
+  const nedenler = fisNedenleri();
+  const simdiki = (f.aciklama || "").trim();
+  const hazirMi = !simdiki || nedenler.some((n) => n.aciklama.trim() === simdiki);
+  if (!hazirMi) return;
+  const eslesen = nedenler.find((n) => n.neden === f.neden);
+  if (!eslesen) return;
+  f.aciklama = eslesen.aciklama;
+  $("fisAciklama").value = eslesen.aciklama;
+}
+
 Object.keys(FIS_ALANLARI).concat(FIS_IMZA_ALANLARI).forEach((id) => {
   $(id).addEventListener("change", () => {
     const f = durum.calisma.fis || (durum.calisma.fis = bosFis());
     if (FIS_ALANLARI[id]) f[FIS_ALANLARI[id]] = $(id).value.trim();
+    if (id === "fisNeden") fisGerekcesiniUyarla(f);
     else f.imzalar = [1, 2, 3].map((n) => ({
       ad: $(`fisAd${n}`).value.trim(),
       unvan: $(`fisImza${n}`).value.trim(),

@@ -427,8 +427,19 @@ ayrımı korunur. Yılın ay sayısını *Beyan Verisi* sekmesinden değiştirir
 Fişin künye alanları — **düzenlenme nedeni**, **cilt/sıra no**, **fiş tarihi**,
 altındaki **gerekçe metni** ve üç imzanın **ad soyadı ile unvanı** — kartın içinden
 doldurulur ve çalışmayla birlikte kaydedilir; çalışmayı yeniden açtığınızda olduğu
-gibi gelir. Düzenlenme nedeni kutusu, sık kullanılan iki gerekçeyi (vergi inceleme
-raporu / takdir komisyonu kararı) hazır önerir; istediğinizi elle de yazabilirsiniz.
+gibi gelir.
+
+Düzenlenme nedeni kutusu üç hazır seçenek önerir; istediğinizi elle de
+yazabilirsiniz:
+
+| Düzenlenme nedeni | Gerekçe metnindeki dayanak |
+|---|---|
+| VERGİ İNCELEME RAPORUNA İSTİNADEN | ekli vergi inceleme raporu nedeniyle |
+| TAKDİR KOMİSYONU KARARINA İSTİNADEN | ekli takdir komisyonu kararları nedeniyle |
+| DEVREDEN KDV BEYAN UYUMSUZLUĞU | devreden KDV tutarlarında beyanlar arasında tespit edilen uyumsuzluk nedeniyle |
+
+Nedeni değiştirdiğinizde **gerekçe metni de kendiliğinden ona uyar**. Metni elle
+değiştirmişseniz yazdığınız korunur, üzerine yazılmaz.
 
 İmza bloğunda ıslak imza için boşluk bırakılır; altına önce **ad soyad**, onun
 altına **unvan** yazılır. Ad alanını boş bırakırsanız yalnızca unvan basılır. Üç

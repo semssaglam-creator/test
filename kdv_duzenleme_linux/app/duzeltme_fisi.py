@@ -63,14 +63,30 @@ FIS_SATIRLARI = [
     ("SONRAKİ DÖN. DEVREDEN KDV", "sonraki_devir"),
 ]
 
-VARSAYILAN_NEDEN = "VERGİ İNCELEME RAPORUNA İSTİNADEN"
-VARSAYILAN_ACIKLAMA = (
-    "Adı geçen mükellefin ekli vergi inceleme raporu nedeniyle sonraki "
-    "vergilendirme dönemi KDV beyannamelerinin fazla ve yersiz olarak devreden "
-    "KDV yönünden re’sen düzeltilmesi neticesinde yukarıdaki tablodaki "
-    "vergilendirme dönemlerinde 213 sayılı V.U.K.’nun düzeltmeye ilişkin 116. "
-    "ve müteakip maddeleri gereğince KDV’nin tarh edilmesi gerekmektedir."
+# Fisin altindaki gerekce paragrafi, devir tablosunun neye dayandigini soyler.
+# Bu yuzden duzenlenme nedeni ile paragraftaki dayanak birlikte degismelidir;
+# ikisi asagida cift halinde tutulur. Arayuz nedeni bu listeden onerir,
+# kullanici baska bir neden de yazabilir.
+ACIKLAMA_KALIBI = (
+    "Adı geçen mükellefin %s sonraki vergilendirme dönemi KDV beyannamelerinin "
+    "fazla ve yersiz olarak devreden KDV yönünden re’sen düzeltilmesi "
+    "neticesinde yukarıdaki tablodaki vergilendirme dönemlerinde 213 sayılı "
+    "V.U.K.’nun düzeltmeye ilişkin 116. ve müteakip maddeleri gereğince "
+    "KDV’nin tarh edilmesi gerekmektedir."
 )
+
+NEDEN_SECENEKLERI = [
+    ("VERGİ İNCELEME RAPORUNA İSTİNADEN",
+     "ekli vergi inceleme raporu nedeniyle"),
+    ("TAKDİR KOMİSYONU KARARINA İSTİNADEN",
+     "ekli takdir komisyonu kararları nedeniyle"),
+    ("DEVREDEN KDV BEYAN UYUMSUZLUĞU",
+     "devreden KDV tutarlarında beyanlar arasında tespit edilen uyumsuzluk "
+     "nedeniyle"),
+]
+
+VARSAYILAN_NEDEN = NEDEN_SECENEKLERI[0][0]
+VARSAYILAN_ACIKLAMA = ACIKLAMA_KALIBI % NEDEN_SECENEKLERI[0][1]
 VARSAYILAN_IMZALAR = [
     {"ad": "", "unvan": "GELİR UZMANI"},
     {"ad": "", "unvan": "MÜDÜR YRD."},
