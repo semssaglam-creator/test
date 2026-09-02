@@ -1,0 +1,117 @@
+KDV İNCELEME ÇALIŞMASI — KURULUM
+=================================
+
+Gereken tek şey Python 3'tür. Hemen her Linux dağıtımında kurulu gelir;
+kurulu değilse aşağıdaki "Sorun giderme" bölümüne bakın.
+
+
+1. ARŞİVİ AÇIN
+--------------
+İndirdiğiniz dosyaya sağ tıklayıp "Buraya Çıkar" deyin. Klasörü istediğiniz
+yere koyabilirsiniz (örneğin Belgeler içine). Uygulama bulunduğu yerden
+çalışır, sisteme dosya kopyalamaz.
+
+
+2. BAŞLATIN  (terminal gerekmez)
+---------------------------------
+Klasörün içindeki
+
+    KDV Uygulamasini Baslat
+
+dosyasına ÇİFT TIKLAYIN. Uygulama açılır, tarayıcınızda kendiliğinden bir
+sekme gelir. Kurulum yok, terminal yok.
+
+Çift tıklayınca bir şey olmazsa bir kereye mahsus şunu yapın:
+  a) Dosyaya SAĞ tıklayın.
+  b) "Çalıştırmaya İzin Ver" / "Allow Launching" varsa tıklayın.
+     Yoksa: Özellikler > İzinler > "Dosyanın program olarak çalışmasına
+     izin ver" kutusunu işaretleyin, pencereyi kapatın.
+  c) Yeniden çift tıklayın.
+
+Bu izin bir kez verilir; sonrasında her zaman çift tıklayarak açılır.
+
+NOT: calistir.sh dosyasına çift tıklamak çoğu masaüstünde İŞE YARAMAZ.
+Dosya yöneticisi .sh betiklerini çalıştırmaz; ya metin düzenleyicide açar
+ya da hiçbir şey yapmaz. Ekranda hiçbir belirti çıkmadığı için uygulama
+bozuk sanılır. Bunun yerine yukarıdaki başlatıcıyı kullanın.
+
+
+3. İSTERSENİZ MENÜYE EKLEYİN  (isteğe bağlı, terminal ister)
+-------------------------------------------------------------
+Uygulamanın menüde ve masaüstünde görünmesini isterseniz, klasörde
+"Terminalde Aç" deyip şunu çalıştırın:
+
+    bash kur.sh
+
+Terminal kullanamıyorsanız buna hiç gerek yok; 2. adımdaki başlatıcı tek
+başına yeterlidir.
+
+
+YENİ SÜRÜME GEÇERKEN
+--------------------
+En kolayı: yeni sürümü, ESKİ klasörün ÜZERİNE kopyalamaktır. Yeni klasörün
+içindekilerin tümünü seçip eski klasöre sürükleyin, sorulunca "Değiştir" /
+"Birleştir" deyin.
+
+Böylece kayıtlı çalışmalarınız yerinde kalır: veritabanı  veritabani/
+klasöründe durur ve pakette o dosya olmadığı için silinmez. Menü kısayolu
+kullanıyorsanız o da aynı klasörü göstermeye devam eder.
+
+Yeni sürümü AYRI bir klasöre çıkarırsanız iki kopya birden durur; menü
+kısayolu eskisini açmaya devam eder ve güncelleme yapmamışsınız gibi
+görünür. Bu durumda ya yeni klasörde  bash kur.sh  çalıştırın ya da yeni
+klasördeki başlatıcıya çift tıklayın.
+
+
+TERMİNALDEN ÇALIŞTIRMAK
+-----------------------
+Terminal kullanabiliyorsanız kurulum hiç gerekmez:
+
+    python3 main.py
+
+Ayrıntı (kaynağı git ile alma, veri klasörleri, sorun giderme) için
+klasördeki TERMINAL.md dosyasına bakın.
+
+
+KULLANIM
+--------
+Ayrıntılı kullanım için klasördeki KULLANIM.md dosyasına bakın.
+
+
+VERİLERİNİZ NEREDE
+------------------
+Hepsi uygulama klasörünün içinde durur:
+
+  veritabani/kdv.db   mükellefler, dosyalar, beyan ve tespit kayıtları
+  yedekler/           veritabanı yedekleri
+  ciktilar/           ürettiğiniz Excel dosyaları
+
+Klasörü başka bir bilgisayara kopyalarsanız verileriniz de birlikte gider.
+Uygulama tamamen çevrimdışıdır; hiçbir veri dışarı gönderilmez, sunucu
+yalnızca kendi bilgisayarınızdan erişilebilir (127.0.0.1).
+
+
+KALDIRMA
+--------
+Klasördeki  kaldir.sh  dosyasını çalıştırın; menü ve masaüstü kısayolları
+silinir. Verileriniz durur. Tamamen silmek için klasörü çöp kutusuna atın.
+
+
+SORUN GİDERME
+-------------
+"Python 3 bulunamadı" hatası:
+    Ubuntu / Debian / Mint : sudo apt install python3
+    Fedora                 : sudo dnf install python3
+    openSUSE               : sudo zypper install python3
+    Arch / Manjaro         : sudo pacman -S python
+
+Çift tıklayınca hiçbir şey olmuyor:
+    Dosyaya sağ tıklayın > Özellikler > İzinler > "Dosyanın program olarak
+    çalıştırılmasına izin ver" kutusunu işaretleyin.
+
+Tarayıcı açılmıyor:
+    Terminal penceresinde yazan adresi (http://127.0.0.1:8766/) elle
+    tarayıcınıza yapıştırın.
+
+Uygulama zaten açıkken tekrar başlatırsanız sıradaki boş port kullanılır
+(8766-8775); terminal penceresinde hangi adreste çalıştığı yazar.
