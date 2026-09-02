@@ -78,16 +78,19 @@ VARSAYILAN_IMZALAR = [
 ]
 
 # ------------------------------------------------------------------- bicimler
+# Fisin tamami Times New Roman 10 punto. Baslik, bant ve etiketler boyutla
+# degil kalinlikla ayrilir; boylece butun sayfa tek punto tutar.
 AD = "Times New Roman"
-FONT_ETIKET = Font(name=AD, size=12, bold=True)
-FONT_DEGER = Font(name=AD, size=12)
-FONT_KUNYE = Font(name=AD, size=12, bold=True)
-FONT_KUNYE_DEGER = Font(name=AD, size=12)
-FONT_YIL = Font(name=AD, size=15, bold=True)
-FONT_FIS = Font(name=AD, size=14, bold=True)
-FONT_BANT = Font(name=AD, size=13, bold=True)
-FONT_ACIKLAMA = Font(name=AD, size=13)
-FONT_IMZA = Font(name=AD, size=12)
+PUNTO = 10
+FONT_ETIKET = Font(name=AD, size=PUNTO, bold=True)
+FONT_DEGER = Font(name=AD, size=PUNTO)
+FONT_KUNYE = Font(name=AD, size=PUNTO, bold=True)
+FONT_KUNYE_DEGER = Font(name=AD, size=PUNTO)
+FONT_YIL = Font(name=AD, size=PUNTO, bold=True)
+FONT_FIS = Font(name=AD, size=PUNTO, bold=True)
+FONT_BANT = Font(name=AD, size=PUNTO, bold=True)
+FONT_ACIKLAMA = Font(name=AD, size=PUNTO)
+FONT_IMZA = Font(name=AD, size=PUNTO)
 
 SARI = PatternFill("solid", fgColor="FFFF00")
 KIRMIZI = PatternFill("solid", fgColor="FF6D6D")
@@ -108,6 +111,11 @@ SAYI_BICIMI = "#,##0.00;\\-#,##0.00"
 
 ILK_SUTUN = 1    # A: etiket sutunu
 SON_SUTUN = 13   # M: ARALIK
+
+# Imza bloklari: B:E, F:I, J:M. Ucu de dorder sutun, yani birbirine esit
+# genislikte. Etiket sutunu A disarida birakilir; o sutun otekilerden genis
+# oldugu icin iceri alinsaydi bloklardan biri digerlerinden genis kalirdi.
+IMZA_BLOKLARI = [(2, 5), (6, 9), (10, 13)]
 
 
 def _kenar(sutun, ust_kalin=False, alt_kalin=False):
@@ -229,13 +237,13 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
     ws = wb.create_sheet(title=("%s Düzeltme Fişi" % yil)[:31])
     ws.sheet_view.showGridLines = False
 
-    # Genislikler, formun A4 yatay tek sayfaya makul bir olcekle sigmasi icin
-    # secildi (bkz. sayfa duzeni). Ay sutunu "123.456.789,00" genisligindedir:
-    # daha dar yapilirsa buyuk tutarlar ##### olarak basilir, daha genis
-    # yapilirsa Excel'in sigdirma olcegi ve dolayisiyla yazi boyu duser.
-    ws.column_dimensions["A"].width = 29.0
+    # Genislikler 10 puntoya gore secildi. Ay sutunu "123.456.789,00"
+    # genisligindedir: daha dar yapilirsa buyuk tutarlar ##### olarak basilir,
+    # daha genis yapilirsa Excel'in sigdirma olcegi ve dolayisiyla baskidaki
+    # yazi boyu duser.
+    ws.column_dimensions["A"].width = 24.0
     for sutun in range(2, SON_SUTUN + 1):
-        ws.column_dimensions[get_column_letter(sutun)].width = 14.5
+        ws.column_dimensions[get_column_letter(sutun)].width = 12.5
 
     def al(kaynak, alan):
         return [d[kaynak][alan] for d in donemler]
@@ -314,23 +322,23 @@ def _yil_sayfasi(wb, yil, donemler, ay_sayisi, inceleme, fis):
     if not any(ad or unvan for ad, unvan in imzalar):
         imzalar = _imzalari_coz(VARSAYILAN_IMZALAR)
     orta = Alignment(horizontal="center", vertical="center")
-    for sutun, (ad, unvan) in zip((3, 9, 11), imzalar):
+    for (bas, son), (ad, unvan) in zip(IMZA_BLOKLARI, imzalar):
         for satir, metin in ((39, ad), (40, unvan)):
-            hucre = ws.cell(row=satir, column=sutun, value=metin)
+            hucre = ws.cell(row=satir, column=bas, value=metin)
             hucre.font = FONT_IMZA
             hucre.alignment = orta
-        ws.merge_cells(start_row=39, start_column=sutun, end_row=39, end_column=sutun + 1)
-        ws.merge_cells(start_row=40, start_column=sutun, end_row=40, end_column=sutun + 1)
+            ws.merge_cells(start_row=satir, start_column=bas,
+                           end_row=satir, end_column=son)
 
     # ----------------------------------------------------- satir yukseklikleri
     # Yukseklikler formun kendi oranlarini korur, ancak A4 yatay tek sayfaya
     # sigdirma olcegini yukseltmek icin bir miktar sikistirilmistir; 34. satir
     # etiketi iki satira tastigi icin daha yuksektir.
-    yukseklikler = {1: 22.0, 2: 19.0, 3: 19.0, 4: 24.0, 5: 30.0, 6: 21.0,
-                    7: 21.0, 19: 8.0, 20: 21.0, 21: 19.0, 34: 28.0,
-                    35: 10.0, 36: 44.0, 37: 42.0, 38: 12.0, 39: 16.0, 40: 16.0}
+    yukseklikler = {1: 18.0, 2: 16.0, 3: 16.0, 4: 20.0, 5: 26.0, 6: 18.0,
+                    7: 18.0, 19: 7.0, 20: 18.0, 21: 16.0, 34: 24.0,
+                    35: 8.0, 36: 38.0, 37: 38.0, 38: 10.0, 39: 14.0, 40: 14.0}
     for satir in list(range(8, 19)) + list(range(22, 34)):
-        yukseklikler.setdefault(satir, 16.5)
+        yukseklikler.setdefault(satir, 14.0)
     for satir, yukseklik in yukseklikler.items():
         ws.row_dimensions[satir].height = yukseklik
 

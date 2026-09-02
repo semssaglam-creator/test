@@ -431,10 +431,15 @@ gibi gelir. Düzenlenme nedeni kutusu, sık kullanılan iki gerekçeyi (vergi in
 raporu / takdir komisyonu kararı) hazır önerir; istediğinizi elle de yazabilirsiniz.
 
 İmza bloğunda ıslak imza için boşluk bırakılır; altına önce **ad soyad**, onun
-altına **unvan** yazılır. Ad alanını boş bırakırsanız yalnızca unvan basılır.
+altına **unvan** yazılır. Ad alanını boş bırakırsanız yalnızca unvan basılır. Üç
+imza sayfa genişliğine **eşit olarak** dağıtılır (B:E · F:I · J:M sütunları, her
+biri aynı genişlikte).
+
+Fişin tamamı **Times New Roman 10 punto**dur; başlık, sarı bantlar ve satır
+etiketleri punto ile değil **kalın yazı** ile ayrılır.
 
 Sayfa **A4 yatay** olarak ayarlıdır ve **tek sayfaya tam sığar** (Excel'in "sayfaya
-sığdır" ölçeği kullanılır, ölçek yaklaşık %72'dir). Her yıl ayrı sayfada olduğu için
+sığdır" ölçeği kullanılır, ölçek yaklaşık %83'tür). Her yıl ayrı sayfada olduğu için
 her fiş tek yaprak çıkar; doğrudan yazdırabilirsiniz.
 
 ### 5. Tespit Etkisi sekmesi
