@@ -222,6 +222,32 @@ hiç tespit girmediğiniz yıllarda bile, önceki yıllardan gelen farklar
 kendiliğinden hesaplanır ve *Sonuç ve Fark* ile *Tarhiyat Özeti*
 sekmelerinde görünür.
 
+### Devreden KDV sıçramaları
+
+Bir dönemin beyanındaki *önceki dönemden devreden KDV*, bir önceki dönemin
+*sonraki döneme devreden KDV* tutarıyla aynı olmalıdır. Fark varsa zincir
+beyanın kendi içinde kırılmış demektir.
+
+Bunun bilinen ve çoğu zaman kabul edilen bir sebebi var: geç gelen faturanın
+KDV'si, deftere kaydedildiği dönemde ödenecek vergi doğurmadığı için o dönemin
+beyannamesi düzeltilmez; tutar, ödemeyi etkilediği ileri bir dönemde *önceki
+dönemden devreden* satırına eklenerek beyana yansıtılır ve gerekçesi
+beyannamenin **İndirim Nedenleri** bölümüne (Değişiklik Nedeni · Açıklama ·
+Miktar) yazılır.
+
+Uygulama bu sıçramaları **Beyannameler** sekmesindeki *Devreden KDV
+Sıçramaları* bölümünde listeler; beyannamedeki gerekçe satırlarını da
+gösterir ve gerekçedeki miktar sıçrama tutarıyla aynıysa işaretler.
+
+- Devir **fazla** beyan edilmiş **ve** beyannamede indirim nedeni yazılmışsa
+  üç seçenek sunulur: **Kabul et** (zincir o dönemde beyandaki tutardan
+  yeniden kurulur, fark doğmaz), **Kısmen kabul et** (araya bir tutar
+  yazarsınız; kalan kısım fark olarak durur), **Kabul etme** (fark tespit
+  olarak kalır).
+- Gerekçesiz bir sıçrama için seçenek sunulmaz; fark olduğu gibi kalır.
+- Karar verilmemiş sıçrama varsa *Sonuç ve Fark* sekmesinde uyarı çıkar.
+  Karar verilene kadar o tutar, tespitten doğmamış bir fark gibi görünür.
+
 **Elle düzenleme:** Yapıştırdıktan sonra ızgarada **bütün değerler görünür**
 (sıfırlar dahil, soluk renkte). Her hücreyi doğrudan değiştirebilirsiniz; alanı
 terk ettiğinizde seri anında yeniden hesaplanır. Böylece mevcut veri üzerinde

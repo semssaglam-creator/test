@@ -112,10 +112,23 @@ def _yillari_coz(calisma):
                    or gelen_e.get("indirim_sifirla") or []) + [False] * 12
         elestiri["indirim_sinirla"] = [bool(s) for s in sinirla[:12]]
         pin = ham.get("devir_baslangic")
+        # Kabul edilmis devir sicramalari: {ay: kabul edilen onceki devir}.
+        # Zincir o donemde bu tutardan yeniden kurulur (bkz. hesap._donem_pinleri).
+        pinler = {}
+        for anahtar, deger in (ham.get("devir_pinleri") or {}).items():
+            if deger in (None, ""):
+                continue
+            try:
+                ay = int(anahtar)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= ay <= 12:
+                pinler[ay] = _sayi(deger)
         yillar.append({
             "yil": yil,
             "ay_sayisi": max(1, min(int(ham.get("ay_sayisi") or 12), 12)),
             "devir_baslangic": None if pin in (None, "") else _sayi(pin),
+            "devir_pinleri": pinler,
             "beyan": beyan,
             "elestiri": elestiri,
         })
@@ -424,6 +437,7 @@ class Istekci(BaseHTTPRequestHandler):
                          for d in duzen["donemler"]},
             "secilen": {a: s["sira"] for a, s in
                         beyannameler.secimi_coz(duzen, veri.get("secim")).items()},
+            "devir_sicramalari": beyannameler.devir_sicramalari(duzen, veri.get("secim")),
             "duzeltme_tablosu": beyannameler.duzeltme_tablosu(duzen),
             "duzeltme_kolonlari": [{"kod": k, "etiket": e}
                                    for k, e in beyannameler.DUZELTME_KOLONLARI],

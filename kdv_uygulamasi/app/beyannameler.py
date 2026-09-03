@@ -125,6 +125,7 @@ def duzenle(beyannameler):
                 "onay_zamani": b.get("onay_zamani") or "",
                 "onay_ts": b.get("onay_ts") or "",
                 "duzeltme_nedeni": b.get("duzeltme_nedeni") or "",
+                "indirim_nedenleri": b.get("indirim_nedenleri") or [],
                 "kaynak": b.get("kaynak") or "",
                 "vkn": b.get("vkn") or "",
                 "unvan": b.get("unvan") or "",
@@ -314,6 +315,63 @@ def beyana_cevir(duzen, secim):
     return {"yillar": liste, "kullanilan": kullanilan,
             "mukellef": mukellef_bilgisi(duzen),
             "uyarilar": [u for u in duzen["uyarilar"] if "vergi kimlik" in u]}
+
+
+def devir_sicramalari(duzen, secim):
+    """Beyanin kendi devir zincirindeki kopukluklari bulur.
+
+    Bir donemin beyanindaki "onceki donemden devreden KDV", bir onceki donemin
+    beyanindaki "sonraki doneme devreden KDV" ile ayni olmalidir. Fark varsa
+    mukellef zinciri kendi elleriyle kirmis demektir.
+
+    Bunun bilinen ve kabul edilebilir bir sebebi var: gec gelen faturanin
+    KDV'si, deftere kaydedildigi donemde odenecek vergi dogurmadigi icin o
+    donemin beyannamesi duzeltilmez; tutar, odemeyi etkiledigi ileri bir
+    donemde "onceki donemden devreden" satirina eklenerek beyana yansitilir ve
+    gerekcesi beyannamenin "Indirim Nedenleri" bolumune yazilir.
+
+    Uygulama bu kopuklugu goremezse zinciri kendi hesabiyla tasimaya devam eder
+    ve fark, ilerideki bir donemde tespitten dogmamis bir matrah farki gibi
+    gorunur. Bu yuzden kopukluk sessizce yutulmaz; kullaniciya bildirilir.
+
+    Karar kullaniciya birakilir. Uc secenek yalnizca devir FAZLA beyan edilmis
+    (mukellef lehine sicrama) ve o beyannamede indirim nedeni yazilmissa
+    sunulur; gerekcesiz bir sicrama icin secenek verilmez, oldugu gibi fark
+    kalir.
+
+    Doner: [{"anahtar", "yil", "ay", "etiket", "beyan_onceki_devir",
+             "onceki_donem_sonraki_devir", "fark", "yon",
+             "indirim_nedenleri", "secenekli"}]
+    """
+    secilen = secimi_coz(duzen, secim)
+    sirali = [d for d in duzen["donemler"] if secilen.get(d["anahtar"])]
+    sirali.sort(key=lambda d: (d["yil"], d["ay"]))
+
+    sicramalar = []
+    for onceki, simdiki in zip(sirali, sirali[1:]):
+        onceki_surum = secilen[onceki["anahtar"]]
+        surum = secilen[simdiki["anahtar"]]
+        tasinan = round(float(onceki_surum["degerler"].get("sonraki_donem_devreden") or 0.0), 2)
+        beyan = round(float(surum["degerler"].get("onceki_donem_devreden") or 0.0), 2)
+        fark = round(beyan - tasinan, 2)
+        if abs(fark) <= 0.005:
+            continue
+        nedenler = surum.get("indirim_nedenleri") or []
+        sicramalar.append({
+            "anahtar": simdiki["anahtar"],
+            "yil": simdiki["yil"],
+            "ay": simdiki["ay"],
+            "etiket": simdiki["etiket"],
+            "surum_etiketi": surum["etiket"],
+            "beyan_onceki_devir": beyan,
+            "onceki_donem_sonraki_devir": tasinan,
+            "fark": fark,
+            "yon": "fazla" if fark > 0 else "eksik",
+            "indirim_nedenleri": nedenler,
+            # Secenek yalnizca fazla beyan + yazili gerekce birlikteyken
+            "secenekli": fark > 0 and bool(nedenler),
+        })
+    return sicramalar
 
 
 def mukellef_bilgisi(duzen):

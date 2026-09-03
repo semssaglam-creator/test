@@ -272,6 +272,7 @@
         tarhiyat özetini ve tespit etkisini birlikte içerir.</span>
       </div>
     </div>
+    <div id="sonucSicramaUyari"></div>
     <div id="sonucIcerik"></div>
   </div>
   <div class="kart" id="dikkatKart" style="display:none;">
@@ -383,6 +384,21 @@
     </div>
     <div class="yil-sekmeler" id="bnGenelYilSekme"></div>
     <div class="kaydir"><table class="tablo" id="bnGenelTablo"></table></div>
+  </div>
+
+  <div class="kart" id="sicramaKart" style="display:none;">
+    <h2>Devreden KDV Sıçramaları</h2>
+    <p class="yardim">
+      Bir dönemin beyanındaki <em>önceki dönemden devreden KDV</em>, bir önceki
+      dönemin <em>sonraki döneme devreden KDV</em> tutarıyla aynı olmalıdır. Fark
+      varsa zincir beyanda kırılmış demektir. Bunun bilinen sebebi, geç gelen
+      faturanın kaydedildiği dönemde ödenecek vergi doğmadığı için o dönemin
+      beyannamesi düzeltilmeden, tutarın ödemeyi etkilediği dönemde devir
+      satırına eklenmesidir; gerekçesi beyannamenin <em>İndirim Nedenleri</em>
+      bölümüne yazılır. Karar verilmeyen sıçrama, ileriki bir dönemde tespitten
+      doğmamış bir fark gibi görünür.
+    </p>
+    <div id="sicramaListesi"></div>
   </div>
 
   <div class="kart" id="beyannameDetayKart" style="display:none;">
@@ -830,6 +846,26 @@ async function hesapla() {
     durum.bulgular = y.bulgular;
   } catch (hata) { mesaj("Hesaplama hatası: " + hata.message, "hata"); }
   ekraniCiz();
+  sicramaUyarisiniCiz();
+}
+
+/** Sonuc ve Fark sekmesinde, karar bekleyen devir sicramasi varsa uyarir.
+ *  Karar verilmemis bir sicrama, ileriki donemlerde tespitten dogmamis bir
+ *  fark uretir; bu sekmeye bakan kisi sebebini goremeden rakami dogru sanabilir. */
+function sicramaUyarisiniCiz() {
+  const kap = $("sonucSicramaUyari");
+  if (!kap) return;
+  const bekleyen = ((durum.bnOzet && durum.bnOzet.devir_sicramalari) || [])
+    .filter((s) => s.secenekli && !sicramaKarari(s).karar);
+  if (!bekleyen.length) { kap.innerHTML = ""; return; }
+  kap.innerHTML =
+    '<div class="uyari-satir"><b>Karar bekleyen devreden KDV sıçraması: ' +
+    bekleyen.map((s) => kacisHtml(s.etiket)).join(", ") + '.</b> ' +
+    'Bu dönemlerde beyandaki devir, önceki dönemden gelenden yüksek ve ' +
+    'beyannamede gerekçesi yazılmış. Karar verilene kadar aradaki tutar, ' +
+    'aşağıdaki tablolarda tespitten doğmamış bir fark olarak görünür — ' +
+    '<em>Beyannameler</em> sekmesindeki “Devreden KDV Sıçramaları” bölümünden ' +
+    'kabul edip etmeyeceğinizi belirtin.</div>';
 }
 
 function rozetiTazele() {
@@ -1901,6 +1937,13 @@ function aciklamaBagla(td, uret, donemEtiketi) {
   });
 }
 
+/** Metni HTML icine gomulebilir hale getirir (beyannameden gelen serbest metin). */
+function kacisHtml(metin) {
+  return String(metin == null ? "" : metin)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function hucre(tur, metin, ozellikler) {
   const el = document.createElement(tur);
   el.textContent = metin;
@@ -2709,6 +2752,7 @@ async function beyannameleriTazele() {
   yuklenenleriCiz();
   bnGenelCiz();
   bnDetayCiz();
+  sicramalariCiz();
   duzeltmeTablosunuCiz();
   bnSecimCiz();
 }
@@ -2927,6 +2971,126 @@ function bnDetayCiz() {
                `</div><ul style="margin:4px 0 0 18px;font-size:13px;">${liste}</ul></div>`;
       }).join("");
   }
+}
+
+// ------------------------------------------------- devreden KDV sicramalari
+// Karar calismada saklanir: yil kaydinda devir_karar {ay: "kabul"|"kismen"|"ret"}
+// ve devir_pinleri {ay: kabul edilen onceki devir}. Sunucu yalnizca pinleri
+// okur (bkz. hesap._donem_pinleri); karar etiketi ekranin kendi bilgisidir.
+function sicramaKarari(s) {
+  const kayit = yilBul(s.yil);
+  if (!kayit) return { karar: null, pin: null };
+  const karar = (kayit.devir_karar || {})[s.ay] || null;
+  const pin = (kayit.devir_pinleri || {})[s.ay];
+  return { karar, pin: pin === undefined ? null : pin };
+}
+
+function sicramaKararVer(anahtar, karar, tutar) {
+  const s = (durum.bnOzet.devir_sicramalari || []).find((x) => x.anahtar === anahtar);
+  if (!s) return;
+  const kayit = yilBul(s.yil);
+  if (!kayit) {
+    mesaj("Bu yıl çalışmada yok. Önce beyannameleri \"Beyana Aktar\" ile " +
+          "beyan verisine aktarın.", "hata");
+    return;
+  }
+  kayit.devir_karar = kayit.devir_karar || {};
+  kayit.devir_pinleri = kayit.devir_pinleri || {};
+  if (karar === "ret") {
+    delete kayit.devir_pinleri[s.ay];
+    kayit.devir_karar[s.ay] = "ret";
+  } else {
+    kayit.devir_pinleri[s.ay] = karar === "kabul" ? s.beyan_onceki_devir : tutar;
+    kayit.devir_karar[s.ay] = karar;
+  }
+  isaretle();
+  sicramalariCiz();
+  hesapla();
+}
+
+function sicramaKismenSor(anahtar) {
+  const s = (durum.bnOzet.devir_sicramalari || []).find((x) => x.anahtar === anahtar);
+  if (!s) return;
+  const girilen = prompt(
+    `${s.etiket} dönemi için kabul edilecek "önceki dönemden devreden KDV" tutarı:\n\n` +
+    `Beyanda yazan       : ${tl(s.beyan_onceki_devir)} TL\n` +
+    `Zincirin taşıdığı   : ${tl(s.onceki_donem_sonraki_devir)} TL\n\n` +
+    "İkisi arasında bir tutar yazın; kalan kısım fark olarak kalır.",
+    tl(s.beyan_onceki_devir));
+  if (girilen === null) return;
+  // sayiCoz cozemedigi metin icin 0 dondurur; "abc" yazilinca sessizce sifir
+  // pinlenmesin diye girdinin gercekten rakam tasidigi ayrica aranir.
+  if (!/\d/.test(girilen)) { mesaj("Geçerli bir tutar girin.", "hata"); return; }
+  const tutar = sayiCoz(girilen);
+  const alt = Math.min(s.beyan_onceki_devir, s.onceki_donem_sonraki_devir);
+  const ust = Math.max(s.beyan_onceki_devir, s.onceki_donem_sonraki_devir);
+  if (tutar < alt - 0.005 || tutar > ust + 0.005) {
+    mesaj(`Tutar ${tl(alt)} ile ${tl(ust)} TL arasında olmalı.`, "hata");
+    return;
+  }
+  sicramaKararVer(anahtar, "kismen", tutar);
+}
+
+function sicramalariCiz() {
+  const liste = (durum.bnOzet && durum.bnOzet.devir_sicramalari) || [];
+  const kap = $("sicramaListesi");
+  $("sicramaKart").style.display = liste.length ? "" : "none";
+  if (!liste.length) return;
+  kap.innerHTML = "";
+
+  liste.forEach((s) => {
+    const { karar, pin } = sicramaKarari(s);
+    const kutu = document.createElement("div");
+    kutu.className = "bulgu";
+    kutu.style.marginBottom = "12px";
+
+    const durumYazi = !s.secenekli
+      ? (s.yon === "eksik"
+          ? "Beyandaki devir, önceki dönemden gelenden <b>düşük</b>. Fark olduğu gibi kalır."
+          : "Beyannamede indirim nedeni yazılmamış; gerekçesiz sıçrama fark olarak kalır.")
+      : karar === "kabul"
+        ? `Karar: <b>kabul edildi</b> — zincir bu dönemde ${tl(pin)} TL'den yeniden kuruluyor.`
+        : karar === "kismen"
+          ? `Karar: <b>kısmen kabul</b> — zincir ${tl(pin)} TL'den kuruluyor; ` +
+            `kalan ${tl(s.beyan_onceki_devir - pin)} TL fark olarak duruyor.`
+          : karar === "ret"
+            ? "Karar: <b>kabul edilmedi</b> — fark tespit olarak duruyor."
+            : "<b>Karar bekliyor.</b> Karar verilene kadar fark, tespitten doğmamış " +
+              "bir matrah farkı gibi görünür.";
+
+    let govde =
+      `<div><b>${s.etiket}</b> — ${s.surum_etiketi}</div>` +
+      `<div style="margin:6px 0; font-size:13px;">` +
+      `Beyandaki önceki devir: <b>${tl(s.beyan_onceki_devir)}</b> TL &nbsp;·&nbsp; ` +
+      `Önceki dönemin devri: <b>${tl(s.onceki_donem_sonraki_devir)}</b> TL &nbsp;·&nbsp; ` +
+      `Sıçrama: <b>${s.fark > 0 ? "+" : ""}${tl(s.fark)}</b> TL</div>`;
+
+    if (s.indirim_nedenleri.length) {
+      govde += '<table class="tablo" style="margin:8px 0; font-size:12px;">' +
+        "<tr><th>Değişiklik Nedeni</th><th>Açıklama</th><th class=\"sag\">Miktar</th></tr>" +
+        s.indirim_nedenleri.map((n) => {
+          const uyar = n.miktar != null && Math.abs(n.miktar - s.fark) <= 0.005
+            ? ' <span style="color:#2c7a3f;">✓ sıçrama tutarıyla aynı</span>' : "";
+          return `<tr><td>${kacisHtml(n.neden)}</td><td>${kacisHtml(n.aciklama)}${uyar}</td>` +
+                 `<td class="sag">${n.miktar == null ? "—" : tl(n.miktar)}</td></tr>`;
+        }).join("") + "</table>";
+    }
+
+    govde += `<div style="margin-top:6px; font-size:13px;">${durumYazi}</div>`;
+
+    if (s.secenekli) {
+      govde += '<div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">' +
+        `<button class="btn${karar === "kabul" ? " birincil" : " ikincil"}" ` +
+        `onclick="sicramaKararVer('${s.anahtar}','kabul')">Kabul et</button>` +
+        `<button class="btn${karar === "kismen" ? " birincil" : " ikincil"}" ` +
+        `onclick="sicramaKismenSor('${s.anahtar}')">Kısmen kabul et</button>` +
+        `<button class="btn${karar === "ret" ? " birincil" : " ikincil"}" ` +
+        `onclick="sicramaKararVer('${s.anahtar}','ret')">Kabul etme</button>` +
+        "</div>";
+    }
+    kutu.innerHTML = govde;
+    kap.appendChild(kutu);
+  });
 }
 
 /**
