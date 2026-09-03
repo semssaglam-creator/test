@@ -56,6 +56,12 @@ SATICI_ALANLARI = [
      "ipucu": "Mükellef bu satıcının faturalarını kendi düzeltme beyannamesiyle "
               "kayıtlarından çıkardıysa “Evet” seçin. O faturalar tarhiyata "
               "girmez; belgede neden dahil edilmediği açıklanır."},
+    {"kod": "kayda_alinmadi",
+     "etiket": "Faturaları hiç kayıtlara alınmamış", "tur": "secim",
+     "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
+     "ipucu": "Fatura mükellefin defterine hiç girmemişse “Evet” seçin. "
+              "Düzeltmeyle çıkarılan faturalar gibi bunlar da tarhiyata "
+              "girmez; ikisi de düzeltme kabul raporunun konusudur."},
     {"kod": "duzeltme_aciklama", "etiket": "Düzeltme beyannamesi açıklaması",
      "tur": "uzun",
      "ipucu": "Düzeltme beyannamesinin Düzeltme Gerekçesi kısmına yazılan "
@@ -137,6 +143,23 @@ def duzeltilmis_mi(satici_vkn, saticilar):
     return str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
 
 
+def kayda_alinmamis_mi(satici_vkn, saticilar):
+    """Bu saticinin faturalari mukellefin defterine hic girmemis mi."""
+    bilgi = (saticilar or {}).get(satici_vkn or "") or {}
+    return str(bilgi.get("kayda_alinmadi") or "") == "Evet"
+
+
+def tarhiyat_disi_birakildi_mi(satici_vkn, saticilar):
+    """Faturalari tarhiyata girmeyen satici mi (duzeltme ya da hic kayda girmeme).
+
+    Iki durum da ayni sonuca varir: KDV zaten indirimlerde degildir, bu yuzden
+    reddedilecek bir indirim yoktur. Ikisi birlikte "duzeltme kabul raporu"nun
+    konusunu olusturur.
+    """
+    return (duzeltilmis_mi(satici_vkn, saticilar)
+            or kayda_alinmamis_mi(satici_vkn, saticilar))
+
+
 def sayilir(f, saticilar=None):
     """Fatura tarhiyata giriyor mu.
 
@@ -148,7 +171,7 @@ def sayilir(f, saticilar=None):
     """
     if not f.get("dahil"):
         return False
-    return not duzeltilmis_mi(f.get("satici_vkn"), saticilar)
+    return not tarhiyat_disi_birakildi_mi(f.get("satici_vkn"), saticilar)
 
 
 def _tarihi_coz(metin):
@@ -269,7 +292,8 @@ def sahteci_belirlenmis_mi(vkn, saticilar):
         return True
     if str(bilgi.get("kullanma") or "Belirlenmedi") != "Belirlenmedi":
         return True
-    return str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+    return (str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+            or str(bilgi.get("kayda_alinmadi") or "") == "Evet")
 
 
 def sahteci_vknler(faturalar, saticilar=None):
@@ -362,6 +386,7 @@ def _elle_satiri(vkn, bilgi):
         "not": bilgi.get("not") or "",
         "cevap": bilgi.get("cevap") or "",
         "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
+        "kayda_alinmadi": bilgi.get("kayda_alinmadi") or "Hayır",
         "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
         # Elle eklenen satici, is emrinde adi gecmedigi halde inceleme
         # sirasinda hakkinda tespit bulundugu icin kapsama alinmistir;
@@ -450,6 +475,7 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
             "not": bilgi.get("not") or "",
             "cevap": bilgi.get("cevap") or "",
             "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
+            "kayda_alinmadi": bilgi.get("kayda_alinmadi") or "Hayır",
             "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
             "is_emri": bilgi.get("is_emri") or "Var",
             "matrah": round(grup["matrah"], 2),
@@ -986,3 +1012,79 @@ def dikkat_dokumu(faturalar, sinirlar, saticilar=None):
             } for sira, f in hucre["dahil"]],
         })
     return dokum
+
+
+def duzeltme_kabul_uygun_mu(satici_satirlari):
+    """Duzeltme kabul raporu duzenlenebilir mi.
+
+    Kosul: belgelere giren HER saticinin faturalari ya duzeltme beyannamesiyle
+    indirimlerden cikarilmis ya da hic kayitlara alinmamis olmali. Bir tek
+    satici bile tarhiyata giriyorsa bu rapor yazilamaz; o dosyada eleştirilecek
+    bir husus vardir ve sahte belge kullanma raporu duzenlenir.
+
+    Doner: (uygun_mu, gerekce_metni)
+    """
+    satirlar = list(satici_satirlari or [])
+    if not satirlar:
+        return False, ("Belgeye girecek satıcı yok. Önce fatura listesi "
+                       "yükleyin ya da satıcı ekleyin.")
+    def _adlar(secilen):
+        adlar = ", ".join((x.get("unvan") or x.get("vkn") or "?")
+                          for x in secilen[:4])
+        if len(secilen) > 4:
+            adlar += " ve %d satıcı daha" % (len(secilen) - 4)
+        return adlar
+
+    kalanlar = [s for s in satirlar
+                if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet"
+                and str(s.get("kayda_alinmadi") or "") != "Evet"]
+    if kalanlar:
+        return False, (
+            "Şu satıcıların faturaları hâlâ tarhiyata giriyor: %s. Düzeltme "
+            "kabul raporu, faturaların tamamı düzeltmeyle çıkarılmış ya da "
+            "hiç kayıtlara alınmamış dosyalar içindir." % _adlar(kalanlar))
+
+    # Bilerek kullanma bu raporu ENGELLEMEZ. Tutar zaten beyandan cikarilmis
+    # oldugu icin her iki halde de tarhiyat yoktur; ayrim sonuc bolumunde
+    # ortaya cikar: bilmeden kullanmada yapilacak islem bulunmaz, bilerek
+    # kullanmada uc kat vergi ziyai cezasi kesilir ve vergi sucu raporu
+    # duzenlenerek suc duyurusunda bulunulur.
+    belirsiz = [s for s in satirlar
+                if str(s.get("kullanma") or "Belirlenmedi") == "Belirlenmedi"]
+    if belirsiz:
+        return False, (
+            "Şu satıcılarda kullanma durumu seçilmemiş: %s. Kabul raporu "
+            "“bilmeden kullanma” kanaatine dayandığı için bu seçim "
+            "zorunludur." % _adlar(belirsiz))
+
+    return True, ""
+
+
+def duzeltme_kabul_orani(faturalar, sonuc, saticilar=None):
+    """Duzeltmeyle cikarilan / kayda alinmayan KDV'nin indirimler icindeki payi.
+
+    `sahte_belge_orani` ile ayni olcut, ama ters kume uzerinde: orada tarhiyata
+    GIREN faturalar sayilir, burada tarhiyat disi birakilanlar. Duzeltme kabul
+    raporunda bilerek/bilmeden degerlendirmesi bu orana dayanir.
+    """
+    ilgili = [f for f in (faturalar or [])
+              if f.get("dahil")
+              and tarhiyat_disi_birakildi_mi(f.get("satici_vkn"), saticilar)]
+    kdv = sum(float(f.get("kdv") or 0.0) for f in ilgili)
+    yillar = {f.get("kayit_yil") for f in ilgili if f.get("kayit_yil")}
+    toplam_indirim = sum(
+        d["beyan"].get("bu_donem_indirim_toplam", 0.0)
+        for d in (sonuc.get("donemler") or []) if d["yil"] in yillar)
+    oran = (kdv / toplam_indirim * 100.0) if toplam_indirim > 0.005 else None
+    return {
+        "sahte_kdv": round(kdv, 2),
+        "toplam_indirim_kdv": round(toplam_indirim, 2),
+        "oran": round(oran, 2) if oran is not None else None,
+        "adet": len(ilgili),
+    }
+
+
+def bilerek_kullananlar(satici_satirlari):
+    """Kullanma durumu "Bilerek kullanma" olan saticilar."""
+    return [s for s in (satici_satirlari or [])
+            if str(s.get("kullanma") or "") == "Bilerek kullanma"]

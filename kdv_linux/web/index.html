@@ -539,6 +539,18 @@
       <div class="otomatik"><button class="btn ikincil" id="tutanakOnizle">Önizle</button></div>
       <div class="otomatik"><button class="btn birincil" id="raporIndir">Sahte Belge Raporu Taslağı (Word)</button></div>
       <div class="otomatik"><button class="btn ikincil" id="raporOnizle">Önizle</button></div>
+      <div class="otomatik"><button class="btn birincil" id="kabulIndir">Düzeltme Kabul Raporu (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="kabulOnizle">Önizle</button></div>
+    </div>
+    <div class="yardim" style="margin-top:8px;">
+      <strong>Düzeltme kabul raporu</strong>, sahteci mükelleflerin
+      faturalarının tamamı düzeltme beyannamesiyle indirimlerden çıkarılmış ya
+      da hiç kayıtlara alınmamışsa düzenlenir; tarhiyat içermez, “yapılacak bir
+      işlem bulunmadığı” sonucuna varır. Faturalar düzeltmeyle çıkarılmış olsa
+      bile satıcı <em>bilerek kullanma</em> olarak işaretliyse bu rapor
+      yazılmaz — o dosyada VUK 359 kapsamında işlem gerekir ve sahte belge
+      kullanma raporu düzenlenir. Seçim satıcı kartındaki
+      <strong>Kullanma durumu</strong> alanındadır.
     </div>
     <div id="kunyeEksik"></div>
   </div>
@@ -2501,6 +2513,24 @@ $("raporIndir").addEventListener("click", async () => {
     await belgeIndir("/api/sahte_belge_raporu", belgeDosyaAdi("Sahte_belge_raporu"),
                      "Rapor taslağı indirildi. İncelenen her yıl için ayrı rapor " +
                      "üretilir; kopyaları ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("kabulIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/duzeltme_kabul_raporu",
+                     belgeDosyaAdi("Duzeltme_kabul_raporu"),
+                     "Düzeltme kabul raporu taslağı indirildi. Kopyası " +
+                     "ciktilar klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("kabulOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/duzeltme_kabul_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "Düzeltme Kabul Raporu — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 

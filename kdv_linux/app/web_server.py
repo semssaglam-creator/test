@@ -327,6 +327,10 @@ class Istekci(BaseHTTPRequestHandler):
                 self._tutanak_gonder(veri)
             elif yol == "/api/tutanak_onizleme":
                 self._json_yanit(self._tutanak_onizleme(veri))
+            elif yol == "/api/duzeltme_kabul_raporu":
+                self._kabul_raporu_gonder(veri)
+            elif yol == "/api/duzeltme_kabul_onizleme":
+                self._json_yanit(self._kabul_raporu_onizleme(veri))
             elif yol == "/api/sahte_belge_raporu":
                 self._rapor_gonder(veri)
             elif yol == "/api/sahte_belge_onizleme":
@@ -704,6 +708,67 @@ class Istekci(BaseHTTPRequestHandler):
             for ad, govde in dosyalar:
                 z.writestr(ad, govde)
         self._belge_gonder(paket.getvalue(), sahte_belge_raporu.paket_adi(inceleme),
+                           "application/zip")
+
+    def _kabul_raporu_hazirla(self, veri):
+        """Duzeltme kabul raporu taslaklarini uretir (yil yil).
+
+        Uygunluk once denetlenir: faturalarin tamami duzeltmeyle cikarilmis
+        ya da hic kayda alinmamis olmali ve kullanma durumu "bilmeden" olmali.
+        Uygun degilse belge uretilmez; sebep kullaniciya bildirilir.
+        """
+        from . import duzeltme_kabul_raporu
+        faturalar = _fatura_modulu()
+        calisma = veri.get("calisma") or {}
+        sonuc, bulgular = _hesapla(calisma)
+        if not sonuc["donemler"]:
+            raise ApiHata("Önce beyan bloğunu yapıştırın.")
+        yillar = _yillari_coz(calisma)
+        inceleme = _inceleme_bilgisi(calisma)
+        mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+        liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+        satirlar = faturalar.satici_ozeti(liste, calisma.get("saticilar") or {})
+        uygun, gerekce = faturalar.duzeltme_kabul_uygun_mu(satirlar)
+        if not uygun:
+            raise ApiHata(gerekce)
+        karsilastirmalar = self._duzeltme_karsilastirmalari(calisma)
+        belgeler = [
+            (y, duzeltme_kabul_raporu.rapor_uret(
+                inceleme, calisma.get("kunye"), yillar, sonuc, calisma,
+                bulgular, karsilastirmalar, y))
+            for y in (duzeltme_kabul_raporu.rapor_yillari(sonuc) or [None])]
+        return belgeler, inceleme
+
+    def _kabul_raporu_onizleme(self, veri):
+        ik, _tutanak = _belge_modulleri()
+        belgeler, _inceleme = self._kabul_raporu_hazirla(veri)
+        kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
+        parcalar = []
+        for yil, belge in belgeler:
+            if yil and len(belgeler) > 1:
+                parcalar.append("=" * 30 + (" %s YILI RAPORU " % yil)
+                                + "=" * 30 + "\n")
+            parcalar.append(belge.duz_metin())
+        return {"metin": "\n".join(parcalar),
+                "eksikler": ik.eksik_alanlar(kunye)}
+
+    def _kabul_raporu_gonder(self, veri):
+        from . import duzeltme_kabul_raporu as R
+        belgeler, inceleme = self._kabul_raporu_hazirla(veri)
+        dosyalar = [(R.dosya_adi(inceleme, yil), belge.bayt())
+                    for yil, belge in belgeler]
+        self._ciktilara_yaz(dosyalar)
+        if len(dosyalar) == 1:
+            ad, govde = dosyalar[0]
+            self._belge_gonder(govde, ad,
+                               "application/vnd.openxmlformats-officedocument."
+                               "wordprocessingml.document")
+            return
+        paket = io.BytesIO()
+        with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
+            for ad, govde in dosyalar:
+                z.writestr(ad, govde)
+        self._belge_gonder(paket.getvalue(), R.paket_adi(inceleme),
                            "application/zip")
 
     def _ciktilara_yaz(self, dosyalar):
