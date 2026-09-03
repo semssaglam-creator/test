@@ -4,6 +4,8 @@ import sqlite3
 import shutil
 from datetime import datetime
 
+from .tutar import uzlasilan_tutar
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_DIR = os.path.join(BASE_DIR, "veritabani")
 DB_PATH = os.path.join(DB_DIR, "uzlasma.db")
@@ -113,11 +115,27 @@ VARSAYILAN_CEZA_KODLARI = [
 ]
 
 
+# Aramada noktali/noktasiz i'nin dort hali (I, İ, ı, i) tek harfe indirgenir.
+# Turkce'de bu ciftlerin buyuk-kucuk eslemesi Python'un ve SQLite'in varsayilan
+# kurallariyla ortusmez; ustelik ayni unvan kimi belgede "ISTANBUL", kimi
+# belgede "İSTANBUL" yazilir. Kalan harflerde (S/s, C/c, U/u...) normal
+# kucultme dogru sonucu verir.
+_ARAMA_ESLEME = str.maketrans({"I": "i", "İ": "i", "ı": "i", "\u0307": ""})
+
+
+def arama_anahtari(metin):
+    """Arama karsilastirmasi icin metni sadelestirir (bkz. _ARAMA_ESLEME)."""
+    return (metin or "").translate(_ARAMA_ESLEME).lower()
+
+
 def get_connection():
     os.makedirs(DB_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # SQLite'in LIKE'i yalnizca ASCII harflerde buyuk/kucuk ayrimi yapmaz;
+    # Turkce harfler icin karsilastirmayi Python tarafinda yapiyoruz.
+    conn.create_function("tr_kucult", 1, arama_anahtari)
     return conn
 
 
@@ -230,15 +248,22 @@ def tutanak_sayaci_ayarla(sonraki_sayi):
 # ---------------------------------------------------------------------------
 
 def mukellef_ara(metin, limit=30):
-    """Ad/unvan, VKN/TCKN veya ihbarname fis no icinde gecen mukellefleri bulur."""
+    """Ad/unvan, VKN/TCKN veya ihbarname fis no icinde gecen mukellefleri bulur.
+
+    Arama buyuk/kucuk harf ayrimi yapmaz: hem aranan metin hem de kayitli deger
+    `tr_kucult` ile ayni bicime indirgenip karsilastirilir. Boylece "istanbul",
+    "İSTANBUL" ve "ISTANBUL" birbirini bulur.
+    """
     conn = get_connection()
     try:
-        like = f"%{metin}%"
+        like = f"%{arama_anahtari(metin)}%"
         rows = conn.execute(
             """
             SELECT DISTINCT m.* FROM mukellefler m
             LEFT JOIN ihbarnameler i ON i.mukellef_id = m.id
-            WHERE m.ad_unvan LIKE ? OR m.vkn_tckn LIKE ? OR i.fis_no LIKE ?
+            WHERE tr_kucult(m.ad_unvan) LIKE ?
+               OR tr_kucult(m.vkn_tckn) LIKE ?
+               OR tr_kucult(i.fis_no) LIKE ?
             ORDER BY m.ad_unvan
             LIMIT ?
             """,
@@ -550,10 +575,55 @@ def komisyon_uyesi_ekle(ad_soyad, unvan, gorev="Üye"):
         conn.close()
 
 
+def komisyon_uyesi_guncelle(uye_id, ad_soyad, unvan, gorev, aktif=True):
+    """Uyenin ad/unvan/gorev bilgisini ve aktifligini gunceller.
+
+    Pasife alinmis bir uye buradan yeniden aktif edilebilir; komisyon uyeligi
+    biten kisinin kaydi silinmeden saklandigi icin geri donusu de mumkun olmali.
+    """
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE komisyon_uyeleri SET ad_soyad = ?, unvan = ?, gorev = ?, aktif = ? WHERE id = ?",
+            (ad_soyad, unvan, gorev, 1 if aktif else 0, uye_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def komisyon_uyesi_imza_sayisi(uye_id):
+    """Uyenin imzasinin bulundugu tutanak sayisi."""
+    conn = get_connection()
+    try:
+        return conn.execute(
+            "SELECT COUNT(*) FROM tutanak_imzalari WHERE komisyon_uye_id = ?", (uye_id,)
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+
 def komisyon_uyesi_sil(uye_id):
+    """Uyeyi pasife alir; kaydi ve gecmis imzalari durur."""
     conn = get_connection()
     try:
         conn.execute("UPDATE komisyon_uyeleri SET aktif = 0 WHERE id = ?", (uye_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def komisyon_uyesi_kalici_sil(uye_id):
+    """Uyeyi kayittan tumuyle siler.
+
+    Cagirmadan once `komisyon_uyesi_imza_sayisi` sifir olmalidir: tutanak,
+    imzalayan uyenin adiyla uretilmis resmi bir belgedir; uyeyi kayittan
+    silmek o belgeyi dayanaksiz birakir. Imzasi olan uye icin pasife alma
+    (`komisyon_uyesi_sil`) kullanilir.
+    """
+    conn = get_connection()
+    try:
+        conn.execute("DELETE FROM komisyon_uyeleri WHERE id = ?", (uye_id,))
         conn.commit()
     finally:
         conn.close()
@@ -975,8 +1045,8 @@ def tutanak_sonuc_guncelle(tutanak_id, yeni_sonuc, davet_tarih_saat=None):
             """,
             (tutanak_id,),
         ).fetchall():
-            yeni_tutar = 0.0 if yeni_sonuc == "gelmedi" else round(
-                k["miktar"] * (1 - k["indirim_orani"] / 100), 2)
+            yeni_tutar = 0.0 if yeni_sonuc == "gelmedi" else uzlasilan_tutar(
+                k["miktar"], k["indirim_orani"])
             conn.execute("UPDATE tutanak_kalemleri SET uzlasilan_tutar = ? WHERE id = ?",
                          (yeni_tutar, k["id"]))
             conn.execute("UPDATE ihbarnameler SET durum = ? WHERE id = ?",

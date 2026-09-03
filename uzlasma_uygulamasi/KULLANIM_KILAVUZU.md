@@ -57,6 +57,10 @@ dilekçelerindeki** bilgileri sisteme kaydettiğiniz ekrandır.
 - Yeni bir mükellef için **Ad Soyad / Ünvan** (zorunlu), **VKN/TCKN**,
   **Telefon** ve **Adres** alanlarını elle doldurun.
 
+> 💡 Mükellef aramasında büyük/küçük harf farkı gözetilmez; "özkan",
+> "ÖZKAN" ve "Özkan" aynı sonucu verir. Türkçe'de karışan I/İ/ı/i
+> harfleri de birbirinin yerine geçer ("istanbul" → "İSTANBUL" bulur).
+
 ### 2.2 Dilekçe Bilgilerini Aktarma — 3 Yöntem
 
 Dilekçedeki ihbarname ve ceza satırlarını aşağıdaki tablo formuna **üç
@@ -67,8 +71,13 @@ farklı yolla** aktarabilirsiniz:
   tıklayıp seçin.
 - **Birden fazla dilekçeyi aynı anda** seçebilirsiniz (toplu yükleme).
   Tek dosya yüklerseniz bilgiler forma aktarılır, kontrol edip
-  kaydedebilirsiniz. Birden fazla dosya yüklerseniz her biri otomatik
-  ayrıştırılıp **doğrudan kaydedilir** ve sonuç özeti gösterilir.
+  kaydedebilirsiniz. Birden fazla dosya yüklerseniz her dilekçe
+  "İhbarname / Ceza Satırları" bölümünde **ayrı bir kulakçığa** yerleşir;
+  kulakçıklar arasında gezip her dilekçeyi kontrol edebilir, gerekirse
+  düzeltebilirsiniz. Tek **Kaydet** ile hepsi birden kaydedilir ve
+  "*n* adet dilekçe ile *m* adet ihbarname kaydedildi" bildirimi çıkar.
+- Okunamayan dosyalar kulakçıkta ⚠ ile işaretlenir ve kaydedilmez;
+  diğer dilekçelerin kaydı bundan etkilenmez.
 
 **b) Kopyala-Yapıştır**
 - Dilekçe PDF'ini bir PDF görüntüleyicide açıp tüm metni kopyalayın
@@ -132,7 +141,9 @@ ihbarnamelerini** listeleyip uzlaşma sonucuna göre tutanak üretirsiniz.
     kutusuna değer yazıp **"Tümüne Uygula"** butonuna basarak
     değiştirebilirsiniz.
 - "Kalan Tutar (TL)" sütunu, indirim sonrası uzlaşılacak/önerilecek tutarı
-  otomatik gösterir.
+  otomatik gösterir. Bu tutar **10 TL'nin bir üst katına yuvarlanır** ve
+  kuruş hanesi 00 olur (ör. 1.660,50 → 1.670,00; 1.230,00 olduğu gibi
+  kalır). Tutanağa yazılan tutar ekranda görünenle aynıdır.
 - **Bir ihbarnameyi silmek** (mükellefin uzlaşmadan tamamen vazgeçmesi gibi
   durumlarda): satırın sonundaki kırmızı **"Sil"** butonuna basın. Bu işlem
   ilgili ihbarnameyi ve tüm ceza satırlarını veritabanından tamamen siler —
@@ -284,9 +295,16 @@ bazında, diğeri vergi türü + vergi ziyaı cezası (3080) bazında
   (Başkan/Üye) bilgileriyle komisyon üyesi ekleyin.
 - Eklenen üyeler "Uzlaşma İşlemi" ekranındaki Başkan/Üye seçim
   listelerinde ve puantaj cetvelinde görünür.
-- Bir üyeyi listeden kaldırmak için (geçmiş kayıtları silmeden) **pasif**
-  yapabilirsiniz; pasif üyeler yeni tutanaklarda seçilemez ama geçmiş
+- **Düzenle** ile üyenin ad/ünvan/görev bilgisini ve durumunu satır
+  içinde değiştirebilirsiniz; pasif bir üyeyi buradan yeniden **Aktif**
+  yapabilirsiniz.
+- Bir üyeyi listeden kaldırmak için (geçmiş kayıtları silmeden) **Pasif
+  Yap**'ı kullanın; pasif üyeler yeni tutanaklarda seçilemez ama geçmiş
   imza kayıtlarında görünmeye devam eder.
+- **Sil**, üyeyi kayıttan tümüyle kaldırır ve geri alınamaz. Tutanak
+  imzalamış bir üye silinemez (uygulama uyarır) — çünkü tutanak, o üyenin
+  adıyla düzenlenmiş resmi bir belgedir; böyle bir üye için "Pasif Yap"
+  kullanılır.
 
 > 💡 Puantaj cetvelinde "Başkan" görevindeki üyenin ünvanı otomatik olarak
 > "Müdür" olarak yazılır (resmi belge gerekliliği).

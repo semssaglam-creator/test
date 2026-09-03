@@ -12,6 +12,7 @@ from . import db
 from .excel_export import puantaj_cetveli_olustur, tutanak_olustur_excel
 from .paste_parser import dilekce_ayristir
 from .tarih_util import simdi_tr, tr_to_iso, tr_tarih_to_iso_gun
+from .tutar import uzlasilan_tutar
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -61,7 +62,7 @@ def _tutanak_uret(veri):
             oran = float(str(k.get("indirim_orani", 80)).replace(",", "."))
         except ValueError:
             oran = 80.0
-        uzlasilan = 0.0 if sonuc == "gelmedi" else round(satir["miktar"] * (1 - oran / 100), 2)
+        uzlasilan = 0.0 if sonuc == "gelmedi" else uzlasilan_tutar(satir["miktar"], oran)
         kalemler_db.append((satir["id"], k["ihbarname_id"], oran, uzlasilan))
         kalemler_excel.append({
             "fis_no": k.get("fis_no", ""),
@@ -390,8 +391,28 @@ class Istekci(BaseHTTPRequestHandler):
                     raise ApiHata("Gorev 'Başkan' veya 'Üye' olmalidir.")
                 db.komisyon_uyesi_ekle(ad_soyad, (veri.get("unvan") or "").strip(), gorev)
                 self._json_yanit({"tamam": True})
+            elif yol == "/api/komisyon/guncelle":
+                ad_soyad = (veri.get("ad_soyad") or "").strip()
+                if not ad_soyad:
+                    raise ApiHata("Ad Soyad bos olamaz.")
+                gorev = (veri.get("gorev") or "Üye").strip()
+                if gorev not in ("Başkan", "Üye"):
+                    raise ApiHata("Gorev 'Başkan' veya 'Üye' olmalidir.")
+                db.komisyon_uyesi_guncelle(
+                    int(veri["id"]), ad_soyad, (veri.get("unvan") or "").strip(),
+                    gorev, bool(veri.get("aktif", True)))
+                self._json_yanit({"tamam": True})
             elif yol == "/api/komisyon/sil":
                 db.komisyon_uyesi_sil(int(veri["id"]))
+                self._json_yanit({"tamam": True})
+            elif yol == "/api/komisyon/kalici_sil":
+                uye_id = int(veri["id"])
+                imza = db.komisyon_uyesi_imza_sayisi(uye_id)
+                if imza:
+                    raise ApiHata(
+                        f"Bu üye {imza} tutanağı imzalamış; kaydı silinemez. "
+                        "Görevi bittiyse 'Pasif Yap' ile listeden çıkarabilirsiniz.")
+                db.komisyon_uyesi_kalici_sil(uye_id)
                 self._json_yanit({"tamam": True})
             elif yol == "/api/ceza_satiri/guncelle":
                 try:

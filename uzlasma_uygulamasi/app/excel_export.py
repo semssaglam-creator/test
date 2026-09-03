@@ -32,7 +32,6 @@ CENTER = Alignment(horizontal="center", vertical="center", wrap_text=True)
 CENTER_TITLE = Alignment(horizontal="center", vertical="center")
 # Veri hucreleri: hucreye sigdir (tasma olmaz); paragraflar: iki yana yasli
 SIGDIR = Alignment(horizontal="center", vertical="center", shrink_to_fit=True)
-SIGDIR_SOL = Alignment(horizontal="left", vertical="center", shrink_to_fit=True)
 JUSTIFY = Alignment(horizontal="justify", vertical="center", wrap_text=True)
 DOLGU_GRI = PatternFill("solid", fgColor="DDDDDD")
 
@@ -73,6 +72,25 @@ def _metin_satir_sayisi(metin, satir_genisligi=110):
     return toplam
 
 
+def _birlesik_genislik(c1, c2):
+    """c1..c2 sutunlarini kaplayan birlesik hucrenin karakter cinsinden genisligi."""
+    return sum(COL_WIDTHS[c1 - 1:c2])
+
+
+def _imza_satir_yuksekligi(bloklar):
+    """Imza satirinin yuksekligi: en cok satira bolunen isim belirler.
+
+    Isimler kucultulerek degil alta kaydirilarak sigdirildigi icin, uzun bir
+    unvan iki-uc satira boluner ve satirin buna gore yukselmesi gerekir.
+    bloklar: [((ilk_sutun, son_sutun), isim), ...]
+    """
+    en_cok = 1
+    for (c1, c2), isim in bloklar:
+        genislik = max(8, int(_birlesik_genislik(c1, c2)))
+        en_cok = max(en_cok, _metin_satir_sayisi(isim, satir_genisligi=genislik))
+    return max(21, en_cok * 15 + 6)
+
+
 def _baslik_blogu(ws, kurum, tutanak_basligi):
     """1-7. satirlar: kurum bilgileri ve tutanak basligi (A1:F7 birlesik)."""
     satirlar = [
@@ -92,7 +110,7 @@ def _baslik_blogu(ws, kurum, tutanak_basligi):
     return 8  # sonraki bos satir
 
 
-def _bilgi_satiri(ws, row, etiket, deger, sigdir=False):
+def _bilgi_satiri(ws, row, etiket, deger):
     ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
     ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=6)
     c1 = ws.cell(row=row, column=1, value=etiket)
@@ -100,14 +118,10 @@ def _bilgi_satiri(ws, row, etiket, deger, sigdir=False):
     c1.alignment = WRAP_LEFT
     c2 = ws.cell(row=row, column=3, value=deger)
     c2.font = FONT_NORMAL
-    if sigdir:
-        c2.alignment = SIGDIR_SOL
-        ws.row_dimensions[row].height = 21
-    else:
-        c2.alignment = WRAP_LEFT
-        # Uzun degerler (ornegin adres) sarildiginda satir yuksekligi yetsin
-        satir_sayisi = _metin_satir_sayisi(deger, satir_genisligi=70)
-        ws.row_dimensions[row].height = max(21, satir_sayisi * 15 + 6)
+    c2.alignment = WRAP_LEFT
+    # Uzun degerler (unvan, adres) sarildiginda satir yuksekligi yetsin
+    satir_sayisi = _metin_satir_sayisi(deger, satir_genisligi=int(_birlesik_genislik(3, 6)))
+    ws.row_dimensions[row].height = max(21, satir_sayisi * 15 + 6)
     return row + 1
 
 
@@ -123,8 +137,9 @@ def _ust_bilgi_blogu(ws, start_row, kurum, tutanak_no, tutanak_tarihi_metni, muk
         c.font = FONT_BOLD
         c.alignment = CENTER_TITLE
         row += 1
-    row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""),
-                         sigdir=True)
+    # Uzun unvanlar kucultulup okunmaz hale gelmesin diye alta kaydirilir;
+    # satir yuksekligi _bilgi_satiri icinde metne gore ayarlanir.
+    row = _bilgi_satiri(ws, row, "Mükellefin Adı Soyadı / Ünvanı", mukellef.get("ad_unvan", ""))
     row = _bilgi_satiri(ws, row, "Mükellefin Adresi", mukellef.get("adres", ""))
     row = _bilgi_satiri(ws, row, "Bağlı Bulunduğu Vergi Dairesi", kurum.get("vergi_dairesi", ""))
     row = _bilgi_satiri(ws, row, "Vergi Kimlik Numarası", mukellef.get("vkn_tckn", ""))
@@ -202,8 +217,9 @@ def _imza_bloklari_4lu(ws, row, imzalayanlar, mukellef_adi):
         if c1 != c2:
             ws.merge_cells(start_row=row, start_column=c1, end_row=row, end_column=c2)
         cell = ws.cell(row=row, column=c1, value=isim)
-        cell.alignment = SIGDIR
+        cell.alignment = CENTER
         cell.font = FONT_NORMAL
+    ws.row_dimensions[row].height = _imza_satir_yuksekligi(list(zip(aralik, isimler)))
 
     for (c1, c2), unvan in zip(aralik, unvanlar):
         if c1 != c2:
@@ -232,8 +248,9 @@ def _imza_bloklari_3lu(ws, row, imzalayanlar):
     for (c1, c2), isim in zip(aralik, isimler):
         ws.merge_cells(start_row=row, start_column=c1, end_row=row, end_column=c2)
         cell = ws.cell(row=row, column=c1, value=isim)
-        cell.alignment = SIGDIR
+        cell.alignment = CENTER
         cell.font = FONT_NORMAL
+    ws.row_dimensions[row].height = _imza_satir_yuksekligi(list(zip(aralik, isimler)))
 
     for (c1, c2), unvan in zip(aralik, unvanlar):
         ws.merge_cells(start_row=row + 1, start_column=c1, end_row=row + 1, end_column=c2)

@@ -48,3 +48,18 @@
       yazılır
 - [x] Ayrıştırıcı gerçek PDF biçimine göre yeniden yazıldı (pypdf +
       pdftotext düzen varyantlarıyla 3 örnek PDF'te doğrulandı)
+
+## Uygulananlar (03.09.2026 — test geri bildirimleri)
+- [x] Mükellef aramasında büyük/küçük harf ayrımı kalktı; Türkçe I/İ/ı/i
+      dört hali birbirini buluyor (`db.arama_anahtari`, SQLite'a
+      `tr_kucult` fonksiyonu olarak kayıtlı)
+- [x] Komisyon üyelerinde satır içi **Düzenle** (ad/ünvan/görev/durum) ve
+      kalıcı **Sil**; imzası olan üye silinemiyor, pasife alınıyor
+- [x] Excel tutanakta mükellef ünvanı ve imza isimleri küçültülmek yerine
+      alta kaydırılıyor, satır yüksekliği metne göre büyüyor
+      (`shrink_to_fit` kaldırıldı)
+- [x] Uzlaşılan tutar 10 TL'nin üst katına yuvarlanıyor, kuruş 00
+      (`app/tutar.py`; ekran önizlemesi ve tutanak aynı sonucu verir)
+- [x] Çoklu PDF yüklemede dilekçeler kulakçıklara ayrılıyor; tek Kaydet
+      ile hepsi kaydediliyor ve "n adet dilekçe ile m adet ihbarname
+      kaydedildi" bildirimi veriliyor (önceki davranış: doğrudan kaydet)

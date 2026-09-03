@@ -54,6 +54,12 @@
   .iki-kolon { display: flex; gap: 16px; flex-wrap: wrap; }
   .iki-kolon > .kart { flex: 1; min-width: 340px; }
   .rozet { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .kulakciklar { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; border-bottom: 2px solid #dde3ea; padding-bottom: 0; }
+  .kulakcik { background: #eef2f6; border: 1px solid #dde3ea; border-bottom: none; border-radius: 6px 6px 0 0;
+              padding: 7px 13px; font-size: 13px; cursor: pointer; color: #33475b; margin-bottom: -2px; }
+  .kulakcik:hover { background: #e2e9f0; }
+  .kulakcik.aktif { background: #fff; color: #1f3a5f; font-weight: 600; border-color: #1f3a5f; border-bottom: 2px solid #fff; }
+  .kulakcik.hatali { color: #a33; }
   .rozet.beklemede { background: #2c7a3f; }
   .rozet.uzlasildi { background: #1f5fae; }
   .rozet.gelmedi { background: #b3261e; }
@@ -120,6 +126,8 @@
 
   <div class="kart">
     <h2>İhbarname / Ceza Satırları</h2>
+    <div class="kulakciklar" id="dilekce-kulakciklar" style="display:none"></div>
+    <div class="ozet" id="dilekce-kulakcik-bilgi" style="display:none; margin-bottom:10px"></div>
     <table id="kayit-tablo">
       <thead><tr>
         <th>İhbarname Fiş No</th><th style="width:100px">Vergi Türü</th><th style="width:100px">Ceza Kodu</th>
@@ -166,6 +174,8 @@
       <div class="dar"><label>Varsayılan İndirim Oranı %</label><input type="text" id="varsayilan-oran" value="80"></div>
       <div class="dar"><button class="btn ikincil" onclick="oraniUygula()">Tümüne Uygula</button></div>
     </div>
+    <label style="margin-top:6px">Kalan tutar, indirim uygulandıktan sonra 10 TL'nin bir üst katına
+    yuvarlanır (kuruş 00 olur). Tutanağa yazılan tutar buradaki ile aynıdır.</label>
   </div>
 
   <div class="kart">
@@ -325,7 +335,7 @@
   </div>
   <div class="kart">
     <h2>Komisyon Üyeleri</h2>
-    <table id="uye-tablo"><thead><tr><th>Ad Soyad</th><th style="width:140px">Ünvan</th><th style="width:110px">Görev</th><th style="width:90px">Durum</th><th style="width:100px"></th></tr></thead><tbody></tbody></table>
+    <table id="uye-tablo"><thead><tr><th>Ad Soyad</th><th style="width:170px">Ünvan</th><th style="width:120px">Görev</th><th style="width:110px">Durum</th><th style="width:250px"></th></tr></thead><tbody></tbody></table>
     <div class="satir" style="margin-top:10px">
       <div><input type="text" id="uye-ad" placeholder="Ad Soyad"></div>
       <div class="dar" style="flex:0 0 170px"><input type="text" id="uye-unvan" placeholder="Ünvan (örn. Müdür Yrd.)"></div>
@@ -369,6 +379,14 @@ function mesajGoster(metin, hata) {
 function hata(e) { mesajGoster(e.message || String(e), true); }
 function tlFormat(t) {
   return (t || 0).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+// Uzlasilan tutar 10 TL'nin ust katina yuvarlanir, kurus 00 olur.
+// Kuralin asli app/tutar.py icindedir; buradaki yalnizca ekran onizlemesidir
+// ve tutanaga yazilan tutarla ayni sonucu vermelidir.
+function uzlasilanYuvarla(tutar) {
+  if (!(tutar > 0)) return 0;
+  const kurusa = Math.round(tutar * 100) / 100;   // kayan nokta artigini temizle
+  return Math.ceil(kurusa / 10 - 1e-9) * 10;
 }
 function miktarCoz(s) {
   s = String(s == null ? "" : s).trim();
@@ -470,9 +488,133 @@ function dosyaBase64(dosya) {
   });
 }
 
+// ---------- COKLU DILEKCE KULAKCIKLARI ----------
+// Birden cok PDF yuklendiginde her dilekce ayri bir kulakcikta bekler.
+// Kullanici kulakciklar arasinda gezip duzeltir, tek Kaydet ile hepsi kaydedilir.
+let dilekceler = [];    // [{ad, mukellef, onay_zamani, satirlar, hata}]
+let aktifDilekce = -1;  // -1: kulakcik yok (tekli yukleme / elle giris)
+
+function kulakciklariGizle() {
+  dilekceler = [];
+  aktifDilekce = -1;
+  document.getElementById("dilekce-kulakciklar").style.display = "none";
+  document.getElementById("dilekce-kulakcik-bilgi").style.display = "none";
+}
+
+/** Ekrandaki mukellef bilgisi ve satirlari nesne olarak okur. */
+function formuOku() {
+  const satirlar = [];
+  document.querySelectorAll("#kayit-tablo tbody tr").forEach(tr => {
+    const s = {};
+    tr.querySelectorAll("[data-alan]").forEach(el => { s[el.dataset.alan] = el.value; });
+    satirlar.push(s);
+  });
+  return {
+    mukellef: {
+      ad_unvan: document.getElementById("kayit-ad").value,
+      vkn_tckn: document.getElementById("kayit-vkn").value,
+      adres: document.getElementById("kayit-adres").value,
+      telefon: document.getElementById("kayit-tel").value,
+    },
+    onay_zamani: dilekceOnayZamani,
+    satirlar,
+  };
+}
+
+/** Kulakcik degistirmeden once ekrandaki duzeltmeler o dilekceye yazilir. */
+function aktifDilekceyiSakla() {
+  const d = dilekceler[aktifDilekce];
+  if (!d || d.hata) return;
+  const g = formuOku();
+  d.mukellef = g.mukellef;
+  d.onay_zamani = g.onay_zamani;
+  d.satirlar = g.satirlar;
+}
+
+function kulakciklariCiz() {
+  const serit = document.getElementById("dilekce-kulakciklar");
+  serit.innerHTML = "";
+  serit.style.display = dilekceler.length ? "flex" : "none";
+  dilekceler.forEach((d, i) => {
+    const dugme = document.createElement("button");
+    dugme.className = "kulakcik" + (i === aktifDilekce ? " aktif" : "") + (d.hata ? " hatali" : "");
+    const ad = d.mukellef.ad_unvan || d.ad;
+    dugme.textContent = (d.hata ? "⚠ " : "") + (ad.length > 34 ? ad.slice(0, 33) + "…" : ad) +
+                        (d.hata ? "" : " (" + d.satirlar.length + ")");
+    dugme.title = d.ad + (d.hata ? " — " + d.hata : "");
+    dugme.addEventListener("click", () => dilekceSec(i));
+    serit.appendChild(dugme);
+  });
+}
+
+function dilekceSec(i) {
+  aktifDilekceyiSakla();
+  aktifDilekce = i;
+  const d = dilekceler[i];
+  const bilgi = document.getElementById("dilekce-kulakcik-bilgi");
+  const tb = document.querySelector("#kayit-tablo tbody");
+  ["kayit-ad", "kayit-vkn", "kayit-adres", "kayit-tel"].forEach(id => document.getElementById(id).value = "");
+  tb.innerHTML = "";
+  dilekceOnayZamani = "";
+  if (!d) { kulakciklariCiz(); return; }
+  if (d.hata) {
+    bilgi.style.display = "block";
+    bilgi.innerHTML = "<b>" + kacis(d.ad) + "</b> okunamadı: " + kacis(d.hata) +
+                      " — bu dilekçe kaydedilmeyecek.";
+  } else {
+    document.getElementById("kayit-ad").value = d.mukellef.ad_unvan || "";
+    document.getElementById("kayit-vkn").value = d.mukellef.vkn_tckn || "";
+    document.getElementById("kayit-adres").value = d.mukellef.adres || "";
+    document.getElementById("kayit-tel").value = d.mukellef.telefon || "";
+    dilekceOnayZamani = d.onay_zamani || "";
+    d.satirlar.forEach(kayitSatirEkle);
+    bilgi.style.display = "block";
+    // Kulakcik sayisi okunamayan dosyalari da icerir; bu yuzden "dilekce"
+    // yerine "kulakcik" denir, kaydedilen dilekce sayisi bildirimde yazar.
+    bilgi.innerHTML = "Dosya: <b>" + kacis(d.ad) + "</b> — " + (i + 1) + ". kulakçık (toplam " +
+                      dilekceler.length + "). Kulakçıkların tümü tek <b>Kaydet</b> ile kaydedilir.";
+  }
+  kulakciklariCiz();
+}
+
+/** Kulakciklardaki dilekcelerin tamami sirayla kaydedilir. */
+async function topluKaydet() {
+  aktifDilekceyiSakla();
+  const gecerli = dilekceler.filter(d => !d.hata && d.satirlar.length);
+  if (!gecerli.length) { mesajGoster("Kaydedilecek dilekçe yok.", true); return; }
+  const toplamSatir = gecerli.reduce((a, d) => a + d.satirlar.length, 0);
+  try { gecerli.forEach(d => d.satirlar.forEach(s => miktarCoz(s.miktar))); } catch (e) { hata(e); return; }
+  if (!confirm(gecerli.length + " dilekçe, toplam " + toplamSatir + " satır kaydedilecek. Onaylıyor musunuz?")) return;
+
+  let dilekceSayisi = 0, ihbarnameSayisi = 0;
+  const hatalar = [];
+  for (const d of gecerli) {
+    try {
+      const r = await api("/api/kayit", {
+        mukellef: d.mukellef, dilekce_onay_zamani: d.onay_zamani || "", satirlar: d.satirlar });
+      dilekceSayisi++;
+      ihbarnameSayisi += r.ihbarname_sayisi;
+    } catch (e) { hatalar.push(d.ad + ": " + e.message); }
+  }
+  const kutu = document.getElementById("pdf-sonuclar");
+  kutu.innerHTML = hatalar.length
+    ? hatalar.map(x => "<div>✗ " + kacis(x) + "</div>").join("") : "";
+  mesajGoster(dilekceSayisi + " adet dilekçe ile " + ihbarnameSayisi + " adet ihbarname kaydedildi." +
+              (hatalar.length ? " " + hatalar.length + " dilekçe kaydedilemedi." : ""),
+              hatalar.length > 0);
+  if (!hatalar.length) {
+    kulakciklariGizle();
+    ["kayit-ad", "kayit-vkn", "kayit-adres", "kayit-tel", "kayit-ara"].forEach(
+      id => document.getElementById(id).value = "");
+    document.querySelector("#kayit-tablo tbody").innerHTML = "";
+    dilekceOnayZamani = "";
+  }
+}
+
 function formaAktar(veri) {
   // Her dilekce kendi mukellefiyle eslesmeli: onceki form ve tablo icerigi
   // temizlenir, aksi halde ust uste yuklemelerde satirlar tek isme karisir.
+  kulakciklariGizle();
   ["kayit-ad", "kayit-vkn", "kayit-adres", "kayit-tel"].forEach(id => document.getElementById(id).value = "");
   document.querySelector("#kayit-tablo tbody").innerHTML = "";
   dilekceOnayZamani = "";
@@ -519,26 +661,33 @@ async function pdfleriYukle(dosyaListesi) {
       return;
     }
 
-    // Toplu yukleme: her dilekce dogrudan kaydedilir, ozet listelenir
-    let basari = 0;
-    const ozet = [];
-    for (const r of sonuclar) {
-      if (!r.tamam) { ozet.push("✗ " + r.ad + " — " + r.hata); continue; }
-      const m = r.veri.mukellef, satirlar = [];
-      (r.veri.ihbarnameler || []).forEach(ih => (ih.ceza_satirlari || []).forEach(cs => satirlar.push({
-        fis_no: ih.fis_no, vergi_turu_kod: cs.vergi_turu_kod || "", ceza_kodu: cs.ceza_kodu || "",
-        ceza_nedeni: cs.ceza_nedeni || "", donem: "", miktar: cs.miktar || 0,
-        duzenleme_tarihi: ih.duzenleme_tarihi || "", teblig_tarihi: ih.teblig_tarihi || "",
-      })));
-      if (!satirlar.length) { ozet.push("✗ " + r.ad + " — ceza satırı bulunamadı"); continue; }
-      try {
-        const k = await api("/api/kayit", { mukellef: m, dilekce_onay_zamani: m.onay_zamani || "", satirlar });
-        ozet.push("✓ " + r.ad + " — " + kacis(m.ad_unvan) + ": " + k.ihbarname_sayisi + " ihbarname, " + k.satir_sayisi + " satır kaydedildi");
-        basari++;
-      } catch (e) { ozet.push("✗ " + r.ad + " — kayıt hatası: " + e.message); }
-    }
-    kutu.innerHTML = ozet.map(x => "<div>" + x + "</div>").join("");
-    mesajGoster(basari + "/" + sonuclar.length + " dilekçe kaydedildi.", basari !== sonuclar.length);
+    // Toplu yukleme: her dilekce ayri bir kulakciga alinir. Kayit, kullanici
+    // kulakciklar arasinda gezip kontrol ettikten sonra tek Kaydet ile yapilir;
+    // tekli yuklemedeki "once gor, sonra kaydet" akisiyla ayni.
+    kutu.textContent = "";
+    dilekceler = sonuclar.map(r => {
+      if (!r.tamam) return { ad: r.ad, hata: r.hata, mukellef: {}, satirlar: [], onay_zamani: "" };
+      const m = r.veri.mukellef || {};
+      const satirlar = [];
+      (r.veri.ihbarnameler || []).forEach(ih => {
+        const cezalar = (ih.ceza_satirlari && ih.ceza_satirlari.length) ? ih.ceza_satirlari : [{}];
+        cezalar.forEach(cs => satirlar.push({
+          fis_no: ih.fis_no || "", vergi_turu_kod: cs.vergi_turu_kod || "", ceza_kodu: cs.ceza_kodu || "",
+          miktar: cs.miktar || "", duzenleme_tarihi: ih.duzenleme_tarihi || "",
+          teblig_tarihi: ih.teblig_tarihi || "",
+        }));
+      });
+      return { ad: r.ad, hata: satirlar.length ? "" : "Ceza satırı bulunamadı",
+               mukellef: m, satirlar, onay_zamani: m.onay_zamani || "" };
+    });
+    aktifDilekce = -1;
+    const ilkGecerli = dilekceler.findIndex(d => !d.hata);
+    dilekceSec(ilkGecerli >= 0 ? ilkGecerli : 0);
+    const gecerliSayisi = dilekceler.filter(d => !d.hata).length;
+    const okunamayan = dilekceler.length - gecerliSayisi;
+    mesajGoster(gecerliSayisi + " dilekçe ayrıştırıldı ve kulakçıklara ayrıldı." +
+                (okunamayan ? " " + okunamayan + " dosya okunamadı." : "") +
+                " Kontrol edip Kaydet'e basın.", okunamayan > 0);
   } catch (e) { kutu.textContent = ""; hata(e); }
 }
 
@@ -567,6 +716,8 @@ async function yapistirAyristir() {
 }
 
 async function kaydet() {
+  // Kulakciklar acikken Kaydet hepsini birden kaydeder
+  if (aktifDilekce >= 0) return topluKaydet();
   const satirlar = [];
   document.querySelectorAll("#kayit-tablo tbody tr").forEach(tr => {
     const s = {};
@@ -669,7 +820,7 @@ async function uzlasmaTabloDoldur() {
     const bekleyen = ih.durum === "beklemede";
     const [rozetYazi, rozetSinif] = DURUM_ROZET[ih.durum] || [ih.durum, ""];
     grup.satirlar.forEach((s, satirIndex) => {
-      const kalan = Math.round(s.miktar * (1 - oran / 100) * 100) / 100;
+      const kalan = uzlasilanYuvarla(s.miktar * (1 - oran / 100));
       const tr = document.createElement("tr");
       // Islem hucresi yalnizca ihbarnamenin ilk satirinda; durum degistirme
       // (tutanak olusturmadan, onayli) ve bekleyen ise silme dugmesi icerir.
@@ -704,7 +855,7 @@ async function uzlasmaTabloDoldur() {
       uzlasmaSatirlar.push(kayit);
       const kalanGuncelle = () => {
         const o = parseFloat(String(tr.querySelector(".oran-girdi").value).replace(",", "."));
-        const k = isNaN(o) ? null : Math.round(kayit.miktar * (1 - o / 100) * 100) / 100;
+        const k = isNaN(o) ? null : uzlasilanYuvarla(kayit.miktar * (1 - o / 100));
         tr.querySelector(".kalan-hucre").textContent = k === null ? "-" : tlFormat(k);
       };
       tr.querySelector(".oran-girdi").addEventListener("input", kalanGuncelle);
@@ -765,7 +916,7 @@ function oraniUygula() {
   if (isNaN(o)) { mesajGoster("Geçerli bir oran girin.", true); return; }
   uzlasmaSatirlar.forEach(k => {
     k.tr.querySelector(".oran-girdi").value = o;
-    k.tr.querySelector(".kalan-hucre").textContent = tlFormat(Math.round(k.miktar * (1 - o / 100) * 100) / 100);
+    k.tr.querySelector(".kalan-hucre").textContent = tlFormat(uzlasilanYuvarla(k.miktar * (1 - o / 100)));
   });
 }
 
@@ -1025,15 +1176,8 @@ async function ayarlarYukle() {
     "Sıradaki tutanak numarası: <b>" + yil + "/" + sonraki + "</b>";
   document.getElementById("sayac-sonraki").value = sonraki;
 
-  const ut = document.querySelector("#uye-tablo tbody");
-  ut.innerHTML = "";
-  (await api("/api/komisyon?tum=1")).forEach(u => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${kacis(u.ad_soyad)}</td><td>${kacis(u.unvan)}</td><td>${kacis(u.gorev)}</td>` +
-      `<td>${u.aktif ? "Aktif" : "Pasif"}</td>` +
-      `<td class="sag">${u.aktif ? `<button class="btn ikincil" onclick="uyeSil(${u.id})">Pasif Yap</button>` : ""}</td>`;
-    ut.appendChild(tr);
-  });
+  uyeListesi = await api("/api/komisyon?tum=1");
+  uyeTablosunuCiz();
 
   const yt = document.querySelector("#yedek-tablo tbody");
   yt.innerHTML = "";
@@ -1076,9 +1220,71 @@ async function uyeEkle() {
     ayarlarYukle();
   } catch (e) { hata(e); }
 }
+// Komisyon uyesi listesi ve o an satir icinde duzenlenen uyenin id'si.
+// Duzenleme ayri bir pencere yerine satirin kendisinde yapilir; boylece
+// hangi uyenin degistirildigi gozden kacmaz.
+let uyeListesi = [];
+let duzenlenenUyeId = null;
+
+function uyeTablosunuCiz() {
+  const ut = document.querySelector("#uye-tablo tbody");
+  ut.innerHTML = "";
+  uyeListesi.forEach(u => {
+    const tr = document.createElement("tr");
+    if (u.id === duzenlenenUyeId) {
+      tr.innerHTML =
+        `<td><input type="text" id="uye-d-ad" value="${kacis(u.ad_soyad)}"></td>` +
+        `<td><input type="text" id="uye-d-unvan" value="${kacis(u.unvan || "")}"></td>` +
+        `<td><select id="uye-d-gorev">` +
+        `<option${u.gorev === "Başkan" ? " selected" : ""}>Başkan</option>` +
+        `<option${u.gorev !== "Başkan" ? " selected" : ""}>Üye</option></select></td>` +
+        `<td><select id="uye-d-aktif">` +
+        `<option value="1"${u.aktif ? " selected" : ""}>Aktif</option>` +
+        `<option value="0"${u.aktif ? "" : " selected"}>Pasif</option></select></td>` +
+        `<td class="sag"><button class="btn" onclick="uyeGuncellemeyiKaydet(${u.id})">Kaydet</button> ` +
+        `<button class="btn ikincil" onclick="uyeDuzenlemeIptal()">Vazgeç</button></td>`;
+    } else {
+      tr.innerHTML =
+        `<td>${kacis(u.ad_soyad)}</td><td>${kacis(u.unvan || "")}</td><td>${kacis(u.gorev)}</td>` +
+        `<td>${u.aktif ? "Aktif" : "Pasif"}</td>` +
+        `<td class="sag"><button class="btn ikincil" onclick="uyeDuzenle(${u.id})">Düzenle</button> ` +
+        (u.aktif ? `<button class="btn ikincil" onclick="uyeSil(${u.id})">Pasif Yap</button> ` : "") +
+        `<button class="btn tehlike" onclick="uyeKaliciSil(${u.id})">Sil</button></td>`;
+    }
+    ut.appendChild(tr);
+  });
+}
+function uyeDuzenle(id) { duzenlenenUyeId = id; uyeTablosunuCiz(); }
+function uyeDuzenlemeIptal() { duzenlenenUyeId = null; uyeTablosunuCiz(); }
+async function uyeGuncellemeyiKaydet(id) {
+  try {
+    await api("/api/komisyon/guncelle", {
+      id,
+      ad_soyad: document.getElementById("uye-d-ad").value,
+      unvan: document.getElementById("uye-d-unvan").value,
+      gorev: document.getElementById("uye-d-gorev").value,
+      aktif: document.getElementById("uye-d-aktif").value === "1",
+    });
+    duzenlenenUyeId = null;
+    mesajGoster("Komisyon üyesi güncellendi.");
+    ayarlarYukle();
+  } catch (e) { hata(e); }
+}
 async function uyeSil(id) {
   if (!confirm("Seçili komisyon üyesi pasif yapılacak. Onaylıyor musunuz?")) return;
   try { await api("/api/komisyon/sil", { id }); ayarlarYukle(); } catch (e) { hata(e); }
+}
+async function uyeKaliciSil(id) {
+  const u = uyeListesi.find(x => x.id === id);
+  const ad = u ? u.ad_soyad : "Seçili üye";
+  if (!confirm(ad + " kayıttan tümüyle silinecek. Bu işlem geri alınamaz.\n\n" +
+               "Tutanak imzalamış üyeler silinemez; onlar için 'Pasif Yap' kullanın.\n\n" +
+               "Onaylıyor musunuz?")) return;
+  try {
+    await api("/api/komisyon/kalici_sil", { id });
+    mesajGoster("Komisyon üyesi silindi.");
+    ayarlarYukle();
+  } catch (e) { hata(e); }
 }
 async function yedekAl() {
   try {
