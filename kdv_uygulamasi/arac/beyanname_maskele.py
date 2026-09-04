@@ -27,8 +27,29 @@ import re
 import sys
 import unicodedata
 
-KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(KOK, "lib"))
+def _lib_yollarini_ekle():
+    """Uygulamanin gomulu `lib/` klasorunu arayip sys.path'e ekler.
+
+    Betik `kdv_uygulamasi/arac/` icinde durdugunda `../lib` dogru yoldur; ama
+    dosya tek basina indirilip baska bir yere konabiliyor. O yuzden birkac
+    makul yer denenir. Hicbiri yoksa sistemde kurulu pypdf de is gorur.
+    """
+    burasi = os.path.dirname(os.path.abspath(__file__))
+    adaylar = [
+        os.path.join(os.path.dirname(burasi), "lib"),   # arac/ icindeyken
+        os.path.join(burasi, "lib"),                    # uygulama kokundeyken
+        os.path.join(os.getcwd(), "lib"),               # kokten calistirilinca
+        os.path.join(os.getcwd(), "kdv_uygulamasi", "lib"),
+        os.path.join(os.path.dirname(os.getcwd()), "lib"),
+    ]
+    for aday in adaylar:
+        if os.path.isdir(os.path.join(aday, "pypdf")) and aday not in sys.path:
+            sys.path.insert(0, aday)
+            return aday
+    return None
+
+
+ARANAN_LIB = _lib_yollarini_ekle()
 
 MASKE = "[MASKELI]"
 
@@ -107,23 +128,23 @@ def normalize(metin):
 
 
 def _kripto_saglayicisini_ele():
-    """pypdf'in istege bagli sifreleme saglayicilarini gerekiyorsa devre disi birakir.
+    """pypdf'in istege bagli sifreleme saglayicilarini kapatir.
 
-    `cryptography` / `PyCryptodome` KURULU AMA BOZUKSA import ImportError yerine
-    baska bir hata firlatir; pypdf bunu yakalamaz ve okuma hic baslamaz.
-    Beyanname PDF'leri sifreli olmadigi icin bu saglayicilara ihtiyac yok;
-    bozuk olani sys.modules'te None isaretleyip pypdf'in saf Python yoluna
-    dusmesini sagliyoruz. (Uygulamanin kendisinde de ayni onlem var.)
+    pypdf, sifreli PDF'ler icin once `cryptography` sonra `PyCryptodome`
+    dener. Bu paketler KURULU AMA BOZUKSA (ornegin derlenmis eklentisi
+    eksikse) yoklamanin kendisi ImportError yerine Rust katmanindan bir panik
+    uretiyor. Panik metnini Python yakalayamaz; dogrudan terminale basilir ve
+    betik calistigi halde cokmus gibi gorunur:
+
+        ModuleNotFoundError: No module named '_cffi_backend'
+        thread '<unnamed>' panicked at ... Python API call failed
+
+    Bu yuzden paketleri yoklamak yerine, denemeden None isaretliyoruz. pypdf
+    temiz bir ImportError gorup saf Python yoluna dusuyor. Beyanname PDF'leri
+    sifreli olmadigi icin kaybimiz yok.
     """
-    for ad, ifade in (
-            ("cryptography", "from cryptography.hazmat.primitives.ciphers."
-                             "algorithms import AES"),
-            ("Crypto", "from Crypto.Cipher import AES")):
-        if ad in sys.modules and sys.modules.get(ad) is None:
-            continue
-        try:
-            exec(compile(ifade, "<kripto denetimi>", "exec"), {})
-        except BaseException:       # ImportError da, bozuk kurulumun paniki de
+    for ad in ("cryptography", "Crypto"):
+        if ad not in sys.modules:
             sys.modules[ad] = None
 
 
@@ -133,7 +154,17 @@ def parcalari_al(yol):
     try:
         import pypdf
     except ImportError:
-        sys.exit("pypdf bulunamadi. Betigi uygulama klasorunun icinden calistirin.")
+        sys.exit(
+            "pypdf bulunamadi.\n\n"
+            "Bu betik PDF okumak icin pypdf kullanir. Iki yoldan biri:\n"
+            "  1) Betigi uygulamanin icine koyun:  kdv_uygulamasi/arac/\n"
+            "     ve oradan calistirin:            cd kdv_uygulamasi\n"
+            "                                      python3 arac/beyanname_maskele.py DOSYA.pdf\n"
+            "  2) Ya da pypdf'i kurun:             pip3 install --user pypdf\n\n"
+            "Aranan yerler: <uygulama>/lib, ./lib, ./kdv_uygulamasi/lib")
+    if isinstance(yol, str) and not os.path.isfile(yol):
+        sys.exit("Dosya bulunamadi: %s\n"
+                 "Yolu kontrol edin; bosluk iceriyorsa tirnak icine alin." % yol)
     try:
         okuyucu = pypdf.PdfReader(yol)
     except Exception as exc:
