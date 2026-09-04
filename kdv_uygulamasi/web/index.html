@@ -367,6 +367,17 @@
       <input type="file" id="pdfSecici" accept="application/pdf,.pdf" multiple hidden>
     </div>
     <div id="pdfDurum"></div>
+    <div class="satir" style="margin-top:8px;">
+      <div class="otomatik">
+        <button class="btn ikincil" id="dokumAl">Metin dökümü al (maskeli)</button>
+      </div>
+      <div class="otomatik" style="padding-bottom:2px;">
+        <span class="yardim" style="margin:0;">Beyanname biçimi değiştiğinde,
+        belgeyi paylaşmadan yardım isteyebilmeniz için;<br>mükellef bilgileri
+        maskelenmiş metin dökümü üretir.</span>
+      </div>
+    </div>
+    <input type="file" id="dokumSecici" accept="application/pdf,.pdf" hidden>
     <div id="pdfListe" class="yuklu-liste"></div>
     <div class="satir" style="margin-top:10px;">
       <button class="btn tehlike" id="pdfTemizle" style="display:none;">Yüklenenleri temizle</button>
@@ -638,6 +649,24 @@
     <div id="temizleSecenekler"></div>
     <div class="satir" style="margin-top:16px;">
       <div class="otomatik"><button class="btn ikincil" id="temizleKapat">Vazgeç</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-arka" id="dokumModal">
+  <div class="modal">
+    <h2>Maskelenmiş Metin Dökümü</h2>
+    <div class="yardim" id="dokumBilgi"></div>
+    <div class="uyari-satir" id="dokumUyari" style="display:none;"></div>
+    <div class="satir" style="margin-top:8px; align-items:flex-end;">
+      <div><label>Ek gizlenecek metin (virgülle ayırın)</label>
+        <input type="text" id="dokumEkGizle" placeholder="Ahmet YILMAZ, ACME İnşaat"></div>
+      <div class="otomatik"><button class="btn ikincil" id="dokumYenile">Yeniden üret</button></div>
+    </div>
+    <pre class="rapor" id="dokumMetin" style="max-height:340px; overflow:auto;"></pre>
+    <div class="satir" style="margin-top:12px;">
+      <div class="otomatik"><button class="btn" id="dokumKopyala">Panoya Kopyala</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="dokumKapat">Kapat</button></div>
     </div>
   </div>
 </div>
@@ -2548,6 +2577,54 @@ $("raporOnizle").addEventListener("click", async () => {
     $("raporModal").classList.add("acik");
     eksikleriCiz(y.eksikler || []);
   } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+// ------------------------------------------- maskelenmis metin dokumu
+// Beyanname bicimi degistiginde, ayristiriciyi uyarlamak icin PDF'in metin
+// katmani ve konum bilgisi gerekir; belgenin kendisi gerekmez. Dokum burada,
+// uygulamanin icinde uretilir - kullanicinin terminal acmasi gerekmesin diye.
+let dokumDosyasi = null;   // {ad, veri} - "Yeniden uret" ayni dosyayi kullanir
+
+async function dokumUret() {
+  if (!dokumDosyasi) return;
+  const ek = $("dokumEkGizle").value.split(",").map((x) => x.trim()).filter(Boolean);
+  $("dokumMetin").textContent = "Okunuyor...";
+  try {
+    const y = await api("/api/pdf_dokum", { dosyalar: [dokumDosyasi], ek_gizle: ek });
+    $("dokumMetin").textContent = y.metin;
+    $("dokumBilgi").textContent =
+      `${y.ad} — ${y.parca_sayisi} metin parçası, ${y.maskelenen} tanesi maskelendi.`;
+    const kalan = y.gozden_gecir || [];
+    const uyari = $("dokumUyari");
+    uyari.style.display = kalan.length ? "" : "none";
+    uyari.textContent =
+      `Dökümün başında maskelenmemiş ${kalan.length} metin listeleniyor. ` +
+      "Çoğu beyanname etiketidir; aralarında isim/ünvan gibi kişisel bir bilgi " +
+      "varsa yukarıdaki kutuya yazıp \"Yeniden üret\" deyin.";
+  } catch (hata) {
+    $("dokumMetin").textContent = "";
+    mesaj(hata.message, "hata");
+  }
+}
+
+$("dokumAl").addEventListener("click", () => $("dokumSecici").click());
+$("dokumSecici").addEventListener("change", async () => {
+  const dosya = $("dokumSecici").files[0];
+  $("dokumSecici").value = "";
+  if (!dosya) return;
+  dokumDosyasi = { ad: dosya.name, veri: await dosyayiOku(dosya) };
+  $("dokumEkGizle").value = "";
+  $("dokumModal").classList.add("acik");
+  await dokumUret();
+});
+$("dokumYenile").addEventListener("click", dokumUret);
+$("dokumKapat").addEventListener("click", () => {
+  $("dokumModal").classList.remove("acik");
+  dokumDosyasi = null;
+});
+$("dokumKopyala").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText($("dokumMetin").textContent); mesaj("Panoya kopyalandı."); }
+  catch { mesaj("Kopyalanamadı; metni seçip elle kopyalayın.", "hata"); }
 });
 
 $("raporKapat").addEventListener("click", () => $("raporModal").classList.remove("acik"));

@@ -324,6 +324,8 @@ class Istekci(BaseHTTPRequestHandler):
                     _inceleme_bilgisi(calisma), sonuc, bulgular)})
             elif yol == "/api/pdf_oku":
                 self._json_yanit(self._pdf_oku(veri))
+            elif yol == "/api/pdf_dokum":
+                self._json_yanit(self._pdf_dokum(veri))
             elif yol == "/api/beyanname_ozet":
                 self._json_yanit(self._beyanname_ozet(veri))
             elif yol == "/api/beyanname_uygula":
@@ -395,6 +397,36 @@ class Istekci(BaseHTTPRequestHandler):
                 "dolu_aylar": sonuc.get("dolu_aylar") or []}
 
     # ------------------------------------------------------- beyanname PDF
+    def _pdf_dokum(self, veri):
+        """Bir PDF'in metin katmanini, kimlik bilgileri maskelenmis olarak doker.
+
+        Yeni bir beyanname bicimi cikinca ayristiriciyi uyarlamak icin metin
+        katmani ve konum bilgisi gerekiyor; belgenin kendisi gerekmiyor.
+        Kullanici bu dokumu kopyalayip paylasabilsin diye uygulamanin icinde
+        uretilir - terminal gerekmez.
+        """
+        from .maskeleme import dokum_uret
+        from .pdf_beyanname import PdfHata
+
+        dosyalar = veri.get("dosyalar") or []
+        if not dosyalar:
+            raise ApiHata("Dökümü alınacak dosya gelmedi.")
+        dosya = dosyalar[0]
+        ad = dosya.get("ad") or "beyanname.pdf"
+        try:
+            ham = base64.b64decode(dosya.get("veri") or "", validate=True)
+        except (binascii.Error, ValueError):
+            raise ApiHata("Dosya içeriği çözülemedi.")
+        if not ham.startswith(b"%PDF"):
+            raise ApiHata("Bu bir PDF dosyası değil.")
+        ek_gizle = [str(x) for x in (veri.get("ek_gizle") or []) if str(x).strip()]
+        try:
+            sonuc = dokum_uret(io.BytesIO(ham), ek_gizle, bool(veri.get("tutarsiz")))
+        except PdfHata as exc:
+            raise ApiHata(str(exc))
+        sonuc["ad"] = ad
+        return sonuc
+
     def _pdf_oku(self, veri):
         """Yuklenen PDF'leri okur. Bir dosyadaki hata digerlerini durdurmaz."""
         dosyalar = veri.get("dosyalar") or []
