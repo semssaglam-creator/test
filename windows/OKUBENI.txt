@@ -1,0 +1,24 @@
+WINDOWS KLASORU
+===============
+
+Burada YALNIZCA Windows'a ozgu dosyalar durur:
+
+  kdv_uygulamasi/       .bat baslaticilar, Windows kurulum belgesi ve
+                        Windows paketini ureten paketle.sh
+  skill-windows-paketi/ Windows paketi uretiminde ogrenilenler (notlar)
+
+Uygulamanin KENDISI burada degil. Kaynak tek yerde durur:
+
+  ../linux/kdv_uygulamasi/
+
+Windows paketini uretmek icin (Linux/Mac uzerinde):
+
+  cd windows/kdv_uygulamasi
+  ./paketle.sh amd64
+
+Betik kaynagi ../../linux/kdv_uygulamasi'ndan alir, buradaki .bat
+dosyalarini ve gomulu Python'u ekler, denetimleri gecerse
+"KDV_Inceleme_Calismasi_Windows.zip" dosyasini burada olusturur.
+
+Neden kaynagin kopyasi burada tutulmuyor: iki kopya zamanla birbirinden
+ayrilir ve hangisinin dogru oldugu belirsizlesir.

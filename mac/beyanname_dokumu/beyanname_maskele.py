@@ -9,13 +9,16 @@ DIKKAT: PDF'te yaziyi ustunden boyamak (highlight) metni SILMEZ. Boyanan
 metin katmanda oldugu gibi durur ve okunur. Guvenli yol, metnin kendisini
 degistirmektir - bu betigin yaptigi budur.
 
-Kullanim:
-    python3 arac/beyanname_maskele.py beyanname.pdf
-    python3 arac/beyanname_maskele.py beyanname.pdf --ek-gizle "ACME LTD" --ek-gizle "Ahmet"
-    python3 arac/beyanname_maskele.py beyanname.pdf --tutarsiz     # tutarlari da gizle
+Mac'te: yanindaki "Beyanname Dokumu Al.command" dosyasina cift tiklamak
+yeter; bu betigi elle calistirmaniza gerek yok.
+
+Terminalden:
+    python3 beyanname_maskele.py beyanname.pdf
+    python3 beyanname_maskele.py beyanname.pdf --ek-gizle "ACME LTD" --ek-gizle "Ahmet"
+    python3 beyanname_maskele.py beyanname.pdf --tutarsiz     # tutarlari da gizle
 
 Cikti ekrana yazilir; dosyaya almak icin:
-    python3 arac/beyanname_maskele.py beyanname.pdf > dokum.txt
+    python3 beyanname_maskele.py beyanname.pdf > dokum.txt
 
 Ciktiyi GONDERMEDEN ONCE GOZDEN GECIRIN. Betik kimlik alanlarini bicimlerinden
 ve sayfadaki yerlerinden taniyor; tanimadigi bir alan kalirsa --ek-gizle ile
@@ -30,15 +33,18 @@ import unicodedata
 def _lib_yollarini_ekle():
     """Uygulamanin gomulu `lib/` klasorunu arayip sys.path'e ekler.
 
-    Betik `kdv_uygulamasi/arac/` icinde durdugunda `../lib` dogru yoldur; ama
-    dosya tek basina indirilip baska bir yere konabiliyor. O yuzden birkac
-    makul yer denenir. Hicbiri yoksa sistemde kurulu pypdf de is gorur.
+    Dagitilan pakette lib/ betigin yanindadir; depodan calistirilinca ise
+    uygulamanin lib/ klasoru (linux/kdv_uygulamasi/lib) kullanilir. Dosya
+    tek basina indirilip baska bir yere de konabiliyor; o yuzden birkac makul
+    yer sirayla denenir. Hicbiri yoksa sistemde kurulu pypdf de is gorur.
     """
     burasi = os.path.dirname(os.path.abspath(__file__))
+    depo = os.path.join(burasi, os.pardir, os.pardir)   # mac/beyanname_dokumu -> depo koku
     adaylar = [
-        os.path.join(os.path.dirname(burasi), "lib"),   # arac/ icindeyken
-        os.path.join(burasi, "lib"),                    # uygulama kokundeyken
-        os.path.join(os.getcwd(), "lib"),               # kokten calistirilinca
+        os.path.join(burasi, "lib"),                    # dagitilan paketin icinde
+        os.path.join(os.path.dirname(burasi), "lib"),
+        os.path.join(depo, "linux", "kdv_uygulamasi", "lib"),   # depodan calisirken
+        os.path.join(os.getcwd(), "lib"),               # bulundugu klasorden
         os.path.join(os.getcwd(), "kdv_uygulamasi", "lib"),
         os.path.join(os.path.dirname(os.getcwd()), "lib"),
     ]
@@ -156,12 +162,11 @@ def parcalari_al(yol):
     except ImportError:
         sys.exit(
             "pypdf bulunamadi.\n\n"
-            "Bu betik PDF okumak icin pypdf kullanir. Iki yoldan biri:\n"
-            "  1) Betigi uygulamanin icine koyun:  kdv_uygulamasi/arac/\n"
-            "     ve oradan calistirin:            cd kdv_uygulamasi\n"
-            "                                      python3 arac/beyanname_maskele.py DOSYA.pdf\n"
-            "  2) Ya da pypdf'i kurun:             pip3 install --user pypdf\n\n"
-            "Aranan yerler: <uygulama>/lib, ./lib, ./kdv_uygulamasi/lib")
+            "Bu betik PDF okumak icin pypdf kullanir; normalde yanindaki\n"
+            "lib/ klasorunden gelir. Demek ki lib/ klasoru eksik.\n\n"
+            "Cozum: paketi (zip'i) oldugu gibi acin - beyanname_maskele.py,\n"
+            "'Beyanname Dokumu Al.command' ve lib/ ayni klasorde durmali.\n"
+            "Ya da pypdf'i kurun: pip3 install --user pypdf")
     if isinstance(yol, str) and not os.path.isfile(yol):
         sys.exit("Dosya bulunamadi: %s\n"
                  "Yolu kontrol edin; bosluk iceriyorsa tirnak icine alin." % yol)
@@ -326,7 +331,7 @@ def main():
     kalanlar = gozden_gecirilecekler(maskeli)
     print("# ---- GOZDEN GECIRIN: maskelenmemis %d metin ----" % len(kalanlar))
     print("# Aralarinda kisisel bilgi varsa betigi soyle yeniden calistirin:")
-    print("#   python3 arac/beyanname_maskele.py DOSYA --ek-gizle \"o metin\"")
+    print("#   python3 beyanname_maskele.py DOSYA --ek-gizle \"o metin\"")
     for m in kalanlar:
         print("#   %s" % m)
     print("# ---- liste sonu ----")

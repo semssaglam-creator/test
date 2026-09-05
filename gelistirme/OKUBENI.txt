@@ -1,0 +1,10 @@
+GELISTIRME KLASORU
+==================
+
+Uygulamayi CALISTIRMAK icin buradaki hicbir dosya gerekmez.
+
+  GELISTIRME_NOTLARI.md          Kararlar, tuzaklar, ogrenilenler
+  TERMINAL.md                    Uygulamayi terminalden calistirma
+  skill-vergi-inceleme-raporu/   Rapor yazim sablonu (Claude becerisi)
+  ORNEK - Rapor ...docx          Kirmizi yer tutuculu ornek belgeler
+  ORNEK - Tutanak ...docx

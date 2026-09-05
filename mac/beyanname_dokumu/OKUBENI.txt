@@ -1,0 +1,83 @@
+BEYANNAME DOKUMU ALMA ARACI  (Mac)
+==================================
+
+NE ISE YARAR
+------------
+Beyanname PDF'ini okur ve icindeki metni bir metin dosyasina dokerken
+mukellefe ait bilgileri (ad, unvan, VKN/TCKN, e-posta, telefon, IBAN)
+[MASKELI] ile degistirir. Tutarlar, donem ve etiketler oldugu gibi kalir.
+
+Boylece beyannamenin KENDISINI paylasmadan, yeni beyanname biciminin
+nasil okundugu uzerinde calisilabilir.
+
+DIKKAT: PDF'te yaziyi ustunden boyamak (highlight) metni SILMEZ; boyanan
+yazi dosyanin icinde okunabilir halde durur. Bu arac metnin kendisini
+degistirir, boyamaz.
+
+
+NASIL CALISTIRILIR
+------------------
+1. Bu klasoru oldugu gibi acin (Masaustune atmaniz yeterli).
+   Icindeki dosyalar birbirinin yaninda durmali:
+       Beyanname Dokumu Al.command
+       beyanname_maskele.py
+       lib/
+
+2. "Beyanname Dokumu Al.command" dosyasina CIFT TIKLAYIN.
+   Terminal penceresi acilir; bir dosya secme penceresi cikar.
+
+3. Beyanname PDF'ini secin.
+   Yanina "dokum.txt" olusur ve kendiliginden acilir.
+
+
+ILK ACILISTA "GUVENLIK" UYARISI CIKARSA
+---------------------------------------
+Internetten indirilen dosyalari macOS ilk seferinde durdurur.
+
+  a) Dosyaya SAG TIKLAYIN  ->  "Ac" (Open)  ->  cikan uyarida yine "Ac".
+     (Sadece ilk seferde; sonra cift tiklama yeter.)
+
+  b) Bu secenek cikmazsa:
+     Sistem Ayarlari -> Gizlilik ve Guvenlik -> asagi inin ->
+     "Beyanname Dokumu Al.command engellendi" satirinin yanindaki
+     "Yine de Ac" dugmesi.
+
+  c) Hicbiri olmazsa Terminal'i acip su iki satiri yazin
+     (klasoru Terminal penceresine surukleyerek yolu yazdirabilirsiniz):
+
+         cd "BU_KLASORUN_YOLU"
+         chmod +x "Beyanname Dokumu Al.command"
+
+     Sonra yeniden cift tiklayin.
+
+
+"PYTHON 3 BULUNAMADI" DERSE
+---------------------------
+Terminal'de su komutu calistirip kurulumu bitirin, sonra yeniden
+cift tiklayin:
+
+    xcode-select --install
+
+
+GONDERMEDEN ONCE - EN ONEMLI ADIM
+---------------------------------
+dokum.txt'nin BASINDA "GOZDEN GECIRIN" baslikli kisa bir liste var.
+Bu liste, aracin maskelemedigi butun serbest metinleri gosterir.
+
+Icinde bir isim, unvan veya baska bir kisisel bilgi kaldiysa, acilan
+pencereye o metni yazip "Yeniden uret" deyin; birden fazlaysa aralarina
+virgul koyun. Liste temizlenene kadar tekrarlayabilirsiniz.
+
+Liste temizse dokum.txt'nin TAMAMINI kopyalayip sohbete yapistirin.
+
+
+NEDEN BAZI ISIMLER OTOMATIK MASKELENMIYOR
+-----------------------------------------
+Arac kisisel bilgiyi iki yoldan tanir: bicimden (VKN 10-11 hane,
+e-posta @ isareti, telefon deseni) ve sayfadaki yerden ("Mukellef
+Bilgileri" basligi altindaki alan). Sirket unvanlari icin ayrica
+LTD/A.S./SANAYI gibi ipuclarina bakar.
+
+Bu ipuclarinin hicbirini tasimayan sade bir sahis adi (ornegin bir
+muhasebecinin adi) bazi PDF'lerde gozden kacabilir. Son denetim bu
+yuzden sizde: yukaridaki liste tam da bunun icin var.

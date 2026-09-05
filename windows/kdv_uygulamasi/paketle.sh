@@ -14,6 +14,11 @@ set -euo pipefail
 KOK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$KOK"
 
+# Uygulama kaynagi artik linux/ altinda; bu klasorde yalnizca Windows'a
+# ozgu dosyalar durur (bkz. depo kokundeki OKUBENI.md). Kaynak tek yerde
+# tutulur, buraya kopyalanmaz: iki kopya kaciniz gunde birbirinden ayrilir.
+KAYNAK="$(cd "$KOK/../../linux/kdv_uygulamasi" && pwd)"
+
 MIMARI="amd64"
 GOMULU="evet"
 for arg in "$@"; do
@@ -31,7 +36,7 @@ PYSURUM="3.12.8"
 PAKET="KDV Inceleme Calismasi"
 ARSIV="KDV_Inceleme_Calismasi_Windows.zip"
 TANI_DOSYASI="TANI RAPORU - BUNU GONDERIN.txt"
-ONBELLEK="$KOK/arac/onbellek"
+ONBELLEK="$KOK/onbellek"
 PYZIP="python-${PYSURUM}-embed-${MIMARI}.zip"
 PYURL="https://www.python.org/ftp/python/${PYSURUM}/${PYZIP}"
 
@@ -104,11 +109,8 @@ mkdir -p "$PAKET"
 DISARIDA=(
   '.git' '__pycache__' '*.pyc' '.DS_Store'
   '*.sh' '*.desktop' '*.db' '*.zip' '*.onceki' '*.tmp'
-  'windows' 'arac' "$PAKET"
   'ciktilar/*' 'yedekler/*'
-  # Gelistirme malzemesi: Windows kullanicisinin isine yaramaz, kafa karistirir.
-  'GELISTIRME_NOTLARI.md' 'TERMINAL.md' 'skill' '.gitignore' 'ikon.png'
-  'WINDOWS TESTI*'
+  '.gitignore' 'ikon.png'
   # Tani ve hata raporlari kullanici verisidir: gelistirme sirasinda
   # olusanlar pakete girerse kullanici baskasinin makinesinin raporunu
   # gonderir ve teshis yanlis yere gider.
@@ -118,21 +120,21 @@ DISARIDA=(
 if command -v rsync >/dev/null 2>&1; then
   haric=()
   for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done
-  rsync -a "${haric[@]}" ./ "$PAKET/"
+  rsync -a "${haric[@]}" "$KAYNAK/" "$PAKET/"
 else
   # rsync her makinede kurulu degil; tar ile ayni isi yapar.
   haric=()
   for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done
-  tar -cf - "${haric[@]}" . | (cd "$PAKET" && tar -xf -)
+  tar -cf - "${haric[@]}" -C "$KAYNAK" . | (cd "$PAKET" && tar -xf -)
 fi
 echo "  Kaynak kopyalandi."
 
-cp windows/*.bat "$PAKET/"
-cp windows/KURULUM.txt "$PAKET/"
+cp "$KOK"/*.bat "$PAKET/"
+cp "$KOK/KURULUM.txt" "$PAKET/"
 echo "  Windows dosyalari kondu."
 
-if [[ -f ikon.png ]]; then
-  python3 arac/png2ico.py ikon.png "$PAKET/ikon.ico" >/dev/null
+if [[ -f "$KAYNAK/ikon.png" ]]; then
+  python3 "$KOK/png2ico.py" "$KAYNAK/ikon.png" "$PAKET/ikon.ico" >/dev/null
   echo "  Ikon uretildi."
 fi
 
