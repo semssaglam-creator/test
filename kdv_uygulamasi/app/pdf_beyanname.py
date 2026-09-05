@@ -44,8 +44,22 @@ AYLAR_PDF = {
 # Beyannamedeki alan adlarinin uygulama satir kodlarina karsiligi.
 # Anahtarlar normalize edilmis (buyuk harf, Turkce harfler sadelestirilmis,
 # noktalama ve bosluk atilmis) bicimdedir.
+# 2026 Nisan'da beyanname bicimi degisti: etiketler kisaldi ("Katma Deger
+# Vergisi" -> "KDV"), bolumler bolundu ve kalemler kod onekli geldi. Yeni
+# adlar ayni alanlara TAKMA AD olarak eklendi; boylece eski ve yeni bicim yan
+# yana okunur. Tarihe gore bicim secmeye gerek yok - bir inceleme her iki
+# bicimden beyanname icerebilir (Ocak-Mart eski, Nisan sonrasi yeni).
 ETIKET_ESLEMESI = {
     "MATRAHTOPLAMI": "matrah_toplami",
+    "TOPLAMMATRAH": "matrah_toplami",                    # yeni bicim
+    "HESAPLANANKDV": "hesaplanan_kdv",                   # yeni bicim
+    "TOPLAMKDV": "toplam_kdv",                           # yeni bicim
+    "TECILEDILECEKKDV": "tecil_edilecek_kdv",            # yeni bicim
+    "ODENMESIGEREKENKDV": "odenmesi_gereken_kdv",        # yeni bicim
+    "IADEEDILMESIGEREKENKDV": "iade_edilmesi_gereken_kdv",   # yeni bicim
+    "SONRAKIDONEMEDEVREDENKDV": "sonraki_donem_devreden",    # yeni bicim
+    "ONCEKIDONEMDENDEVREDENKDV": "onceki_donem_devreden",    # yeni bicim
+    "DAHAONCEINDIRIMKONUSUYAPILANKDVNINILAVESI2": "ilave_edilecek_kdv",
     "HESAPLANANKATMADEGERVERGISI": "hesaplanan_kdv",
     "DAHAONCEINDIRIMKONUSUYAPILANKDVNINILAVESI": "ilave_edilecek_kdv",
     "ILAVEEDILECEKKDV": "ilave_edilecek_kdv",
@@ -105,6 +119,14 @@ EK_ETIKETLER = {
 BOLUM_BASLIKLARI = {
     "BUDONEMEAITINDIRILECEKKDVTUTARININORANLARAGOREDAGILIMI": "oran_dagilimi",
     "MATRAHVEVERGIBILDIRIMI": "matrah",
+    # 2026 Nisan sonrasi bicimdeki bolum basliklari
+    "MATRAH": "matrah",
+    "MATRAHDETAYI": "matrah_detay",
+    "INDIRIMLERDETAYI": "indirimler_detay",
+    "ONCEKIDONEMDENDEVREDENINDIRILECEKKDV": "onceki_devir_detay",
+    "DIGERINDIRIMLER": "diger_indirimler",
+    "DIGERISLEMLER": "diger_islemler",
+    "TEVKIFATUYGULANMAYANISLEMLER": "tevkifatsiz",
     "INDIRIMLER": "indirimler",
     "INDIRIMNEDENLERI": "indirim_nedenleri",
     "DIGERBILGILER": "diger",
@@ -118,7 +140,14 @@ BOLUME_BAGLI = {
 }
 
 SAYI = re.compile(r"^-?\d{1,3}(?:\.\d{3})*,\d{2}$|^-?\d+,\d{2}$")
-TARIH_SAATI = re.compile(r"(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2}):(\d{2}):(\d{2})")
+# Onay zamani iki bicimde gelebiliyor:
+#   eski (2026 Nisan oncesi): 28.01.2025 - 22:07:21   (nokta, arada tire)
+#   yeni:                     05/06/2026 12:52:04     (egik cizgi, tire yok)
+# Ayirici ve tire istege bagli birakilarak ikisi de tek desenle okunur.
+# Okunamazsa surumler onay zamanina gore siralanamaz ve butun duzeltme
+# beyannameleri "kanuni suresinde" sayilir; bu yuzden desen genis tutuldu.
+TARIH_SAATI = re.compile(
+    r"(\d{2})[./](\d{2})[./](\d{4})\s*-?\s*(\d{2}):(\d{2}):(\d{2})")
 
 
 class PdfHata(Exception):
