@@ -90,6 +90,21 @@ oturumda buradan devam edilir.
       eşitliği tutmazdı. Ekranda sürüm satırında "yeni biçim" yazıyor.
       Elde bir düzeltme beyannamesinin yeni biçimli örneği yok; "Beyanname
       Türü: Düzeltme…" alanı destekleniyor ama örnekle doğrulanmadı.
+- [x] 2026-09-06 — **Windows için güncelleme paketi** (`kdv_windows/
+      guncelleme_paketle.sh`). Tam paketin küçük kardeşi: gömülü Python ve
+      kurulum malzemesi taşımaz, yalnızca program dosyalarını (`main.py`,
+      `app/`, `web/`) ve bunları kurulu uygulamanın üzerine koyan
+      `guncelle.bat`'i taşır. Betik kurulu uygulamayı kendisi arar
+      (bırakılan klasör, kendi klasörü ve bir üstü, Desktop/Downloads/
+      Documents, OneDrive), bulamazsa klasörü sürükleyip bırakmayı ister;
+      **önce yedek alır, alamazsa hiçbir dosyaya dokunmaz** ve kopyaladıktan
+      sonra yeni sürümün gerçekten yerine geçtiğini bir işaret arayarak
+      denetler. Paketleyici de denetliyor: CRLF, **UTF-8 BOM** (BOM'suz
+      .txt'yi eski Notepad ANSI sanıp Türkçe harfleri bozuyor), tırnaksız
+      `%HEDEF%`, kullanıcı klasörlerinin (ciktilar/veritabani/yedekler)
+      pakete sızmaması, ve `guncelle.bat`'in aradığı işaretin pakette
+      gerçekten bulunması — bulunmazsa betik başarılı bir güncellemeyi
+      başarısız sanardı.
 - [x] 2026-08-26 — **Linux sürümü çalışır durumda doğrulandı.** Uzun süren
       "hiç açılmıyor" arızasının sebebi bulundu: `::1` çift dinleme
       eklenirken "IPv6 yok" ile "port dolu" ayrılmamıştı. `_ipv6_var()`

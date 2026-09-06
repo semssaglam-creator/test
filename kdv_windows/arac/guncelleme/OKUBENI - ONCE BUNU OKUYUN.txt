@@ -1,0 +1,69 @@
+﻿KDV İNCELEME ÇALIŞMASI — GÜNCELLEME PAKETİ (WINDOWS)
+=====================================================
+
+Bu paket, kurulu uygulamanın yerine geçmez; üzerine yalnızca yenilenen
+program dosyalarını koyar. Uygulamayı baştan kurmanız gerekmez.
+
+ÇALIŞMALARINIZ ELLENMEZ: veritabanı, çıktılar ve yedekler olduğu gibi
+kalır. Yenilenen dosyalar da değiştirilmeden önce yedeklenir.
+
+
+YAPILACAK — ÜÇ ADIM
+-------------------
+
+  1. Bu zip'e sağ tıklayın > "Tümünü ayıkla" deyin.
+     (Zip'in İÇİNDEN çift tıklamayın; Windows tek dosyayı geçici bir
+     klasöre çıkarır ve güncelleme yanındaki dosyaları bulamaz.)
+
+  2. Uygulama açıksa KAPATIN.
+
+  3. Çıkan klasördeki   guncelle.bat   dosyasına çift tıklayın.
+
+Betik kurulu uygulamayı kendisi arar. Bulamazsa uygulama klasörünü
+pencereye sürükleyip bırakmanızı ister; klasörün adı genellikle
+"KDV Inceleme Calismasi" şeklindedir.
+
+Bittiğinde uygulamayı her zamanki gibi calistir.bat ile açın.
+
+
+BU GÜNCELLEMEDE NE VAR
+----------------------
+
+Beyannamenin YENİ ÇIKTI BİÇİMİ okunuyor. Aynı KDV beyannamesinin iki
+basımı dolaşımda; uygulama artık ikisini de kabul ediyor ve hangisi
+olduğunu kendisi anlıyor. Yeni biçimde okunan beyannamenin sürüm
+satırında "yeni biçim" yazar.
+
+Eski biçim beyannameler eskisi gibi okunmaya devam eder; elinizdeki
+çalışmalarda hiçbir şey değişmez.
+
+
+BİR ŞEY TERS GİDERSE
+--------------------
+
+Güncelleme betiği her adımı şu dosyaya yazar:
+
+    GÜNCELLEME KAYDI.txt   (guncelle.bat ile aynı klasörde)
+
+Bir hata görürseniz bu dosyayı gönderin; nerede durduğu içinde yazar.
+
+Güncellemeden ÖNCEKİ sürüm şurada durur:
+
+    <uygulama klasörü>\yedekler\guncelleme_oncesi\
+
+İçindeki  app  ve  web  klasörleri ile  main.py  dosyasını uygulama
+klasörüne geri kopyalarsanız eski hâle dönersiniz. Bir önceki
+güncellemenin yedeği de "guncelleme_oncesi_eski" adıyla saklanır.
+
+Güncelleme yedek alamazsa hiçbir dosyaya dokunmaz ve bunu ekranda
+söyler: geri dönüşü olmayan bir değişiklik, kaçırılan bir
+güncellemeden daha kötüdür.
+
+
+TAM PAKET NE ZAMAN GEREKİR
+--------------------------
+
+Bu güncelleme paketinde gömülü Python YOKTUR; kurulu uygulamanızdaki
+Python olduğu gibi kullanılır. Elinizde çalışan bir kurulum yoksa bu
+paket işe yaramaz, tam paket (KDV_Inceleme_Calismasi_Windows.zip)
+gerekir.
