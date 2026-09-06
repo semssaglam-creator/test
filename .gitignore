@@ -14,5 +14,5 @@ baslatma_hatasi.txt
 
 # Mac paketi uretim ciktisi
 /mac/Beyanname_Dokumu_Mac.zip
-/mac/beyanname_dokumu/dokum.txt
+/mac/beyanname_dokumu/dokum*.txt
 /mac/beyanname_dokumu/dokum_hata.txt

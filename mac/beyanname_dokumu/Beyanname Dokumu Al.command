@@ -50,7 +50,14 @@ if [ -z "$PDF" ]; then
 fi
 
 echo "Secilen dosya: $PDF"
-CIKTI="$KLASOR/dokum.txt"
+
+# Cikti dosyasi PDF'in adindan turetilir. Sabit bir "dokum.txt" kullanilirsa
+# ikinci beyanname birincinin uzerine yazilir; ustelik TextEdit acik duran
+# dosyayi kendiliginden tazelemedigi icin ekranda hala ESKI dokum gorunur ve
+# kullanici farkinda olmadan ayni metni ikinci kez kopyalar. Bir kez oldu.
+TEMEL="$(basename "$PDF")"
+TEMEL="${TEMEL%.*}"
+CIKTI="$KLASOR/dokum - $TEMEL.txt"
 HATA="$KLASOR/dokum_hata.txt"
 EK_GIZLE=""
 
@@ -111,7 +118,11 @@ Temizse boş bırakıp Bitti deyin." default answer "" buttons {"Bitti", "Yenide
 done
 
 echo
-echo "Hazir. dokum.txt dosyasinin TAMAMINI kopyalayip sohbete yapistirin."
+echo "Hazir. Asagidaki dosyanin TAMAMINI kopyalayip sohbete yapistirin:"
+echo
+echo "    $CIKTI"
+echo
+echo "Her beyanname icin ayri bir dosya olusur; ustune yazilmaz."
 echo
 read -r -p "Kapatmak icin Enter'a basin..." || true
 exit 0

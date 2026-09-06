@@ -28,7 +28,14 @@ NASIL CALISTIRILIR
    Terminal penceresi acilir; bir dosya secme penceresi cikar.
 
 3. Beyanname PDF'ini secin.
-   Yanina "dokum.txt" olusur ve kendiliginden acilir.
+   Yanina PDF ile ayni adi tasiyan bir "dokum - ....txt" dosyasi olusur ve
+   kendiliginden acilir. Her beyanname icin ayri dosya olusur; ikinci bir
+   beyanname birincinin uzerine YAZMAZ.
+
+   Birden fazla beyanname isliyorsaniz: her seferinde acilan yeni pencereyi
+   kopyalayin. TextEdit'te acik duran eski bir pencere kendiliginden
+   tazelenmez; yanlislikla ayni metni ikinci kez kopyalamamak icin isi
+   biten pencereyi kapatin.
 
 
 ILK ACILISTA "GUVENLIK" UYARISI CIKARSA
