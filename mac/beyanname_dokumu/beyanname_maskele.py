@@ -31,12 +31,24 @@ import sys
 import unicodedata
 
 def _lib_yollarini_ekle():
-    """Uygulamanin gomulu `lib/` klasorunu arayip sys.path'e ekler.
+    """Gomulu `lib/` (ve yanindaki `lib_ek/`) klasorunu sys.path'e ekler.
 
     Dagitilan pakette lib/ betigin yanindadir; depodan calistirilinca ise
     uygulamanin lib/ klasoru (linux/kdv_uygulamasi/lib) kullanilir. Dosya
     tek basina indirilip baska bir yere de konabiliyor; o yuzden birkac makul
     yer sirayla denenir. Hicbiri yoksa sistemde kurulu pypdf de is gorur.
+
+    lib_ek NEDEN GEREKLI: pypdf, Python 3.11'den eskisinde `Self`,
+    3.10'dan eskisinde `TypeAlias`/`TypeGuard` icin `typing_extensions`
+    modulunu ice aktarir. macOS'un kendi python3'u 3.9'dur; typing_extensions
+    yanina konmazsa pypdf'in ice aktarmasi ImportError ile duser ve hata
+    "pypdf yok" gibi gorunur. Gelistirme makinesinde Python 3.11 oldugu icin
+    bu dal hic calismaz - bu yuzden paketleyici eski bir yorumlayiciyla
+    deneme yapar (bkz. paketle_mac.py).
+
+    lib_ek SONA eklenir: icindeki typing_extensions ortak bir moduldur,
+    basa eklenirse bilgisayarda kurulu surumu golgeler ve ona guvenen
+    paketleri bozar.
     """
     burasi = os.path.dirname(os.path.abspath(__file__))
     depo = os.path.join(burasi, os.pardir, os.pardir)   # mac/beyanname_dokumu -> depo koku
@@ -51,6 +63,9 @@ def _lib_yollarini_ekle():
     for aday in adaylar:
         if os.path.isdir(os.path.join(aday, "pypdf")) and aday not in sys.path:
             sys.path.insert(0, aday)
+            ek = os.path.join(os.path.dirname(aday), "lib_ek")
+            if os.path.isdir(ek) and ek not in sys.path:
+                sys.path.append(ek)
             return aday
     return None
 
@@ -159,14 +174,19 @@ def parcalari_al(yol):
     _kripto_saglayicisini_ele()
     try:
         import pypdf
-    except ImportError:
+    except ImportError as exc:
+        # Gercek hatayi MUTLAKA yaz. Onceden burada sabit bir "pypdf yok"
+        # metni vardi; oysa hata pypdf'in KENDI bagimliligindan geliyordu
+        # (typing_extensions) ve mesaj yanlis yere baktirdi.
         sys.exit(
-            "pypdf bulunamadi.\n\n"
-            "Bu betik PDF okumak icin pypdf kullanir; normalde yanindaki\n"
-            "lib/ klasorunden gelir. Demek ki lib/ klasoru eksik.\n\n"
-            "Cozum: paketi (zip'i) oldugu gibi acin - beyanname_maskele.py,\n"
-            "'Beyanname Dokumu Al.command' ve lib/ ayni klasorde durmali.\n"
-            "Ya da pypdf'i kurun: pip3 install --user pypdf")
+            "PDF okuyucu (pypdf) yuklenemedi.\n\n"
+            "Asil hata: %s\n\n"
+            "Python surumu: %s\n"
+            "Aranan lib klasoru: %s\n\n"
+            "Genellikle sebep, paketin eksik acilmasidir: beyanname_maskele.py,\n"
+            "'Beyanname Dokumu Al.command', lib/ ve lib_ek/ ayni klasorde\n"
+            "yan yana durmali. Zip'i oldugu gibi acip yeniden deneyin."
+            % (exc, sys.version.split()[0], ARANAN_LIB or "bulunamadi"))
     if isinstance(yol, str) and not os.path.isfile(yol):
         sys.exit("Dosya bulunamadi: %s\n"
                  "Yolu kontrol edin; bosluk iceriyorsa tirnak icine alin." % yol)

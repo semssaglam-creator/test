@@ -22,6 +22,7 @@ NASIL CALISTIRILIR
        Beyanname Dokumu Al.command
        beyanname_maskele.py
        lib/
+       lib_ek/
 
 2. "Beyanname Dokumu Al.command" dosyasina CIFT TIKLAYIN.
    Terminal penceresi acilir; bir dosya secme penceresi cikar.
@@ -49,6 +50,13 @@ Internetten indirilen dosyalari macOS ilk seferinde durdurur.
          chmod +x "Beyanname Dokumu Al.command"
 
      Sonra yeniden cift tiklayin.
+
+
+"PDF OKUYUCU (PYPDF) YUKLENEMEDI" DERSE
+--------------------------------------
+Klasorde lib/ ve lib_ek/ yan yana duruyor mu, ona bakin. Zip kismi
+acildiysa (ornegin yalnizca .command dosyasi masaustune suruklendiyse)
+bu hata cikar. Zip'i oldugu gibi, tek klasor halinde acin.
 
 
 "PYTHON 3 BULUNAMADI" DERSE
