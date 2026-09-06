@@ -618,6 +618,29 @@ def duzeltme_karsilastirmalari(duzen):
     return sonuc
 
 
+def duzeltmeyle_dogan_vergi(duzen):
+    """Duzeltme beyannameleriyle ODENECEK hale gelen KDV toplami.
+
+    Vergi ziyai cezasinin matrahi budur. Faturalardaki KDV toplamiyla
+    KARISTIRILMAMALI: duzeltme indirimi cikarir, ama cikarilan indirim once
+    devreden KDV'yi eritir; ancak devir tukendikten sonra odenecek vergi
+    dogar. Bir duzeltme yalnizca devri eksiltmisse ortada odenecek vergi ve
+    dolayisiyla ziya YOKTUR, vergi dairesince ceza da kesilmemistir.
+
+    Adim adim toplanir (`duzeltme_adimlari`), donemin ilk ve son hali
+    karsilastirilarak degil: ayni doneme birden cok duzeltme verilmisse her
+    adimda dogan vergi ayri ayri tahakkuk etmistir. Yalnizca ARTISLAR
+    sayilir; bir duzeltme odenecek vergiyi azaltmissa bu, baska bir donemde
+    dogan ziyayi kapatmaz.
+    """
+    toplam = 0.0
+    for adim in duzeltme_adimlari(duzen):
+        for satir in adim["satirlar"]:
+            if satir["kod"] == "odenmesi_gereken_kdv" and satir["fark"] > 0:
+                toplam += satir["fark"]
+    return round(toplam, 2)
+
+
 def duzeltme_adimlari(duzen):
     """Her duzeltme beyannamesini BIR ONCEKI surumle karsilastirir.
 

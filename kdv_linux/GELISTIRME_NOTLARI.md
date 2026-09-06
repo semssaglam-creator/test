@@ -72,6 +72,24 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-09-06 — **Kullanma durumu artık belgenin TÜRÜNÜ değiştiriyor.**
+      Faturaların tamamı düzeltmeyle çıkarılmışsa tarh edilecek vergi iki
+      hâlde de yoktur, ama düzenlenecek belge farklıdır:
+      *bilmeden* → **Vergi Tekniği Raporu** (vergi de ceza da yok);
+      *bilerek* → **Vergi İnceleme Raporu** (tarhiyat yine önerilmez, ancak
+      düzeltme beyannameleri üzerine VUK 344 son fıkra uyarınca kesilmiş olan
+      **yarım kat** cezanın **üç kata tamamlanması** vergi dairesinden istenir
+      ve VUK 359 kapsamında vergi suçu raporu düzenlenir). Belge başlığı ve
+      dosya adı da buna göre değişiyor; ikisi ayrı belgedir ve aynı klasörde
+      yan yana durabilmeli.
+      **Cezanın matrahı düzeltildi:** eskiden faturalardaki KDV toplamı
+      alınıyordu; doğrusu düzeltmeyle *ödenecek hâle gelen* vergidir
+      (`beyannameler.duzeltmeyle_dogan_vergi`). Düzeltme önce devreden KDV'yi
+      eritir; ziya ancak devir tükendikten sonra doğar. Bu yüzden üç hâl ayrı
+      cümle gerektiriyor ve üçü de yazıldı: tutar bilinmiyor (beyanname
+      yüklenmemiş → kırmızı yer tutucu), ziya doğmamış (yalnızca devir
+      eridi → tamamlanacak ceza yok), ziya var (tutarlar yazılır).
+
 - [x] 2026-09-06 — **Beyannamenin yeni çıktı biçimi okunuyor.** Aynı KDV
       beyannamesinin iki basımı dolaşımda; okuyucu ikisini de kabul ediyor ve
       hangisi olduğunu kendi anlıyor (`pdf_beyanname._yeni_bicim_mi`, ölçüt

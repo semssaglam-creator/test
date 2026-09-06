@@ -735,16 +735,34 @@ class Istekci(BaseHTTPRequestHandler):
         if not uygun:
             raise ApiHata(gerekce)
         karsilastirmalar = self._duzeltme_karsilastirmalari(calisma)
+        ziya = self._duzeltmeyle_dogan_vergi(calisma)
         belgeler = [
             (y, duzeltme_kabul_raporu.rapor_uret(
                 inceleme, calisma.get("kunye"), yillar, sonuc, calisma,
-                bulgular, karsilastirmalar, y))
+                bulgular, karsilastirmalar, y, ziya))
             for y in (duzeltme_kabul_raporu.rapor_yillari(sonuc) or [None])]
-        return belgeler, inceleme
+        bilerek = bool(faturalar.bilerek_kullananlar(satirlar))
+        return belgeler, inceleme, bilerek
+
+    def _duzeltmeyle_dogan_vergi(self, calisma):
+        """Duzeltme beyannameleriyle odenecek hale gelen KDV.
+
+        Beyanname PDF'leri yuklenmemisse None doner; belge o zaman tutar
+        yerine kirmizi yer tutucu yazar. Sifir donmesi bundan farklidir ve
+        "ziya dogmamis" demektir.
+        """
+        if not calisma.get("beyannameler"):
+            return None
+        try:
+            beyannameler = _beyanname_modulu()
+            duzen = beyannameler.duzenle(calisma["beyannameler"])
+            return beyannameler.duzeltmeyle_dogan_vergi(duzen)
+        except Exception:                       # okunamayan beyanname belgeyi durdurmasin
+            return None
 
     def _kabul_raporu_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()
-        belgeler, _inceleme = self._kabul_raporu_hazirla(veri)
+        belgeler, _inceleme, _bilerek = self._kabul_raporu_hazirla(veri)
         kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
         parcalar = []
         for yil, belge in belgeler:
@@ -757,8 +775,8 @@ class Istekci(BaseHTTPRequestHandler):
 
     def _kabul_raporu_gonder(self, veri):
         from . import duzeltme_kabul_raporu as R
-        belgeler, inceleme = self._kabul_raporu_hazirla(veri)
-        dosyalar = [(R.dosya_adi(inceleme, yil), belge.bayt())
+        belgeler, inceleme, bilerek = self._kabul_raporu_hazirla(veri)
+        dosyalar = [(R.dosya_adi(inceleme, yil, bilerek), belge.bayt())
                     for yil, belge in belgeler]
         self._ciktilara_yaz(dosyalar)
         if len(dosyalar) == 1:
@@ -771,7 +789,7 @@ class Istekci(BaseHTTPRequestHandler):
         with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
             for ad, govde in dosyalar:
                 z.writestr(ad, govde)
-        self._belge_gonder(paket.getvalue(), R.paket_adi(inceleme),
+        self._belge_gonder(paket.getvalue(), R.paket_adi(inceleme, bilerek),
                            "application/zip")
 
     def _ciktilara_yaz(self, dosyalar):

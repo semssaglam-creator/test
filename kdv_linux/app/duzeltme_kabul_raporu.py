@@ -1,10 +1,26 @@
-"""Duzeltme kabul raporu (Vergi Teknigi Raporu).
+"""Duzeltme kabul raporu.
 
 Sahte belge kullanma incelemesinde, sahteci mukelleften alinan faturalarin
 TAMAMI ya duzeltme beyannamesiyle indirimlerden cikarilmis ya da hic kayitlara
-alinmamissa tarhiyat yapilacak bir sey kalmaz: reddedilecek indirim zaten
-beyanda degildir. Bu durumda tarhiyatli rapor degil, tespiti ve "yapilacak bir
-islem bulunmadigi" sonucunu yazan bir rapor duzenlenir.
+alinmamissa TARH EDILECEK vergi kalmaz: reddedilecek indirim zaten beyanda
+degildir. Tarhiyat iki halde de yoktur; kullanma durumu ise hem belgenin
+TURUNU hem sonucu degistirir:
+
+  BILMEDEN kullanma -> VERGI TEKNIGI RAPORU
+      Vergi de ceza da yoktur; rapor tespiti ve "yapilacak bir islem
+      bulunmadigi" kanaatini kurar.
+
+  BILEREK kullanma  -> VERGI INCELEME RAPORU
+      Yine tarhiyat onerilmez, ancak kasit unsuru olustugu icin:
+        - duzeltme beyannameleri uzerine VUK 344 son fikra uyarinca kesilmis
+          olan YARIM KAT (%50) vergi ziyai cezasinin UC KATA TAMAMLANMASI
+          vergi dairesinden istenir,
+        - VUK 359 kapsaminda vergi sucu raporu duzenlenir ve suc duyurusunda
+          bulunulur.
+      Cezanin matrahi, faturalardaki KDV toplami DEGIL, duzeltmeyle odenecek
+      hale gelen vergidir (bkz. beyannameler.duzeltmeyle_dogan_vergi):
+      duzeltme once devreden KDV'yi eritir, ziya ancak devir tukendikten
+      sonra dogar.
 
 Yapisi ornek rapordan cikarilmistir:
 
@@ -16,9 +32,9 @@ Yapisi ornek rapordan cikarilmistir:
   4- DEGERLENDIRMELER                (KDV, bilerek/bilmeden, kazanc vergileri)
   5- SONUC
 
-Tarhiyat, ceza ve uzlasma bolumleri BILEREK yoktur; bu raporun tamami
-"islem yapilmasina gerek bulunmadigi" kanaatini kurar. Sahte belge kullanma
-raporu (sahte_belge_raporu.py) ise tarhiyatli dosyalar icindir; ikisi ayni
+Tarhiyat ve uzlasma bolumleri BILEREK yoktur: bu raporda onerilen bir vergi
+yoktur, dolayisiyla uzlasilacak bir tarhiyat da yoktur. Sahte belge kullanma
+raporu (sahte_belge_raporu.py) tarhiyatli dosyalar icindir; ikisi ayni
 dosyada birlikte kullanilmaz.
 """
 from . import faturalar as F
@@ -230,7 +246,53 @@ def _ilgili_mevzuat(b):
 
 
 # -------------------------------------------------------- 4) degerlendirmeler
-def _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme):
+def _ceza_tamamlama(b, kunye, ziya):
+    """Kesilmis yarim kat cezanin uc kata tamamlanmasi paragrafi.
+
+    Duzeltme beyannamesi kanuni suresinden sonra verildigi icin, dogan vergi
+    uzerinden VUK 344 son fikra uyarinca YARIM KAT (%50) vergi ziyai cezasi
+    zaten kesilmistir. Belgenin bilerek kullanildigi tespit edildiginde
+    gereken ceza UC KATTIR; bu yuzden yeni bir ceza degil, kesilmis cezanin
+    tamamlanmasi istenir.
+
+    Uc hal ayrilir; ucu de dogru cumleyi gerektirir:
+      - ziya bilinmiyor (beyannameler yuklenmemis) -> kirmizi yer tutucu
+      - ziya YOK (duzeltme yalnizca devri eritmis) -> tamamlanacak ceza yok
+      - ziya VAR -> tutarlar yazilir
+    """
+    M = ik.mukellef_sozu
+    if ziya is None:
+        b.paragraf(
+            "Düzeltme beyannameleri üzerine tahakkuk eden [vergi ziyaına konu "
+            "tutar] TL üzerinden Vergi Usul Kanunu’nun 344. maddesinin son "
+            "fıkrası uyarınca kesilen yarım kat vergi ziyaı cezasının, "
+            "belgelerin bilerek kullanıldığı tespit edildiğinden aynı maddenin "
+            "ikinci fıkrası uyarınca üç kata tamamlanması gerekmektedir. "
+            "(Tutarlar, beyanname PDF’leri yüklendiğinde kendiliğinden "
+            "yazılır.)", girinti=1, renk=KIRMIZI)
+        return
+    if ziya <= 0:
+        b.paragraf(
+            "Düzeltme beyannameleriyle indirimlerden çıkarılan katma değer "
+            "vergisi, %s devreden katma değer vergisini azaltmış olup ödenmesi "
+            "gereken bir vergi doğmamıştır. Bu nedenle vergi ziyaı da "
+            "oluşmamış, düzeltme beyannameleri üzerine vergi ziyaı cezası "
+            "kesilmemiştir; tamamlanması istenecek bir ceza bulunmamaktadır."
+            % M(kunye, ek="in"), girinti=1)
+        return
+    b.paragraf(
+        "Düzeltme beyannameleri kanuni süresinden sonra verildiğinden, doğan "
+        "%s TL vergi üzerinden Vergi Usul Kanunu’nun 344. maddesinin son "
+        "fıkrası uyarınca yarım kat (%%50) vergi ziyaı cezası, yani %s TL "
+        "kesilmiştir. Belgelerin bilerek kullanıldığı tespit edildiğinden "
+        "aynı maddenin ikinci fıkrası uyarınca kesilmesi gereken ceza üç kat, "
+        "yani %s TL’dir. Bu itibarla kesilmiş cezanın %s TL tutarında "
+        "tamamlanmasının vergi dairesinden istenmesi gerekmektedir."
+        % (_tl(ziya), _tl(round(ziya * 0.5, 2)), _tl(round(ziya * 3, 2)),
+           _tl(round(ziya * 2.5, 2))), girinti=1)
+
+
+def _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme, ziya):
     M = ik.mukellef_sozu
     b.baslik("4- DEĞERLENDİRMELER", duzey=1)
 
@@ -288,6 +350,7 @@ def _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme):
             "vergi ziyaına sebebiyet verilmiş olması hâlinde 344. madde "
             "uyarınca üç kat vergi ziyaı cezası kesilmesi gerekmektedir.",
             girinti=1)
+        _ceza_tamamlama(b, kunye, ziya)
     else:
         b.paragraf(
             "%s tarafından düzeltme beyannamesi verilerek faturalarda yer alan "
@@ -322,7 +385,25 @@ def _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme):
 
 
 # ------------------------------------------------------------------ 5) sonuc
-def _sonuc(b, inceleme, kunye, donemler, bilerek, ziya_matrahi):
+def _ceza_maddesi(ziya):
+    """SONUC bolumundeki ceza maddesi; ziyanin bilinip bilinmedigine gore."""
+    if ziya is None:
+        return ("Düzeltme beyannameleri üzerine kesilen yarım kat vergi ziyaı "
+                "cezasının, 213 sayılı Vergi Usul Kanunu’nun 344. maddesi "
+                "uyarınca ÜÇ KATA TAMAMLANMASININ vergi dairesinden "
+                "istenmesi gerektiği,")
+    if ziya <= 0:
+        return ("Düzeltme beyannameleriyle ödenmesi gereken bir vergi "
+                "doğmadığından vergi ziyaı oluşmadığı ve tamamlanması "
+                "istenecek bir vergi ziyaı cezası bulunmadığı,")
+    return ("Düzeltme beyannameleri üzerine tahakkuk eden %s TL vergi "
+            "üzerinden kesilmiş olan yarım kat (%s TL) vergi ziyaı cezasının, "
+            "213 sayılı Vergi Usul Kanunu’nun 344. maddesi uyarınca üç kata "
+            "(%s TL) TAMAMLANMASININ vergi dairesinden istenmesi gerektiği,"
+            % (_tl(ziya), _tl(round(ziya * 0.5, 2)), _tl(round(ziya * 3, 2))))
+
+
+def _sonuc(b, inceleme, kunye, donemler, bilerek, ziya):
     M = ik.mukellef_sozu
     b.baslik("5- SONUÇ", duzey=1)
     b.paragraf(
@@ -341,13 +422,11 @@ def _sonuc(b, inceleme, kunye, donemler, bilerek, ziya_matrahi):
             "ait katma değer vergisi tutarları beyanlardan çıkarılmış "
             "olduğundan tarh edilecek bir katma değer vergisi bulunmadığı,",
             "Raporun 4.2. bölümünde belirtildiği üzere, söz konusu belgelerin "
-            "bilerek kullanıldığı ve kasıt unsurunun oluştuğu; bu nedenle "
-            "213 sayılı Vergi Usul Kanunu’nun 344. maddesi uyarınca %s TL "
-            "vergi ziyaına konu tutar üzerinden ÜÇ KAT vergi ziyaı cezası "
-            "kesilmesi gerektiği," % _tl(ziya_matrahi),
-            "Aynı Kanun’un 359. maddesi kapsamında %s hakkında vergi suçu "
-            "raporu düzenlenerek Cumhuriyet Savcılığına suç duyurusunda "
-            "bulunulması gerektiği," % ik.mukellef_sozu(kunye),
+            "bilerek kullanıldığı ve kasıt unsurunun oluştuğu,",
+            _ceza_maddesi(ziya),
+            "213 sayılı Vergi Usul Kanunu’nun 359. maddesi kapsamında %s "
+            "hakkında vergi suçu raporu düzenlenerek Cumhuriyet Savcılığına "
+            "suç duyurusunda bulunulması gerektiği," % ik.mukellef_sozu(kunye),
             "Raporun 4.3. bölümünde belirtildiği üzere, %s ve %s yönünden "
             "yapılacak bir işlem bulunmadığı,"
             % (ik.gelir_vergisi_adi(kunye).title(),
@@ -368,9 +447,28 @@ def _sonuc(b, inceleme, kunye, donemler, bilerek, ziya_matrahi):
 
 
 # ------------------------------------------------------------------- uretim
+def belge_turu(satici_satirlari):
+    """Duzenlenecek belgenin adi. Kullanma durumu belgenin TURUNU degistirir.
+
+    Bilmeden kullanmada vergi de ceza da yoktur; yazilan sey bir tespit
+    raporudur, yani VERGI TEKNIGI RAPORU. Bilerek kullanmada tarhiyat yine
+    yoktur ama kesilmis cezanin uc kata tamamlanmasi istenir ve vergi sucu
+    raporu duzenlenir; bunlar bir VERGI INCELEME RAPORU'nun sonuclaridir.
+    """
+    return ("VERGİ İNCELEME RAPORU" if F.bilerek_kullananlar(satici_satirlari)
+            else "VERGİ TEKNİĞİ RAPORU")
+
+
 def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
-               karsilastirmalar=None, yil=None):
-    """Duzeltme kabul raporu taslagini uretir ve `Belge` dondurur."""
+               karsilastirmalar=None, yil=None, ziya=None):
+    """Duzeltme kabul raporu taslagini uretir ve `Belge` dondurur.
+
+    `ziya`: duzeltme beyannameleriyle odenecek hale gelen KDV. Bilerek
+    kullanmada kesilmis cezanin tamamlanmasi bunun uzerinden hesaplanir.
+    Beyannameler yuklenmemisse None gelir ve tutarlar kirmizi yer tutucu
+    olarak yazilir; sifir gelmesi ise "ziya dogmamis" demektir - ikisi ayni
+    sey degildir ve belgede ayri cumleleri gerektirir.
+    """
     kunye = ik.normalize(kunye)
     calisma = calisma or {}
     donemler = dolu_donemler(sonuc)
@@ -387,15 +485,14 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     oran = F.duzeltme_kabul_orani(liste, sonuc, saticilar)
 
     b = Belge()
-    b.paragraf("VERGİ TEKNİĞİ RAPORU", kalin=True, hiza="orta")
+    b.paragraf(belge_turu(satici_satirlari), kalin=True, hiza="orta")
     b.bos_satir()
     _giris(b, inceleme, kunye, donemler, satici_satirlari)
     _tespitler(b, kunye, donemler, satici_satirlari, liste, karsilastirmalar)
     _ilgili_mevzuat(b)
-    _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme)
+    _degerlendirmeler(b, kunye, satici_satirlari, oran, inceleme, ziya)
     _sonuc(b, inceleme, kunye, donemler,
-           F.bilerek_kullananlar(satici_satirlari),
-           sum(x.get("liste_kdv") or 0.0 for x in satici_satirlari))
+           F.bilerek_kullananlar(satici_satirlari), ziya)
     return b
 
 
@@ -405,15 +502,21 @@ def rapor_yillari(sonuc):
     return _y(sonuc)
 
 
-def dosya_adi(inceleme, yil=None):
+def _on_ek(bilerek):
+    """Dosya adi on eki. Belgenin turu dosya adindan da okunabilmeli:
+    ikisi ayri belgedir ve ayni klasorde yan yana durabilir."""
+    return "Vergi_inceleme_raporu" if bilerek else "Vergi_teknigi_raporu"
+
+
+def dosya_adi(inceleme, yil=None, bilerek=False):
     ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
                  if c.isalnum() or c in " -_").strip() or "rapor"
     if yil:
         ad = "%s_%s" % (yil, ad)
-    return ("Duzeltme_kabul_raporu_taslagi_%s.docx" % ad).replace(" ", "_")
+    return ("%s_taslagi_%s.docx" % (_on_ek(bilerek), ad)).replace(" ", "_")
 
 
-def paket_adi(inceleme):
+def paket_adi(inceleme, bilerek=False):
     ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
                  if c.isalnum() or c in " -_").strip() or "rapor"
-    return ("Duzeltme_kabul_raporlari_%s.zip" % ad).replace(" ", "_")
+    return ("%s_%s.zip" % (_on_ek(bilerek), ad)).replace(" ", "_")
