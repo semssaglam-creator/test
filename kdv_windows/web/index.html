@@ -2902,6 +2902,8 @@ function bnDetayCiz() {
     `<div class="oge"><span class="rozet ${s.tur === "duzeltme" ? "duzeltme" : "kanuni"}">` +
     `${s.etiket}</span><span>${s.onay_zamani || "onay zamanı yok"}</span>` +
     (s.duzeltme_nedeni ? `<span style="color:#8a6d1b;">${s.duzeltme_nedeni}</span>` : "") +
+    (s.bicim === "yeni" ? `<span style="color:#5a8a6d;" title="Beyanname, yeni ` +
+      `çıktı düzeninde okundu.">yeni biçim</span>` : "") +
     `<span style="color:#8899aa;flex:1;">${s.kaynak}</span></div>`).join("");
 
   const satirlar = durum.bnOzet.tablolar[donem.anahtar] || [];

@@ -125,6 +125,10 @@ def duzenle(beyannameler):
                 "onay_zamani": b.get("onay_zamani") or "",
                 "onay_ts": b.get("onay_ts") or "",
                 "duzeltme_nedeni": b.get("duzeltme_nedeni") or "",
+                # Hangi cikti duzeninden okundugu ("eski" / "yeni"); ekranda
+                # yalnizca yeni bicim isaretlenir, okuyucunun onu tanidigi
+                # gorunsun diye.
+                "bicim": b.get("bicim") or "",
                 "kaynak": b.get("kaynak") or "",
                 "vkn": b.get("vkn") or "",
                 "unvan": b.get("unvan") or "",

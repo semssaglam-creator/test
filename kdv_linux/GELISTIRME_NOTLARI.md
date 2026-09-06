@@ -72,6 +72,24 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-09-06 — **Beyannamenin yeni çıktı biçimi okunuyor.** Aynı KDV
+      beyannamesinin iki basımı dolaşımda; okuyucu ikisini de kabul ediyor ve
+      hangisi olduğunu kendi anlıyor (`pdf_beyanname._yeni_bicim_mi`, ölçüt
+      dönem bilgisinin "Yıl: 2026" gibi tek parçada basılması). Farklar:
+      künye alanları "Etiket: Değer" olarak tek parçada; onay damgası
+      `06/05/2026 06:01:51` (nokta yerine eğik çizgi, tire yok); alan adları
+      kısaltılmış ("… Katma Değer Vergisi" → "… KDV"); vergi dairesi
+      etiketsiz, dönem serisinin solunda; indirimler ayrıca "İNDİRİMLER
+      DETAYI" bölümünde resmi satır koduyla ("108 - Yurtiçi Alımlara İlişkin
+      KDV") dökülüyor. **En önemlisi:** yeni biçim, tutarı tümden sıfır olan
+      BÖLÜMÜ başlığıyla birlikte hiç basmıyor (örnek beyannamede satış
+      olmadığı için matrah bölümü yok), o yüzden eksik bölüm "okunamadı"
+      değil "sıfır" demek. Yeni biçimde okunamayan çekirdek satırlar sıfır
+      sayılıyor; yanlış okumayı örtmez, çünkü sıfır kabulü hatalı olsaydı
+      `_denetle`nin "toplam KDV − indirimler = ödenecek / devreden"
+      eşitliği tutmazdı. Ekranda sürüm satırında "yeni biçim" yazıyor.
+      Elde bir düzeltme beyannamesinin yeni biçimli örneği yok; "Beyanname
+      Türü: Düzeltme…" alanı destekleniyor ama örnekle doğrulanmadı.
 - [x] 2026-08-26 — **Linux sürümü çalışır durumda doğrulandı.** Uzun süren
       "hiç açılmıyor" arızasının sebebi bulundu: `::1` çift dinleme
       eklenirken "IPv6 yok" ile "port dolu" ayrılmamıştı. `_ipv6_var()`

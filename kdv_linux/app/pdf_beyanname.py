@@ -5,6 +5,31 @@ Mukellefler Icin)" ciktisidir (1015 A). Hem kanuni suresinde verilen beyanname
 hem de duzeltme beyannamesi ayni duzeni tasir; ikisi "Duzeltme Nedeni"
 satirinin varligindan ve "Onay Zamani" damgasindan ayirt edilir.
 
+Iki cikti bicimi
+----------------
+Ayni beyannamenin iki farkli basimi dolasimdadir; okuyucu ikisini de kabul
+eder ve hangisi oldugunu kendi anlar (`_yeni_bicim_mi`).
+
+  ESKI bicim                          YENI bicim
+  ----------------------------------  ----------------------------------
+  "Yıl"  "2025"   (iki ayri parca)    "Yıl: 2026"   (tek parca)
+  "28.01.2025 - 22:07:21"             "06/05/2026 06:01:51"
+  "Vergi Kimlik Numarası"             "Vergi Kimlik No"
+  "Soyadı (Unvanı)" + devami          "Adı Soyadı/Ünvanı"
+  "... Katma Değer Vergisi"           "... KDV"  (sonuc hesaplarinda)
+  vergi dairesi, adinin altindaki      vergi dairesi etiketsiz; donem
+  "Vergi Dairesi Müdürlüğü" ile        serisinin ("Şube No / Yıl / Ay")
+  isaretlenir                          en solunda durur
+  indirimler yalnizca toplam olarak    ayrica "INDIRIMLER DETAYI"nde
+  ilgili satirlarda                    kalem kalem ("108 - ...")
+  butun bolumler basilir, bos          tutari tumden sifir olan BOLUM hic
+  satirlar 0,00 gorunur                basilmaz
+
+Son fark onemlidir: yeni bicimde eksik bolum "okunamadi" degil "sifir"
+demektir. Bu yuzden yeni bicimde okunamayan cekirdek satirlar sifir kabul
+edilir (`YENI_BICIM_SIFIRLAR`); okuma yanlissa `_denetle`nin aritmetigi
+zaten tutmaz ve kullanici uyarilir.
+
 Neden konum bazli okuma
 -----------------------
 PDF'te metin, gorsel duzenden bagimsiz bir sirada saklanir; duz metin
@@ -90,6 +115,20 @@ ETIKET_ESLEMESI = {
     "TESLIMVEHIZMETLERINKARSILIGINITESKILEDENBEDELKUMULATIF": "teslim_bedel_kumulatif",
     "KREDIKARTIILETAHSILEDILENTESLIMVEHIZMETLERINKDVDAHILKARSILIGINITESKILEDENBEDEL":
         "kredi_karti_tahsilat",
+
+    # --- Yeni bicimin kisaltilmis alan adlari
+    # Ayni satirlar, "Katma Değer Vergisi" yerine "KDV" yazilarak basiliyor.
+    # Eski adlar yukarida duruyor; ikisi bir arada calisir.
+    "HESAPLANANKDV": "hesaplanan_kdv",
+    "TOPLAMKDV": "toplam_kdv",
+    "TECILEDILECEKKDV": "tecil_edilecek_kdv",
+    "ODENMESIGEREKENKDV": "odenmesi_gereken_kdv",
+    "IADEEDILMESIGEREKENKDV": "iade_edilmesi_gereken_kdv",
+    "SONRAKIDONEMEDEVREDENKDV": "sonraki_donem_devreden",
+    # "İNDİRİMLER DETAYI" tablosunun devir satiri. Ayni metin bolumun
+    # basligi olarak da gecer; baslikta tutar bulunmadigi icin deger
+    # buradan, tablo satirindan gelir.
+    "ONCEKIDONEMDENDEVREDENKDV": "onceki_donem_devreden",
 }
 
 # Beyannamede yer alan ama uygulama satirlarina girmeyen, yine de bilgi olarak
@@ -110,6 +149,15 @@ BOLUM_BASLIKLARI = {
     "DIGERBILGILER": "diger",
     "IHRACKAYDIYLATESLIMLER": "ihrac",
     "SONUCHESAPLARI": "sonuc",
+
+    # --- Yeni bicimin bolumleri
+    # Bunlar deger tasimaz; bolum olarak taninmalari, altlarindaki yalin
+    # "Toplam" satirlarinin baska bir bolumun toplami sanilmasini onler.
+    "INDIRIMLERDETAYI": "indirimler_detayi",
+    "DIGERINDIRIMLER": "diger_indirimler",
+    "MUKELLEFBILGILERI": "kunye",
+    "BEYANNAMEYIDUZENLEYENBILGILERI": "kunye",
+    "BEYANNAMEYIONAYLAYANBILGILERI": "kunye",
 }
 
 # Yalnizca belirli bir bolumde anlamli olan etiketler
@@ -118,7 +166,16 @@ BOLUME_BAGLI = {
 }
 
 SAYI = re.compile(r"^-?\d{1,3}(?:\.\d{3})*,\d{2}$|^-?\d+,\d{2}$")
-TARIH_SAATI = re.compile(r"(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2}):(\d{2}):(\d{2})")
+# Onay damgasi iki bicimde gelir: eskisinde "28.01.2025 - 22:07:21",
+# yenisinde "06/05/2026 06:01:51" (nokta yerine egik cizgi, tire yok).
+TARIH_SAATI = re.compile(
+    r"(\d{2})[./](\d{2})[./](\d{4})\s*-?\s*(\d{2}):(\d{2}):(\d{2})")
+# Yeni bicimde kunye alanlari "Etiket: Deger" olarak tek parcada basilir
+# ("Yıl: 2026", "Dönem Tipi: AYLIK", "Onay Zamanı: ...").
+SATIR_ICI_ALAN = re.compile(r"^\s*([^:]{2,40}?)\s*:\s*(.*)$")
+# Yeni bicimde indirim kalemleri resmi satir koduyla basilir:
+# "108 - Yurtiçi Alımlara İlişkin KDV". Kod, alan adinin parcasi degildir.
+BAS_KODU = re.compile(r"^\d{2,3}(?=[A-Z])")
 
 
 class PdfHata(Exception):
@@ -228,8 +285,12 @@ def _tutarlar(parcalar, sayfa_no):
             if s == sayfa_no and tutar_coz(m) is not None]
 
 
-# Formda bir alan adi en fazla kac satira tasiyor
-EN_COK_SATIR = 3
+# Formda bir alan adi en fazla kac satira tasiyor. Yeni bicimde sutunlar
+# daha dar oldugu icin dorde cikti (ornegin "Kredi Kartı İle Tahsil Edilen /
+# Teslim ve Hizmetlerin KDV / Dahil Karşılığını Teşkil Eden / Bedel").
+# Yukseltmek yanlis birlestirme riski tasimaz: birlesik metin ancak BILINEN
+# bir alan adina birebir esitse kabul edilir.
+EN_COK_SATIR = 4
 # Alt alta gelen iki satirin ayni alana ait sayilabilmesi icin en buyuk dikey
 # aralik ve sola hizalanma toleransi
 SATIR_ARALIGI = 14
@@ -237,9 +298,20 @@ HIZA_TOLERANSI = 3
 
 
 def _kod_ara(anahtar, bolum):
-    return (ETIKET_ESLEMESI.get(anahtar)
-            or EK_ETIKETLER.get(anahtar)
-            or BOLUME_BAGLI.get((bolum, anahtar)))
+    kod = (ETIKET_ESLEMESI.get(anahtar)
+           or EK_ETIKETLER.get(anahtar)
+           or BOLUME_BAGLI.get((bolum, anahtar)))
+    if kod:
+        return kod
+    # Yeni bicim alan adinin onune resmi satir kodunu koyuyor
+    # ("108 - Yurtiçi Alımlara İlişkin KDV"). Kod atilarak yeniden bakilir;
+    # boylece iki bicim icin tek bir alan adi tablosu yeter.
+    kodsuz = BAS_KODU.sub("", anahtar)
+    if kodsuz != anahtar:
+        return (ETIKET_ESLEMESI.get(kodsuz)
+                or EK_ETIKETLER.get(kodsuz)
+                or BOLUME_BAGLI.get((bolum, kodsuz)))
+    return None
 
 
 def _bloklari_esle(satirlar):
@@ -339,9 +411,11 @@ def _etiket_mi(metin):
         return True
     # "Vergi Kimlik Numarası", "E-Posta Adresi" gibi kunye etiketleri de burada
     # durdurucu sayilir; hepsini listelemek yerine bilinen birkac tanesi yeter.
+    # Sondaki dordu yeni bicimin kunye alanlaridir.
     return n.startswith(("VERGIKIMLIKNUMARASI", "EPOSTAADRESI", "TICARETSICILNO",
                          "IRTIBATTELNO", "SOYADI", "ADI", "UNVANI",
-                         "VERGIDAIRESIMUDURLUGU", "ONAYZAMANI"))
+                         "VERGIDAIRESIMUDURLUGU", "ONAYZAMANI",
+                         "VERGIKIMLIKNO", "TCKIMLIKNO", "TELEFONNO", "SUBENO"))
 
 
 def _duzeltme_nedeni(ilk_sayfa, indeks):
@@ -378,15 +452,118 @@ def _duzeltme_nedeni(ilk_sayfa, indeks):
     return " ".join(parcalar).strip()
 
 
+def _satir_ici_alanlar(ilk_sayfa):
+    """Yeni bicimdeki "Etiket: Deger" parcalarini sozluge cevirir.
+
+    Ayni etiket birden cok gecerse ilki gecerlidir; kunye alanlari sayfanin
+    ustunde durur, asagidaki tekrarlar (tablo sutunlari) sonra gelir.
+    """
+    alanlar = {}
+    for _x, _y, m in ilk_sayfa:
+        e = SATIR_ICI_ALAN.match(m)
+        if not e:
+            continue
+        anahtar = normalize(e.group(1))
+        if anahtar and anahtar not in alanlar:
+            alanlar[anahtar] = e.group(2).strip()
+    return alanlar
+
+
+def _yeni_bicim_mi(parcalar, alanlar):
+    """Cikti, yeni beyanname duzeninde mi.
+
+    En kesin isaret, donem bilgisinin "Yıl: 2026" gibi TEK parcada
+    basilmasidir; eski bicimde etiket ve deger ayri parcalardir. Yedek
+    isaret, yalnizca yeni bicimde bulunan "INDIRIMLER DETAYI" bolumudur.
+    """
+    if "DONEMTIPI" in alanlar or ("YIL" in alanlar and "AY" in alanlar):
+        return True
+    return any(normalize(m) == "INDIRIMLERDETAYI" for _s, _x, _y, m in parcalar)
+
+
+def _sagdaki_deger(ilk_sayfa, etiketler, dogrula=None, devam=False):
+    """Etiketin sagindaki degeri dondurur.
+
+    `etiketler` normalize edilmis alan adlaridir; ilk gecerli degeri veren
+    gecerlidir (ayni ad formda birden cok blokta gecebiliyor: "Vergi Kimlik
+    No" hem mukellefin hem beyannameyi onaylayanin bolumunde var).
+
+    `devam` verilirse deger, alt satira tasan parcalariyla birlestirilir;
+    yalnizca yeni bicimde gerekir (unvan iki satira tasiyor).
+    """
+    for x, y, m in ilk_sayfa:
+        if normalize(m) not in etiketler:
+            continue
+        aday = None
+        for x2, y2, m2 in ilk_sayfa:
+            if abs(y2 - y) > 3 or x2 <= x + 10:
+                continue
+            if dogrula and not dogrula(m2.strip()):
+                continue
+            if aday is None or x2 < aday[0]:
+                aday = (x2, m2.strip())
+        if aday is None:
+            continue                       # bu blokta yok; sonrakine bak
+        ax, deger = aday
+        if not devam:
+            return deger
+        parcalari, onceki = [deger], y
+        for x2, y2, m2 in ilk_sayfa:
+            if (abs(x2 - ax) <= 6 and 0 < onceki - y2 <= SATIR_ARALIGI
+                    and tutar_coz(m2) is None and not _etiket_mi(m2)):
+                parcalari.append(m2.strip())
+                onceki = y2
+        return " ".join(p for p in parcalari if p).strip()
+    return ""
+
+
+def _yeni_vergi_dairesi(ilk_sayfa):
+    """Yeni bicimde vergi dairesi adini konumundan bulur.
+
+    Bu bicimde alanin etiketi yoktur: ad, donem serisinin ("Şube No: - /
+    Yıl: 2026 / Ay: Nisan / Dönem Tipi: AYLIK") en solunda tek basina
+    durur ve alt satira tasabilir. Bu yuzden "Yıl:" parcasi capa alinip
+    ayni bandin solundaki metin okunur.
+    """
+    capa = next(((x, y) for x, y, m in ilk_sayfa
+                 if ":" in m and normalize(m).startswith("YIL")), None)
+    if capa is None:
+        return ""
+    cx, cy = capa
+    aday = None
+    for x, y, m in ilk_sayfa:
+        if abs(y - cy) > 4 or x >= cx or ":" in m or tutar_coz(m) is not None:
+            continue
+        if aday is None or x < aday[0]:
+            aday = (x, m.strip())
+    if aday is None:
+        return ""
+    ax, ad = aday
+    parcalari, onceki = [ad], cy
+    for x, y, m in ilk_sayfa:
+        if (abs(x - ax) <= HIZA_TOLERANSI and 0 < onceki - y <= SATIR_ARALIGI
+                and ":" not in m and tutar_coz(m) is None and not _etiket_mi(m)):
+            parcalari.append(m.strip())
+            onceki = y
+    return " ".join(p for p in parcalari if p).strip()
+
+
 def _kunye(parcalar):
-    """Mukellef, donem ve onay bilgilerini cikarir."""
+    """Mukellef, donem ve onay bilgilerini cikarir.
+
+    Iki cikti bicimini birden karsilar; farklari modulun basinda anlatildi.
+    """
     kunye = {"vkn": "", "unvan": "", "vergi_dairesi": "", "yil": None, "ay": None,
-             "onay_zamani": "", "duzeltme_nedeni": ""}
+             "onay_zamani": "", "duzeltme_nedeni": "", "donem_tipi": "",
+             "yeni_bicim": False}
 
     ilk_sayfa = [(x, y, m) for s, x, y, m in parcalar if s == 0]
     ilk_sayfa.sort(key=lambda p: (-p[1], p[0]))
     metinler = [m for _x, _y, m in ilk_sayfa]
     tam = " ".join(metinler)
+    alanlar = _satir_ici_alanlar(ilk_sayfa)
+    kunye["yeni_bicim"] = _yeni_bicim_mi(parcalar, alanlar)
+    kunye["donem_tipi"] = alanlar.get("DONEMTIPI", "")
 
     # Onay zamani ve duzeltme nedeni
     eslesme = TARIH_SAATI.search(tam)
@@ -396,6 +573,13 @@ def _kunye(parcalar):
         if normalize(m).startswith("DUZELTMENEDENI"):
             kunye["duzeltme_nedeni"] = (_duzeltme_nedeni(ilk_sayfa, i)
                                         or "(belirtilmemiş)")
+    # Yeni bicimde beyanname turu ayri bir alanda yazili olabiliyor. Buradaki
+    # olcut alanin ADI ve DEGERI birlikte oldugu icin dardir; "Değişiklik
+    # Nedeni" (indirimler detayi tablosunun sutunu) buna takilmaz.
+    if not kunye["duzeltme_nedeni"]:
+        tur = alanlar.get("BEYANNAMETURU", "")
+        if normalize(tur).startswith("DUZELTME"):
+            kunye["duzeltme_nedeni"] = alanlar.get("DUZELTMENEDENI") or tur.strip()
 
     # Vergi dairesi: "VERGI DAIRESI MUDURLUGU" yazisinin hemen ustundeki ad
     for idx, (x, y, m) in enumerate(ilk_sayfa):
@@ -405,9 +589,15 @@ def _kunye(parcalar):
                     kunye["vergi_dairesi"] = m2.strip()
                     break
             break
+    if not kunye["vergi_dairesi"] and kunye["yeni_bicim"]:
+        kunye["vergi_dairesi"] = _yeni_vergi_dairesi(ilk_sayfa)
 
-    # Yil / Ay: etiketin sagindaki deger
+    # Yil / Ay: yeni bicimde ayni parcada ("Yıl: 2026"), eskisinde etiketin
+    # sagindaki ayri parcada.
     for etiket, alan in (("YIL", "yil"), ("AY", "ay")):
+        if alanlar.get(etiket):
+            kunye[alan] = alanlar[etiket]
+            continue
         for x, y, m in ilk_sayfa:
             if normalize(m) != etiket:
                 continue
@@ -425,24 +615,21 @@ def _kunye(parcalar):
     if kunye["ay"]:
         kunye["ay"] = AYLAR_PDF.get(normalize(kunye["ay"]))
 
-    # VKN ve unvan
-    for x, y, m in ilk_sayfa:
-        if normalize(m) == "VERGIKIMLIKNUMARASI":
-            for x2, y2, m2 in ilk_sayfa:
-                if abs(y2 - y) <= 3 and x2 > x + 10 and re.fullmatch(r"\d{10,11}", m2.strip()):
-                    kunye["vkn"] = m2.strip()
-                    break
-            break
-    parcalari = []
-    for etiket in ("SOYADIUNVANI", "ADIUNVANINDEVAMI"):
-        for x, y, m in ilk_sayfa:
-            if normalize(m) == etiket:
-                for x2, y2, m2 in ilk_sayfa:
-                    if abs(y2 - y) <= 3 and x2 > x + 10:
-                        parcalari.append(m2.strip())
-                        break
-                break
+    # VKN: "Vergi Kimlik Numarası" (eski) / "Vergi Kimlik No" (yeni). Ad
+    # formda birden cok gecer (mukellef, beyannameyi duzenleyen, onaylayan);
+    # rakam denetimi sayesinde bos bloklar atlanir ve mukellefinki bulunur.
+    kunye["vkn"] = _sagdaki_deger(
+        ilk_sayfa, {"VERGIKIMLIKNUMARASI", "VERGIKIMLIKNO"},
+        dogrula=lambda v: re.fullmatch(r"\d{10,11}", v) is not None)
+
+    # Unvan: eski bicimde iki ayri alan ("Soyadı (Unvanı)" ve
+    # "Adı (Unvanının Devamı)"), yeni bicimde tek alan ve degeri alt satira
+    # tasabiliyor.
+    parcalari = [_sagdaki_deger(ilk_sayfa, {etiket})
+                 for etiket in ("SOYADIUNVANI", "ADIUNVANINDEVAMI")]
     kunye["unvan"] = " ".join(p for p in parcalari if p).strip()
+    if not kunye["unvan"]:
+        kunye["unvan"] = _sagdaki_deger(ilk_sayfa, {"ADISOYADIUNVANI"}, devam=True)
     return kunye
 
 
@@ -488,6 +675,20 @@ def _turet(degerler):
     if hes is not None and top is not None and "ilave_edilecek_kdv" not in degerler:
         degerler["ilave_edilecek_kdv"] = round(top - hes, 2)
     return degerler
+
+
+# Yeni bicimde tutari tumden sifir olan BOLUM basligiyla birlikte hic
+# basilmiyor (ornek beyannamede satis olmadigi icin "Matrah ve Vergi
+# Bildirimi" bolumu yok). Eski bicimde her satir 0,00 olarak basildigindan
+# bu ayrim yoktu. Bu yuzden yeni bicimde okunamayan cekirdek satirlar sifir
+# sayilir. Yanlis okumayi ortmez: sifir kabulu hatali olsaydi _denetle'deki
+# "toplam KDV - indirimler = odenecek / devreden" esitligi tutmazdi.
+YENI_BICIM_SIFIRLAR = (
+    "matrah_toplami", "hesaplanan_kdv", "ilave_edilecek_kdv", "toplam_kdv",
+    "onceki_donem_devreden", "bu_donem_indirilecek", "diger_indirimler_toplami",
+    "indirimler_toplami", "tecil_edilecek_kdv", "odenmesi_gereken_kdv",
+    "iade_edilmesi_gereken_kdv", "sonraki_donem_devreden",
+)
 
 
 def _denetle(degerler):
@@ -567,7 +768,20 @@ def beyanname_oku(yol, dosya_adi=None):
     if kunye["yil"] is None or kunye["ay"] is None:
         raise PdfHata("Beyannamenin dönemi (yıl/ay) okunamadı.")
 
+    # Turetmeden SONRA: turetme (ornegin 103+104+105 toplami) var olan
+    # degerlere dayanir, sifirla doldurulmus olanlara degil.
+    if kunye["yeni_bicim"]:
+        for kod in YENI_BICIM_SIFIRLAR:
+            degerler.setdefault(kod, 0.0)
+
     uyarilar = _denetle(degerler)
+    if kunye["donem_tipi"] and normalize(kunye["donem_tipi"]) != "AYLIK":
+        # Calisma aylik KDV duzenine gore kuruldugu icin ucer aylik bir
+        # beyanname sessizce tek aya yazilir; kullanici bunu gormeli.
+        uyarilar.append(
+            "Beyannamenin dönem tipi \"%s\" okundu. Çalışma aylık KDV düzenine "
+            "göre kuruludur; bu beyanname yalnızca %d. aya yazılır."
+            % (kunye["donem_tipi"], kunye["ay"]))
     # Oran dagilimi toplami bir uygulama satiri degildir; denetimden sonra
     # bilgi alanina alinir.
     if "oran_dagilimi_toplami" in degerler:
@@ -580,6 +794,8 @@ def beyanname_oku(yol, dosya_adi=None):
         "unvan": kunye["unvan"],
         "vergi_dairesi": kunye["vergi_dairesi"],
         "tur": "duzeltme" if kunye["duzeltme_nedeni"] else "kanuni",
+        "bicim": "yeni" if kunye["yeni_bicim"] else "eski",
+        "donem_tipi": kunye["donem_tipi"],
         "onay_zamani": kunye["onay_zamani"],
         "onay_ts": _onay_ts(kunye["onay_zamani"]),
         "duzeltme_nedeni": kunye["duzeltme_nedeni"],
