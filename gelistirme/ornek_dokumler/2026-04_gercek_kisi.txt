@@ -1,0 +1,107 @@
+# Beyanname metin katmani dokumu (maskelenmis) - 2026/Nisan yeni bicim
+# Kaynak: gercek kisi mukellef, matrahsiz donem (satis yok)
+# Bicim: sayfa <sekme> x <sekme> y <sekme> metin
+0	199.8	771.0	Katma Değer Vergisi Beyannamesi
+0	200.2	747.0	(Gerçek Usulde Vergilendirilen Mükellefler İçin)
+0	439.2	710.0	Onay Zamanı: 06/05/2026 06:01:51
+0	245.2	684.0	MÜKELLEF BİLGİLERİ
+0	41.0	670.0	Vergi Kimlik No
+0	408.2	670.0	[MASKELI]
+0	41.0	656.0	Adı Soyadı/Ünvanı
+0	322.0	656.0	[MASKELI]
+0	327.3	648.0	[MASKELI]
+0	41.0	634.0	E-Posta Adresi
+0	382.1	634.0	[MASKELI]
+0	41.0	620.0	Telefon No
+0	404.2	620.0	[MASKELI]
+0	41.0	596.0	[MASKELI]
+0	41.0	588.0	[MASKELI]
+0	145.6	596.0	Şube No: -
+0	250.2	596.0	Yıl: 2026
+0	354.8	596.0	Ay: Nisan
+0	459.4	596.0	Dönem Tipi: AYLIK
+0	144.4	564.0	[MASKELI]
+0	174.3	556.0	[MASKELI]
+0	290.8	560.0	Beyannameyi Düzenleyen Bilgileri
+0	433.8	560.0	Beyannameyi Onaylayan Bilgileri
+0	41.0	542.0	T.C. Kimlik No
+0	325.2	542.0	[MASKELI]
+0	466.4	542.0	[MASKELI]
+0	41.0	528.0	Vergi Kimlik No
+0	186.0	528.0	[MASKELI]
+0	468.4	528.0	[MASKELI]
+0	41.0	514.0	Adı Soyadı/Ünvanı
+0	151.2	514.0	[MASKELI]
+0	155.5	506.0	[MASKELI]
+0	147.6	498.0	[MASKELI]
+0	164.4	490.0	[MASKELI]
+0	305.4	502.0	[MASKELI]
+0	446.6	502.0	[MASKELI]
+0	41.0	476.0	E-Posta Adresi
+0	159.8	476.0	[MASKELI]
+0	301.0	476.0	[MASKELI]
+0	41.0	462.0	Telefon No
+0	182.0	462.0	[MASKELI]
+0	323.2	462.0	[MASKELI]
+0	268.1	436.0	İNDİRİMLER
+0	41.0	422.0	İndirimler Toplamı
+0	526.0	422.0	8.327,60
+0	251.8	396.0	SONUÇ HESAPLARI
+0	41.0	382.0	Tecil Edilecek KDV
+0	540.0	382.0	0,00
+0	41.0	368.0	Ödenmesi Gereken KDV
+0	540.0	368.0	0,00
+0	41.0	354.0	İade Edilmesi Gereken KDV
+0	540.0	354.0	0,00
+0	41.0	340.0	Sonraki Döneme Devreden
+0	41.0	332.0	KDV
+0	526.0	340.0	8.327,60
+0	258.2	306.0	DİĞER BİLGİLER
+0	41.0	292.0	Teslim ve Hizmetlerin
+0	41.0	284.0	Karşılığını Teşkil Eden
+0	41.0	276.0	Bedel (Aylık)
+0	540.0	292.0	0,00
+0	41.0	262.0	Teslim ve Hizmetlerin
+0	41.0	254.0	Karşılığını Teşkil Eden
+0	41.0	246.0	Bedel (Kümülatif)
+0	540.0	262.0	0,00
+0	41.0	232.0	Kredi Kartı İle Tahsil Edilen
+0	41.0	224.0	Teslim ve Hizmetlerin KDV
+0	41.0	216.0	Dahil Karşılığını Teşkil Eden
+0	41.0	208.0	Bedel
+0	540.0	232.0	0,00
+0	238.4	174.0	İNDİRİMLER DETAYI
+0	204.3	135.0	Önceki Dönemden Devreden İndirilecek KDV
+0	78.9	121.0	Değişiklik Nedeni
+0	181.8	121.0	Devrolunan (Eski Mükellef) Şirket VKN
+0	351.2	121.0	Açıklama
+0	479.4	121.0	KDV Tutarı
+0	38.0	107.0	Önceki dönemden devreden KDV
+0	299.5	107.0	-
+0	533.8	107.0	5.842,80
+0	38.0	95.0	Toplam
+0	529.0	95.0	5.842,80
+0	264.6	59.0	Diğer İndirimler
+0	150.2	45.0	İndirim Türü
+0	399.4	45.0	İndirilecek KDV Tutarı
+0	292.4	26.0	1 /
+0	0.0	0.0	2
+0	292.4	26.0	2
+1	38.0	795.0	108 - Yurtiçi Alımlara İlişkin KDV
+1	533.8	795.0	2.484,80
+1	38.0	783.0	Toplam
+1	529.0	783.0	2.484,80
+1	162.1	747.0	Bu Döneme Ait İndirilecek KDV Tutarının Oranlara Göre Dağılımı
+1	84.9	733.0	İndirim Türü
+1	212.3	733.0	KDV Oranı (%)
+1	321.0	733.0	Alınan Mal ve Hizmete Ait Bedel
+1	479.4	733.0	KDV Tutarı
+1	38.0	719.0	108 - Yurtiçi Alımlara İlişkin KDV
+1	168.8	719.0	20
+1	399.7	719.0	12.424,00
+1	533.8	719.0	2.484,80
+1	38.0	707.0	Toplam
+1	529.0	707.0	2.484,80
+1	292.4	26.0	2 /
+1	0.0	0.0	2
+1	292.4	26.0	2

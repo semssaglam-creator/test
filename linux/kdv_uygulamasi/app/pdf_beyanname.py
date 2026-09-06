@@ -257,18 +257,35 @@ def _tutarlar(parcalar, sayfa_no):
             if s == sayfa_no and tutar_coz(m) is not None]
 
 
-# Formda bir alan adi en fazla kac satira tasiyor
-EN_COK_SATIR = 3
+# Formda bir alan adi en fazla kac satira tasiyor. 2026 Nisan bicimindeki
+# "Kredi Kartı İle Tahsil Edilen Teslim ve Hizmetlerin KDV Dahil Karşılığını
+# Teşkil Eden Bedel" dort satira tasiyor; uc satirda kalinca alan okunamiyordu.
+EN_COK_SATIR = 4
 # Alt alta gelen iki satirin ayni alana ait sayilabilmesi icin en buyuk dikey
 # aralik ve sola hizalanma toleransi
 SATIR_ARALIGI = 14
 HIZA_TOLERANSI = 3
 
 
+# 2026 Nisan bicimi kalem adlarinin basina beyanname satir kodunu koyuyor:
+# "108 - Yurtiçi Alımlara İlişkin KDV". Kod, alan adinin bir parcasi degildir.
+KOD_ONEKI = re.compile(r"^\d{2,4}(?=[A-Z])")
+
+
 def _kod_ara(anahtar, bolum):
-    return (ETIKET_ESLEMESI.get(anahtar)
-            or EK_ETIKETLER.get(anahtar)
-            or BOLUME_BAGLI.get((bolum, anahtar)))
+    """Normalize edilmis alan adini uygulama satir koduna cevirir.
+
+    Once adin kendisi aranir; bulunamazsa bastaki beyanname satir kodu
+    atilarak yeniden denenir. Sira onemli: "7440 Sayılı Kanunun..." gibi
+    gercekten rakamla baslayan alan adlari once kendi haliyle eslesir.
+    """
+    for aday in (anahtar, KOD_ONEKI.sub("", anahtar)):
+        kod = (ETIKET_ESLEMESI.get(aday)
+               or EK_ETIKETLER.get(aday)
+               or BOLUME_BAGLI.get((bolum, aday)))
+        if kod:
+            return kod
+    return None
 
 
 def _bloklari_esle(satirlar):
@@ -368,7 +385,8 @@ def _etiket_mi(metin):
         return True
     # "Vergi Kimlik Numarası", "E-Posta Adresi" gibi kunye etiketleri de burada
     # durdurucu sayilir; hepsini listelemek yerine bilinen birkac tanesi yeter.
-    return n.startswith(("VERGIKIMLIKNUMARASI", "EPOSTAADRESI", "TICARETSICILNO",
+    return n.startswith(("VERGIKIMLIKNUMARASI", "VERGIKIMLIKNO", "TCKIMLIKNO",
+                         "EPOSTAADRESI", "TICARETSICILNO", "SUBENO",
                          "IRTIBATTELNO", "SOYADI", "ADI", "UNVANI",
                          "VERGIDAIRESIMUDURLUGU", "ONAYZAMANI"))
 
@@ -407,14 +425,43 @@ def _duzeltme_nedeni(ilk_sayfa, indeks):
     return " ".join(parcalar).strip()
 
 
-# "Indirim Nedenleri" bolumu uc sutunludur:
-#   Degisiklik Nedeni | Aciklama | Miktar
+# Devir tutarindaki degisikligin gerekcesi iki ayri yerde durabiliyor:
+#
+#   Eski bicim  : "İNDİRİM NEDENLERİ" bolumu, uc sutun
+#                 Degisiklik Nedeni | Aciklama | Miktar
+#
+#   2026 Nisan+ : "İNDİRİMLER DETAYI" icindeki "Önceki Dönemden Devreden
+#                 İndirilecek KDV" tablosu, dort sutun
+#                 Degisiklik Nedeni | Devrolunan (Eski Mükellef) Şirket VKN |
+#                 Aciklama | KDV Tutarı
+#
 # Sutun basliklarinin x konumu, veri satirlarini sutunlara dagitmakta kullanilir.
-INDIRIM_NEDENI_SUTUNLARI = (
-    ("DEGISIKLIKNEDENI", "neden"),
-    ("ACIKLAMA", "aciklama"),
-    ("MIKTAR", "miktar"),
+INDIRIM_TABLOLARI = (
+    {
+        "baslik": "INDIRIMNEDENLERI",
+        "sutunlar": (("DEGISIKLIKNEDENI", "neden"),
+                     ("ACIKLAMA", "aciklama"),
+                     ("MIKTAR", "miktar")),
+        # Eski bicimde bolumun bittigi yer, taninan bir alan basligidir.
+        "etikette_dur": True,
+    },
+    {
+        "baslik": "ONCEKIDONEMDENDEVREDENINDIRILECEKKDV",
+        "sutunlar": (("DEGISIKLIKNEDENI", "neden"),
+                     ("DEVROLUNANESKIMUKELLEFSIRKETVKN", "vkn"),
+                     ("ACIKLAMA", "aciklama"),
+                     ("KDVTUTARI", "miktar")),
+        # Yeni tabloda veri satirinin kendisi taninan bir alan adiyla basliyor
+        # ("Önceki dönemden devreden KDV"); etikette durulursa tablo bos kalir.
+        "etikette_dur": False,
+    },
 )
+
+# Yeni tabloda, devir tutari degismemis donemde de bir satir bulunur ve
+# "Değişiklik Nedeni" sutununa alanin kendi adi yazilir. Bu satir bir gerekce
+# degil, "gerekce yok" demektir; aksi halde her beyanname gerekceli gorunur ve
+# devir sicramasi uyarisi anlamini yitirir.
+VARSAYILAN_DEVIR_SATIRI = "ONCEKIDONEMDENDEVREDENKDV"
 
 
 def _satirlara_bol(parcalar_xy):
@@ -436,7 +483,20 @@ def _satirlara_bol(parcalar_xy):
 
 
 def _indirim_nedenleri(parcalar):
-    """İNDİRİM NEDENLERİ bolumundeki satirlari okur.
+    """Devir degisikliginin gerekcesini tasiyan tabloyu okur.
+
+    Beyannamenin bicimine gore iki tablodan biri bulunur; ilk dolu olan
+    dondurulur (bkz. INDIRIM_TABLOLARI).
+    """
+    for tablo in INDIRIM_TABLOLARI:
+        kayitlar = _indirim_tablosunu_oku(parcalar, tablo)
+        if kayitlar:
+            return kayitlar
+    return []
+
+
+def _indirim_tablosunu_oku(parcalar, tablo):
+    """Bir gerekce tablosunun satirlarini okur.
 
     Mukellef, gec gelen faturayi ilgili donemin beyannamesini duzeltmeden
     devreden KDV uzerinden yansittiginda, aradaki farkin gerekcesini bu
@@ -454,7 +514,7 @@ def _indirim_nedenleri(parcalar):
     for sayfa_no in sorted({s for s, _x, _y, _m in parcalar}):
         sayfa = [(x, y, m) for s, x, y, m in parcalar if s == sayfa_no]
         baslik = next((p for p in sayfa
-                       if normalize(p[2]) == "INDIRIMNEDENLERI"), None)
+                       if normalize(p[2]) == tablo["baslik"]), None)
         if baslik is None:
             continue
         # Bolum basligindan asagisi; sonraki bolum basligina kadar
@@ -468,8 +528,8 @@ def _indirim_nedenleri(parcalar):
             if any(a in BOLUM_BASLIKLARI for a in anahtarlar):
                 break                                   # sonraki bolum basladi
             if not sutun_x:
-                # Sutun basligi satiri: uc basligi da tasiyorsa konumlari al
-                for anahtar, ad in INDIRIM_NEDENI_SUTUNLARI:
+                # Sutun basligi satiri: basliklarin konumlari alinir
+                for anahtar, ad in tablo["sutunlar"]:
                     for x, m in hucreler:
                         if normalize(m) == anahtar:
                             sutun_x[ad] = x
@@ -477,7 +537,9 @@ def _indirim_nedenleri(parcalar):
                 if len(sutun_x) >= 2:
                     continue                            # baslik satiri veriye girmez
                 sutun_x = {}
-            if any(_etiket_mi(m) for _x, m in hucreler):
+            if anahtarlar and anahtarlar[0] == "TOPLAM":
+                break                                   # tablonun toplam satiri
+            if tablo["etikette_dur"] and any(_etiket_mi(m) for _x, m in hucreler):
                 break                                   # taninan bir alan basligi
             veri_satirlari.append(hucreler)
 
@@ -494,7 +556,7 @@ def _indirim_satirlarini_coz(veri_satirlari, sutun_x):
 
     kayitlar = []
     for hucreler in veri_satirlari:
-        alanlar = {"neden": [], "aciklama": [], "miktar": None}
+        alanlar = {"neden": [], "aciklama": [], "vkn": [], "miktar": None}
         artakalan = []
         for x, metin in hucreler:
             tutar = tutar_coz(metin)
@@ -502,7 +564,7 @@ def _indirim_satirlarini_coz(veri_satirlari, sutun_x):
                 alanlar["miktar"] = tutar
                 continue
             ad = sutuna_ata(x)
-            if ad in ("neden", "aciklama"):
+            if ad in ("neden", "aciklama", "vkn"):
                 alanlar[ad].append(metin)
             else:
                 artakalan.append(metin)
@@ -515,15 +577,58 @@ def _indirim_satirlarini_coz(veri_satirlari, sutun_x):
 
         neden = " ".join(alanlar["neden"]).strip()
         aciklama = " ".join(alanlar["aciklama"]).strip()
+        vkn = " ".join(alanlar["vkn"]).strip()
         if not neden and not aciklama and alanlar["miktar"] is None:
+            continue
+        # Bos hucre tire ile gosteriliyor; "-" bir icerik degildir.
+        if _bos_hucre(neden, VARSAYILAN_DEVIR_SATIRI) and _bos_hucre(aciklama) \
+                and _bos_hucre(vkn):
             continue
         # Yalnizca aciklama tasiyan satir, ustteki kaydin devamidir
         if kayitlar and not neden and alanlar["miktar"] is None and aciklama:
             kayitlar[-1]["aciklama"] = (kayitlar[-1]["aciklama"] + " " + aciklama).strip()
             continue
-        kayitlar.append({"neden": neden, "aciklama": aciklama,
-                         "miktar": alanlar["miktar"]})
+        kayit = {"neden": neden, "aciklama": aciklama, "miktar": alanlar["miktar"]}
+        if not _bos_hucre(vkn):
+            kayit["vkn"] = vkn
+        kayitlar.append(kayit)
     return kayitlar
+
+
+def _bos_hucre(metin, varsayilan=None):
+    """Hucre bos mu sayilir.
+
+    Beyanname bos hucreye tire koyuyor. Ayrica bir hucre, alanin kendi adini
+    tasiyorsa (varsayilan) yine bilgi tasimiyor demektir.
+    """
+    sade = (metin or "").strip(" -\u2013\u2014\t")
+    if not sade:
+        return True
+    return varsayilan is not None and normalize(sade) == varsayilan
+
+
+def _sagdaki_deger(ilk_sayfa, x, y):
+    """Etiketin sagindaki degeri, alt satira tasan devamiyla birlikte alir.
+
+    Yeni bicimde uzun bir unvan tek alanda iki satira tasiyor. Devam satiri,
+    ilk degerle ayni sutunda ve bir satir arali icinde duran parcadir; sagdaki
+    baska bir sutun (ornegin ayni hizadaki "Beyannameyi Onaylayan" bilgileri)
+    bu olcutlere uymadigi icin karismaz.
+    """
+    degerler, ilk_x, onceki_y = [], None, y
+    for x2, y2, m2 in ilk_sayfa:
+        if x2 <= x + 10 or tutar_coz(m2) is not None:
+            continue
+        if abs(y2 - y) <= 3:
+            if ilk_x is None:
+                ilk_x, onceki_y = x2, y2
+                degerler.append(m2.strip())
+            continue
+        if (ilk_x is not None and abs(x2 - ilk_x) <= 8
+                and 0 < onceki_y - y2 <= SATIR_ARALIGI):
+            degerler.append(m2.strip())
+            onceki_y = y2
+    return degerler
 
 
 def _kunye(parcalar):
@@ -554,15 +659,25 @@ def _kunye(parcalar):
                     break
             break
 
-    # Yil / Ay: etiketin sagindaki deger
+    # Yil / Ay
+    #
+    # Eski bicimde etiket ve deger ayri parcalardir ("Yıl" | "2026"); 2026
+    # Nisan'dan sonra ikisi tek parcada gelir ("Yıl: 2026"). Once parcanin
+    # kendi icine bakilir, orada deger yoksa sagdaki parca alinir. Bu alan
+    # okunamazsa beyanname tumuyle reddedilir (donem bilinmeden kaydedilemez),
+    # bu yuzden iki bicim de desteklenir.
     for etiket, alan in (("YIL", "yil"), ("AY", "ay")):
         for x, y, m in ilk_sayfa:
-            if normalize(m) != etiket:
+            ad, ayrac, kalan = m.partition(":")
+            if normalize(ad) != etiket:
                 continue
-            for x2, y2, m2 in ilk_sayfa:
-                if abs(y2 - y) <= 3 and x2 > x + 10:
-                    kunye[alan] = m2.strip()
-                    break
+            if ayrac and kalan.strip():
+                kunye[alan] = kalan.strip()
+            else:
+                for x2, y2, m2 in ilk_sayfa:
+                    if abs(y2 - y) <= 3 and x2 > x + 10:
+                        kunye[alan] = m2.strip()
+                        break
             break
 
     if kunye["yil"]:
@@ -574,13 +689,21 @@ def _kunye(parcalar):
         kunye["ay"] = AYLAR_PDF.get(normalize(kunye["ay"]))
 
     # VKN ve unvan
+    # Yeni bicimde etiket kisaldi: "Vergi Kimlik Numarası" -> "Vergi Kimlik No".
+    # Etiket sayfada uc kez gecer (mukellef, duzenleyen, onaylayan); parcalar
+    # yukaridan asagiya sirali oldugu icin ilk bulunan mukellefinkidir.
     for x, y, m in ilk_sayfa:
-        if normalize(m) == "VERGIKIMLIKNUMARASI":
+        if normalize(m) in ("VERGIKIMLIKNUMARASI", "VERGIKIMLIKNO"):
             for x2, y2, m2 in ilk_sayfa:
                 if abs(y2 - y) <= 3 and x2 > x + 10 and re.fullmatch(r"\d{10,11}", m2.strip()):
                     kunye["vkn"] = m2.strip()
                     break
             break
+    # Eski bicimde unvan iki ayri alana bolunmustu ("Soyadı (Ünvanı)" ve
+    # "Adı (Ünvanın Devamı)"); yeni bicimde tek "Adı Soyadı/Ünvanı" alani var
+    # ve uzun unvan alt satira tasiyor. Tasma yalnizca yeni etikette toplanir:
+    # eski bicimde alt satir zaten ikinci alanin degeridir, oradan toplanirsa
+    # ayni metin iki kez eklenir.
     parcalari = []
     for etiket in ("SOYADIUNVANI", "ADIUNVANINDEVAMI"):
         for x, y, m in ilk_sayfa:
@@ -589,6 +712,11 @@ def _kunye(parcalar):
                     if abs(y2 - y) <= 3 and x2 > x + 10:
                         parcalari.append(m2.strip())
                         break
+                break
+    if not parcalari:
+        for x, y, m in ilk_sayfa:
+            if normalize(m) == "ADISOYADIUNVANI":
+                parcalari.extend(_sagdaki_deger(ilk_sayfa, x, y))
                 break
     kunye["unvan"] = " ".join(p for p in parcalari if p).strip()
     return kunye

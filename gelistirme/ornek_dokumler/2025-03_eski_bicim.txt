@@ -1,0 +1,52 @@
+# ELLE URETILMIS DENEME DOSYASI - gercek beyanname degil
+# Amac: 2026 Nisan oncesi (eski) bicimin okunmaya devam ettigini dogrulamak.
+# Etiketler eski bicimdeki tam adlariyla yazilmistir.
+# Bicim: sayfa <sekme> x <sekme> y <sekme> metin
+0	200.0	750.0	Katma Değer Vergisi Beyannamesi
+0	41.0	720.0	Düzeltme Nedeni : Matrah artırımı nedeniyle
+0	41.0	700.0	ÖRNEK VERGİ DAİRESİ MÜDÜRLÜĞÜ
+0	41.0	690.0	Vergi Dairesi Müdürlüğü
+0	41.0	670.0	Vergi Kimlik Numarası
+0	200.0	670.0	1234567890
+0	41.0	656.0	Soyadı (Ünvanı)
+0	200.0	656.0	ÖRNEK İNŞAAT
+0	41.0	642.0	Adı (Ünvanın Devamı)
+0	200.0	642.0	SANAYİ VE TİCARET LTD ŞTİ
+0	41.0	628.0	Yıl
+0	200.0	628.0	2025
+0	41.0	614.0	Ay
+0	200.0	614.0	Mart
+0	220.0	590.0	MATRAH VE VERGİ BİLDİRİMİ
+0	41.0	576.0	Matrah Toplamı
+0	500.0	576.0	100.000,00
+0	41.0	562.0	Hesaplanan Katma Değer Vergisi
+0	500.0	562.0	20.000,00
+0	41.0	548.0	Toplam Katma Değer Vergisi
+0	500.0	548.0	20.000,00
+0	250.0	520.0	İNDİRİMLER
+0	41.0	506.0	Önceki Dönemden Devreden İndirilecek KDV
+0	500.0	506.0	5.000,00
+0	41.0	492.0	Yurtiçi Alımlara İlişkin KDV
+0	500.0	492.0	12.000,00
+0	41.0	478.0	İndirimler Toplamı
+0	500.0	478.0	17.000,00
+0	250.0	450.0	SONUÇ HESAPLARI
+0	41.0	436.0	Tecil Edilecek Katma Değer Vergisi
+0	500.0	436.0	0,00
+0	41.0	422.0	Ödenmesi Gereken Katma Değer Vergisi
+0	500.0	422.0	3.000,00
+0	41.0	408.0	İade Edilmesi Gereken Katma Değer Vergisi
+0	500.0	408.0	0,00
+0	41.0	394.0	Sonraki Döneme Devreden Katma Değer Vergisi
+0	500.0	394.0	0,00
+0	150.0	360.0	Bu Döneme Ait İndirilecek KDV Tutarının Oranlara Göre Dağılımı
+0	41.0	346.0	Toplam
+0	500.0	346.0	12.000,00
+0	250.0	310.0	İNDİRİM NEDENLERİ
+0	60.0	296.0	Değişiklik Nedeni
+0	250.0	296.0	Açıklama
+0	480.0	296.0	Miktar
+0	41.0	282.0	Geç gelen fatura
+0	250.0	282.0	2025/02 dönemine ait fatura
+0	500.0	282.0	1.000,00
+0	400.0	250.0	Onay Zamanı: 28.01.2025 - 22:07:21

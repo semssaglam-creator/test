@@ -3148,7 +3148,12 @@ function sicramalariCiz() {
         s.indirim_nedenleri.map((n) => {
           const uyar = n.miktar != null && Math.abs(n.miktar - s.fark) <= 0.005
             ? ' <span style="color:#2c7a3f;">✓ sıçrama tutarıyla aynı</span>' : "";
-          return `<tr><td>${kacisHtml(n.neden)}</td><td>${kacisHtml(n.aciklama)}${uyar}</td>` +
+          // 2026 Nisan bicimi, devri devralinan sirketin VKN'sini de yaziyor.
+          // Devir baska bir mukelleften geldiyse sicramanin gerekcesi budur.
+          const devir = n.vkn
+            ? ` <span style="color:#5a6b7d;">(devrolunan şirket VKN: ${kacisHtml(n.vkn)})</span>`
+            : "";
+          return `<tr><td>${kacisHtml(n.neden)}</td><td>${kacisHtml(n.aciklama)}${devir}${uyar}</td>` +
                  `<td class="sag">${n.miktar == null ? "—" : tl(n.miktar)}</td></tr>`;
         }).join("") + "</table>";
     }
