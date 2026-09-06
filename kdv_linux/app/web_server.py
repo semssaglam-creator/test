@@ -714,8 +714,11 @@ class Istekci(BaseHTTPRequestHandler):
         """Duzeltme kabul raporu taslaklarini uretir (yil yil).
 
         Uygunluk once denetlenir: faturalarin tamami duzeltmeyle cikarilmis
-        ya da hic kayda alinmamis olmali ve kullanma durumu "bilmeden" olmali.
-        Uygun degilse belge uretilmez; sebep kullaniciya bildirilir.
+        ya da hic kayda alinmamis olmali ve her satici icin kullanma durumu
+        secilmis olmali. Bilerek kullanma raporu ENGELLEMEZ; tutar zaten
+        beyandan cikarilmis oldugu icin iki halde de tarhiyat yoktur, ayrim
+        sonuc bolumunde ortaya cikar. Uygun degilse belge uretilmez; sebep
+        kullaniciya bildirilir.
         """
         from . import duzeltme_kabul_raporu
         faturalar = _fatura_modulu()

@@ -1053,9 +1053,11 @@ def duzeltme_kabul_uygun_mu(satici_satirlari):
                 if str(s.get("kullanma") or "Belirlenmedi") == "Belirlenmedi"]
     if belirsiz:
         return False, (
-            "Şu satıcılarda kullanma durumu seçilmemiş: %s. Kabul raporu "
-            "“bilmeden kullanma” kanaatine dayandığı için bu seçim "
-            "zorunludur." % _adlar(belirsiz))
+            "Şu satıcılarda kullanma durumu seçilmemiş: %s. Kabul raporunun "
+            "sonuç bölümü bu kanaate göre yazıldığı için seçim zorunludur: "
+            "bilmeden kullanmada yapılacak işlem bulunmaz, bilerek kullanmada "
+            "üç kat vergi ziyaı cezası ve vergi suçu raporu gerekir."
+            % _adlar(belirsiz))
 
     return True, ""
 
