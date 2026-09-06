@@ -25,6 +25,7 @@ ve sayfadaki yerlerinden taniyor; tanimadigi bir alan kalirsa --ek-gizle ile
 elle ekleyebilirsiniz.
 """
 import argparse
+import hashlib
 import os
 import re
 import sys
@@ -341,8 +342,15 @@ def main():
     parcalar = parcalari_al(a.pdf)
     maskeli, sayac = maskele(parcalar, a.ek_gizle, a.tutarsiz)
 
+    # Parmak izi, maskelenmis dokumun ozetidir; belgeyi tanitmaz, yalnizca iki
+    # dokumun ayni belgeden gelip gelmedigini bir bakista gosterir. Ayni dosya
+    # yanlislikla iki kez gonderildiginde bu satir ayni cikar.
+    govde = "\n".join("%d\t%s\t%s\t%s" % p for p in maskeli)
+    parmak = hashlib.sha256(govde.encode("utf-8")).hexdigest()[:8]
+
     print("# Beyanname metin katmani dokumu (maskelenmis)")
     print("# Bicim: sayfa <sekme> x <sekme> y <sekme> metin")
+    print("# Belge parmak izi: %s" % parmak)
     print("# Toplam %d parca, %d tanesi maskelendi." % (len(maskeli), sayac))
     print("# GONDERMEDEN ONCE GOZDEN GECIRIN: maskelenmemis kisisel bilgi kaldiysa")
     print("# --ek-gizle \"...\" ile yeniden calistirin.")
@@ -357,8 +365,7 @@ def main():
     print("# ---- liste sonu ----")
     print("#")
 
-    for sayfa, x, y, metin in maskeli:
-        print("%d\t%s\t%s\t%s" % (sayfa, x, y, metin))
+    print(govde)
 
 
 if __name__ == "__main__":

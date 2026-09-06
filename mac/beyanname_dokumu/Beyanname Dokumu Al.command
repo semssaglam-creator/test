@@ -118,11 +118,20 @@ Temizse boş bırakıp Bitti deyin." default answer "" buttons {"Bitti", "Yenide
 done
 
 echo
-echo "Hazir. Asagidaki dosyanin TAMAMINI kopyalayip sohbete yapistirin:"
+# Dokumu dogrudan panoya koy. Dosyayi acip elle secmek gerekmez; bir kez,
+# TextEdit'te acik kalan ESKI pencereden kopyalandigi icin ayni belge iki
+# kez gonderilmisti. Panoya en son uretilen dokum konur.
+if command -v pbcopy >/dev/null 2>&1 && pbcopy < "$CIKTI"; then
+    echo "Dokum PANOYA kopyalandi."
+    echo "Sohbete gecip yapistirmaniz (Cmd+V) yeterli - dosyayi acmaniza gerek yok."
+else
+    echo "Hazir. Asagidaki dosyanin TAMAMINI kopyalayip sohbete yapistirin:"
+    echo
+    echo "    $CIKTI"
+fi
 echo
-echo "    $CIKTI"
-echo
-echo "Her beyanname icin ayri bir dosya olusur; ustune yazilmaz."
+echo "Dosya olarak da duruyor: $CIKTI"
+echo "Her beyanname icin ayri dosya olusur; ustune yazilmaz."
 echo
 read -r -p "Kapatmak icin Enter'a basin..." || true
 exit 0
