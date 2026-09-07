@@ -142,9 +142,19 @@ if __name__ == "__main__":
     # Tam pakette ust klasor surumle adlandirilir; guncelleme paketinde
     # ad ayni kalmali, cunku o zaten var olan klasorun uzerine acilir.
     klasor_adi = None
-    if yalnizca is None and klasorler == [UYGULAMALAR["kdv"]]:
+    if klasorler == [UYGULAMALAR["kdv"]]:
         s = _surum()
-        if s:
+        if yalnizca:
+            # Guncelleme paketinin ust klasoru BILEREK "kdv_uygulamasi"
+            # DEGIL. Ayni adi tasisaydi, kullanicinin klasorunun yanina
+            # acilinca dosya yoneticisi "birlestir mi, degistir mi" diye
+            # sorar; "degistir" secilirse klasorun icerigi silinir ve
+            # main.py, lib/, calistir.sh gider - uygulama hic acilmaz.
+            # Bir kez oldu. Ayri adla acilinca cakisma, app/ ve web/
+            # seviyesine iner; orada iki cevap da guvenlidir, cunku paket
+            # o klasorlerin TAMAMINI tasir.
+            klasor_adi = "KDV_Guncelleme"
+        elif s:
             klasor_adi = "kdv_uygulamasi_%s" % s
     alinan, calisir = paketle(hedef, klasorler, yalnizca, klasor_adi)
     print("%d dosya -> %s (%.1f MB)"
