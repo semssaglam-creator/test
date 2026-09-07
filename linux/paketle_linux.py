@@ -28,24 +28,37 @@ UYGULAMALAR = {
     "uzlasma": "uzlasma_uygulamasi",
 }
 
+# Calisan bir kuruluma uygulanacak guncelleme paketi: yalnizca uygulama kodu.
+# Baslatici, lib/ ve main.py disarida kalir - kullanicinin calisan duzenine
+# dokunulmaz. Kullanici paketi kendi klasorunun uzerine acar ve uygulamayi
+# her zamanki gibi (calistir.sh) baslatir. Baslatma yontemini degistirmek
+# defalarca ise yaramadi; calisan duzene dokunmamak en emniyetli yol.
+GUNCELLEME_ALT_DIZINLER = ("app", "web")
+
 DISARIDA_DIZIN = {"__pycache__", ".git", "onbellek", "veritabani"}
 DISARIDA_DOSYA = {".gitignore"}
 DISARIDA_UZANTI = (".pyc", ".db", ".xlsx", ".docx", ".bat")
 
 
-def _dosyalar(klasorler):
-    """Pakete girecek (tam yol, paket icindeki yol) ciftlerini uretir."""
+def _dosyalar(klasorler, yalnizca=None):
+    """Pakete girecek (tam yol, paket icindeki yol) ciftlerini uretir.
+
+    `yalnizca` verilirse uygulama klasorunun yalnizca o alt dizinleri alinir
+    (guncelleme paketi).
+    """
     for klasor in klasorler:
-        kaynak = os.path.join(BURASI, klasor)
-        for kok, dizinler, dosyalar in os.walk(kaynak):
-            dizinler[:] = [d for d in dizinler if d not in DISARIDA_DIZIN]
-            for d in sorted(dosyalar):
-                if d in DISARIDA_DOSYA or d.endswith(DISARIDA_UZANTI):
-                    continue
-                if "baslatma_kaydi" in d or "baslatma_hatasi" in d:
-                    continue
-                tam = os.path.join(kok, d)
-                yield tam, os.path.relpath(tam, BURASI)
+        koklar = ([os.path.join(BURASI, klasor, alt) for alt in yalnizca]
+                  if yalnizca else [os.path.join(BURASI, klasor)])
+        for kaynak in koklar:
+            for kok, dizinler, dosyalar in os.walk(kaynak):
+                dizinler[:] = [d for d in dizinler if d not in DISARIDA_DIZIN]
+                for d in sorted(dosyalar):
+                    if d in DISARIDA_DOSYA or d.endswith(DISARIDA_UZANTI):
+                        continue
+                    if "baslatma_kaydi" in d or "baslatma_hatasi" in d:
+                        continue
+                    tam = os.path.join(kok, d)
+                    yield tam, os.path.relpath(tam, BURASI)
 
 
 def _sahipsiz(bilgi):
@@ -60,13 +73,13 @@ def _sahipsiz(bilgi):
     return bilgi
 
 
-def paketle(hedef, klasorler):
+def paketle(hedef, klasorler, yalnizca=None):
     alinan, calisir = [], []
     tar_mi = hedef.endswith((".tar.gz", ".tgz"))
     arsiv = (tarfile.open(hedef, "w:gz") if tar_mi
              else zipfile.ZipFile(hedef, "w", zipfile.ZIP_DEFLATED))
     with arsiv as a:
-        for tam, bagil in _dosyalar(klasorler):
+        for tam, bagil in _dosyalar(klasorler, yalnizca):
             kip = os.stat(tam).st_mode
             if tar_mi:
                 # tar dosya kipini kendisi tasir; ayrica ayarlamak gerekmez.
@@ -86,14 +99,19 @@ def paketle(hedef, klasorler):
 if __name__ == "__main__":
     hedef = sys.argv[1] if len(sys.argv) > 1 else "kdv_uygulamasi_linux.tar.gz"
     hangi = sys.argv[2] if len(sys.argv) > 2 else "kdv"
+    yalnizca = None
+    if hangi.endswith("-guncelleme"):
+        hangi = hangi[: -len("-guncelleme")]
+        yalnizca = GUNCELLEME_ALT_DIZINLER
     if hangi == "hepsi":
         klasorler = list(UYGULAMALAR.values())
     elif hangi in UYGULAMALAR:
         klasorler = [UYGULAMALAR[hangi]]
     else:
-        sys.exit("bilinmeyen uygulama: %s (kdv | uzlasma | hepsi)" % hangi)
+        sys.exit("bilinmeyen uygulama: %s "
+                 "(kdv | uzlasma | hepsi; sonuna -guncelleme eklenebilir)" % hangi)
 
-    alinan, calisir = paketle(hedef, klasorler)
+    alinan, calisir = paketle(hedef, klasorler, yalnizca)
     print("%d dosya -> %s (%.1f MB)"
           % (len(alinan), hedef, os.path.getsize(hedef) / 1024 / 1024))
     ust = sorted({a.split("/")[1] for a in alinan if a.count("/") >= 1})
