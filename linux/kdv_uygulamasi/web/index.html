@@ -4429,7 +4429,8 @@ function ekraniCiz() {
     // Surum damgasi. Eski bir sunucu bu alani gondermiyorsa hicbir sey
     // yazilmaz; ekranda yer tutucu gorunmez.
     if (durum.tanimlar.surum) {
-      $("surumDamgasi").textContent = "sürüm " + durum.tanimlar.surum;
+      const py = durum.tanimlar.python ? " · Python " + durum.tanimlar.python : "";
+      $("surumDamgasi").textContent = "sürüm " + durum.tanimlar.surum + py;
     }
     durum.calisma = bosCalisma();
     const k = await api("/api/calismalar");

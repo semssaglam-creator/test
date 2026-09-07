@@ -15,6 +15,7 @@ import io
 import json
 import os
 import socket
+import sys
 import threading
 import urllib.parse
 import zipfile
@@ -251,8 +252,12 @@ class Istekci(BaseHTTPRequestHandler):
                                    "image/png", onbellek_kapali=False)
             elif yol == "/api/tanimlar":
                 self._json_yanit({
-                    # Arayuzun surum damgasi; bkz. app/__init__.py
+                    # Arayuzun surum damgasi; bkz. app/__init__.py.
+                    # Python surumu de gonderilir: hangi yorumlayicinin
+                    # calistigi destek sirasinda defalarca soruldu ve
+                    # tahminle cevaplandi; ekranda yazsin.
                     "surum": SURUM,
+                    "python": sys.version.split()[0],
                     "satirlar": [{"kod": k, "etiket": e, "baslik": b,
                                   "toplam_turu": BEYAN_TOPLAM_TURLERI.get(k)}
                                  for k, e, b in BEYAN_SATIRLARI],
