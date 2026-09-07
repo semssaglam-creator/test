@@ -17,6 +17,7 @@ zip'ten calistirma bitini kaybederse kullanici cift tikladiginda hicbir
 sey olmaz; bu yuzden her girdinin kipi external_attr'a acikca konur.
 """
 import os
+import re
 import stat
 import sys
 import tarfile
@@ -34,6 +35,21 @@ UYGULAMALAR = {
 # her zamanki gibi (calistir.sh) baslatir. Baslatma yontemini degistirmek
 # defalarca ise yaramadi; calisan duzene dokunmamak en emniyetli yol.
 GUNCELLEME_ALT_DIZINLER = ("app", "web")
+
+
+def _surum():
+    """app/__init__.py icindeki SURUM degerini okur (ice aktarmadan)."""
+    yol = os.path.join(BURASI, "kdv_uygulamasi", "app", "__init__.py")
+    try:
+        with open(yol, encoding="utf-8") as f:
+            for satir in f:
+                # Belge metninde de "SURUM" gectigi icin atama araniyor.
+                esles = re.match(r"""^SURUM\s*=\s*['"]([^'"]+)['"]""", satir)
+                if esles:
+                    return esles.group(1)
+    except OSError:
+        pass
+    return ""
 
 DISARIDA_DIZIN = {"__pycache__", ".git", "onbellek", "veritabani"}
 DISARIDA_DOSYA = {".gitignore"}
@@ -73,13 +89,25 @@ def _sahipsiz(bilgi):
     return bilgi
 
 
-def paketle(hedef, klasorler, yalnizca=None):
+def paketle(hedef, klasorler, yalnizca=None, klasor_adi=None):
+    """`klasor_adi` verilirse paketin ust klasoru o adla acilir.
+
+    Tam pakette ust klasore surum eklenir (kdv_uygulamasi_2026.09.07).
+    Sebep: paket, kullanicinin var olan "kdv_uygulamasi" klasorunun yanina
+    acildiginda dosya yoneticisi "birlestir mi, degistir mi" diye soruyor.
+    "Degistir" secilirse eski klasorun icerigi silinir - main.py, lib/ ve
+    calistir.sh gider, uygulama hic acilmaz. Ad farkli olunca cakisma da
+    soru da ortadan kalkar; eski klasore hicbir sey olmaz.
+    """
     alinan, calisir = [], []
     tar_mi = hedef.endswith((".tar.gz", ".tgz"))
     arsiv = (tarfile.open(hedef, "w:gz") if tar_mi
              else zipfile.ZipFile(hedef, "w", zipfile.ZIP_DEFLATED))
     with arsiv as a:
         for tam, bagil in _dosyalar(klasorler, yalnizca):
+            if klasor_adi:
+                ilk, _ayrac, kalan = bagil.partition("/")
+                bagil = "%s/%s" % (klasor_adi, kalan) if kalan else klasor_adi
             kip = os.stat(tam).st_mode
             if tar_mi:
                 # tar dosya kipini kendisi tasir; ayrica ayarlamak gerekmez.
@@ -111,7 +139,14 @@ if __name__ == "__main__":
         sys.exit("bilinmeyen uygulama: %s "
                  "(kdv | uzlasma | hepsi; sonuna -guncelleme eklenebilir)" % hangi)
 
-    alinan, calisir = paketle(hedef, klasorler, yalnizca)
+    # Tam pakette ust klasor surumle adlandirilir; guncelleme paketinde
+    # ad ayni kalmali, cunku o zaten var olan klasorun uzerine acilir.
+    klasor_adi = None
+    if yalnizca is None and klasorler == [UYGULAMALAR["kdv"]]:
+        s = _surum()
+        if s:
+            klasor_adi = "kdv_uygulamasi_%s" % s
+    alinan, calisir = paketle(hedef, klasorler, yalnizca, klasor_adi)
     print("%d dosya -> %s (%.1f MB)"
           % (len(alinan), hedef, os.path.getsize(hedef) / 1024 / 1024))
     ust = sorted({a.split("/")[1] for a in alinan if a.count("/") >= 1})
