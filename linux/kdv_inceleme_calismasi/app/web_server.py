@@ -16,13 +16,14 @@ import io
 import json
 import os
 import socket
+import sys
 import threading
 import urllib.parse
 import zipfile
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import db, hesap
+from . import SURUM, db, hesap
 from .excel_export import (calisma_baytlari, calisma_olustur,
                            fatura_listesi_olustur)
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
@@ -240,6 +241,10 @@ class Istekci(BaseHTTPRequestHandler):
                                    "image/png", onbellek_kapali=False)
             elif yol == "/api/tanimlar":
                 self._json_yanit({
+                    # Arayuzun surum damgasi (bkz. app/__init__.py) ve
+                    # calisan Python surumu.
+                    "surum": SURUM,
+                    "python": sys.version.split()[0],
                     "satirlar": [{"kod": k, "etiket": e, "baslik": b,
                                   "toplam_turu": BEYAN_TOPLAM_TURLERI.get(k)}
                                  for k, e, b in BEYAN_SATIRLARI],
@@ -430,6 +435,10 @@ class Istekci(BaseHTTPRequestHandler):
                          for d in duzen["donemler"]},
             "secilen": {a: s["sira"] for a, s in
                         beyannameler.secimi_coz(duzen, veri.get("secim")).items()},
+            # Devir zincirindeki kopukluklar; arayuz bunlari uyari olarak
+            # gosterir ve karari kullaniciya birakir.
+            "devir_sicramalari": beyannameler.devir_sicramalari(
+                duzen, veri.get("secim")),
             "duzeltme_tablosu": beyannameler.duzeltme_tablosu(duzen),
             "duzeltme_kolonlari": [{"kod": k, "etiket": e}
                                    for k, e in beyannameler.DUZELTME_KOLONLARI],

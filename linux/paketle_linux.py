@@ -25,9 +25,16 @@ import zipfile
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
 UYGULAMALAR = {
+    # Kullanicinin gercekte calistirdigi soy. Klasor adi "KDV Inceleme
+    # Calismasi" (bosluklu); paketler de o adla acilmali, yoksa guncelleme
+    # onun klasorune hic ulasmaz.
+    "inceleme": "kdv_inceleme_calismasi",
     "kdv": "kdv_uygulamasi",
     "uzlasma": "uzlasma_uygulamasi",
 }
+
+# Paket acilinca gorunecek ust klasor adlari (depo icindeki ada gore).
+KLASOR_ADLARI = {"kdv_inceleme_calismasi": "KDV Inceleme Calismasi"}
 
 # Calisan bir kuruluma uygulanacak guncelleme paketi: yalnizca uygulama kodu.
 # Baslatici, lib/ ve main.py disarida kalir - kullanicinin calisan duzenine
@@ -37,9 +44,9 @@ UYGULAMALAR = {
 GUNCELLEME_ALT_DIZINLER = ("app", "web")
 
 
-def _surum():
+def _surum(klasor="kdv_uygulamasi"):
     """app/__init__.py icindeki SURUM degerini okur (ice aktarmadan)."""
-    yol = os.path.join(BURASI, "kdv_uygulamasi", "app", "__init__.py")
+    yol = os.path.join(BURASI, klasor, "app", "__init__.py")
     try:
         with open(yol, encoding="utf-8") as f:
             for satir in f:
@@ -142,8 +149,8 @@ if __name__ == "__main__":
     # Tam pakette ust klasor surumle adlandirilir; guncelleme paketinde
     # ad ayni kalmali, cunku o zaten var olan klasorun uzerine acilir.
     klasor_adi = None
-    if klasorler == [UYGULAMALAR["kdv"]]:
-        s = _surum()
+    if len(klasorler) == 1:
+        s = _surum(klasorler[0])
         if yalnizca:
             # Guncelleme paketinin ust klasoru BILEREK "kdv_uygulamasi"
             # DEGIL. Ayni adi tasisaydi, kullanicinin klasorunun yanina
@@ -154,8 +161,9 @@ if __name__ == "__main__":
             # seviyesine iner; orada iki cevap da guvenlidir, cunku paket
             # o klasorlerin TAMAMINI tasir.
             klasor_adi = "KDV_Guncelleme"
-        elif s:
-            klasor_adi = "kdv_uygulamasi_%s" % s
+        else:
+            temel = KLASOR_ADLARI.get(klasorler[0], klasorler[0])
+            klasor_adi = "%s %s" % (temel, s) if s else temel
     alinan, calisir = paketle(hedef, klasorler, yalnizca, klasor_adi)
     print("%d dosya -> %s (%.1f MB)"
           % (len(alinan), hedef, os.path.getsize(hedef) / 1024 / 1024))

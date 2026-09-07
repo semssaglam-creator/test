@@ -54,6 +54,30 @@ def _devir_pini(yil_kaydi):
         return None
 
 
+def _donem_pinleri(yil_kaydi):
+    """Yil icindeki aya ozel devir pinleri: {ay_indeksi: tutar}.
+
+    Mukellef, gec gelen faturayi ilgili donemi duzeltmeden ileri bir donemin
+    "onceki donemden devreden" satirinda gosterdiginde beyan zinciri o donemde
+    kirilir. Kullanici bu sicramayi kabul ederse (ya da bir kismini kabul
+    ederse) zincir o donemde kabul edilen tutardan yeniden kurulur; tutar
+    buraya {ay: tutar} olarak gelir.
+
+    `devir_baslangic` yilin Ocak'ina uygulanan ozel bir haldir ve ayri
+    tutulur; burasi yalnizca ay bazli pinleri okur.
+    """
+    ham = yil_kaydi.get("devir_pinleri") or {}
+    pinler = {}
+    for anahtar, deger in ham.items():
+        if deger in (None, ""):
+            continue
+        try:
+            pinler[int(anahtar) - 1] = float(deger)
+        except (TypeError, ValueError):
+            continue
+    return pinler
+
+
 def bos_elestiri():
     return {
         "matrah_ilave": [0.0] * 12,
@@ -243,7 +267,12 @@ def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
         pin = _devir_pini(yil_kaydi)
         if pin is not None:
             devreden = pin
+        donem_pinleri = _donem_pinleri(yil_kaydi)
         for ay in range(min(max(ay_sayisi, 1), 12)):
+            # Kabul edilmis bir devir sicramasi varsa zincir bu donemde
+            # kabul edilen tutardan yeniden kurulur (bkz. _donem_pinleri).
+            if ay in donem_pinleri:
+                devreden = donem_pinleri[ay]
             beyan_ozet = _beyan_ozeti(beyan, yil, ay)
             elestirili = _donem_hesapla(beyan, elestiri, yil, ay, devreden)
 
@@ -388,7 +417,10 @@ def _zincir(yillar, devreden_baslangic, aktif=None):
         pin = _devir_pini(yil_kaydi)
         if pin is not None:
             devreden = pin
+        donem_pinleri = _donem_pinleri(yil_kaydi)
         for ay in range(ay_sayisi):
+            if ay in donem_pinleri:
+                devreden = donem_pinleri[ay]
             anahtar = kaynak_anahtari(yil, ay)
             kullanilan = elestiri if (aktif is None or anahtar in aktif) else bos
             kayit = _donem_hesapla(beyan, kullanilan, yil, ay, devreden)
