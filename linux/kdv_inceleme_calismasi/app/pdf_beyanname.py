@@ -742,6 +742,188 @@ def _denetle(degerler):
     return uyarilar
 
 
+
+# --------------------------------------------------------------------------
+# Devir degisikliginin gerekcesi
+#
+# Mukellef, gec gelen bir faturayi ilgili donemin beyannamesini duzeltmeden
+# devreden KDV uzerinden yansittiginda, aradaki farkin gerekcesini
+# beyannameye yazar. Uygulama devreden KDV zincirinde bir sicrama gordugunde
+# bu satirlari kullaniciya gosterir; bu yuzden metin ve tutar birlikte
+# saklanir.
+#
+# Gerekce iki ayri yerde durabiliyor:
+#
+#   Eski bicim  : "INDIRIM NEDENLERI" bolumu, uc sutun
+#                 Degisiklik Nedeni | Aciklama | Miktar
+#
+#   2026 Nisan+ : "INDIRIMLER DETAYI" icindeki "Onceki Donemden Devreden
+#                 Indirilecek KDV" tablosu, dort sutun
+#                 Degisiklik Nedeni | Devrolunan (Eski Mukellef) Sirket VKN |
+#                 Aciklama | KDV Tutari
+#
+# Sutun basliklarinin x konumu, veri satirlarini sutunlara dagitmakta
+# kullanilir.
+INDIRIM_TABLOLARI = (
+    {
+        "baslik": "INDIRIMNEDENLERI",
+        "sutunlar": (("DEGISIKLIKNEDENI", "neden"),
+                     ("ACIKLAMA", "aciklama"),
+                     ("MIKTAR", "miktar")),
+        # Eski bicimde bolumun bittigi yer, taninan bir alan basligidir.
+        "etikette_dur": True,
+    },
+    {
+        "baslik": "ONCEKIDONEMDENDEVREDENINDIRILECEKKDV",
+        "sutunlar": (("DEGISIKLIKNEDENI", "neden"),
+                     ("DEVROLUNANESKIMUKELLEFSIRKETVKN", "vkn"),
+                     ("ACIKLAMA", "aciklama"),
+                     ("KDVTUTARI", "miktar")),
+        # Yeni tabloda veri satiri taninan bir alan adiyla basliyor
+        # ("Onceki donemden devreden KDV"); etikette durulursa tablo bos kalir.
+        "etikette_dur": False,
+    },
+)
+
+# Yeni tabloda, devir tutari degismemis donemde de bir satir bulunur ve
+# "Degisiklik Nedeni" sutununa alanin kendi adi yazilir. Bu satir bir gerekce
+# degil, "gerekce yok" demektir; aksi halde her beyanname gerekceli gorunur ve
+# devir sicramasi uyarisi anlamini yitirir.
+VARSAYILAN_DEVIR_SATIRI = "ONCEKIDONEMDENDEVREDENKDV"
+
+
+def _satirlara_bol(parcalar_xy):
+    """(x, y, metin) parcalarini ayni satirda olanlari birlestirerek gruplar.
+
+    Doner: [(y, [(x, metin), ...])] - yukaridan asagiya sirali, her satirin
+    icinde soldan saga.
+    """
+    sirali = sorted(parcalar_xy, key=lambda p: (-p[1], p[0]))
+    satirlar = []
+    for x, y, metin in sirali:
+        if satirlar and abs(satirlar[-1][0] - y) <= HIZA_TOLERANSI:
+            satirlar[-1][1].append((x, metin))
+        else:
+            satirlar.append((y, [(x, metin)]))
+    for _y, hucreler in satirlar:
+        hucreler.sort(key=lambda h: h[0])
+    return satirlar
+
+
+def _bos_hucre(metin, varsayilan=None):
+    """Hucre bos mu sayilir.
+
+    Beyanname bos hucreye tire koyuyor. Ayrica bir hucre alanin kendi adini
+    tasiyorsa (varsayilan) yine bilgi tasimiyor demektir.
+    """
+    sade = (metin or "").strip(" -\u2013\u2014\t")
+    if not sade:
+        return True
+    return varsayilan is not None and normalize(sade) == varsayilan
+
+
+def _indirim_nedenleri(parcalar):
+    """Devir degisikliginin gerekcesini tasiyan tabloyu okur.
+
+    Beyannamenin bicimine gore iki tablodan biri bulunur; ilk dolu olan
+    dondurulur (bkz. INDIRIM_TABLOLARI).
+    """
+    for tablo in INDIRIM_TABLOLARI:
+        kayitlar = _indirim_tablosunu_oku(parcalar, tablo)
+        if kayitlar:
+            return kayitlar
+    return []
+
+
+def _indirim_tablosunu_oku(parcalar, tablo):
+    """Bir gerekce tablosunun satirlarini okur.
+
+    Sutun basliklari bulunursa satirlar basliklarin x konumuna gore
+    dagitilir. Baslik satiri okunamazsa daha kaba bir yol izlenir: satirdaki
+    son sayi miktar, ilk metin neden, arasi aciklama sayilir. Boylece bicim
+    beklenenden saparsa bolum tumuyle kaybolmaz.
+    """
+    for sayfa_no in sorted({s for s, _x, _y, _m in parcalar}):
+        sayfa = [(x, y, m) for s, x, y, m in parcalar if s == sayfa_no]
+        baslik = next((p for p in sayfa
+                       if normalize(p[2]) == tablo["baslik"]), None)
+        if baslik is None:
+            continue
+        altindakiler = [p for p in sayfa if p[1] < baslik[1] - HIZA_TOLERANSI]
+        satirlar = _satirlara_bol(altindakiler)
+
+        sutun_x = {}
+        veri_satirlari = []
+        for _y, hucreler in satirlar:
+            anahtarlar = [normalize(m) for _x, m in hucreler]
+            if any(a in BOLUM_BASLIKLARI for a in anahtarlar):
+                break                                   # sonraki bolum basladi
+            if not sutun_x:
+                for anahtar, ad in tablo["sutunlar"]:
+                    for x, m in hucreler:
+                        if normalize(m) == anahtar:
+                            sutun_x[ad] = x
+                            break
+                if len(sutun_x) >= 2:
+                    continue                            # baslik satiri veri degil
+                sutun_x = {}
+            if anahtarlar and anahtarlar[0] == "TOPLAM":
+                break                                   # tablonun toplam satiri
+            if tablo["etikette_dur"] and any(_etiket_mi(m) for _x, m in hucreler):
+                break                                   # taninan bir alan basligi
+            veri_satirlari.append(hucreler)
+
+        return _indirim_satirlarini_coz(veri_satirlari, sutun_x)
+    return []
+
+
+def _indirim_satirlarini_coz(veri_satirlari, sutun_x):
+    """Veri satirlarini {neden, aciklama, miktar} kayitlarina cevirir."""
+    def sutuna_ata(x):
+        if not sutun_x:
+            return None
+        return min(sutun_x, key=lambda ad: abs(sutun_x[ad] - x))
+
+    kayitlar = []
+    for hucreler in veri_satirlari:
+        alanlar = {"neden": [], "aciklama": [], "vkn": [], "miktar": None}
+        artakalan = []
+        for x, metin in hucreler:
+            tutar = tutar_coz(metin)
+            if tutar is not None:
+                alanlar["miktar"] = tutar
+                continue
+            ad = sutuna_ata(x)
+            if ad in ("neden", "aciklama", "vkn"):
+                alanlar[ad].append(metin)
+            else:
+                artakalan.append(metin)
+        if artakalan and not sutun_x:
+            # Baslik okunamadi: ilk parca neden, kalani aciklama
+            alanlar["neden"] = artakalan[:1]
+            alanlar["aciklama"] = artakalan[1:]
+        elif artakalan:
+            alanlar["aciklama"].extend(artakalan)
+
+        neden = " ".join(alanlar["neden"]).strip()
+        aciklama = " ".join(alanlar["aciklama"]).strip()
+        vkn = " ".join(alanlar["vkn"]).strip()
+        if not neden and not aciklama and alanlar["miktar"] is None:
+            continue
+        if (_bos_hucre(neden, VARSAYILAN_DEVIR_SATIRI) and _bos_hucre(aciklama)
+                and _bos_hucre(vkn)):
+            continue
+        # Yalnizca aciklama tasiyan satir, ustteki kaydin devamidir
+        if kayitlar and not neden and alanlar["miktar"] is None and aciklama:
+            kayitlar[-1]["aciklama"] = (
+                kayitlar[-1]["aciklama"] + " " + aciklama).strip()
+            continue
+        kayit = {"neden": neden, "aciklama": aciklama, "miktar": alanlar["miktar"]}
+        if not _bos_hucre(vkn):
+            kayit["vkn"] = vkn
+        kayitlar.append(kayit)
+    return kayitlar
+
 def beyanname_oku(yol, dosya_adi=None):
     """Bir beyanname PDF'ini okur.
 
@@ -757,6 +939,7 @@ def beyanname_oku(yol, dosya_adi=None):
     parcalar = _parcalar(yol)
     kunye = _kunye(parcalar)
     degerler, tanimsiz = _alanlari_topla(parcalar)
+    indirim_nedenleri = _indirim_nedenleri(parcalar)
 
     ek = {kod: degerler.pop(kod) for kod in list(EK_ETIKETLER.values())
           if kod in degerler}
@@ -799,6 +982,7 @@ def beyanname_oku(yol, dosya_adi=None):
         "onay_zamani": kunye["onay_zamani"],
         "onay_ts": _onay_ts(kunye["onay_zamani"]),
         "duzeltme_nedeni": kunye["duzeltme_nedeni"],
+        "indirim_nedenleri": indirim_nedenleri,
         # yol bir akis (BytesIO) da olabilir; bkz. fatura_oku.dosya_oku
         "kaynak": dosya_adi or (os.path.basename(yol)
                                 if isinstance(yol, str) else ""),

@@ -744,7 +744,7 @@ def genel_bakis(duzen):
             simdiki = s["degerler"]
             ilk_mi = onceki_surum is None
             onceki = {} if ilk_mi else onceki_surum["degerler"]
-            ozet, degisen = {}, []
+            ozet, degisen, ozet_fark = {}, [], {}
             for ozet_kod, _etiket in OZET_KOLONLARI:
                 beyan_kod = OZET_ESLEMESI.get(ozet_kod)
                 deger = al(simdiki, beyan_kod) if beyan_kod else 0.0
@@ -752,6 +752,7 @@ def genel_bakis(duzen):
                 if not ilk_mi and beyan_kod \
                         and abs(deger - al(onceki, beyan_kod)) > 0.005:
                     degisen.append(ozet_kod)
+                    ozet_fark[ozet_kod] = round(deger - al(onceki, beyan_kod), 2)
             satirlar.append({
                 "anahtar": d["anahtar"],
                 "yil": d["yil"],
@@ -767,6 +768,10 @@ def genel_bakis(duzen):
                 "degisen_satir": 0 if ilk_mi else len(_degisenler(onceki_surum, s)),
                 "ozet": ozet,
                 "ozet_degisen": degisen,
+                # Degisen kolonlarin degisim tutari (simdiki - onceki);
+                # vurgulanan tutarin altinda "Fark: +/-" olarak gosterilir.
+                # Yalnizca degisen kolonlar icin anahtar bulunur.
+                "ozet_fark": ozet_fark,
             })
             onceki_surum = s
     return satirlar
