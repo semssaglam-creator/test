@@ -21,7 +21,7 @@ import zipfile
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import db, hesap
+from . import SURUM, db, hesap
 from .excel_export import calisma_olustur, fatura_listesi_olustur
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
                            tek_satir_ayristir, tutar_coz)
@@ -251,6 +251,8 @@ class Istekci(BaseHTTPRequestHandler):
                                    "image/png", onbellek_kapali=False)
             elif yol == "/api/tanimlar":
                 self._json_yanit({
+                    # Arayuzun surum damgasi; bkz. app/__init__.py
+                    "surum": SURUM,
                     "satirlar": [{"kod": k, "etiket": e, "baslik": b,
                                   "toplam_turu": BEYAN_TOPLAM_TURLERI.get(k)}
                                  for k, e, b in BEYAN_SATIRLARI],
