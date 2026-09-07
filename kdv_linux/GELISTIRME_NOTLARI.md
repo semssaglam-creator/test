@@ -70,6 +70,38 @@ oturumda buradan devam edilir.
 
 ---
 
+## Verilmiş kararlar (yeniden açmayın)
+
+- **Bilerek kullanmada ceza ÜÇ KAT olarak kodlanır.** Müfettişin kararı
+  (2026-09-07). Farklı bir durum çıkarsa raporu elle düzeltir; uygulamaya
+  seçim eklenmeyecek. Gerekçe: dosyaların ezici çoğunluğu bu hâlde ve her
+  ihtimali seçime bağlamak ekranı ağırlaştırıyor.
+
+  Araştırmada çıkan ve **elle düzeltmeyi gerektiren** hâller — belgedeki
+  yardım metni bunları sayar, kod dallanmaz:
+  - *Pişmanlıkla verilen düzeltme (VUK 371):* vergi ziyaı cezası hiç
+    kesilmez; ayrıca VUK 359'un son fıkrası "371'deki pişmanlık şartlarına
+    uygun olarak durumu ilgili makamlara bildirenler hakkında bu madde
+    hükmü uygulanmaz" dediği için vergi suçu raporu ve suç duyurusu da
+    yazılmaz. Ancak 371'in kapısı dardır: ihbardan, incelemeye
+    başlanmasından, takdire sevkten ve kaçakçılık fiilinin tespitinden önce
+    olmalıdır — sahte belge dosyalarında karşıt/mukabil inceleme tutanağı
+    düzenlenmişse pişmanlık kapanır.
+  - *İzaha davet (VUK 370):* ceza %20. Sahte belge kullanmada tutar
+    sınırlıdır (belge başına yıllık sınır ve o yılki toplam alışların
+    %5'i).
+  - *İnceleme başladıktan SONRA verilen düzeltme:* VUK 344 son fıkrasındaki
+    %50 uygulanmaz; ceza tam kat kesilmiştir. Kodun "yarım kat kesilmiştir"
+    varsayımı yalnızca inceleme öncesi düzeltmeler için doğrudur.
+  - *Üç kat mı 1,5 kat mı:* Danıştay 9. Daire'nin 344/2 ile son fıkrayı
+    birlikte uygulayıp 1,5 kata indiren kararları var; "fark cezanın hiç
+    kesilemeyeceği" yönünde kararlar da olduğu belirtiliyor. Tartışmalı;
+    uygulama üç kat yazar.
+
+  Not: bu araştırma yalnızca arama motoru özetlerine dayanıyor; oturumun ağ
+  politikası mevzuat.gov.tr ve gib.gov.tr dahil hemen her kaynağı engelledi.
+  Madde metinleri birincil kaynaktan doğrulanmadı.
+
 ## Yapılanlar
 
 - [x] 2026-09-06 — **Kullanma durumu artık belgenin TÜRÜNÜ değiştiriyor.**
