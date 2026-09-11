@@ -120,6 +120,14 @@ oturumda buradan devam edilir.
         bakılıyor: bandın ETİKET sütunu boşsa devam satırıdır.
       Ayrıca düzeltme işareti, künye alanları gibi etiketi ve değeri **ayrı
       parçalarda** olabiliyor; iki düzen de destekleniyor.
+      **Düzeltme işareti bulundu:** alanın adı **"Düzeltme Açıklaması"**
+      (ne "Düzeltme Nedeni" ne "Beyanname Türü" — ikisi de denendi, üçüncüsü
+      çıktı). Etiketi solda, serbest metin açıklama sağında; alan yalnızca
+      düzeltme beyannamelerinde basılıyor, kanuni beyannamede o satır hiç yok
+      ve altındaki her şey 24 punto yukarıda duruyor.
+      **Vergi dairesi kod önekiyle geliyor** ("033254 - Liman Vergi Dairesi
+      Müdürlüğü"); kod belgeye girmemeli, `inceleme_kunyesi.daire_adi` artık
+      kırpıyor. Okuyucu beyannamede yazanı verir; kırpma belgeye yazarken olur.
       **`testler/` eklendi:** sahadan gelen üç döküm (eski biçim, yeni biçim,
       yeni biçim matrahlı) ve gerileme koşucusu. `python3
       testler/beyanname_testi.py`. Paketlere girmiyor. Yukarıdaki iki hata

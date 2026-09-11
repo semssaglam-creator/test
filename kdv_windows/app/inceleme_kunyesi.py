@@ -12,6 +12,8 @@ Kunye, calisma JSON'unun icinde "kunye" anahtariyla saklanir; veritabani
 semasi degismez.
 """
 
+import re
+
 from . import turkce
 
 # Alan turleri:
@@ -536,6 +538,12 @@ def daire_adi(deger, yer_tutucu="[Vergi dairesi]"):
         return yer_tutucu
     if ham.startswith("["):                    # yer tutucu
         return ham
+
+    # Sistem dokumleri daire adini kodla birlikte veriyor:
+    # "033254 - Liman Vergi Dairesi Müdürlüğü". Kod belgeye girmemeli;
+    # rapor "...Müdürlüğü'nün mükellefi" diye devam ediyor. Hicbir daire
+    # adi rakamla baslamadigi icin bu kirpma ada zarar vermez.
+    ham = re.sub(r"^\d{3,6}\s*[-–]\s*", "", ham)
 
     kelimeler = ham.split()
     baskanlik = False

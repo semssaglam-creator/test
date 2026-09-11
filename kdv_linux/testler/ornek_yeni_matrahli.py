@@ -13,16 +13,16 @@ DOKUM = """0	199.8	771.0	Katma Değer Vergisi Beyannamesi
 0	395.8	634.0	ornek@ornek.com
 0	41.0	620.0	Telefon No
 0	404.2	620.0	2120000000
-0	41.0	596.0	BEŞİKTAŞ VERGİ DAİRESİ
-0	41.0	588.0	MÜDÜRLÜĞÜ
+0	41.0	596.0	033254 - Örnek Vergi Dairesi
+0	41.0	588.0	Müdürlüğü
 0	145.6	596.0	Şube No: -
 0	250.2	596.0	Yıl: 2026
 0	354.8	596.0	Ay: Mayıs
 0	459.4	596.0	Dönem Tipi: AYLIK
 0	41.0	564.0	@@ETIKET@@
 0	145.6	564.0	@@DEGER@@
-0	144.4	540.0	Mükellefin Kendisi
-0	174.3	532.0	Bilgileri
+0	144.4	540.0	Beyannamenin Hangi Sıfatla Verildiği
+0	174.3	532.0	Bilgileri (Mükellef)
 0	290.8	536.0	Beyannameyi Düzenleyen Bilgileri
 0	433.8	536.0	Beyannameyi Onaylayan Bilgileri
 0	41.0	518.0	T.C. Kimlik No
@@ -205,12 +205,19 @@ DOKUM = """0	199.8	771.0	Katma Değer Vergisi Beyannamesi
 2	292.4	26.0	3"""
 
 
-def parcalar(etiket="", deger=""):
+# y=564'teki satir dokumde maskeli geldi; sonradan ekran goruntusuyle
+# ogrenildi: alanin adi "Düzeltme Açıklaması", degeri serbest metin.
+# Bu alan YALNIZCA duzeltme beyannamelerinde basilir - kanuni beyannamede
+# o satir hic yoktur, altindaki her sey 24 punto yukaridadir.
+DUZELTME_ETIKETI = "Düzeltme Açıklaması"
+DUZELTME_ACIKLAMASI = "SMMM TARAFINDAN YAPILAN DÜZELTME...."
+
+
+def parcalar(etiket=DUZELTME_ETIKETI, deger=DUZELTME_ACIKLAMASI):
     """Dokumu (sayfa, x, y, metin) listesine cevirir.
 
-    y=564 satirindaki iki parca maskeli geldi; duzeltme isareti orada
-    olabilir. Ne yazdigi bilinmedigi icin disaridan verilir; bos verilirse
-    o satir hic yokmus gibi okunur.
+    etiket/deger bos verilirse duzeltme satiri hic yokmus gibi okunur;
+    beyannamenin kanuni suresinde verilmis hali boyle gorunur.
     """
     sonuc = []
     for satir in DOKUM.splitlines():

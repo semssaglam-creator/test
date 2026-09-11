@@ -184,11 +184,14 @@ if y["tur"] != "kanuni":
 # 2026/Mayıs beyannamesi. İlk yeni biçim örneğinde bu bölümler hiç yoktu.
 P._parcalar = lambda _yol: MATRAHLI.parcalar()
 m = P.beyanname_oku("(bellek)", "mayis.pdf")
-yazdir("YENİ BİÇİM — matrah, ihraç kayıtlı teslim, istisna", m)
+yazdir("YENİ BİÇİM — matrah, ihraç kayıtlı teslim, istisna (düzeltme)", m)
 hata |= denetle("yeni+matrah", m, {
-    "yil": 2026, "ay": 5, "bicim": "yeni", "tur": "kanuni",
+    "yil": 2026, "ay": 5, "bicim": "yeni", "tur": "duzeltme",
+    "duzeltme_nedeni": MATRAHLI.DUZELTME_ACIKLAMASI,
     "unvan": "ÖRNEK TEKSTİL SANAYİ VE TİCARET ANONİM ŞİRKETİ",
-    "vergi_dairesi": "BEŞİKTAŞ VERGİ DAİRESİ MÜDÜRLÜĞÜ",
+    # Okuyucu beyannamede YAZANI verir; daire kodu belgeye yazilirken
+    # inceleme_kunyesi.daire_adi tarafindan kirpilir.
+    "vergi_dairesi": "033254 - Örnek Vergi Dairesi Müdürlüğü",
     "degerler.matrah_toplami": 2209951.45,
     "degerler.hesaplanan_kdv": 441990.29,
     "degerler.toplam_kdv": 441990.29,
@@ -215,6 +218,7 @@ if m["uyarilar"]:
 # Düzeltme işareti, künye alanları gibi etiketi ve değeri AYRI parçalarda
 # olabilir; iki düzende de yakalanmalı.
 for etiket, deger, bek_tur in (
+        ("Düzeltme Açıklaması", "SMMM tarafından yapılan düzeltme", "duzeltme"),
         ("Beyanname Türü", "Düzeltme Beyannamesi", "duzeltme"),
         ("Düzeltme Nedeni", "Sahte belge indirimlerinin çıkarılması", "duzeltme"),
         ("Beyanname Türü", "Kanuni Süresinde", "kanuni"),
@@ -224,6 +228,28 @@ for etiket, deger, bek_tur in (
     if s2["tur"] != bek_tur:
         print("  ! %r / %r -> tür %s, beklenen %s"
               % (etiket, deger, s2["tur"], bek_tur)); hata = 1
+
+# Uzun bir duzeltme aciklamasi alt satira tasar. Devami alinmali, ama
+# 24 punto asagidaki SUTUN BASLIKLARI aciklamaya karismamali
+# ("Beyannamenin Hangi Sıfatla Verildiği Bilgileri").
+# Uc satira tasan aciklama, sutun basliklarinin bulundugu banda DEGER;
+# iki satirda kalirsa aradaki bosluk zaten 16 punto olup satir araligini
+# astigi icin sorun cikmaz. Denetim bu yuzden uc satirla yapilir.
+_tasan = MATRAHLI.parcalar() + [(0, 145.6, 556.0, "İNDİRİMLERDEN"),
+                                (0, 145.6, 548.0, "ÇIKARILMIŞTIR")]
+P._parcalar = lambda _yol: _tasan
+t = P.beyanname_oku("(bellek)", "tasan.pdf")
+_bek = MATRAHLI.DUZELTME_ACIKLAMASI + " İNDİRİMLERDEN ÇIKARILMIŞTIR"
+if t["duzeltme_nedeni"] != _bek:
+    print("  ! taşan açıklama: beklenen %r, okunan %r"
+          % (_bek, t["duzeltme_nedeni"])); hata = 1
+
+# Daire kodu ("033254 - ") belgeye GECMEMELI: rapor "...Müdürlüğü'nün
+# mükellefi" diye devam ediyor.
+from app import inceleme_kunyesi as ik
+_ad = ik.daire_adi(m["vergi_dairesi"])
+if _ad != "Örnek Vergi Dairesi Müdürlüğü":
+    print("  ! daire adı belgeye %r olarak geçiyor" % _ad); hata = 1
 
 print("\n" + ("BAŞARISIZ" if hata else "TÜMÜ GEÇTİ"))
 sys.exit(hata)

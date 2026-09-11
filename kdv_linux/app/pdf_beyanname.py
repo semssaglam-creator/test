@@ -427,10 +427,15 @@ def _etiket_mi(metin):
     # "Vergi Kimlik Numarası", "E-Posta Adresi" gibi kunye etiketleri de burada
     # durdurucu sayilir; hepsini listelemek yerine bilinen birkac tanesi yeter.
     # Sondaki dordu yeni bicimin kunye alanlaridir.
+    # "BEYANNAME..." ile baslayanlar kunye blogunun sutun basliklaridir
+    # ("Beyannamenin Hangi Sıfatla Verildiği Bilgileri", "Beyannameyi
+    # Düzenleyen Bilgileri"). Durdurucu sayilmazlarsa, hemen ustlerindeki
+    # "Düzeltme Açıklaması" alaninin devami sanilip aciklamaya karisiyorlar.
     return n.startswith(("VERGIKIMLIKNUMARASI", "EPOSTAADRESI", "TICARETSICILNO",
                          "IRTIBATTELNO", "SOYADI", "ADI", "UNVANI",
                          "VERGIDAIRESIMUDURLUGU", "ONAYZAMANI",
-                         "VERGIKIMLIKNO", "TCKIMLIKNO", "TELEFONNO", "SUBENO"))
+                         "VERGIKIMLIKNO", "TCKIMLIKNO", "TELEFONNO", "SUBENO",
+                         "BEYANNAMENIN", "BEYANNAMEYI"))
 
 
 def _duzeltme_nedeni(ilk_sayfa, indeks):
@@ -627,8 +632,13 @@ def _kunye(parcalar):
     # Olcut dar tutulmustur: alanin ADI da DEGERI de aranir. "Değişiklik
     # Nedeni" (indirimler detayi tablosunun sutun basligi) buna takilmaz.
     if not kunye["duzeltme_nedeni"]:
-        neden = (alanlar.get("DUZELTMENEDENI")
-                 or _sagdaki_deger(ilk_sayfa, {"DUZELTMENEDENI"}))
+        # Yeni bicimde alanin adi "Düzeltme Açıklaması"dir; etiketi solda,
+        # aciklama sagindadir ve alt satira tasabilir. Alan yalnizca duzeltme
+        # beyannamelerinde basilir, kanuni beyannamede o satir hic yoktur.
+        adlar = {"DUZELTMEACIKLAMASI", "DUZELTMENEDENI"}
+        neden = (alanlar.get("DUZELTMEACIKLAMASI")
+                 or alanlar.get("DUZELTMENEDENI")
+                 or _sagdaki_deger(ilk_sayfa, adlar, devam=True))
         tur = (alanlar.get("BEYANNAMETURU")
                or _sagdaki_deger(ilk_sayfa, {"BEYANNAMETURU"}))
         if neden:
