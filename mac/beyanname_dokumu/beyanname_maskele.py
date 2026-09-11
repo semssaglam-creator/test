@@ -95,6 +95,7 @@ VERI_BOLUMLERI = (
 
 # Kimlik bloklarindaki ETIKETLER korunur; yalnizca degerleri maskelenir.
 KIMLIK_ETIKETLERI = (
+    "DUZELTMENEDENI", "DUZELTMEBEYANNAMESI", "DUZELTME",
     "TCKIMLIKNO", "VERGIKIMLIKNO", "ADISOYADIUNVANI", "EPOSTAADRESI",
     "TELEFONNO", "SUBENO", "VERGIDAIRESI", "VERGIDAIRESIMUDURLUGU",
     "YIL", "AY", "DONEMTIPI", "ONAYZAMANI", "SOYADI", "ADI", "UNVANI",
@@ -123,9 +124,14 @@ YIL_DESENI = re.compile(r"^(?:19|20)\d{2}$")
 def guvenli_deger(metin):
     """Kimlik bandinda olsa bile maskelenmemesi gereken deger mi.
 
-    Donem (yil / ay / donem tipi) ve vergi dairesi kisiye ozel bilgi degil;
-    ayristirici beyannamenin hangi doneme ait oldugunu bunlardan anliyor.
-    Maskelenirse dokum ise yaramaz hale gelir.
+    Donem (yil / ay / donem tipi), vergi dairesi ve duzeltme bilgisi kisiye
+    ozel veri degil; beyannamenin hangi doneme ait oldugunu ve kanuni beyan
+    mi duzeltme mi oldugunu ayristirici bunlardan anliyor. Maskelenirse
+    dokum ise yaramaz hale gelir.
+
+    Duzeltme satiri bir kez maskelenmis ve dokumdan "bu bir duzeltme
+    beyannamesi mi" sorusu cevaplanamamisti; satir kimlik bandinin icinde
+    durdugu icin etiketiyle birlikte gizlenmisti.
     """
     a = normalize(metin)
     if not a:
@@ -136,7 +142,7 @@ def guvenli_deger(metin):
         return True
     if "VERGIDAIRESI" in a:
         return True
-    return False
+    return "DUZELTME" in a
 
 
 def normalize(metin):

@@ -71,6 +71,10 @@ AYLAR_PDF = {
 # noktalama ve bosluk atilmis) bicimdedir.
 ETIKET_ESLEMESI = {
     "MATRAHTOPLAMI": "matrah_toplami",
+    # Yeni bicimde ad ters cevrilmis: "Matrah Toplamı" -> "Toplam Matrah".
+    # Eksikligi sessiz kaliyordu: okunamayan cekirdek satirlar yeni bicimde
+    # sifir sayildigi icin (bkz. YENI_BICIM_SIFIRLAR) matrah 0,00 gorunuyordu.
+    "TOPLAMMATRAH": "matrah_toplami",
     "HESAPLANANKATMADEGERVERGISI": "hesaplanan_kdv",
     "DAHAONCEINDIRIMKONUSUYAPILANKDVNINILAVESI": "ilave_edilecek_kdv",
     "ILAVEEDILECEKKDV": "ilave_edilecek_kdv",
@@ -155,6 +159,13 @@ BOLUM_BASLIKLARI = {
     # "Toplam" satirlarinin baska bir bolumun toplami sanilmasini onler.
     "INDIRIMLERDETAYI": "indirimler_detayi",
     "DIGERINDIRIMLER": "diger_indirimler",
+    "MATRAH": "matrah",
+    "MATRAHDETAYI": "matrah_detayi",
+    "TEVKIFATUYGULANMAYANISLEMLER": "tevkifatsiz",
+    "ISTISNALARDIGERIADEHAKKIDOGURANISLEMLER": "istisnalar",
+    "ISTISNALARDIGERIADEHAKKIDOGURANISLEMLERDETAYI": "istisnalar_detayi",
+    "TAMISTISNAKAPSAMINAGIRENISLEMLER": "tam_istisna",
+    "IHRACKAYDIYLATESLIMLEREAITBILDIRIM": "ihrac_bildirim",
     "MUKELLEFBILGILERI": "kunye",
     "BEYANNAMEYIDUZENLEYENBILGILERI": "kunye",
     "BEYANNAMEYIONAYLAYANBILGILERI": "kunye",
