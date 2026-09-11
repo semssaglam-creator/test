@@ -95,7 +95,11 @@ VERI_BOLUMLERI = (
 
 # Kimlik bloklarindaki ETIKETLER korunur; yalnizca degerleri maskelenir.
 KIMLIK_ETIKETLERI = (
-    "DUZELTMENEDENI", "DUZELTMEBEYANNAMESI", "DUZELTME",
+    # Duzeltme alaninin ADI korunur; DEGERI maskeli kalir. Deger serbest
+    # metin ve icinde kisi adi gecebiliyor - ornek bir beyannamede
+    # "YMM ... tarafindan yapilan duzeltme" yaziyordu. Dokumu okuyanin
+    # beyannamenin duzeltme oldugunu anlamasi icin etiket yeterli.
+    "DUZELTMENEDENI", "DUZELTMEACIKLAMASI", "DUZELTMEBEYANNAMESI",
     "TCKIMLIKNO", "VERGIKIMLIKNO", "ADISOYADIUNVANI", "EPOSTAADRESI",
     "TELEFONNO", "SUBENO", "VERGIDAIRESI", "VERGIDAIRESIMUDURLUGU",
     "YIL", "AY", "DONEMTIPI", "ONAYZAMANI", "SOYADI", "ADI", "UNVANI",
@@ -119,6 +123,8 @@ AY_ADLARI = ("OCAK", "SUBAT", "MART", "NISAN", "MAYIS", "HAZIRAN", "TEMMUZ",
              "AGUSTOS", "EYLUL", "EKIM", "KASIM", "ARALIK")
 DONEM_TIPLERI = ("AYLIK", "UCAYLIK", "YILLIK")
 YIL_DESENI = re.compile(r"^(?:19|20)\d{2}$")
+# Vergi dairesi adinin basindaki daire kodu: "033254 - Liman Vergi"
+DAIRE_KODU = re.compile(r"^\d{5,6}\s*-\s*\S")
 
 
 def guvenli_deger(metin):
@@ -142,7 +148,14 @@ def guvenli_deger(metin):
         return True
     if "VERGIDAIRESI" in a:
         return True
-    return "DUZELTME" in a
+    # Vergi dairesi adi etiketsiz basiliyor, iki satira tasiyor ve basinda
+    # daire kodu var ("033254 - Liman Vergi" / "Dairesi Müdürlüğü"). Boyle
+    # bolundugunde hicbir parca tek basina "Vergi Dairesi" icermiyor ve
+    # ikisi de maskeleniyordu; daire adi kisisel veri degil, ayristirici
+    # kunyeye onu yaziyor.
+    if "DAIRESI" in a or "MUDURLUGU" in a:
+        return True
+    return bool(DAIRE_KODU.match((metin or "").strip()))
 
 
 def normalize(metin):

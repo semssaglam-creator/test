@@ -429,6 +429,10 @@ def _etiket_mi(metin):
                          "VERGIKIMLIKNO", "TCKIMLIKNO", "TELEFONNO", "SUBENO"))
 
 
+# Duzeltme beyannamesini isaretleyen alanin adi bicime gore degisir.
+DUZELTME_ETIKETLERI = ("DUZELTMENEDENI", "DUZELTMEACIKLAMASI")
+
+
 def _duzeltme_nedeni(ilk_sayfa, indeks):
     """Duzeltme nedeni aciklamasinin tamamini toplar.
 
@@ -580,8 +584,12 @@ def _kunye(parcalar):
     eslesme = TARIH_SAATI.search(tam)
     if eslesme:
         kunye["onay_zamani"] = eslesme.group(0)
+    # Etiket bicime gore degisiyor: eski ciktida "Düzeltme Nedeni", 2026
+    # Nisan sonrasi ciktida "Düzeltme Açıklaması". Etiket taninmazsa
+    # beyanname duzeltme olarak isaretlenmiyor ve donem icin tek beyan
+    # varmis gibi gorunuyordu.
     for i, (_x, _y, m) in enumerate(ilk_sayfa):
-        if normalize(m).startswith("DUZELTMENEDENI"):
+        if normalize(m).startswith(DUZELTME_ETIKETLERI):
             kunye["duzeltme_nedeni"] = (_duzeltme_nedeni(ilk_sayfa, i)
                                         or "(belirtilmemiş)")
     # Yeni bicimde beyanname turu ayri bir alanda yazili olabiliyor. Buradaki
