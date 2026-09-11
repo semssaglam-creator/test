@@ -104,6 +104,27 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-09-11 — **Yeni biçimin matrahlı hâli okunuyor; iki hata düzeltildi.**
+      Sahadan gelen ikinci örnek (2026/Mayıs) ilkinde hiç bulunmayan bölümleri
+      taşıyordu: MATRAH, İHRAÇ KAYDIYLA TESLİMLER, İSTİSNALAR, MATRAH DETAYI,
+      İSTİSNALAR DETAYI. İkisi gerçek hataydı:
+      - **`matrah_toplami` sıfır okunuyordu.** Yeni biçim "Matrah Toplamı"
+        değil **"Toplam Matrah"** yazıyor; alan adı tanınmayınca değer eksik
+        kalıyor, eksik bölüm "sıfır" sayıldığı için de **sessizce** 0,00
+        görünüyordu. Artık eşleniyor; ayrıca `_denetle`ye "matrahsız
+        hesaplanan KDV olmaz" uyarısı eklendi — aynı hatanın bir daha sessiz
+        kalmaması için.
+      - **Ünvanın ikinci satırı kayboluyordu.** Değer satırları sola değil
+        **sağa** yaslı olabiliyor; devam satırı birincinin çok sağında
+        başlıyor (312.6 → 377.6). Hizaya bakan kural yerine artık şuna
+        bakılıyor: bandın ETİKET sütunu boşsa devam satırıdır.
+      Ayrıca düzeltme işareti, künye alanları gibi etiketi ve değeri **ayrı
+      parçalarda** olabiliyor; iki düzen de destekleniyor.
+      **`testler/` eklendi:** sahadan gelen üç döküm (eski biçim, yeni biçim,
+      yeni biçim matrahlı) ve gerileme koşucusu. `python3
+      testler/beyanname_testi.py`. Paketlere girmiyor. Yukarıdaki iki hata
+      bilerek geri konarak denetimin gerçekten attığı doğrulandı.
+
 - [x] 2026-09-06 — **Kullanma durumu artık belgenin TÜRÜNÜ değiştiriyor.**
       Faturaların tamamı düzeltmeyle çıkarılmışsa tarh edilecek vergi iki
       hâlde de yoktur, ama düzenlenecek belge farklıdır:

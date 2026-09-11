@@ -52,7 +52,7 @@ mkdir -p "$PAKET/yeni"
 
 DISARIDA=(
   '.git' '__pycache__' '*.pyc' '.DS_Store' '*.sh' '*.zip' '*.tmp' '*.db'
-  'ACILIS KAYDI.txt' '*BUNU GONDERIN*'
+  'testler' 'ACILIS KAYDI.txt' '*BUNU GONDERIN*'
 )
 haric=()
 for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done

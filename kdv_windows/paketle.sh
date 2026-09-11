@@ -84,7 +84,7 @@ mkdir -p "$PAKET"
 # Linux surumu ayri agacta (kdv_linux) durur.
 DISARIDA=(
   '.git' '__pycache__' '*.pyc' '.DS_Store' '*.sh' '*.zip' '*.tmp' '.gitignore'
-  'arac' "$PAKET" 'ciktilar/*' 'yedekler/*' 'veritabani/*' '*.db'
+  'arac' 'testler' "$PAKET" 'ciktilar/*' 'yedekler/*' 'veritabani/*' '*.db'
   "$TANI_DOSYASI" '*BUNU GONDERIN*' 'ACILIS KAYDI.txt'
 )
 haric=()

@@ -53,7 +53,7 @@ mkdir -p "$PAKET"
 
 DISARIDA=(
   '.git' '__pycache__' '*.pyc' '.DS_Store' '*.tar.gz' '*.zip' '*.tmp'
-  '.gitignore' 'paketle.sh' 'skill' 'GELISTIRME_NOTLARI.md'
+  '.gitignore' 'paketle.sh' 'skill' 'testler' 'GELISTIRME_NOTLARI.md'
   "$PAKET" 'ciktilar/*' 'yedekler/*' 'veritabani/*' '*.db'
   '*BUNU GONDERIN*' 'ACILIS KAYDI.txt'
 )

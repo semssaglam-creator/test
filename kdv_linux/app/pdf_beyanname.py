@@ -119,6 +119,9 @@ ETIKET_ESLEMESI = {
     # --- Yeni bicimin kisaltilmis alan adlari
     # Ayni satirlar, "Katma Değer Vergisi" yerine "KDV" yazilarak basiliyor.
     # Eski adlar yukarida duruyor; ikisi bir arada calisir.
+    # Alan adi yalnizca kisalmiyor, SIRASI da degisebiliyor:
+    # "Matrah Toplamı" -> "Toplam Matrah".
+    "TOPLAMMATRAH": "matrah_toplami",
     "HESAPLANANKDV": "hesaplanan_kdv",
     "TOPLAMKDV": "toplam_kdv",
     "TECILEDILECEKKDV": "tecil_edilecek_kdv",
@@ -153,8 +156,20 @@ BOLUM_BASLIKLARI = {
     # --- Yeni bicimin bolumleri
     # Bunlar deger tasimaz; bolum olarak taninmalari, altlarindaki yalin
     # "Toplam" satirlarinin baska bir bolumun toplami sanilmasini onler.
+    "MATRAH": "matrah",
+    "ISTISNALARDIGERIADEHAKKIDOGURANISLEMLER": "istisna",
     "INDIRIMLERDETAYI": "indirimler_detayi",
     "DIGERINDIRIMLER": "diger_indirimler",
+    # Detay bolumleri ve tablo basliklari. Bunlar deger tasimaz; bolum olarak
+    # taninmalari, altlarindaki yalin "Toplam" satirlarinin bir onceki
+    # bolumun toplami sanilmasini onler. Ornegin istisna detay tablosunun
+    # "Toplam" satiri, uzerindeki oran dagilimi bolumunde kalirsa "bu doneme
+    # ait indirilecek KDV" diye okunurdu.
+    "MATRAHDETAYI": "matrah_detayi",
+    "TEVKIFATUYGULANMAYANISLEMLER": "matrah_detayi",
+    "ISTISNALARDIGERIADEHAKKIDOGURANISLEMLERDETAYI": "istisna_detayi",
+    "TAMISTISNAKAPSAMINAGIRENISLEMLER": "istisna_detayi",
+    "IHRACKAYDIYLATESLIMLEREAITBILDIRIM": "ihrac_detayi",
     "MUKELLEFBILGILERI": "kunye",
     "BEYANNAMEYIDUZENLEYENBILGILERI": "kunye",
     "BEYANNAMEYIONAYLAYANBILGILERI": "kunye",
@@ -507,14 +522,45 @@ def _sagdaki_deger(ilk_sayfa, etiketler, dogrula=None, devam=False):
         ax, deger = aday
         if not devam:
             return deger
-        parcalari, onceki = [deger], y
-        for x2, y2, m2 in ilk_sayfa:
-            if (abs(x2 - ax) <= 6 and 0 < onceki - y2 <= SATIR_ARALIGI
-                    and tutar_coz(m2) is None and not _etiket_mi(m2)):
-                parcalari.append(m2.strip())
-                onceki = y2
+        parcalari = [deger]
+        onceki, suan = y, ax
+        while True:
+            band = _alt_band(ilk_sayfa, onceki)
+            if not band:
+                break
+            # Bandin ETIKET SUTUNUNDA bir sey varsa yeni alan baslamistir;
+            # devam satirlarinin etiket sutunu bostur. Hizaya bakmak yetmez:
+            # deger satirlari sola degil SAGA yasli olabiliyor, o zaman ikinci
+            # satir birincinin cok saginda baslar ("ÖRNEK ... SANAYİ VE"
+            # x=312.6 iken "TİCARET ANONİM ŞİRKETİ" x=377.6).
+            if any(abs(bx - x) <= HIZA_TOLERANSI for bx, _by, _bm in band):
+                break
+            adaylar = [(bx, bm) for bx, _by, bm in band
+                       if bx > x + 10 and tutar_coz(bm) is None
+                       and not _etiket_mi(bm)]
+            if not adaylar:
+                break
+            # Ayni bandda birden cok sutun olabilir (duzenleyen / onaylayan);
+            # kendi sutunumuza en yakin olani alinir.
+            bx, bm = min(adaylar, key=lambda p: abs(p[0] - suan))
+            parcalari.append(bm.strip())
+            onceki, suan = band[0][1], bx
         return " ".join(p for p in parcalari if p).strip()
     return ""
+
+
+def _alt_band(ilk_sayfa, y):
+    """`y`'nin hemen altindaki satir bandi: [(x, y, metin)].
+
+    Band, satir araligi icindeki EN UST y degerine sahip parcalardir; daha
+    asagidakiler bir sonraki banda birakilir.
+    """
+    altlar = [(x2, y2, m2) for x2, y2, m2 in ilk_sayfa
+              if 0 < y - y2 <= SATIR_ARALIGI]
+    if not altlar:
+        return []
+    ust = max(y2 for _x2, y2, _m2 in altlar)
+    return [p for p in altlar if abs(p[1] - ust) <= HIZA_TOLERANSI]
 
 
 def _yeni_vergi_dairesi(ilk_sayfa):
@@ -573,13 +619,22 @@ def _kunye(parcalar):
         if normalize(m).startswith("DUZELTMENEDENI"):
             kunye["duzeltme_nedeni"] = (_duzeltme_nedeni(ilk_sayfa, i)
                                         or "(belirtilmemiş)")
-    # Yeni bicimde beyanname turu ayri bir alanda yazili olabiliyor. Buradaki
-    # olcut alanin ADI ve DEGERI birlikte oldugu icin dardir; "Değişiklik
-    # Nedeni" (indirimler detayi tablosunun sutunu) buna takilmaz.
+    # Yeni bicimde beyanname turu ayri bir alanda yazili olabiliyor. Alan iki
+    # duzende de aranir: tek parcada ("Beyanname Türü: Düzeltme") ve etiketi
+    # ile degeri AYRI parcalarda -- kunye alanlari bu bicimde boyle bolunuyor
+    # ("Vergi Kimlik No" bir parca, numarasi baska bir parca).
+    #
+    # Olcut dar tutulmustur: alanin ADI da DEGERI de aranir. "Değişiklik
+    # Nedeni" (indirimler detayi tablosunun sutun basligi) buna takilmaz.
     if not kunye["duzeltme_nedeni"]:
-        tur = alanlar.get("BEYANNAMETURU", "")
-        if normalize(tur).startswith("DUZELTME"):
-            kunye["duzeltme_nedeni"] = alanlar.get("DUZELTMENEDENI") or tur.strip()
+        neden = (alanlar.get("DUZELTMENEDENI")
+                 or _sagdaki_deger(ilk_sayfa, {"DUZELTMENEDENI"}))
+        tur = (alanlar.get("BEYANNAMETURU")
+               or _sagdaki_deger(ilk_sayfa, {"BEYANNAMETURU"}))
+        if neden:
+            kunye["duzeltme_nedeni"] = neden.strip()
+        elif normalize(tur).startswith("DUZELTME"):
+            kunye["duzeltme_nedeni"] = tur.strip()
 
     # Vergi dairesi: "VERGI DAIRESI MUDURLUGU" yazisinin hemen ustundeki ad
     for idx, (x, y, m) in enumerate(ilk_sayfa):
@@ -705,6 +760,16 @@ def _denetle(degerler):
                 "Toplam KDV %.2f okundu; hesaplanan (%.2f) ve ilave edilecek (%.2f) "
                 "toplamı %.2f." % (d("toplam_kdv"), d("hesaplanan_kdv"),
                                    d("ilave_edilecek_kdv"), beklenen))
+
+    # Matrahsiz hesaplanan KDV olmaz. Bu denetim, alan adinin taninmamasi
+    # yuzunden sifir kalan bir satiri yakalar: yeni bicimde eksik bolum
+    # "sifir" sayildigi icin okunamayan matrah sessizce 0,00 gorunuyordu
+    # ("Matrah Toplamı" -> "Toplam Matrah" oldugunda sahada boyle cikti).
+    if d("hesaplanan_kdv") > 0.01 and d("matrah_toplami") <= 0.01:
+        uyarilar.append(
+            "Hesaplanan KDV %.2f okundu ama matrah toplamı sıfır. Beyannamedeki "
+            "matrah alanı tanınmamış olabilir; belgeye geçirmeden önce "
+            "beyannameyle karşılaştırın." % d("hesaplanan_kdv"))
 
     if "oran_dagilimi_toplami" in degerler:
         fark = d("oran_dagilimi_toplami") - d("bu_donem_indirilecek")
