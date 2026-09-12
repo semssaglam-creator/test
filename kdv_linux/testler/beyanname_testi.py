@@ -251,5 +251,25 @@ _ad = ik.daire_adi(m["vergi_dairesi"])
 if _ad != "Örnek Vergi Dairesi Müdürlüğü":
     print("  ! daire adı belgeye %r olarak geçiyor" % _ad); hata = 1
 
+# Buyuk harfli girdide noktali İ / noktasiz I ayrimi kaybolabiliyor.
+# Bilinen daireler dogru yazimiyla cikmali; BILINMEYENLER ise
+# DEGISMEMELI - kor bir kural bunlari bozardi.
+for _girdi, _bek in (
+        ("LIMAN VD", "Liman Vergi Dairesi Müdürlüğü"),
+        ("LİMAN VD", "Liman Vergi Dairesi Müdürlüğü"),
+        ("liman", "Liman Vergi Dairesi Müdürlüğü"),
+        ("033254 - LIMAN VD", "Liman Vergi Dairesi Müdürlüğü"),
+        ("KADIKÖY VD", "Kadıköy Vergi Dairesi Müdürlüğü"),
+        ("IŞIKLAR VD", "Işıklar Vergi Dairesi Müdürlüğü"),
+        ("SARIYER VD", "Sarıyer Vergi Dairesi Müdürlüğü"),
+        ("BEŞİKTAŞ VD", "Beşiktaş Vergi Dairesi Müdürlüğü"),
+        ("12 Nolu Vergi Dairesi", "12 Nolu Vergi Dairesi Müdürlüğü"),
+        ("Büyük Mükellefler Vergi Dairesi Başkanlığı",
+         "Büyük Mükellefler Vergi Dairesi Başkanlığı")):
+    _c = ik.daire_adi(_girdi)
+    if _c != _bek:
+        print("  ! daire adı %r -> %r, beklenen %r" % (_girdi, _c, _bek))
+        hata = 1
+
 print("\n" + ("BAŞARISIZ" if hata else "TÜMÜ GEÇTİ"))
 sys.exit(hata)

@@ -104,6 +104,20 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-09-12 — **Daire adında noktalı İ / noktasız I ayrımı.** Büyük
+      harfle `LIMAN VD` yazıldığında belgeye `Lıman` geçiyordu. Kod Türkçe
+      kuralına uygun çalışıyor; sorun gerçek bir **belirsizlik**: aynı harf
+      `KADIKÖY`de noktasız olarak doğru, `LIMAN`da yanlış. Bu yüzden tahmin
+      yürütülmedi — "büyük harfte I'yi hep i say" gibi kör bir kural bugün
+      doğru çalışan Kadıköy, Işıklar, Sarıyer gibi adları bozardı.
+      Bunun yerine `inceleme_kunyesi.BILINEN_DAIRELER` listesi eklendi; girdi
+      genişletildikten sonra bu adlarla **noktadan bağımsız** karşılaştırılıyor
+      ve tutarsa doğru yazım kullanılıyor. Eşleşme yoksa davranış hiç
+      değişmiyor. **Liste tek satırla genişletilir** — adın tam ve doğru
+      yazımını eklemek yeter. Beyanname yüklendiğinde daire adı zaten doğru
+      yazımıyla okunduğu için bu liste yalnızca elle girişi ilgilendirir.
+      Şu an yalnızca Liman var; kullanıcının çalıştığı daireler eklenecek.
+
 - [x] 2026-09-11 — **Yeni biçimin matrahlı hâli okunuyor; iki hata düzeltildi.**
       Sahadan gelen ikinci örnek (2026/Mayıs) ilkinde hiç bulunmayan bölümleri
       taşıyordu: MATRAH, İHRAÇ KAYDIYLA TESLİMLER, İSTİSNALAR, MATRAH DETAYI,

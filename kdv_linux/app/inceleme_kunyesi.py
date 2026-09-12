@@ -526,6 +526,40 @@ def mukellef_adi(inceleme, kunye, yer_tutucu="[Mükellef unvanı]"):
 _DAIRE_KISALTMALARI = {"vd": False, "vdm": False, "vdb": True}
 
 
+# Buyuk harfli girdide noktali İ ile noktasiz I ayrimi kaybolabiliyor.
+# Kullanici "LIMAN VD" yazdiginda Turkce kurallari geregi "Lıman" cikar;
+# kastedilen ise "Liman"dir. Bu ayrim GERCEKTEN belirsizdir - ayni harf
+# "KADIKÖY"de noktasiz olarak DOGRU, "LIMAN"da yanlistir - bu yuzden burada
+# tahmin yurutulmez: kor bir kural (ornegin "buyuk harfte I'yi hep i say")
+# bugun dogru calisan Kadikoy, Isiklar, Sariyer gibi adlari bozardi.
+#
+# Bunun yerine bilinen daire adlari burada tutulur; girdi, genisletildikten
+# sonra bu adlarla NOKTADAN BAGIMSIZ karsilastirilir ve tutarsa dogru yazim
+# kullanilir. Eslesme yoksa davranis hic degismez, yazilan harf korunur.
+#
+# Listeyi genisletmek icin adin TAM ve DOGRU yazimini eklemek yeter.
+# Beyanname yuklendiginde daire adi zaten dogru yazimiyla okundugu icin bu
+# liste yalnizca ELLE girisi ilgilendirir.
+BILINEN_DAIRELER = (
+    "Liman Vergi Dairesi Müdürlüğü",
+)
+
+
+def _noktadan_bagimsiz(metin):
+    """Karsilastirma anahtari: i / ı / İ / I ayrimini kaldirir."""
+    esit = {"İ": "i", "I": "i", "ı": "i", "i": "i"}
+    return "".join(esit.get(ch) or turkce.kucuk(ch) for ch in str(metin or ""))
+
+
+def _bilinen_yazim(ad):
+    """Ad bilinen bir daireyse onun dogru yazimini dondurur."""
+    anahtar = _noktadan_bagimsiz(ad)
+    for bilinen in BILINEN_DAIRELER:
+        if _noktadan_bagimsiz(bilinen) == anahtar:
+            return bilinen
+    return ad
+
+
 def daire_adi(deger, yer_tutucu="[Vergi dairesi]"):
     """Vergi dairesi adini tam ve yazim kurallarina uygun bicimde verir.
 
@@ -557,11 +591,11 @@ def daire_adi(deger, yer_tutucu="[Vergi dairesi]"):
         return yer_tutucu
     kucugu = turkce.kucuk(govde)
     if kucugu.endswith("müdürlüğü") or kucugu.endswith("başkanlığı"):
-        return govde
+        return _bilinen_yazim(govde)
     kuyruk = " Başkanlığı" if baskanlik else " Müdürlüğü"
     if kucugu.endswith("vergi dairesi"):
-        return govde + kuyruk
-    return govde + " Vergi Dairesi" + kuyruk
+        return _bilinen_yazim(govde + kuyruk)
+    return _bilinen_yazim(govde + " Vergi Dairesi" + kuyruk)
 
 
 def vergi_dairesi(deger, yer_tutucu="[Vergi dairesi]", ek=""):
