@@ -1,33 +1,39 @@
 INDIRILEBILIR PAKETLER
 ======================
 
-Bu klasor, uygulamanin indirilmeye hazir paketlerini tutar. Icerigi
-kaynak koddan uretilir (bkz. linux/paketle_linux.py); elle duzenlenmez.
+Icerik kaynak koddan uretilir (linux/paketle_linux.py, mac/paketle_mac.py);
+elle duzenlenmez. Depo ozel oldugu icin paketlere yalnizca GitHub'a girmis
+bir tarayicidan ulasilabiliyor, bu yuzden burada tutuluyorlar.
 
-Buradalar cunku pakete baska turlu ulasilamiyor: depo ozel oldugu icin
-paketler yalnizca GitHub'a girmis bir tarayicidan indirilebiliyor.
-
-
-KDV_Guncelleme_app_web.tar.gz   (~0,2 MB)
------------------------------------------
-CALISAN bir kurulumu guncellemek icin. Icinde yalnizca app/ ve web/
-klasorleri var; baslatici, main.py, lib/ ve lib_ek/ YOK, sizdekiler
-oldugu gibi kalir.
-
-Uygulamak:
-  1. Uygulama acikssa kapatin.
-  2. Dosyayi kendi "kdv_uygulamasi" klasorunuzun BIR USTUNE acin
-     (sag tik -> Buraya cikart). "Uzerine yazilsin mi?" derse: evet.
-  3. Her zamanki gibi calistir.sh ile baslatin.
-
-  Terminalden:
-     tar -xzf KDV_Guncelleme_app_web.tar.gz -C <kdv_uygulamasi'nin bir ustu>
+Uc dosya var; hangisinin ne oldugu karistirilmasin diye:
 
 
-KDV_Inceleme_Calismasi_Linux.tar.gz   (~0,7 MB)
------------------------------------------------
-SIFIRDAN kurulum icin: uygulamanin tamami. Acinca "kdv_uygulamasi"
-klasoru olusur; icindeki calistir.sh ile baslatilir.
+KDV_Guncelleme_app_web.tar.gz          (~0,2 MB)   <-- OLAGAN DURUMDA BU
+------------------------------------------------
+Calisan kurulumu guncellemek icin. Icinde yalnizca app/ ve web/ var.
+Acilinca "KDV_Guncelleme" adinda bir klasor olusur - bu ad hicbir seyle
+cakismaz, dosya yoneticisi soru sormaz.
 
-Yalnizca calismak icin gerekenler vardir; Windows dosyasi, gelistirme
-notu ya da paketleyici icermez.
+Uygulamak: icindeki "app" ve "web" klasorlerini kopyalayip kendi
+"KDV Inceleme Calismasi" klasorunuze yapistirin. Baslatici, main.py, lib/
+elden gecmez; uygulamayi her zamanki gibi baslatirsiniz.
+
+
+KDV_Inceleme_Calismasi_Linux.tar.gz    (~0,7 MB)
+------------------------------------------------
+Sifirdan kurulum. Acilinca "KDV Inceleme Calismasi <surum>" klasoru olusur;
+surum adda oldugu icin var olan klasorunuzle CAKISMAZ, ona dokunulmaz.
+Icindeki calistir.sh ile baslatilir.
+
+
+Beyanname_Dokumu_Mac.zip               (~0,3 MB)
+------------------------------------------------
+Mac'te beyanname dokumu almak icin. Mukellef bilgilerini maskeler; dokum
+bitince PANOYA kopyalar, ayrica her PDF icin ayri bir dosya birakir.
+
+
+HANGI SURUM CALISIYOR?
+----------------------
+Uygulamanin basliginda "sürüm <tarih> · Python <surum>" yazar. Guncelleme
+uygulandiktan sonra o yaziya bakin; degismediyse eski kopyaya bakiyorsunuz
+demektir.
