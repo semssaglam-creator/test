@@ -340,6 +340,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._rapor_gonder(veri)
             elif yol == "/api/sahte_belge_onizleme":
                 self._json_yanit(self._rapor_onizleme(veri))
+            elif yol == "/api/duzeltme_fisi":
+                self._duzeltme_fisi_gonder(veri)
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/fatura_excel":
@@ -867,6 +869,50 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
         self.send_header("Content-Length", str(len(govde)))
         self._onbellek_kapali()
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _duzeltme_fisi_gonder(self, veri):
+        """Vergi dairesinin duzeltme fisi formunu Excel olarak dondurur.
+
+        Dosya BELLEKTE uretilip gonderilir; ciktilar klasorune kopyalanmasi
+        istege baglidir ve basarisiz olmasi indirmeyi engellemez (bkz.
+        _excel_gonder'deki ayni gerekce: Excel'de acik duran dosya Windows'ta
+        kilitli olur).
+        """
+        import io as _io
+
+        from . import duzeltme_fisi
+
+        calisma = veri.get("calisma") or {}
+        sonuc, _bulgular = _hesapla(calisma)
+        if not sonuc["donemler"]:
+            raise ApiHata("Önce beyan bloğunu yapıştırın.")
+        inceleme = _inceleme_bilgisi(calisma)
+        fis = calisma.get("duzeltme_fisi") or {}
+
+        bellek = _io.BytesIO()
+        try:
+            duzeltme_fisi.uret(bellek, sonuc, inceleme, fis)
+        except ValueError as exc:
+            raise ApiHata(str(exc))
+        govde = bellek.getvalue()
+
+        guvenli = "".join(c for c in (calisma.get("ad") or "kdv")
+                          if c.isalnum() or c in " -_").strip() or "kdv"
+        dosya_adi = f"Duzeltme_fisi_{guvenli}.xlsx".replace(" ", "_")
+        try:
+            os.makedirs(CIKTI_DIR, exist_ok=True)
+            with open(os.path.join(CIKTI_DIR, dosya_adi), "wb") as f:
+                f.write(govde)
+        except OSError:
+            pass
+
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition", _dosya_basligi(dosya_adi))
+        self.send_header("Content-Length", str(len(govde)))
         self.end_headers()
         self.wfile.write(govde)
 

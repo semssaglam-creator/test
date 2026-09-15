@@ -137,6 +137,7 @@
   .kunye-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px 14px; }
   .kunye-izgara .genis { grid-column: 1 / -1; }
   .kunye-izgara textarea { font-family: inherit; font-size: 13px; line-height: 1.5; }
+  textarea.duz-yazi { font-family: inherit; font-size: 13px; line-height: 1.5; }
   .kunye-izgara .yardim { margin-top: 3px; }
   table.satir-alani { width: 100%; margin: 4px 0 8px; }
   table.satir-alani th { font-size: 12px; white-space: nowrap; }
@@ -308,6 +309,54 @@
     <div class="kaydir"><table id="tarhiyatTablo"></table></div>
     <div id="tarhiyatNot"></div>
   </div>
+  <div class="kart">
+    <h2>Düzeltme Fişi</h2>
+    <p class="yardim">
+      Vergi dairesinin düzenlediği <b>düzeltme fişi</b> formunu Excel olarak
+      üretir. Üstte <b>mükellefçe süresinde beyan edilen</b>, altta
+      <b>mükellef adına olması gereken</b> KDV dökümleri yer alır; olması
+      gereken tablonun sonuna <b>tarhı gereken vergi</b> — yukarıdaki tabloda
+      bulunan <i>Re'sen Tarhı Gereken KDV</i> sütununun aynısı — ve
+      <b>sonraki dön. dev. KDV uyumsuzluk tutarı</b> (fazla ve yersiz
+      devredilen KDV) satırları eklenir. Her yıl ayrı bir sayfaya yazılır.
+      Aşağıdaki künye alanları çalışmayla birlikte kaydedilir. İmza
+      sahiplerinin adı fişte unvanın üstünde yer alır.
+    </p>
+    <div class="satir">
+      <div>
+        <label for="fisNeden">Devir tablosunun düzenlenme nedeni</label>
+        <input type="text" id="fisNeden" data-fis="neden">
+      </div>
+      <div class="dar">
+        <label for="fisCilt">Cilt/Sıra No</label>
+        <input type="text" id="fisCilt" data-fis="cilt_sira">
+      </div>
+      <div class="dar">
+        <label for="fisTarih">Fiş tarihi</label>
+        <input type="text" id="fisTarih" data-fis="tarih">
+      </div>
+    </div>
+    <label for="fisGerekce">Gerekçe metni (fişin altına yazılır)</label>
+    <textarea id="fisGerekce" data-fis="gerekce" rows="3" class="duz-yazi"></textarea>
+    <div class="satir" style="margin-top:10px;">
+      <div><label for="fisAd1">İmza 1 — ad soyad</label>
+        <input type="text" id="fisAd1" data-fis="ad1"></div>
+      <div><label for="fisAd2">İmza 2 — ad soyad</label>
+        <input type="text" id="fisAd2" data-fis="ad2"></div>
+      <div><label for="fisAd3">İmza 3 — ad soyad</label>
+        <input type="text" id="fisAd3" data-fis="ad3"></div>
+    </div>
+    <div class="satir">
+      <div><label for="fisUnvan1">İmza 1 — unvan</label>
+        <input type="text" id="fisUnvan1" data-fis="unvan1"></div>
+      <div><label for="fisUnvan2">İmza 2 — unvan</label>
+        <input type="text" id="fisUnvan2" data-fis="unvan2"></div>
+      <div><label for="fisUnvan3">İmza 3 — unvan</label>
+        <input type="text" id="fisUnvan3" data-fis="unvan3"></div>
+    </div>
+    <button class="btn" id="fisAl">Düzeltme Fişi Al</button>
+  </div>
+
   <div class="kart">
     <h2>Yıllara Göre Beyan Uyumu</h2>
     <div class="kaydir"><table id="yilUyumTablo"></table></div>
@@ -2297,6 +2346,81 @@ function etkiYilListesiniCiz() {
 
 ["etkiAlan", "etkiYil"].forEach((id) => $(id).addEventListener("change", etkiTablosunuCiz));
 $("etkiSadeceDolu").addEventListener("change", etkiTablosunuCiz);
+
+// ------------------------------------------------------------ duzeltme fisi
+// Kunye alanlari calismanin icinde saklanir (calisma.duzeltme_fisi), boylece
+// kaydedilen calisma yeniden acildiginda fis bilgileri de geri gelir.
+// Varsayilanlar, vergi dairesinin olagan fis metnidir; kullanici degistirir.
+const FIS_VARSAYILAN = {
+  neden: "VERGİ İNCELEME RAPORUNA İSTİNADEN",
+  cilt_sira: "",
+  tarih: "",
+  gerekce: "Adı geçen mükellefin ekli vergi inceleme raporu nedeniyle sonraki " +
+    "vergilendirme dönemi KDV beyannamelerinin fazla ve yersiz olarak devreden " +
+    "KDV yönünden re'sen düzeltilmesi neticesinde yukarıdaki tablodaki " +
+    "vergilendirme dönemlerinde 213 sayılı V.U.K.'nun düzeltmeye ilişkin 116. " +
+    "ve müteakip maddeleri gereğince KDV'nin tarh edilmesi gerekmektedir.",
+  ad1: "", unvan1: "GELİR UZMANI",
+  ad2: "", unvan2: "MÜDÜR YRD.",
+  ad3: "", unvan3: "VERGİ DAİRESİ MÜDÜRÜ",
+};
+
+function fisKaydi() {
+  durum.calisma.duzeltme_fisi = Object.assign(
+    {}, FIS_VARSAYILAN, durum.calisma.duzeltme_fisi || {});
+  return durum.calisma.duzeltme_fisi;
+}
+
+function fisFormunuCiz() {
+  if (!$("fisNeden")) return;
+  const kayit = fisKaydi();
+  // Fis tarihi bos birakildiysa bugun yazilir; fis tarihsiz duzenlenmez.
+  if (!kayit.tarih) {
+    const b = new Date();
+    kayit.tarih = `${String(b.getDate()).padStart(2, "0")}.` +
+      `${String(b.getMonth() + 1).padStart(2, "0")}.${b.getFullYear()}`;
+  }
+  document.querySelectorAll("[data-fis]").forEach((alan) => {
+    alan.value = kayit[alan.dataset.fis] || "";
+  });
+}
+
+document.querySelectorAll("[data-fis]").forEach((alan) => {
+  alan.addEventListener("change", () => {
+    fisKaydi()[alan.dataset.fis] = alan.value;
+    isaretle();
+  });
+});
+
+async function duzeltmeFisiIndir() {
+  if (!durum.calisma.yillar.length) { mesaj("Önce sorguyu yapıştırın.", "hata"); return; }
+  fisKaydi();
+  try {
+    const yanit = await fetch("/api/duzeltme_fisi", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ calisma: durum.calisma }),
+    });
+    if (!yanit.ok) {
+      const h = await yanit.json();
+      throw new Error(h.hata || "Düzeltme fişi üretilemedi");
+    }
+    const blob = await yanit.blob();
+    const bag = document.createElement("a");
+    bag.href = URL.createObjectURL(blob);
+    const ad = (durum.calisma.ad || durum.calisma.mukellef.ad_unvan || "kdv")
+      .replace(/[^\wğüşiöçĞÜŞİÖÇ -]/g, "").trim() || "kdv";
+    bag.download = `Duzeltme_fisi_${ad}.xlsx`.replace(/ /g, "_");
+    document.body.appendChild(bag);
+    bag.click();
+    bag.remove();
+    URL.revokeObjectURL(bag.href);
+    mesaj("Düzeltme fişi indirildi.");
+  } catch (hata) {
+    mesaj(hata.message, "hata");
+  }
+}
+
+dinle("fisAl", "click", duzeltmeFisiIndir);
 
 // ------------------------------------------------------------ excel / rapor
 async function excelIndir() {
@@ -4307,6 +4431,7 @@ $("yedekAl").addEventListener("click", async () => {
 
 // ------------------------------------------------------------------- cizim
 function ekraniCiz() {
+  fisFormunuCiz();
   rozetiTazele();
   if (durum.calisma && (durum.calisma.beyannameler || []).length && !durum.bnOzet) {
     beyannameleriTazele();          // kayitli calismadan gelen beyannameler
