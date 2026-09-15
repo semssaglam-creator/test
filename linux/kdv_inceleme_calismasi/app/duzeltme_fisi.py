@@ -58,8 +58,9 @@ PAY = 2          # kenar boslugu; icerik hucre cizgisine yapismasin
 # kayiyordu. Birlestirilmis hucrede Excel satir yuksekligini kendiliginden
 # buyutmez; kayan ikinci satir gorunmez oluyordu.
 KUNYE_ETIKET_SON = 3
-SATIR_YUKSEKLIGI = 15.0   # Excel varsayilani; sarma oldukca kati ile carpilir
-KALIN_PAYI = 1.15         # kalin yazi normalden genis; olcuye pay birakilir
+VARSAYILAN_YUKSEKLIK = 15.0   # Excel varsayilani (10 punto yaziya bol gelir)
+SARMA_YUKSEKLIGI = 13.5       # sarilan her satirin kapladigi yukseklik
+KALIN_PAYI = 1.15             # kalin yazi normalden genis; olcuye pay birakilir
 
 
 def _sutun_no(kod):
@@ -71,14 +72,15 @@ def _sutun_no(kod):
 
 
 def _sayfa_kur(ws):
-    """Sayfa duzeni: A4 YATAY ve genislik olarak TEK sayfaya sigar.
+    """Sayfa duzeni: A4 DIKEY ve genislik olarak TEK sayfaya sigar.
 
-    Fis dokumu dokuz sutun; dikey A4'e sigmaz, bolunup okunmaz hale gelirdi.
-    fitToWidth=1 / fitToHeight=0 ile sutunlar tek sayfaya sikistirilir, satir
-    sayisi arttikca alta sayfa eklenir.
+    fitToWidth=1 / fitToHeight=0 ile dokuz sutun tek sayfa enine sikistirilir,
+    satir sayisi arttikca alta sayfa eklenir. Dikey A4'te sutunlar dar kaldigi
+    icin basliklar sarar; sarilan satirlarin yuksekligi _yukseklikleri_uygula
+    ile buyutulur, yoksa ikinci satir gorunmez olur.
     """
     ws.sheet_view.showGridLines = False
-    ws.page_setup.orientation = "landscape"
+    ws.page_setup.orientation = "portrait"
     ws.page_setup.paperSize = ws.PAPERSIZE_A4
     ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
     ws.page_setup.fitToWidth = 1
@@ -93,8 +95,12 @@ def _olcum_kur(ws):
     return ws._fis_olcum
 
 
-def _olc(ws, sutun, deger):
+def _olc(ws, sutun, deger, kat=1.0):
     """Hucre iceriginin goruntulenecek uzunlugunu sutun olcusune isler.
+
+    `kat` kalin yazi payidir; kalin metin ayni karakter sayisinda daha genis
+    yer kaplar. Payi vermezsek sutun tam bir sozcuk kadar dar kalir ve baslik
+    sozcugun ortasindan bolunur - "Dönemden" iki satira dagilirdi.
 
     Birlesik hucreler cagrilmaz: onlarin metni birden cok sutuna yayilir,
     olcuye katilirsa sutunlar gereksiz genisler.
@@ -108,7 +114,7 @@ def _olc(ws, sutun, deger):
     olcum = getattr(ws, "_fis_olcum", None)
     if olcum is None:
         olcum = _olcum_kur(ws)
-    uzunluk = max(len(parca) for parca in metin.split("\n"))
+    uzunluk = max(len(parca) for parca in metin.split("\n")) * kat
     if uzunluk > olcum.get(sutun, 0):
         olcum[sutun] = uzunluk
 
@@ -118,7 +124,7 @@ def _genislikleri_uygula(ws):
     olcum = getattr(ws, "_fis_olcum", {}) or {}
     for sutun in range(1, GENISLIK + 1):
         uzunluk = olcum.get(sutun, EN_DAR)
-        genislik = min(max(uzunluk + PAY, EN_DAR), EN_GENIS)
+        genislik = round(min(max(uzunluk + PAY, EN_DAR), EN_GENIS), 1)
         ws.column_dimensions[get_column_letter(sutun)].width = genislik
 
 
@@ -156,45 +162,92 @@ def _kunye_satiri(ws, satir, etiket, deger, genislik=GENISLIK):
     # sag ucu cercevesiz kaliyordu. Sirasi boyle olmali.
     _alani_cercevele(ws, satir, 1, etiket_son, DOLGU_BASLIK)
     _alani_cercevele(ws, satir, etiket_son + 1, genislik)
-    _kunye_kaydet(ws, satir, etiket, deger, etiket_son, genislik)
     return satir + 1
 
 
-def _kunye_kaydet(ws, satir, etiket, deger, etiket_son, genislik):
-    """Kunye satirini yukseklik hesabi icin saklar (genislikler henuz belli degil)."""
-    kayit = getattr(ws, "_fis_kunye", None)
-    if kayit is None:
-        kayit = ws._fis_kunye = []
-    kayit.append((satir, etiket, deger, etiket_son, genislik))
+def _sutun_genisligi(ws, sutun):
+    ayar = ws.column_dimensions.get(get_column_letter(sutun))
+    return (ayar.width if ayar is not None and ayar.width else EN_DAR)
+
+
+def _sarma_satiri(metin, alan, kat):
+    """Metin `alan` karakter genisligine sarilinca kac satir tuttugunu verir.
+
+    Excel sozcuk sinirindan kirar; sigmayan tek bir sozcuk ortadan bolunur.
+    Hesap ayni sirayi izler, yoksa uzun basliklar oldugundan az satir sayilir.
+    """
+    metin = "" if metin is None else str(metin)
+    if not metin or alan <= 0:
+        return 1
+    toplam = 0
+    for paragraf in metin.split("\n"):
+        sozcukler = paragraf.split()
+        if not sozcukler:
+            toplam += 1
+            continue
+        sayi, dolu = 1, 0.0
+        for sozcuk in sozcukler:
+            en = len(sozcuk) * kat
+            if dolu == 0:
+                dolu = en
+            elif dolu + kat + en <= alan:
+                dolu += kat + en
+            else:
+                sayi += 1
+                dolu = en
+            while dolu > alan:      # tek basina sigmayan sozcuk bolunur
+                sayi += 1
+                dolu -= alan
+        toplam += sayi
+    return max(1, toplam)
 
 
 def _yukseklikleri_uygula(ws):
-    """Kunye satirlarinin yuksekligini sarma sonrasi satir sayisina gore ayarlar.
+    """Saran her satirin yuksekligini kendimiz hesaplar.
 
-    Birlestirilmis hucrede Excel, metin sarinca satir yuksekligini kendiliginden
-    buyutmez; tasan kisim gorunmez olur. Genislikler yazildiktan SONRA cagrilir,
-    cunku kac satira sardigi genislige bagli.
+    Excel satir yuksekligini dosya acilirken yeniden olcmez, openpyxl de
+    yukseklik yazmaz; butun satirlar varsayilan 15 puntoda kalir ve sarilan
+    metnin ikinci satiri gorunmez olurdu - dikey sayfada sutunlar dar kaldigi
+    icin once basliklarda ("Önceki Dönemden Devreden" gibi) ortaya cikiyordu.
+    Genislikler yazildiktan SONRA cagrilir; kac satira sardigi genislige bagli.
     """
-    for satir, etiket, deger, etiket_son, genislik in getattr(ws, "_fis_kunye", []):
-        satir_sayisi = max(
-            _sarma_satiri(ws, etiket, 1, etiket_son, KALIN_PAYI),
-            _sarma_satiri(ws, deger, etiket_son + 1, genislik, 1.0),
-        )
-        if satir_sayisi > 1:
-            ws.row_dimensions[satir].height = SATIR_YUKSEKLIGI * satir_sayisi
+    # Birlesik alanlar: metin sol ust hucrede durur, genislik butun aralik
+    # kadardir. Aralikta kalan diger hucreler olcuye girmemeli.
+    alanlar, kapali = {}, set()
+    for aralik in ws.merged_cells.ranges:
+        alanlar[(aralik.min_row, aralik.min_col)] = (
+            sum(_sutun_genisligi(ws, s)
+                for s in range(aralik.min_col, aralik.max_col + 1)),
+            aralik.max_row - aralik.min_row + 1)
+        for r in range(aralik.min_row, aralik.max_row + 1):
+            for s in range(aralik.min_col, aralik.max_col + 1):
+                if (r, s) != (aralik.min_row, aralik.min_col):
+                    kapali.add((r, s))
 
+    gereken = {}
+    for satir in ws.iter_rows():
+        for hucre in satir:
+            if hucre.value in (None, "") or (hucre.row, hucre.column) in kapali:
+                continue
+            hiza = hucre.alignment
+            if not (hiza and hiza.wrap_text):
+                continue    # sarmayan hucre (sayilar) satiri uzatmaz
+            alan, kac_satir = alanlar.get(
+                (hucre.row, hucre.column),
+                (_sutun_genisligi(ws, hucre.column), 1))
+            kat = KALIN_PAYI if (hucre.font and hucre.font.bold) else 1.0
+            sayi = _sarma_satiri(hucre.value, alan - PAY, kat)
+            if sayi <= kac_satir:
+                continue
+            # Cok satira yayilan birlesimde yuk satirlara bolunur.
+            pay = -(-sayi // kac_satir)
+            for r in range(hucre.row, hucre.row + kac_satir):
+                if pay > gereken.get(r, 1):
+                    gereken[r] = pay
 
-def _sarma_satiri(ws, metin, bas, son, kat):
-    """Metnin bas..son sutunlarina yayilmis halde kac satira sardigini verir."""
-    metin = "" if metin is None else str(metin)
-    if not metin:
-        return 1
-    alan = sum(ws.column_dimensions[get_column_letter(s)].width or EN_DAR
-               for s in range(bas, son + 1))
-    if alan <= 0:
-        return 1
-    gereken = len(metin) * kat
-    return max(1, int(gereken / alan) + (1 if gereken % alan else 0))
+    for r, kac in gereken.items():
+        ws.row_dimensions[r].height = max(VARSAYILAN_YUKSEKLIK,
+                                          SARMA_YUKSEKLIGI * kac)
 
 
 def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
@@ -209,12 +262,13 @@ def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
     satir += 1
 
     _yaz(ws, satir, 1, "Dönem", FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
-    _olc(ws, 1, "Dönem")
+    _olc(ws, 1, "Dönem", KALIN_PAYI)
     for i, (_kod, etiket) in enumerate(SUTUNLAR):
         _yaz(ws, satir, 2 + i, etiket, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
-        # Baslik iki satira sarabilir; olcuye en uzun sozcugu girer, boylece
-        # baslik yuzunden sutun gereksiz genislemez.
-        _olc(ws, 2 + i, max(etiket.split(), key=len))
+        # Baslik birkac satira sarabilir; olcuye yalnizca EN UZUN SOZCUGU girer.
+        # Boylece sutun baslik yuzunden gereksiz genislemez ama sarma sozcuk
+        # sinirindan olur, sozcugun ortasindan degil.
+        _olc(ws, 2 + i, max(etiket.split(), key=len), KALIN_PAYI)
     satir += 1
 
     toplamlar = [0.0] * len(SUTUNLAR)
