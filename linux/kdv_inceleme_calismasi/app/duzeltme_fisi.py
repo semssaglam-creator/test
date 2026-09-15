@@ -23,6 +23,8 @@ Kunye alanlari (duzenlenme nedeni, cilt/sira no, fis tarihi, gerekce metni ve
 uc imza) calismayla birlikte saklanir; buraya hazir gelir.
 """
 from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.properties import PageSetupProperties
 
 from .excel_export import (BORDER, DOLGU_BASLIK, DOLGU_TOPLAM, FONT, FONT_BASLIK,
                            FONT_BOLD, FONT_FARK, FONT_NOT, ORTA, SAG, SAYI_BICIMI,
@@ -44,22 +46,155 @@ SUTUNLAR = (
 
 GENISLIK = 1 + len(SUTUNLAR)
 
+# Sutun genisligi sinirlari (Excel "karakter" birimi). Alt sinir dar sayilarin
+# baslik altinda kaybolmasini, ust sinir uzun bir metnin sayfayi yatay olarak
+# tasirmasini onler.
+EN_DAR = 10
+EN_GENIS = 24
+PAY = 2          # kenar boslugu; icerik hucre cizgisine yapismasin
+
+# Kunye (mukellef bilgileri) alani. Etiket sutunu UC sutuna yayilir: iki sutunda
+# "Vergilendirme Dönemi" ve "Düzenlenme Nedeni" satira sigmiyor, alt satira
+# kayiyordu. Birlestirilmis hucrede Excel satir yuksekligini kendiliginden
+# buyutmez; kayan ikinci satir gorunmez oluyordu.
+KUNYE_ETIKET_SON = 3
+SATIR_YUKSEKLIGI = 15.0   # Excel varsayilani; sarma oldukca kati ile carpilir
+KALIN_PAYI = 1.15         # kalin yazi normalden genis; olcuye pay birakilir
+
+
+def _sutun_no(kod):
+    """Dokum sutununun sayfadaki numarasi (A = donem, B'den itibaren tutarlar)."""
+    for i, (alan, _etiket) in enumerate(SUTUNLAR):
+        if alan == kod:
+            return 2 + i
+    return GENISLIK
+
 
 def _sayfa_kur(ws):
-    ws.column_dimensions["A"].width = 16
-    for i in range(len(SUTUNLAR)):
-        ws.column_dimensions[chr(ord("B") + i)].width = 16
+    """Sayfa duzeni: A4 YATAY ve genislik olarak TEK sayfaya sigar.
+
+    Fis dokumu dokuz sutun; dikey A4'e sigmaz, bolunup okunmaz hale gelirdi.
+    fitToWidth=1 / fitToHeight=0 ile sutunlar tek sayfaya sikistirilir, satir
+    sayisi arttikca alta sayfa eklenir.
+    """
     ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+    ws.page_margins.left = ws.page_margins.right = 0.4
+    ws.page_margins.top = ws.page_margins.bottom = 0.5
+
+
+def _olcum_kur(ws):
+    """Sutun genisliklerini olcmek icin sayaci hazirlar."""
+    ws._fis_olcum = {}
+    return ws._fis_olcum
+
+
+def _olc(ws, sutun, deger):
+    """Hucre iceriginin goruntulenecek uzunlugunu sutun olcusune isler.
+
+    Birlesik hucreler cagrilmaz: onlarin metni birden cok sutuna yayilir,
+    olcuye katilirsa sutunlar gereksiz genisler.
+    """
+    if deger is None or deger == "":
+        return
+    if isinstance(deger, (int, float)):
+        metin = "{:,.2f}".format(float(deger))
+    else:
+        metin = str(deger)
+    olcum = getattr(ws, "_fis_olcum", None)
+    if olcum is None:
+        olcum = _olcum_kur(ws)
+    uzunluk = max(len(parca) for parca in metin.split("\n"))
+    if uzunluk > olcum.get(sutun, 0):
+        olcum[sutun] = uzunluk
+
+
+def _genislikleri_uygula(ws):
+    """Olculen en uzun iceriklere gore sutun genisliklerini yazar."""
+    olcum = getattr(ws, "_fis_olcum", {}) or {}
+    for sutun in range(1, GENISLIK + 1):
+        uzunluk = olcum.get(sutun, EN_DAR)
+        genislik = min(max(uzunluk + PAY, EN_DAR), EN_GENIS)
+        ws.column_dimensions[get_column_letter(sutun)].width = genislik
+
+
+def _alani_cercevele(ws, satir, bas, son, dolgu=None):
+    """Birlestirilmis bir alanin her hucresine kenarlik (ve dolgu) yazar.
+
+    openpyxl birlestirmede kapsanan hucreleri yeniden olusturur; bicim
+    birlestirmeden ONCE yazilirsa kaybolur. Bu yuzden cerceve sonradan
+    cekilir, yoksa alan yalnizca sol ust hucrede cizgili gorunur.
+    """
+    for sutun in range(bas, son + 1):
+        hucre = ws.cell(satir, sutun)
+        hucre.border = BORDER
+        if dolgu:
+            hucre.fill = dolgu
 
 
 def _kunye_satiri(ws, satir, etiket, deger, genislik=GENISLIK):
-    _yaz(ws, satir, 1, etiket, FONT_BOLD, SOL, bicim=None)
-    h = ws.cell(satir, 2, deger or "")
-    h.font = FONT
-    h.alignment = SOL
-    ws.merge_cells(start_row=satir, start_column=2, end_row=satir,
+    """Kunye satiri: etiket ilk UC sutuna, deger kalanina yayilir.
+
+    Etiket birlestirilmezse ("Vergilendirme Dönemi" gibi uzun olanlar) A
+    sutununu genisletmek gerekirdi; oysa A sutunu asagidaki dokum tablosunun
+    "Dönem" sutunu ve dar kalmali. Bu yuzden etiket birlestirilir; alan uc
+    sutun olunca en uzun etiket bile tek satira sigar.
+    """
+    etiket_son = min(KUNYE_ETIKET_SON, genislik - 1)
+    _yaz(ws, satir, 1, etiket, FONT_BOLD, SOL, DOLGU_BASLIK, bicim=None)
+    _yaz(ws, satir, etiket_son + 1, deger or "", FONT, SOL, bicim=None)
+    ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                   end_column=etiket_son)
+    ws.merge_cells(start_row=satir, start_column=etiket_son + 1, end_row=satir,
                    end_column=genislik)
+    # Kenarlik ve dolgu BIRLESTIRMEDEN SONRA yazilir. merge_cells kapsanan
+    # hucreleri yeniden olusturuyor; once yazilan bicim siliniyor ve kunyenin
+    # sag ucu cercevesiz kaliyordu. Sirasi boyle olmali.
+    _alani_cercevele(ws, satir, 1, etiket_son, DOLGU_BASLIK)
+    _alani_cercevele(ws, satir, etiket_son + 1, genislik)
+    _kunye_kaydet(ws, satir, etiket, deger, etiket_son, genislik)
     return satir + 1
+
+
+def _kunye_kaydet(ws, satir, etiket, deger, etiket_son, genislik):
+    """Kunye satirini yukseklik hesabi icin saklar (genislikler henuz belli degil)."""
+    kayit = getattr(ws, "_fis_kunye", None)
+    if kayit is None:
+        kayit = ws._fis_kunye = []
+    kayit.append((satir, etiket, deger, etiket_son, genislik))
+
+
+def _yukseklikleri_uygula(ws):
+    """Kunye satirlarinin yuksekligini sarma sonrasi satir sayisina gore ayarlar.
+
+    Birlestirilmis hucrede Excel, metin sarinca satir yuksekligini kendiliginden
+    buyutmez; tasan kisim gorunmez olur. Genislikler yazildiktan SONRA cagrilir,
+    cunku kac satira sardigi genislige bagli.
+    """
+    for satir, etiket, deger, etiket_son, genislik in getattr(ws, "_fis_kunye", []):
+        satir_sayisi = max(
+            _sarma_satiri(ws, etiket, 1, etiket_son, KALIN_PAYI),
+            _sarma_satiri(ws, deger, etiket_son + 1, genislik, 1.0),
+        )
+        if satir_sayisi > 1:
+            ws.row_dimensions[satir].height = SATIR_YUKSEKLIGI * satir_sayisi
+
+
+def _sarma_satiri(ws, metin, bas, son, kat):
+    """Metnin bas..son sutunlarina yayilmis halde kac satira sardigini verir."""
+    metin = "" if metin is None else str(metin)
+    if not metin:
+        return 1
+    alan = sum(ws.column_dimensions[get_column_letter(s)].width or EN_DAR
+               for s in range(bas, son + 1))
+    if alan <= 0:
+        return 1
+    gereken = len(metin) * kat
+    return max(1, int(gereken / alan) + (1 if gereken % alan else 0))
 
 
 def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
@@ -74,34 +209,55 @@ def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
     satir += 1
 
     _yaz(ws, satir, 1, "Dönem", FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+    _olc(ws, 1, "Dönem")
     for i, (_kod, etiket) in enumerate(SUTUNLAR):
         _yaz(ws, satir, 2 + i, etiket, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+        # Baslik iki satira sarabilir; olcuye en uzun sozcugu girer, boylece
+        # baslik yuzunden sutun gereksiz genislemez.
+        _olc(ws, 2 + i, max(etiket.split(), key=len))
     satir += 1
 
     toplamlar = [0.0] * len(SUTUNLAR)
     for d in donemler:
         kaynak = d[alan_adi]
         _yaz(ws, satir, 1, d["ay_adi"], FONT, SOL, dolgu, bicim=None)
+        _olc(ws, 1, d["ay_adi"])
         for i, (kod, _etiket) in enumerate(SUTUNLAR):
             deger = float(kaynak.get(kod) or 0.0)
             toplamlar[i] += deger
             _yaz(ws, satir, 2 + i, deger, FONT, SAG, dolgu)
+            _olc(ws, 2 + i, deger)
         satir += 1
 
     _yaz(ws, satir, 1, "Toplam", FONT_BOLD, SOL, DOLGU_TOPLAM, bicim=None)
+    _olc(ws, 1, "Toplam")
     for i, toplam in enumerate(toplamlar):
         _yaz(ws, satir, 2 + i, round(toplam, 2), FONT_BOLD, SAG, DOLGU_TOPLAM)
+        _olc(ws, 2 + i, round(toplam, 2))
     return satir + 1
 
 
-def _ek_satir(ws, satir, etiket, deger, vurgu=False):
-    """Olmasi gereken tablonun altina eklenen tek tutarli satir."""
+def _ek_satir(ws, satir, etiket, deger, sutun, vurgu=False):
+    """Olmasi gereken tablonun altina eklenen tek tutarli satir.
+
+    Tutar, ustteki tablonun HANGI sutununa ait ise oraya yazilir; boylece
+    satir tablonun kolonlariyla hizali okunur. Etiket, tutarin sutununa kadar
+    olan alana yayilir - tutar hucresi birlesime GIRMEZ, yoksa sayi gorunmez.
+    """
     font = FONT_FARK if vurgu else FONT_BOLD
     _yaz(ws, satir, 1, etiket, font, SOL, DOLGU_TOPLAM, bicim=None)
-    ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
-                   end_column=GENISLIK - 1)
-    _yaz(ws, satir, GENISLIK, round(float(deger or 0.0), 2), font, SAG,
-         DOLGU_TOPLAM)
+    if sutun > 2:
+        ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                       end_column=sutun - 1)
+        # Birlestirme kapsanan hucreleri yeniden olusturuyor; cerceve sonradan
+        # cekilmezse etiket kutusunun ust/alt cizgisi B'den itibaren kopuyor.
+        _alani_cercevele(ws, satir, 1, sutun - 1, DOLGU_TOPLAM)
+    tutar = round(float(deger or 0.0), 2)
+    _yaz(ws, satir, sutun, tutar, font, SAG, DOLGU_TOPLAM)
+    _olc(ws, sutun, tutar)
+    # Tutarin sagindaki sutunlar bos kalmasin; tablo cercevesi surer.
+    for bos in range(sutun + 1, GENISLIK + 1):
+        _yaz(ws, satir, bos, None, font, SAG, DOLGU_TOPLAM, bicim=None)
     return satir + 1
 
 
@@ -148,6 +304,7 @@ def _imza_blogu(ws, satir, imzalar):
 def _yil_sayfasi(wb, yil, donemler, inceleme, fis):
     ws = wb.create_sheet(str(yil))
     _sayfa_kur(ws)
+    _olcum_kur(ws)
     satir = 1
 
     _yaz(ws, satir, 1, "DÜZELTME FİŞİ", FONT_BASLIK, ORTA, bicim=None)
@@ -174,7 +331,7 @@ def _yil_sayfasi(wb, yil, donemler, inceleme, fis):
     tarhi_gereken = sum(float((d.get("tarhiyat") or {}).get("resen_tarhi_gereken")
                               or 0.0) for d in donemler)
     satir = _ek_satir(ws, satir, "Tarhı Gereken Vergi", tarhi_gereken,
-                      vurgu=abs(tarhi_gereken) > 0.005)
+                      _sutun_no("odenecek"), vurgu=abs(tarhi_gereken) > 0.005)
 
     # Fazla ve yersiz devredilen KDV: yilin SON doneminde beyandaki devir ile
     # olmasi gereken devir arasindaki fark. Toplam alinmaz - devir bir stok
@@ -183,7 +340,8 @@ def _yil_sayfasi(wb, yil, donemler, inceleme, fis):
     uyumsuzluk = (float(son["beyan"].get("sonraki_devir") or 0.0)
                   - float(son["elestirili"].get("sonraki_devir") or 0.0))
     satir = _ek_satir(ws, satir, "Sonraki Dön. Dev. KDV Uyumsuzluk Tutarı",
-                      round(uyumsuzluk, 2), vurgu=abs(uyumsuzluk) > 0.005)
+                      round(uyumsuzluk, 2), _sutun_no("sonraki_devir"),
+                      vurgu=abs(uyumsuzluk) > 0.005)
     satir += 1
 
     gerekce = (fis.get("gerekce") or "").strip()
@@ -196,6 +354,8 @@ def _yil_sayfasi(wb, yil, donemler, inceleme, fis):
         satir += 3
 
     _imza_blogu(ws, satir, _imzalari_coz(fis))
+    _genislikleri_uygula(ws)
+    _yukseklikleri_uygula(ws)   # genislikler yazildiktan SONRA; sirasi onemli
     return ws
 
 

@@ -325,7 +325,14 @@
     <div class="satir">
       <div>
         <label for="fisNeden">Devir tablosunun düzenlenme nedeni</label>
-        <input type="text" id="fisNeden" data-fis="neden">
+        <!-- Liste acilir kutu gibi secenek verir ama yazmayi da engellemez;
+             olagan uc nedenin disinda bir metin gerektiginde elle yazilir. -->
+        <input type="text" id="fisNeden" data-fis="neden" list="fisNedenleri">
+        <datalist id="fisNedenleri">
+          <option value="VERGİ İNCELEME RAPORUNA İSTİNADEN"></option>
+          <option value="TAKDİR KOMİSYONU KARARINA İSTİNADEN"></option>
+          <option value="DEVREDEN KDV UYUMSUZLUĞUNA İSTİNADEN"></option>
+        </datalist>
       </div>
       <div class="dar">
         <label for="fisCilt">Cilt/Sıra No</label>
