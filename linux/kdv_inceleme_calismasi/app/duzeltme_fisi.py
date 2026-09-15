@@ -8,13 +8,17 @@ koyar:
   ustte  - mukellefce suresinde BEYAN EDILEN KDV dokumu
   altta  - mukellef adina OLMASI GEREKEN KDV dokumu
 
-Olmasi gereken tablonun sonuna iki satir eklenir:
+Olmasi gereken tablonun son satiri, fazla ve yersiz devredilen KDV'yi gosteren
+"devreden KDV uyumsuzluk tutari"dir: beyandaki yil sonu devri ile olmasi
+gereken devir arasindaki fark. Satir vurgulu (dolgulu ve kalin), cunku fisin
+duzenlenme nedeni odur.
 
-  Tarhi gereken vergi              - tarhiyat ozetindeki "Re'sen Tarhi Gereken
-                                     KDV" sutununun aynisi
-  Sonraki don. dev. KDV uyumsuzluk - fazla ve yersiz devredilen KDV; beyandaki
-                                     yil sonu devri ile olmasi gereken devir
-                                     arasindaki fark
+Tarhi gereken vergi ayri bir tablodur; ucu yan yana okunsun diye:
+
+  Beyan Edilen Odenecek KDV   - mukellefin beyan ettigi
+  Olmasi Gereken Odenecek KDV - inceleme sonucuna gore olmasi gereken
+  Tarhi Gereken KDV           - tarhiyat ozetindeki "Re'sen Tarhi Gereken KDV"
+                                sutununun aynisi
 
 Her yil ayri bir sayfaya yazilir: fis donem donem degil, vergilendirme
 donemleri itibariyla duzenlenir ve imza blogu her sayfanin altinda yer alir.
@@ -26,9 +30,17 @@ from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.properties import PageSetupProperties
 
-from .excel_export import (BORDER, DOLGU_BASLIK, DOLGU_TOPLAM, FONT, FONT_BASLIK,
-                           FONT_BOLD, FONT_FARK, FONT_NOT, ORTA, SAG, SAYI_BICIMI,
-                           SOL, _yaz)
+from .excel_export import (BORDER, DOLGU_BASLIK, DOLGU_FARK, DOLGU_TOPLAM, FONT,
+                           FONT_BASLIK, FONT_BOLD, FONT_FARK, FONT_NOT, ORTA,
+                           SAG, SAYI_BICIMI, SOL, _yaz)
+
+# Tarhi gereken vergi tablosunun sutunlari: (donem kaydindaki yol, baslik).
+# Yol bir cifttir: once senaryo/bolum, sonra alan adi.
+TARHIYAT_SUTUNLARI = (
+    (("beyan", "odenecek"), "Beyan Edilen Ödenecek KDV"),
+    (("elestirili", "odenecek"), "Olması Gereken Ödenecek KDV"),
+    (("tarhiyat", "resen_tarhi_gereken"), "Tarhı Gereken KDV"),
+)
 
 # Dokum sutunlari: (donem kaydindaki alan, baslik)
 # Beyanname duzeninin okunma sirasini izler; fisi elle kontrol eden kisi
@@ -250,11 +262,15 @@ def _yukseklikleri_uygula(ws):
                                           SARMA_YUKSEKLIGI * kac)
 
 
-def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
+def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None, vurgu_satiri=None):
     """Bir dokum tablosu yazar; son satir yil toplamidir.
 
     `alan_adi` donem kaydindaki hangi senaryonun yazilacagini soyler:
     "beyan" (mukellefce beyan edilen) ya da "elestirili" (olmasi gereken).
+
+    `vurgu_satiri` verilirse toplamin altina (etiket, tutar, sutun_kodu)
+    biciminde vurgulu bir satir eklenir; tablonun icinde yer alir, ayri bir
+    blok degildir.
     """
     _yaz(ws, satir, 1, baslik, FONT_BASLIK, SOL, bicim=None)
     ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
@@ -288,31 +304,105 @@ def _tablo(ws, satir, baslik, donemler, alan_adi, dolgu=None):
     for i, toplam in enumerate(toplamlar):
         _yaz(ws, satir, 2 + i, round(toplam, 2), FONT_BOLD, SAG, DOLGU_TOPLAM)
         _olc(ws, 2 + i, round(toplam, 2))
-    return satir + 1
+    satir += 1
+
+    if vurgu_satiri:
+        etiket, tutar, kod = vurgu_satiri
+        satir = _vurgulu_satir(ws, satir, etiket, tutar, _sutun_no(kod))
+    return satir
 
 
-def _ek_satir(ws, satir, etiket, deger, sutun, vurgu=False):
-    """Olmasi gereken tablonun altina eklenen tek tutarli satir.
+def _vurgulu_satir(ws, satir, etiket, deger, sutun):
+    """Tablonun sonuna eklenen, dolgulu ve kalin tek tutarli satir.
 
     Tutar, ustteki tablonun HANGI sutununa ait ise oraya yazilir; boylece
     satir tablonun kolonlariyla hizali okunur. Etiket, tutarin sutununa kadar
     olan alana yayilir - tutar hucresi birlesime GIRMEZ, yoksa sayi gorunmez.
     """
-    font = FONT_FARK if vurgu else FONT_BOLD
-    _yaz(ws, satir, 1, etiket, font, SOL, DOLGU_TOPLAM, bicim=None)
+    tutar = round(float(deger or 0.0), 2)
+    # Fark varsa kirmizi kalin, yoksa duz kalin; dolgu her iki durumda da var,
+    # cunku satirin kendisi fisin gerekcesi ve goze carpmasi gerekiyor.
+    font = FONT_FARK if abs(tutar) > 0.005 else FONT_BOLD
+    _yaz(ws, satir, 1, etiket, font, SOL, DOLGU_FARK, bicim=None)
     if sutun > 2:
         ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
                        end_column=sutun - 1)
         # Birlestirme kapsanan hucreleri yeniden olusturuyor; cerceve sonradan
         # cekilmezse etiket kutusunun ust/alt cizgisi B'den itibaren kopuyor.
-        _alani_cercevele(ws, satir, 1, sutun - 1, DOLGU_TOPLAM)
-    tutar = round(float(deger or 0.0), 2)
-    _yaz(ws, satir, sutun, tutar, font, SAG, DOLGU_TOPLAM)
+        _alani_cercevele(ws, satir, 1, sutun - 1, DOLGU_FARK)
+    _yaz(ws, satir, sutun, tutar, font, SAG, DOLGU_FARK)
     _olc(ws, sutun, tutar)
     # Tutarin sagindaki sutunlar bos kalmasin; tablo cercevesi surer.
     for bos in range(sutun + 1, GENISLIK + 1):
-        _yaz(ws, satir, bos, None, font, SAG, DOLGU_TOPLAM, bicim=None)
+        _yaz(ws, satir, bos, None, font, SAG, DOLGU_FARK, bicim=None)
     return satir + 1
+
+
+def _bloklar(kac):
+    """2..GENISLIK sutunlarini `kac` esit bloga boler: [(bas, son), ...].
+
+    Tarhiyat tablosunun uc tutar sutunu var, sayfa ise dokuz sutun genisliginde.
+    Bloklara bolunmezse tablo A-D arasinda sikisip sayfanin geri kalanini bos
+    birakiyor; birlestirilerek yayilinca ustteki tablolarla ayni eni tutuyor.
+    """
+    toplam = GENISLIK - 1
+    taban, artan = divmod(toplam, kac)
+    bloklar, bas = [], 2
+    for i in range(kac):
+        boy = taban + (1 if i < artan else 0)
+        bloklar.append((bas, bas + boy - 1))
+        bas += boy
+    return bloklar
+
+
+def _tarhiyat_tablosu(ws, satir, baslik, donemler):
+    """Tarhi gereken vergiyi ayri tablo olarak yazar.
+
+    Beyan edilen / olmasi gereken / tarhi gereken odenecek KDV yan yana durur.
+    Tarhi gereken tutar iki sutunun farkindan TUREMEZ; tarhiyat ozetindeki
+    degerin aynisi okunur, yoksa iki ekran farkli sayi gosterebilir.
+    """
+    bloklar = _bloklar(len(TARHIYAT_SUTUNLARI))
+
+    _yaz(ws, satir, 1, baslik, FONT_BASLIK, SOL, bicim=None)
+    ws.merge_cells(start_row=satir, start_column=1, end_row=satir,
+                   end_column=GENISLIK)
+    satir += 1
+
+    _yaz(ws, satir, 1, "Dönem", FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+    _olc(ws, 1, "Dönem", KALIN_PAYI)
+    for (bas, son), (_yol, etiket) in zip(bloklar, TARHIYAT_SUTUNLARI):
+        _yaz(ws, satir, bas, etiket, FONT_BOLD, ORTA, DOLGU_BASLIK, bicim=None)
+        _blogu_birlestir(ws, satir, bas, son, DOLGU_BASLIK)
+    satir += 1
+
+    toplamlar = [0.0] * len(TARHIYAT_SUTUNLARI)
+    for d in donemler:
+        _yaz(ws, satir, 1, d["ay_adi"], FONT, SOL, bicim=None)
+        _olc(ws, 1, d["ay_adi"])
+        for i, ((bas, son), (yol, _etiket)) in enumerate(zip(bloklar,
+                                                             TARHIYAT_SUTUNLARI)):
+            bolum, alan = yol
+            deger = float((d.get(bolum) or {}).get(alan) or 0.0)
+            toplamlar[i] += deger
+            _yaz(ws, satir, bas, deger, FONT, SAG)
+            _blogu_birlestir(ws, satir, bas, son)
+        satir += 1
+
+    _yaz(ws, satir, 1, "Toplam", FONT_BOLD, SOL, DOLGU_TOPLAM, bicim=None)
+    _olc(ws, 1, "Toplam")
+    for (bas, son), toplam in zip(bloklar, toplamlar):
+        _yaz(ws, satir, bas, round(toplam, 2), FONT_BOLD, SAG, DOLGU_TOPLAM)
+        _blogu_birlestir(ws, satir, bas, son, DOLGU_TOPLAM)
+    return satir + 1
+
+
+def _blogu_birlestir(ws, satir, bas, son, dolgu=None):
+    """Bir tutar/baslik blogunu birlestirir ve cercevesini sonradan ceker."""
+    if son > bas:
+        ws.merge_cells(start_row=satir, start_column=bas, end_row=satir,
+                       end_column=son)
+    _alani_cercevele(ws, satir, bas, son, dolgu)
 
 
 def _imzalari_coz(fis):
@@ -378,24 +468,20 @@ def _yil_sayfasi(wb, yil, donemler, inceleme, fis):
     satir = _tablo(ws, satir, "MÜKELLEFÇE SÜRESİNDE BEYAN EDİLEN", donemler,
                    "beyan")
     satir += 1
-    satir = _tablo(ws, satir, "MÜKELLEF ADINA OLMASI GEREKEN", donemler,
-                   "elestirili")
-
-    # Tarhi gereken vergi: tarhiyat ozetindeki sutunun yil toplami.
-    tarhi_gereken = sum(float((d.get("tarhiyat") or {}).get("resen_tarhi_gereken")
-                              or 0.0) for d in donemler)
-    satir = _ek_satir(ws, satir, "Tarhı Gereken Vergi", tarhi_gereken,
-                      _sutun_no("odenecek"), vurgu=abs(tarhi_gereken) > 0.005)
 
     # Fazla ve yersiz devredilen KDV: yilin SON doneminde beyandaki devir ile
     # olmasi gereken devir arasindaki fark. Toplam alinmaz - devir bir stok
     # kalemidir, aylik farklarin toplami bir yil devri anlamina gelmez.
     son = donemler[-1]
-    uyumsuzluk = (float(son["beyan"].get("sonraki_devir") or 0.0)
-                  - float(son["elestirili"].get("sonraki_devir") or 0.0))
-    satir = _ek_satir(ws, satir, "Sonraki Dön. Dev. KDV Uyumsuzluk Tutarı",
-                      round(uyumsuzluk, 2), _sutun_no("sonraki_devir"),
-                      vurgu=abs(uyumsuzluk) > 0.005)
+    uyumsuzluk = round(float(son["beyan"].get("sonraki_devir") or 0.0)
+                       - float(son["elestirili"].get("sonraki_devir") or 0.0), 2)
+    satir = _tablo(ws, satir, "MÜKELLEF ADINA OLMASI GEREKEN", donemler,
+                   "elestirili",
+                   vurgu_satiri=("Devreden KDV Uyumsuzluk Tutarı", uyumsuzluk,
+                                 "sonraki_devir"))
+    satir += 1
+
+    satir = _tarhiyat_tablosu(ws, satir, "TARHI GEREKEN VERGİ", donemler)
     satir += 1
 
     gerekce = (fis.get("gerekce") or "").strip()
