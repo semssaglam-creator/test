@@ -47,6 +47,10 @@ SUTUNLAR = (
     ("ilave_edilecek", "İlave Edilecek KDV"),
     ("toplam_kdv", "Toplam KDV"),
     ("onceki_devir", "Önceki Dönemden Devreden"),
+    # Beyannamedeki "Bu Döneme Ait İndirilecek KDV" satiri. Diger indirimleri
+    # de kapsayan "toplam" alani okunur; yoksa tablo kendi icinde tutmazdi -
+    # indirimler toplami onceki devir + bu donem indirimi + diger indirimler.
+    ("bu_donem_indirim_toplam", "Bu Döneme Ait İndirilecek KDV"),
     ("indirimler", "İndirimler Toplamı"),
     ("odenecek", "Ödenecek KDV"),
     ("sonraki_devir", "Sonraki Döneme Devreden"),
