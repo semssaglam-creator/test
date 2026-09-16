@@ -482,6 +482,53 @@ def tutanak_olustur_excel(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat, da
     )
 
 
+def detay_tablo_xlsx(baslik_metni, basliklar, satirlar, tutar_kolonlari=()):
+    """Basit baslikli tablo Excel'i (bytes doner). Istatistik detay dokumu icin.
+
+    baslik_metni: ust satirdaki aciklama; basliklar: kolon adlari;
+    satirlar: her biri basliklar ile ayni uzunlukta liste;
+    tutar_kolonlari: para bicimi uygulanacak 0-tabanli kolon indeksleri.
+    """
+    from io import BytesIO
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Detay"
+    kolon_sayisi = max(1, len(basliklar))
+
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=kolon_sayisi)
+    c = ws.cell(row=1, column=1, value=baslik_metni)
+    c.font = FONT_BOLD
+    c.alignment = Alignment(horizontal="left", vertical="center")
+
+    for j, ad in enumerate(basliklar, start=1):
+        h = ws.cell(row=2, column=j, value=ad)
+        h.font = FONT_BOLD
+        h.fill = DOLGU_GRI
+        h.border = BORDER_ALL
+        h.alignment = CENTER
+
+    for i, satir in enumerate(satirlar, start=3):
+        for j, deger in enumerate(satir, start=1):
+            hucre = ws.cell(row=i, column=j, value=deger)
+            hucre.border = BORDER_ALL
+            if (j - 1) in tutar_kolonlari:
+                hucre.number_format = "#,##0.00"
+                hucre.alignment = Alignment(horizontal="right", vertical="center")
+            else:
+                hucre.alignment = Alignment(horizontal="left", vertical="center")
+
+    genislikler = [max(12, len(str(b)) + 2) for b in basliklar]
+    for j, g in enumerate(genislikler, start=1):
+        ws.column_dimensions[get_column_letter(j)].width = min(50, g)
+    if basliklar:
+        ws.column_dimensions[get_column_letter(1)].width = 34  # unvan kolonu genis
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 # ---------------------------------------------------------------------------
 # Aylik huzur hakki puantaj cetveli
 # ---------------------------------------------------------------------------

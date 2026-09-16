@@ -4,6 +4,22 @@ import sqlite3
 import shutil
 from datetime import datetime
 
+
+def tr_kucuk(s):
+    """Turkce'ye uygun kucuk harfe cevirir (I->ı, İ->i)."""
+    if s is None:
+        return ""
+    return str(s).replace("I", "ı").replace("İ", "i").lower()
+
+
+def arama_anahtari(s):
+    """Arama karsilastirmasi icin normalize eder.
+
+    Buyuk/kucuk harf VE Turkce aksan farkini (ş~s, ı~i, ğ~g, ü~u, ö~o, ç~c)
+    yok sayar; boylece 'SIMSEK', 'şimşek', 'Simsek' hepsi eslesir.
+    """
+    return tr_kucuk(s).translate(str.maketrans("şığüöç", "siguoc"))
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_DIR = os.path.join(BASE_DIR, "veritabani")
 DB_PATH = os.path.join(DB_DIR, "uzlasma.db")
@@ -230,15 +246,20 @@ def tutanak_sayaci_ayarla(sonraki_sayi):
 # ---------------------------------------------------------------------------
 
 def mukellef_ara(metin, limit=30):
-    """Ad/unvan, VKN/TCKN veya ihbarname fis no icinde gecen mukellefleri bulur."""
+    """Ad/unvan, VKN/TCKN veya ihbarname fis no icinde gecen mukellefleri bulur.
+
+    Buyuk/kucuk harf duyarsiz (Turkce uyumlu).
+    """
     conn = get_connection()
     try:
-        like = f"%{metin}%"
+        conn.create_function("aramanorm", 1, arama_anahtari)
+        like = f"%{arama_anahtari(metin)}%"
         rows = conn.execute(
             """
             SELECT DISTINCT m.* FROM mukellefler m
             LEFT JOIN ihbarnameler i ON i.mukellef_id = m.id
-            WHERE m.ad_unvan LIKE ? OR m.vkn_tckn LIKE ? OR i.fis_no LIKE ?
+            WHERE aramanorm(m.ad_unvan) LIKE ? OR aramanorm(m.vkn_tckn) LIKE ?
+                  OR aramanorm(i.fis_no) LIKE ?
             ORDER BY m.ad_unvan
             LIMIT ?
             """,
@@ -881,6 +902,7 @@ def istatistikler(baslangic=None, bitis=None):
         for r in _grup_istatistik("COALESCE(cs.ceza_kodu, '')",
                                    "COALESCE(cs.ceza_kodu, '') != '3080'"):
             r["ceza_kodu"] = r.pop("kod")
+            r["detay_kod"] = r["ceza_kodu"]      # drill-down icin ham kod
             r["aciklama"] = ceza_aciklamalari.get(r["ceza_kodu"], "")
             ceza_turu_bazinda.append(r)
 
@@ -890,6 +912,7 @@ def istatistikler(baslangic=None, bitis=None):
                                    "cs.ceza_kodu = '3080'"):
             vt = r.pop("kod")
             r["vergi_turu_kod"] = f"{vt}/3080"
+            r["detay_kod"] = vt                  # drill-down icin ham vergi turu kodu
             vt_ad = vergi_adlari.get(vt, "")
             r["ad"] = (vt_ad + " - " if vt_ad else "") + "Vergi Ziyaı Cezası"
             vergi_turu_bazinda.append(r)
@@ -917,6 +940,80 @@ def istatistikler(baslangic=None, bitis=None):
             "basvuran_sayisi": basvuran_sayisi,
             "dilekce_sayisi": dilekce_sayisi,
         }
+    finally:
+        conn.close()
+
+
+def istatistik_detay(baslangic, bitis, grup, kod, metrik):
+    """Bir istatistik hucresinin (kod + metrik) altindaki mukellef dokumu.
+
+    grup   : 'ceza' (ceza kodu bazinda, 3080 haric) | 'vergi' (3080, vergi turu bazinda)
+    kod    : ceza icin ceza_kodu ( or. '3074'); vergi icin ham vergi turu kodu (or. '0015')
+    metrik : 'basvuru' | 'uzlasildi' | 'uzlasilamadi' | 'gelmedi'
+    Donus  : [{ad_unvan, vkn_tckn, adet, tutar}] (mukellef bazinda, tutara gore azalan).
+    """
+    if grup == "vergi":
+        kod_kosulu = ("cs.ceza_kodu = '3080' AND "
+                      "COALESCE(NULLIF(cs.vergi_turu_kod, ''), '????') = ?")
+    else:
+        kod_kosulu = ("COALESCE(cs.ceza_kodu, '') = ? AND "
+                      "COALESCE(cs.ceza_kodu, '') != '3080'")
+
+    dilekce_anahtari = ("ih.mukellef_id || '|' || "
+                        "COALESCE(NULLIF(ih.dilekce_onay_zamani, ''), 'IH' || ih.id)")
+
+    conn = get_connection()
+    try:
+        if metrik == "basvuru":
+            kosul, params = "1=1", []
+            if baslangic:
+                kosul += " AND ih.olusturma_tarihi >= ?"; params.append(baslangic)
+            if bitis:
+                kosul += " AND ih.olusturma_tarihi <= ?"; params.append(bitis + " 23:59:59")
+            rows = conn.execute(
+                f"""
+                SELECT m.ad_unvan, m.vkn_tckn,
+                       COUNT(DISTINCT {dilekce_anahtari}) AS adet,
+                       SUM(cs.miktar) AS tutar
+                FROM ceza_satirlari cs
+                JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
+                JOIN mukellefler m ON m.id = ih.mukellef_id
+                WHERE {kosul} AND {kod_kosulu}
+                GROUP BY m.id
+                ORDER BY tutar DESC, m.ad_unvan
+                """,
+                params + [kod],
+            ).fetchall()
+        else:
+            sonuc_map = {"uzlasildi": ("uzlasildi", "tk.uzlasilan_tutar"),
+                         "uzlasilamadi": ("uzlasilamadi", "cs.miktar"),
+                         "gelmedi": ("gelmedi", "cs.miktar")}
+            if metrik not in sonuc_map:
+                raise ValueError("Gecersiz metrik")
+            sonuc, tutar_ifade = sonuc_map[metrik]
+            kosul, params = "1=1", []
+            if baslangic:
+                kosul += " AND t.toplanti_tarih_saat >= ?"; params.append(baslangic)
+            if bitis:
+                kosul += " AND t.toplanti_tarih_saat <= ?"; params.append(bitis + " 23:59:59")
+            rows = conn.execute(
+                f"""
+                SELECT m.ad_unvan, m.vkn_tckn,
+                       COUNT(DISTINCT t.id) AS adet,
+                       SUM({tutar_ifade}) AS tutar
+                FROM tutanak_kalemleri tk
+                JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+                JOIN uzlasma_tutanaklari t ON t.id = tk.tutanak_id
+                JOIN mukellefler m ON m.id = t.mukellef_id
+                WHERE {kosul} AND t.sonuc = ? AND {kod_kosulu}
+                GROUP BY m.id
+                ORDER BY tutar DESC, m.ad_unvan
+                """,
+                params + [sonuc, kod],
+            ).fetchall()
+        return [{"ad_unvan": r["ad_unvan"], "vkn_tckn": r["vkn_tckn"] or "",
+                 "adet": r["adet"] or 0, "tutar": round(r["tutar"] or 0, 2)}
+                for r in rows]
     finally:
         conn.close()
 

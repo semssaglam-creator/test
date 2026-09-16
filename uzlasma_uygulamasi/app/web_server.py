@@ -327,6 +327,10 @@ class Istekci(BaseHTTPRequestHandler):
                 baslangic = tr_tarih_to_iso_gun(params.get("baslangic", [""])[0]) or None
                 bitis = tr_tarih_to_iso_gun(params.get("bitis", [""])[0]) or None
                 self._json_yanit(db.istatistikler(baslangic, bitis))
+            elif yol == "/api/istatistik/detay":
+                self._json_yanit(self._istatistik_detay(params))
+            elif yol == "/istatistik_detay":
+                self._istatistik_detay_indir(params)
             elif yol == "/api/yedekler":
                 self._json_yanit(db.yedekleri_listele())
             elif yol == "/api/simdi":
@@ -518,6 +522,52 @@ class Istekci(BaseHTTPRequestHandler):
         dosya_adi = f"uzlasma_dokum_{datetime.now().strftime('%Y%m%d_%H%M')}.ods"
         self.send_response(200)
         self.send_header("Content-Type", "application/vnd.oasis.opendocument.spreadsheet")
+        self.send_header("Content-Disposition",
+                         f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
+        self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _istatistik_detay_params(self, params):
+        grup = (params.get("grup", [""])[0]).strip()
+        kod = (params.get("kod", [""])[0]).strip()
+        metrik = (params.get("metrik", [""])[0]).strip()
+        if grup not in ("ceza", "vergi"):
+            raise ApiHata("Gecersiz grup.")
+        if metrik not in ("basvuru", "uzlasildi", "uzlasilamadi", "gelmedi"):
+            raise ApiHata("Gecersiz metrik.")
+        baslangic = tr_tarih_to_iso_gun(params.get("baslangic", [""])[0]) or None
+        bitis = tr_tarih_to_iso_gun(params.get("bitis", [""])[0]) or None
+        return grup, kod, metrik, baslangic, bitis
+
+    def _istatistik_detay(self, params):
+        grup, kod, metrik, baslangic, bitis = self._istatistik_detay_params(params)
+        return db.istatistik_detay(baslangic, bitis, grup, kod, metrik)
+
+    def _istatistik_detay_indir(self, params):
+        try:
+            grup, kod, metrik, baslangic, bitis = self._istatistik_detay_params(params)
+        except ApiHata as exc:
+            self._hata(str(exc))
+            return
+        from datetime import datetime
+
+        from .excel_export import detay_tablo_xlsx
+        etiket = (params.get("etiket", [""])[0]).strip() or (kod + " - " + metrik)
+        veri = db.istatistik_detay(baslangic, bitis, grup, kod, metrik)
+        metrik_ad = {"basvuru": "Başvuru", "uzlasildi": "Uzlaşılan",
+                     "uzlasilamadi": "Uzlaşma Vaki Olmadı",
+                     "gelmedi": "Uzlaşma Temin Edilemedi"}
+        adet_baslik = metrik_ad.get(metrik, "Adet") + " Sayısı"
+        tutar_baslik = ("Toplam Uzlaşılan Tutar (TL)" if metrik == "uzlasildi"
+                        else "Toplam Tutar (TL)")
+        basliklar = ["Mükellef Adı/Ünvanı", "VKN/TCKN", adet_baslik, tutar_baslik]
+        satirlar = [[r["ad_unvan"], r["vkn_tckn"], r["adet"], r["tutar"]] for r in veri]
+        govde = detay_tablo_xlsx(etiket, basliklar, satirlar, tutar_kolonlari=(3,))
+        dosya_adi = f"istatistik_detay_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         self.send_header("Content-Disposition",
                          f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
         self.send_header("Content-Length", str(len(govde)))

@@ -51,6 +51,8 @@
   .radio-grup { display: flex; gap: 18px; }
   .radio-grup label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #1c2733; cursor: pointer; }
   a.indir { color: #1f3a5f; }
+  a.say-link { color: #1c6fb3; text-decoration: underline; cursor: pointer; font-weight: 600; }
+  a.say-link:hover { color: #0d4d85; }
   .iki-kolon { display: flex; gap: 16px; flex-wrap: wrap; }
   .iki-kolon > .kart { flex: 1; min-width: 340px; }
   .rozet { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; }
@@ -203,7 +205,13 @@
 <!-- ================= GECMIS ================= -->
 <section class="sekme" id="sekme-gecmis">
   <div class="kart">
-    <h2>Tüm Tutanaklar</h2>
+    <h2>Geçmiş Tutanaklar</h2>
+    <div class="satir" style="align-items:flex-end; margin-bottom:8px">
+      <div style="flex:2"><label>Ara (mükellef adı / VKN / tutanak no / tarih)</label>
+        <input type="text" id="gecmis-ara" autocomplete="off" oninput="gecmisTabloCiz()" placeholder="Aramak için yazın... (boşken son 10 tutanak listelenir)"></div>
+      <div class="dar" style="flex:0 0 auto"><button class="btn ikincil" onclick="document.getElementById('gecmis-ara').value=''; gecmisTabloCiz();">Temizle</button></div>
+    </div>
+    <div id="gecmis-bilgi" style="font-size:13px; color:#5a6b7d; margin-bottom:6px"></div>
     <table id="gecmis-tablo">
       <thead><tr><th>Toplantı Tarih/Saat</th><th>Tutanak No</th><th>Mükellef</th><th>VKN/TCKN</th><th>Sonuç</th><th>Dosya</th><th style="width:250px">İşlem</th></tr></thead>
       <tbody></tbody>
@@ -300,6 +308,22 @@
           <th rowspan="2" class="sag">Toplam Uzlaşılamayan Tutar (TL)</th></tr>
         <tr><th class="sag">Uzlaşılan</th><th class="sag">Uzlaşılamayan</th><th class="sag">Gelmeyen</th></tr>
       </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="kart" id="ist-detay-kart" hidden>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
+      <h2 id="ist-detay-baslik" style="margin:0">Detay</h2>
+      <div style="display:flex; gap:8px">
+        <button class="btn" id="ist-detay-excel">Excel İndir</button>
+        <button class="btn ikincil" onclick="document.getElementById('ist-detay-kart').hidden = true">Kapat</button>
+      </div>
+    </div>
+    <div id="ist-detay-bilgi" style="font-size:13px; color:#5a6b7d; margin:6px 0"></div>
+    <table id="ist-detay-tablo">
+      <thead><tr><th>Mükellef Adı/Ünvanı</th><th style="width:150px">VKN/TCKN</th>
+        <th style="width:110px" class="sag" id="ist-detay-adet-baslik">Sayı</th>
+        <th style="width:160px" class="sag">Toplam Tutar (TL)</th></tr></thead>
       <tbody></tbody>
     </table>
   </div>
@@ -816,10 +840,49 @@ async function tutanakOlustur() {
 }
 
 // ---------- GECMIS ----------
+let gecmisTutanaklar = [];
+
+// Arama icin normalize: buyuk/kucuk + Turkce aksan (ş~s, ı~i, ...) duyarsiz
+function aramaAnahtari(s) {
+  return String(s == null ? "" : s)
+    .replace(/I/g, "ı").replace(/İ/g, "i").toLowerCase()
+    .replace(/ş/g, "s").replace(/ı/g, "i").replace(/ğ/g, "g")
+    .replace(/ü/g, "u").replace(/ö/g, "o").replace(/ç/g, "c");
+}
+
 async function gecmisYukle() {
+  gecmisTutanaklar = await api("/api/tutanaklar");
+  const ara = document.getElementById("gecmis-ara");
+  if (ara) ara.value = "";
+  gecmisTabloCiz();
+
+  const sec = document.getElementById("imza-uye");
+  const uyeler = await api("/api/komisyon");
+  sec.innerHTML = '<option value="">— Üye seçin —</option>' +
+    uyeler.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}</option>`).join("");
+  document.querySelector("#imza-tablo tbody").innerHTML = "";
+}
+
+function gecmisTabloCiz() {
   const tb = document.querySelector("#gecmis-tablo tbody");
+  const bilgi = document.getElementById("gecmis-bilgi");
   tb.innerHTML = "";
-  (await api("/api/tutanaklar")).forEach(t => {
+  const q = aramaAnahtari((document.getElementById("gecmis-ara") || {}).value || "").trim();
+  let liste = gecmisTutanaklar;
+  if (q) {
+    liste = gecmisTutanaklar.filter(t =>
+      aramaAnahtari(t.ad_unvan).includes(q) ||
+      aramaAnahtari(t.vkn_tckn).includes(q) ||
+      aramaAnahtari(t.tutanak_no).includes(q) ||
+      aramaAnahtari(isoToTr(t.toplanti_tarih_saat)).includes(q));
+    bilgi.textContent = liste.length + " tutanak bulundu.";
+  } else {
+    liste = gecmisTutanaklar.slice(0, 10);
+    bilgi.textContent = gecmisTutanaklar.length > 10
+      ? "Son 10 tutanak gösteriliyor (toplam " + gecmisTutanaklar.length + "). Tamamı için arama yapın."
+      : gecmisTutanaklar.length + " tutanak.";
+  }
+  liste.forEach(t => {
     const dosyaAdi = (t.dosya_yolu || "").split("/").pop();
     const baglanti = dosyaAdi ? `<a class="indir" href="/tutanak?dosya=${encodeURIComponent(dosyaAdi)}">${kacis(dosyaAdi)}</a>` : "";
     const tr = document.createElement("tr");
@@ -834,12 +897,6 @@ async function gecmisYukle() {
       `</div></td>`;
     tb.appendChild(tr);
   });
-
-  const sec = document.getElementById("imza-uye");
-  const uyeler = await api("/api/komisyon");
-  sec.innerHTML = '<option value="">— Üye seçin —</option>' +
-    uyeler.map(u => `<option value="${u.id}">${kacis(u.ad_soyad)}${u.unvan ? " (" + kacis(u.unvan) + ")" : ""}</option>`).join("");
-  document.querySelector("#imza-tablo tbody").innerHTML = "";
 }
 
 async function tutanakSonucDegistir(id, dugme) {
@@ -984,6 +1041,8 @@ async function istatistikYukle() {
     const b = document.getElementById("ist-baslangic").value.trim();
     const s = document.getElementById("ist-bitis").value.trim();
     const v = await api("/api/istatistik?baslangic=" + encodeURIComponent(b) + "&bitis=" + encodeURIComponent(s));
+    sonIstatistik = v;
+    document.getElementById("ist-detay-kart").hidden = true;
     const d = v.sonuc_dagilimi || {};
     document.getElementById("ist-ozet").innerHTML =
       `Başvuru (dilekçe) sayısı: <b>${v.dilekce_sayisi}</b><br>` +
@@ -994,8 +1053,11 @@ async function istatistikYukle() {
     (v.ceza_turu_bazinda || []).forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${kacis(r.ceza_kodu)}</td><td>${kacis(r.aciklama)}</td>` +
-        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
-        `<td class="sag">${r.uzlasilan_sayisi}</td><td class="sag">${r.uzlasilamayan_sayisi}</td><td class="sag">${r.gelmeyen_sayisi}</td>` +
+        saySutun("ceza", r.detay_kod, "basvuru", r.basvuru_sayisi) +
+        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
+        saySutun("ceza", r.detay_kod, "uzlasildi", r.uzlasilan_sayisi) +
+        saySutun("ceza", r.detay_kod, "uzlasilamadi", r.uzlasilamayan_sayisi) +
+        saySutun("ceza", r.detay_kod, "gelmedi", r.gelmeyen_sayisi) +
         `<td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td><td class="sag">${tlFormat(r.toplam_uzlasilamayan_tutar)}</td>`;
       tb.appendChild(tr);
     });
@@ -1005,12 +1067,74 @@ async function istatistikYukle() {
     (v.vergi_turu_bazinda || []).forEach(r => {
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${kacis(r.vergi_turu_kod) || "(belirtilmemiş)"}</td><td>${kacis(r.ad)}</td>` +
-        `<td class="sag">${r.basvuru_sayisi}</td><td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
-        `<td class="sag">${r.uzlasilan_sayisi}</td><td class="sag">${r.uzlasilamayan_sayisi}</td><td class="sag">${r.gelmeyen_sayisi}</td>` +
+        saySutun("vergi", r.detay_kod, "basvuru", r.basvuru_sayisi) +
+        `<td class="sag">${tlFormat(r.toplam_basvuru_tutari)}</td>` +
+        saySutun("vergi", r.detay_kod, "uzlasildi", r.uzlasilan_sayisi) +
+        saySutun("vergi", r.detay_kod, "uzlasilamadi", r.uzlasilamayan_sayisi) +
+        saySutun("vergi", r.detay_kod, "gelmedi", r.gelmeyen_sayisi) +
         `<td class="sag">${tlFormat(r.toplam_uzlasilan_tutar)}</td><td class="sag">${tlFormat(r.toplam_uzlasilamayan_tutar)}</td>`;
       vtb.appendChild(tr);
     });
     toplamSatiriEkle(vtb, v.vergi_turu_bazinda || [], 2);
+  } catch (e) { hata(e); }
+}
+
+// ---------- ISTATISTIK DRILL-DOWN ----------
+let sonIstatistik = null;
+const METRIK_AD = { basvuru: "Başvuru Sayısı", uzlasildi: "Uzlaşılan",
+  uzlasilamadi: "Uzlaşma Vaki Olmadı", gelmedi: "Uzlaşma Temin Edilemedi" };
+
+// Tiklanabilir sayi hucresi (0 ise tiklanmaz)
+function saySutun(grup, kod, metrik, deger) {
+  const g = deger || 0;
+  if (!g) return `<td class="sag">0</td>`;
+  return `<td class="sag"><a href="#" class="say-link" ` +
+    `onclick="istatistikDetay('${grup}','${kacis(String(kod))}','${metrik}'); return false;">${g}</a></td>`;
+}
+
+function istatistikGrupSatiri(grup, kod) {
+  const liste = grup === "vergi" ? (sonIstatistik.vergi_turu_bazinda || [])
+                                 : (sonIstatistik.ceza_turu_bazinda || []);
+  return liste.find(r => String(r.detay_kod) === String(kod)) || {};
+}
+
+async function istatistikDetay(grup, kod, metrik) {
+  const b = document.getElementById("ist-baslangic").value.trim();
+  const s = document.getElementById("ist-bitis").value.trim();
+  const satir = istatistikGrupSatiri(grup, kod);
+  const kodAd = grup === "vergi" ? (satir.vergi_turu_kod || kod) : (satir.ceza_kodu || kod);
+  const aciklama = grup === "vergi" ? (satir.ad || "") : (satir.aciklama || "");
+  const etiket = kodAd + (aciklama ? " (" + aciklama + ")" : "") + " — " + (METRIK_AD[metrik] || metrik);
+  const qs = "grup=" + encodeURIComponent(grup) + "&kod=" + encodeURIComponent(kod) +
+    "&metrik=" + encodeURIComponent(metrik) + "&baslangic=" + encodeURIComponent(b) +
+    "&bitis=" + encodeURIComponent(s);
+  try {
+    const veri = await api("/api/istatistik/detay?" + qs);
+    document.getElementById("ist-detay-baslik").textContent = "Detay: " + etiket;
+    document.getElementById("ist-detay-adet-baslik").textContent =
+      metrik === "basvuru" ? "Başvuru Sayısı" : METRIK_AD[metrik] + " Sayısı";
+    const bilgi = document.getElementById("ist-detay-bilgi");
+    const toplamAdet = veri.reduce((a, r) => a + (r.adet || 0), 0);
+    const toplamTutar = veri.reduce((a, r) => a + (r.tutar || 0), 0);
+    bilgi.textContent = veri.length + " mükellef · toplam " + toplamAdet +
+      " · " + tlFormat(toplamTutar) + " TL";
+    const dt = document.querySelector("#ist-detay-tablo tbody");
+    dt.innerHTML = "";
+    if (!veri.length) {
+      dt.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#5a6b7d">Kayıt bulunamadı.</td></tr>`;
+    } else {
+      veri.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${kacis(r.ad_unvan)}</td><td>${kacis(r.vkn_tckn)}</td>` +
+          `<td class="sag">${r.adet}</td><td class="sag">${tlFormat(r.tutar)}</td>`;
+        dt.appendChild(tr);
+      });
+    }
+    document.getElementById("ist-detay-excel").onclick = () =>
+      window.location.href = "/istatistik_detay?" + qs + "&etiket=" + encodeURIComponent(etiket);
+    const kart = document.getElementById("ist-detay-kart");
+    kart.hidden = false;
+    kart.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) { hata(e); }
 }
 
