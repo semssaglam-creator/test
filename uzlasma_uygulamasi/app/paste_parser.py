@@ -9,10 +9,15 @@ bu yuzden ayristirma satir duzenine degil, alan kaliplarina dayanir.
 """
 import re
 
-# Ornek: 2026041113EvU0000001 / 2026090113Eva0000004 (Ev'den sonraki harf
-# buyuk ya da kucuk olabilir; farkli vergi daireleri/tur kodlari farkli harf
-# ve buyuk-kucuk kullaniyor)
-FIS_NO_RE = r"\d{10}Ev[A-Za-z]\d{7}"
+# Ihbarname fis no yapisi (GIB Dijital Vergi Dairesi):
+#   \d{8}  -> tarih (YYYYAAGG)
+#   13     -> ihbarnameyi tanimlayan sabit isaret (tarihten sonra "13" yoksa
+#             o numara bir ihbarname degildir)
+#   [A-Za-z]+ -> duruma gore degisen alfabetik bolum (herhangi bir harf
+#                kombinasyonu; buyuk/kucuk, tek ya da cok harf olabilir)
+#   \d{7}  -> ihbarname sira numarasi
+# Ornekler: 2026041113EvU0000001, 2026090113Eva0000004, 2026090813Evd0000003
+FIS_NO_RE = r"\d{8}13[A-Za-z]+\d{7}"
 
 _ALAN_ETIKETLERI = (
     "Ad Soyad / Ünvan",

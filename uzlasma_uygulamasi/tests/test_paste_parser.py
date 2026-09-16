@@ -74,5 +74,23 @@ class VergiTuruBos(unittest.TestCase):
         self.assertEqual(satirlar[0]["miktar"], 17000.0)
 
 
+class FisNoYapisi(unittest.TestCase):
+    """Fis no: \\d{8} tarih + '13' isaret + degisken harfler + \\d{7} sira."""
+
+    def test_farkli_harf_kombinasyonlari(self):
+        # Alfabetik bolum tek harf, cok harf, buyuk/kucuk karisik olabilir
+        for fis in ("2026041113X0000001", "2026041113EvU0000001",
+                    "2026041113abc0000009", "2026041113EVDE0000007"):
+            metin = "Ceza Satırları\n" + fis + " 0015 3080 213 sayılı VUK Gereğince 100.5\n"
+            satirlar = ceza_satirlari_ayikla(metin)
+            self.assertEqual(len(satirlar), 1, fis)
+            self.assertEqual(satirlar[0]["fis_no"], fis)
+
+    def test_tarihten_sonra_13_yoksa_ihbarname_degil(self):
+        # 9-10. haneler '13' degil (burada '99') -> fis no sayilmaz
+        metin = "Ceza Satırları\n2026041199EvU0000001 0015 3080 213 sayılı VUK 100.5\n"
+        self.assertEqual(ceza_satirlari_ayikla(metin), [])
+
+
 if __name__ == "__main__":
     unittest.main()
