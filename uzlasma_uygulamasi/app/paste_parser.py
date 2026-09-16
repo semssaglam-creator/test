@@ -9,8 +9,10 @@ bu yuzden ayristirma satir duzenine degil, alan kaliplarina dayanir.
 """
 import re
 
-# Ornek: 2026041113EvU0000001
-FIS_NO_RE = r"\d{10}Ev[A-Z]\d{7}"
+# Ornek: 2026041113EvU0000001 / 2026090113Eva0000004 (Ev'den sonraki harf
+# buyuk ya da kucuk olabilir; farkli vergi daireleri/tur kodlari farkli harf
+# ve buyuk-kucuk kullaniyor)
+FIS_NO_RE = r"\d{10}Ev[A-Za-z]\d{7}"
 
 _ALAN_ETIKETLERI = (
     "Ad Soyad / Ünvan",
