@@ -835,6 +835,21 @@ function tarihGoster(deger) {
   return `${m[3].padStart(2, "0")}.${m[2].padStart(2, "0")}.${m[1]}`;
 }
 
+/**
+ * "10.03.2021" -> "2021-03-10". Çalışmada tarihler ISO tutulur; ekranda
+ * gg.aa.yyyy gösterilir ve öyle yazılır. Boş metin boş döner; çözülemeyen
+ * metin null döner ki çağıran kullanıcıyı uyarabilsin.
+ */
+function tarihCoz(metin) {
+  const ham = String(metin || "").trim();
+  if (!ham) return "";
+  const m = /^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/.exec(ham);
+  if (!m) return null;
+  const g = Number(m[1]), a = Number(m[2]);
+  if (g < 1 || g > 31 || a < 1 || a > 12) return null;
+  return `${m[3]}-${String(a).padStart(2, "0")}-${String(g).padStart(2, "0")}`;
+}
+
 function sayiCoz(metin) {
   if (metin === null || metin === undefined) return 0;
   let m = String(metin).trim().replace(/\s/g, "");
@@ -3657,6 +3672,7 @@ function faturaSutunSuzgecleri(suz) {
     tdSon.appendChild(sil);
   }
   tr.appendChild(tdSon);
+  bos(2);                                   // Yevmiye Tarihi · Yevmiye No
   return tr;
 }
 
@@ -3745,7 +3761,7 @@ function faturaListesiniCiz() {
   ust.appendChild(thDahil);
   ["Defterde", "Beyanda", "Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih",
    "Satıcı VKN", "Yön", "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran",
-   "Not"].forEach((b) =>
+   "Malın Cinsi", "Yevmiye\nTarihi", "Yevmiye\nNo"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
   tablo.appendChild(faturaSutunSuzgecleri(suz));
@@ -3753,7 +3769,7 @@ function faturaListesiniCiz() {
   if (!gorunen.length) {
     const bos = document.createElement("tr");
     bos.appendChild(hucre("td", "Seçilen yıl ve satıcıya ait fatura yok.",
-                          { className: "sessiz" })).colSpan = 15;
+                          { className: "sessiz" })).colSpan = 17;
     tablo.appendChild(bos);
   }
 
@@ -3882,11 +3898,47 @@ function faturaListesiniCiz() {
     // Süzgeç seçenekleriyle birebir aynı biçim kullanılır
     tr.appendChild(hucre("td", faturaOrani(f) || "—", { className: "sag" }));
 
-    const notlar = [];
-    if (f.iptal) notlar.push("iptal/itiraz");
-    if (f.mal_cinsi) notlar.push(f.mal_cinsi);
-    if (f.yevmiye_no) notlar.push("yev. " + f.yevmiye_no);
-    tr.appendChild(hucre("td", notlar.join(" · ") || "", { className: f.iptal ? "fark-var" : "sessiz" }));
+    // Malın cinsi ve yevmiye bilgileri portal dökümlerinde gelmez; defter
+    // kaydından elle girilir. Girilmezse belgede kırmızı yer tutucu kalır
+    // ([malın cinsi], [yevmiye tarihi], [yevmiye no]) — yani doldurulmamış
+    // olması belgede görünür, sessizce kaybolmaz.
+    const kayitsiz = (f.deftere_kaydedildi || "Evet") === "Hayır";
+    const metinKutusu = (alan, genislik, yer_tutucu, cozucu) => {
+      const td = document.createElement("td");
+      const g = document.createElement("input");
+      g.type = "text";
+      g.style.cssText = `width:${genislik}px;padding:3px 6px;font-size:12px;`;
+      g.placeholder = yer_tutucu;
+      g.value = cozucu ? (tarihGoster(f[alan]) || "") : (f[alan] || "");
+      // Deftere kaydedilmemiş faturanın yevmiye bilgisi olamaz; belgede de
+      // "kayıt yok" yazılıyor. Kutu kapatılır ki boşuna doldurulmasın.
+      if (cozucu !== undefined && kayitsiz) {
+        g.disabled = true;
+        g.placeholder = "kayıt yok";
+        g.title = "Fatura yasal deftere kaydedilmemiş.";
+      }
+      g.addEventListener("change", async () => {
+        if (cozucu) {
+          const iso = tarihCoz(g.value);
+          if (iso === null) {
+            mesaj("Yevmiye tarihini gg.aa.yyyy biçiminde yazın (örn 10.03.2021).",
+                  "hata");
+            g.value = tarihGoster(f[alan]) || "";
+            return;
+          }
+          f[alan] = iso;
+        } else {
+          f[alan] = g.value.trim();
+        }
+        isaretle(false);
+        await faturalariTazele();
+      });
+      td.appendChild(g);
+      tr.appendChild(td);
+    };
+    metinKutusu("mal_cinsi", 130, "malın cinsi");
+    metinKutusu("yevmiye_tarih", 90, "gg.aa.yyyy", true);
+    metinKutusu("yevmiye_no", 70, "no", false);
 
     if (!f.dahil) tr.style.opacity = "0.55";
     tablo.appendChild(tr);
@@ -3907,12 +3959,9 @@ async function faturaListesiniAktar() {
     .find((y) => y.kod === kod) || {}).etiket || kod || "";
   const basliklar = ["Dahil", "Tevsik yok", "İptal/itiraz", "Fatura No", "Tarih", "Satıcı VKN",
                      "Satıcı Unvanı", "Yön", "Kayıt Dönemi", "Matrah", "KDV",
-                     "Toplam", "Oran (%)", "Not"];
+                     "Toplam", "Oran (%)", "Defterde", "Beyanda",
+                     "Malın Cinsi", "Yevmiye Tarihi", "Yevmiye No"];
   const satirlar = gorunen.map((f) => {
-    const notlar = [];
-    if (f.iptal) notlar.push("iptal/itiraz");
-    if (f.mal_cinsi) notlar.push(f.mal_cinsi);
-    if (f.yevmiye_no) notlar.push("yev. " + f.yevmiye_no);
     const satici = (durum.calisma.saticilar || {})[f.satici_vkn || ""] || {};
     return [
       f.dahil ? "Evet" : "Hayır",
@@ -3929,7 +3978,13 @@ async function faturaListesiniAktar() {
       Number(f.kdv || 0),
       Number(f.toplam || 0),
       f.matrah ? Number((f.kdv / f.matrah * 100).toFixed(1)) : 0,
-      notlar.join(" · "),
+      (f.deftere_kaydedildi || "Evet") === "Hayır" ? "Hayır" : "Evet",
+      (f.beyana_yansitildi || "Evet") === "Hayır" ? "Hayır" : "Evet",
+      f.mal_cinsi || "",
+      (f.deftere_kaydedildi || "Evet") === "Hayır"
+        ? "kayıt yok" : (tarihGoster(f.yevmiye_tarih) || ""),
+      (f.deftere_kaydedildi || "Evet") === "Hayır"
+        ? "kayıt yok" : (f.yevmiye_no || ""),
     ];
   });
   const kapsam = [];

@@ -104,6 +104,20 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-10-01 — **Malın cinsi ve yevmiye bilgileri artık fatura listesinden
+      girilebiliyor.** Bu üç alan portal dökümlerinde gelmiyor, defter
+      kaydından elle giriliyordu; ama girilecek bir yer yoktu — belgelerde
+      hep kırmızı yer tutucu kalıyordu. Okunur "Not" sütununun yerine üç
+      düzenlenebilir sütun geldi: **Malın Cinsi · Yevmiye Tarihi · Yevmiye
+      No** (Not sütunu zaten bu iki alanı ve iptal/itirazı tekrar
+      gösteriyordu; iptal/itirazın kendi kutusu var).
+      Yevmiye tarihi gg.aa.yyyy yazılıp ISO saklanıyor (`tarihCoz`,
+      `tarihGoster`in tersi); çözülemeyen metin reddedilip kutu eski değerine
+      dönüyor. Deftere kaydedilmemiş faturanın yevmiye kutuları kapalı ve
+      "kayıt yok" yazıyor — belgedeki hücreyle aynı.
+      Excel çıktısına da yansıdı: "Not" yerine Defterde · Beyanda · Malın
+      Cinsi · Yevmiye Tarihi · Yevmiye No sütunları.
+
 - [x] 2026-10-01 — **Fatura düzenlenmesi / deftere kaydedilmesi / beyana
       yansıtılması üç ayrı olgu olarak ayrıldı.** Sahada çıktı: satıcı üç
       fatura düzenlemiş, mükellef bunlardan yalnızca birini deftere kaydedip
