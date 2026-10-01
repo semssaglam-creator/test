@@ -104,6 +104,40 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-10-01 — **Fatura düzenlenmesi / deftere kaydedilmesi / beyana
+      yansıtılması üç ayrı olgu olarak ayrıldı.** Sahada çıktı: satıcı üç
+      fatura düzenlemiş, mükellef bunlardan yalnızca birini deftere kaydedip
+      indirimine almıştı; uygulamada bunu gösterecek bir yer yoktu.
+      Faturaya iki tik eklendi (**Defterde**, **Beyanda**); ikisi de evet olup
+      satıcı düzeltmeliyse durum "düzeltme beyannamesi var" olur
+      (`faturalar.fatura_durumu`). **Reddedilen şey indirimdir:** beyana
+      yansımamış fatura tarhiyata giremez — `normalize` bunu zorlar,
+      arayüzde de "Dahil" kutusu kapanır.
+      Tabloya **Sıra** sütunu kondu; durum paragrafları belgeyi sıra
+      numarasıyla anıyor. Deftere kaydedilmemiş faturanın yevmiye hücrelerine
+      "kayıt yok" yazılıyor (kırmızı yer tutucu yanıltıcı olurdu: orada
+      doldurulacak bir bilgi yok).
+      Kaldırılan paragrafların yerine dört durum paragrafı geldi
+      (`tutanak.defter_beyan_paragraflari`), tekil/çoğul uyumlu ve tablo
+      sırasına göre dizili. **Tutanak ve iki rapor aynı üreteçten besleniyor.**
+      Muhasebe kaydı paragrafı ve sahte belge raporunun giriş cümlesi artık
+      yalnızca deftere kayıtlı/beyana yansımış faturalar için yazılıyor;
+      hepsini kapsayan eski cümle istisna varken gerçeğe aykırıydı.
+      **Yan sonuç:** bütün faturaları beyan dışı olan satıcı tarhiyata hiç
+      girmediği için düzeltme kabul raporunun uygunluk ölçütüne "tarhiyata
+      giren KDV'si yok" hâli eklendi; yoksa tarhiyatı sıfır olan bir dosyada
+      rapor "faturaları hâlâ tarhiyata giriyor" diye reddedilirdi.
+- [x] 2026-10-01 — **Tutanaktan değerlendirme cümleleri çıkarıldı.** Satıcı
+      maddelerinin 2. ve 3. paragrafları kaldırıldı: "…sahte belge
+      kullanıldığı anlaşılmıştır" ile Vergi Tekniği Raporunun sonuç bölümünü
+      tırnak içinde aktaran paragraf. Tutanak tespit belgesidir; değerlendirme
+      ve sonuca yalnızca raporda varılabilir. Özel esaslar paragrafı kaldı —
+      o idari bir durumdur, tespittir. Raporlar iki paragrafı da yazmaya
+      devam ediyor (`satici_tespit_paragraflari(..., vtr_dahil=False)`).
+      Kaybolmaması gereken **yıl bilgisi** Ba-Bs cümlesine taşındı:
+      "Mükellef Kurumun **2021 hesap dönemi** Ba-Bs sorgulamasında…"
+      (kurumda hesap dönemi, gerçek kişide takvim yılı).
+
 - [x] 2026-09-12 — **Daire adında noktalı İ / noktasız I ayrımı.** Büyük
       harfle `LIMAN VD` yazıldığında belgeye `Lıman` geçiyordu. Kod Türkçe
       kuralına uygun çalışıyor; sorun gerçek bir **belirsizlik**: aynı harf

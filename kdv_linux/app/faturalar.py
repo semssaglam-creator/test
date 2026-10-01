@@ -122,9 +122,42 @@ def yevmiye_hucreleri(f):
     defter kaydindan elle girilir. Bos birakmak yerine kose parantezli tutucu
     yazilir: belge yazicisi bunlari kirmizi gosterdiginden, doldurulacak yer
     belgede goze carpar.
+
+    Deftere hic kaydedilmemis bir fatura icin "kayıt yok" yazilir: orada
+    doldurulacak bir bilgi YOKTUR, kirmizi tutucu yaniltici olurdu.
     """
+    if str(f.get("deftere_kaydedildi") or "Evet") == "Hayır":
+        return ("kayıt yok", "kayıt yok")
     return (tarih_goster(f.get("yevmiye_tarih")) or "[yevmiye tarihi]",
             f.get("yevmiye_no") or "[yevmiye no]")
+
+
+# Faturanin defter ve beyan karsisindaki durumu. Iki tikten ve saticinin
+# duzeltme isaretinden turetilir; belgedeki paragraf da buna gore secilir.
+DURUM_NORMAL = "normal"            # deftere kayitli, beyana yansimis
+DURUM_DUZELTME = "duzeltme"        # kayitli ve yansimis, sonra duzeltmeyle cikarilmis
+DURUM_DEFTERDE_YOK = "defterde_yok"        # ne deftere ne beyana girmis
+DURUM_BEYANDA_YOK = "beyanda_yok"          # deftere kayitli, beyana yansimamis
+DURUM_DEFTERSIZ_BEYAN = "deftersiz_beyan"  # defterde yok ama beyanda var
+
+
+def fatura_durumu(f, satici_duzeltme=False):
+    """Faturanin defter/beyan durumu; yukaridaki DURUM_* degerlerinden biri.
+
+    `satici_duzeltme`, saticinin faturalarinin duzeltme beyannamesiyle
+    indirimlerden cikarilmis olmasidir. Yalnizca deftere KAYITLI ve beyana
+    YANSIMIS faturalar icin anlamlidir: kaydedilmemis bir faturanin
+    duzeltmeyle cikarilacak bir indirimi zaten yoktur.
+    """
+    defter = str(f.get("deftere_kaydedildi") or "Evet") != "Hayır"
+    beyan = str(f.get("beyana_yansitildi") or "Evet") != "Hayır"
+    if defter and beyan:
+        return DURUM_DUZELTME if satici_duzeltme else DURUM_NORMAL
+    if defter and not beyan:
+        return DURUM_BEYANDA_YOK
+    if not defter and beyan:
+        return DURUM_DEFTERSIZ_BEYAN
+    return DURUM_DEFTERDE_YOK
 
 
 def mal_cinsi_hucresi(f):
@@ -260,10 +293,27 @@ def normalize(ham_faturalar, mukellef_vkn=None):
 
         f["tevsik_yok"] = bool(f.get("tevsik_yok"))
 
+        # Fatura duzenlenmesi, deftere kaydedilmesi ve beyana yansitilmasi
+        # UC AYRI olgudur. Saticinin fatura duzenlemis olmasi, mukellefin o
+        # faturayi deftere isledigi anlamina gelmez; deftere islemis olmasi da
+        # KDV'sini indirim konusu yaptigi anlamina gelmez. Sahada boyle cikti:
+        # satici uc fatura duzenlemis, mukellef bunlardan yalnizca birini
+        # deftere kaydedip indirimine almisti.
+        #
+        # Varsayilan ikisi de "evet": dokumden gelen faturalarin olagan hali
+        # budur ve eski calismalar boyle okunmalidir.
+        for alan in ("deftere_kaydedildi", "beyana_yansitildi"):
+            f[alan] = "Hayır" if str(f.get(alan) or "") == "Hayır" else "Evet"
+
         if "dahil" not in f:
             # Iptal edilmis ve alis olmayan belgeler bastan disarida kalir;
             # kullanici isterse geri alir.
             f["dahil"] = bool(f["yon"] == YON_ALIS and not f["iptal"])
+        # Reddedilecek sey INDIRIMDIR: beyana yansimamis bir belgenin
+        # indirimi zaten yok, tarhiyata giremez. Bu, kullanicinin "dahil"
+        # isaretini de bastirir - isaretli birakilmis olsa bile.
+        if f["beyana_yansitildi"] == "Hayır":
+            f["dahil"] = False
 
         f["satici_vkn"] = (_vkn(f.get("duzenleyen_vkn")) if f["yon"] != YON_SATIS
                            else _vkn(f.get("alici_vkn")))
@@ -1035,9 +1085,17 @@ def duzeltme_kabul_uygun_mu(satici_satirlari):
             adlar += " ve %d satıcı daha" % (len(secilen) - 4)
         return adlar
 
+    # Tarhiyata giren KDV'si olmayan satici da "kalan" sayilmaz. Satici
+    # kartindaki iki isaretin yani sira, faturalarin tamami beyana
+    # yansimamissa da ortada reddedilecek indirim yoktur: fatura basina
+    # "beyannameye yansitildi" isareti kaldirildiginda o fatura tarhiyata
+    # girmiyor (bkz. normalize). Bu sart olmasaydi, tarhiyati sifir olan bir
+    # dosyada rapor "faturalari hala tarhiyata giriyor" diye reddedilirdi -
+    # ki o cumle artik dogru olmazdi.
     kalanlar = [s for s in satirlar
                 if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet"
-                and str(s.get("kayda_alinmadi") or "") != "Evet"]
+                and str(s.get("kayda_alinmadi") or "") != "Evet"
+                and abs(float(s.get("kdv") or 0.0)) > 0.005]
     if kalanlar:
         return False, (
             "Şu satıcıların faturaları hâlâ tarhiyata giriyor: %s. Düzeltme "

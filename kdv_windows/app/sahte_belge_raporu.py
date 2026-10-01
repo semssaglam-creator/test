@@ -33,7 +33,7 @@ from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
                       kalan_dikkat_notu, kalan_iptal_notlari, yetersiz_donemleri,
-                      satici_tespit_paragraflari,
+                      defter_beyan_paragraflari, satici_tespit_paragraflari,
                       satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
@@ -809,32 +809,51 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
         # faturalari kimin duzenledigi ve hangi donem beyannamelerinde indirim
         # konusu yapildigi.
         yillar = sorted({f["kayit_yil"] for f in tum if f.get("kayit_yil")})
-        b.paragraf(
-            "Rapora ekli vergi inceleme tutanağının %s maddesinde tespit "
-            "edildiği üzere, %s, düzenlenen Vergi Tekniği Raporu ile sahte "
-            "olduğu tespit edilen %s %s Vergi Kimlik Numaralı Mükellefi %s "
-            "tarafından düzenlenen faturaları yevmiye defterine kaydederek, bu "
-            "faturalara ait KDV’leri %s dönemi KDV beyannamelerinde indirilecek "
-            "KDV olarak göstermiştir. Faturalara ilişkin ayrıntılı bilgiler "
-            "aşağıdaki tabloda yer almaktadır."
-            % (("%d." % veri_no) if veri_no else "[ilgili]",
-               M(kunye, buyuk=True), daire, s["vkn"] or "[VKN]", unvan,
-               turkce.liste([str(y) for y in yillar]) or "[yıl]"),
-            girinti=1)
+        # Giris cumlesi "faturalari yevmiye defterine kaydederek ... indirilecek
+        # KDV olarak gostermistir" der. Bu, ancak faturalarin TAMAMI deftere
+        # kayitli ve beyana yansimissa dogrudur. Istisna varsa cumle notr
+        # birakilir; hangi belgenin ne durumda oldugunu tablodan sonraki
+        # paragraflar tek tek soyler.
+        istisna_var = any(
+            F.fatura_durumu(f) not in (F.DURUM_NORMAL, F.DURUM_DUZELTME)
+            for f in tum)
+        ortak = ("Rapora ekli vergi inceleme tutanağının %s maddesinde tespit "
+                 "edildiği üzere, %s, düzenlenen Vergi Tekniği Raporu ile sahte "
+                 "olduğu tespit edilen %s %s Vergi Kimlik Numaralı Mükellefi %s "
+                 "tarafından düzenlenen "
+                 % (("%d." % veri_no) if veri_no else "[ilgili]",
+                    M(kunye, buyuk=True), daire, s["vkn"] or "[VKN]", unvan))
+        if istisna_var:
+            b.paragraf(ortak + "faturalara ilişkin ayrıntılı bilgiler aşağıdaki "
+                       "tabloda yer almaktadır.", girinti=1)
+        else:
+            b.paragraf(
+                ortak + "faturaları yevmiye defterine kaydederek, bu "
+                "faturalara ait KDV’leri %s dönemi KDV beyannamelerinde "
+                "indirilecek KDV olarak göstermiştir. Faturalara ilişkin "
+                "ayrıntılı bilgiler aşağıdaki tabloda yer almaktadır."
+                % (turkce.liste([str(y) for y in yillar]) or "[yıl]"),
+                girinti=1)
         tablo = []
-        for f in tum:
+        for sira, f in enumerate(tum, 1):
             yev_tarih, yev_no = F.yevmiye_hucreleri(f)
-            tablo.append([F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
+            tablo.append([str(sira),
+                          F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
                           F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
                           _tl(f.get("kdv")), _tl(f.get("toplam")),
                           yev_tarih, yev_no])
-        tablo.append(["TOPLAM", "", "", _tl(s["liste_matrah"]),
+        tablo.append(["", "TOPLAM", "", "", _tl(s["liste_matrah"]),
                       _tl(s["liste_kdv"]), _tl(s["liste_toplam"]), "", ""])
-        b.tablo(["Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar", "KDV",
-                 "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
-                hizalar=["orta", "sol", "sol", "sag", "sag", "sag", "orta", "orta"],
-                oranlar=[1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
+        b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
+                 "KDV", "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
+                hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag",
+                         "orta", "orta"],
+                oranlar=[0.45, 1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+        # Tutanakla AYNI uretecten: iki belge birbirini tutsun.
+        for satir in defter_beyan_paragraflari(kunye, s, tum):
+            b.paragraf(satir, girinti=1)
 
     # Iptal/itiraz kaydi, tarhiyata dahil edilmeyen faturalar icin de yazilir
     for satir in iptal_notlari(tum):

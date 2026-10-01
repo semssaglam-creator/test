@@ -41,8 +41,8 @@ from . import faturalar as F
 from . import inceleme_kunyesi as ik
 from . import mevzuat, turkce
 from .belge_docx import TABLO_PUNTOSU, YER_TUTUCU_RENGI as KIRMIZI, Belge
-from .tutanak import (beyan_dokum_tablosu, dolu_donemler,
-                      satici_tespit_paragraflari)
+from .tutanak import (beyan_dokum_tablosu, defter_beyan_paragraflari,
+                      dolu_donemler, satici_tespit_paragraflari)
 
 _tl = turkce.tl
 
@@ -166,16 +166,20 @@ def _satici_tespiti(b, kunye, s, liste, karsilastirmalar, sira):
                (" Söz konusu faturaların %s yasal defter kayıtlarına hiç "
                 "alınmadığı görülmüştür." % M(kunye, ek="in"))
                if kayda_alinmadi else ""), girinti=1)
-        b.tablo(["Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar", "KDV",
-                 "Toplam Tutar"],
-                [[F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
-                  F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
-                  _tl(f.get("kdv")), _tl(f.get("toplam"))] for f in kendi]
-                + [["TOPLAM", "", "", _tl(s["liste_matrah"]),
+        b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
+                 "KDV", "Toplam Tutar"],
+                [[str(sira), F.tarih_goster(f.get("tarih")),
+                  f.get("fatura_no") or "", F.mal_cinsi_hucresi(f),
+                  _tl(f.get("matrah")), _tl(f.get("kdv")), _tl(f.get("toplam"))]
+                 for sira, f in enumerate(kendi, 1)]
+                + [["", "TOPLAM", "", "", _tl(s["liste_matrah"]),
                     _tl(s["liste_kdv"]), _tl(s["liste_toplam"])]],
-                hizalar=["orta", "sol", "sol", "sag", "sag", "sag"],
-                oranlar=[1, 1.3, 1.4, 1.2, 1.1, 1.2],
+                hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag"],
+                oranlar=[0.45, 1, 1.3, 1.4, 1.2, 1.1, 1.2],
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+        # Tutanak ve sahte belge raporuyla ayni uretecten.
+        for satir in defter_beyan_paragraflari(kunye, s, kendi):
+            b.paragraf(satir, girinti=1)
     else:
         b.paragraf(
             "%s %s vergi kimlik numaralı mükellefi %s’den %s %s TL tutarında "

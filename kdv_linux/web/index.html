@@ -3595,7 +3595,8 @@ function faturaSutunSuzgecleri(suz) {
   };
   const kutuStili = "width:100%;padding:2px 4px;font-size:11px;";
 
-  bos(4);                        // Dahil · Tevsik yok · İptal/itiraz · Fatura No
+  bos(6);                        // Dahil · Defterde · Beyanda ·
+                                 // Tevsik yok · İptal/itiraz · Fatura No
 
   const tdTarih = document.createElement("td");
   const girdi = document.createElement("input");
@@ -3730,16 +3731,21 @@ function faturaListesiniCiz() {
   hepsi.style.width = "auto";
   hepsi.id = "fatHepsiSec";
   hepsi.title = "Görünen satırların tamamını dahil et / çıkar";
-  hepsi.checked = gorunen.length > 0 && gorunen.every((f) => f.dahil);
+  const secilebilir = gorunen.filter(
+    (f) => (f.beyana_yansitildi || "Evet") !== "Hayır");
+  hepsi.checked = secilebilir.length > 0 && secilebilir.every((f) => f.dahil);
   hepsi.addEventListener("change", async () => {
-    gorunen.forEach((f) => { f.dahil = hepsi.checked; });
+    gorunen.forEach((f) => {
+      if ((f.beyana_yansitildi || "Evet") !== "Hayır") f.dahil = hepsi.checked;
+    });
     isaretle(false);
     await faturalariTazele();
   });
   thDahil.append(hepsi, document.createTextNode(" Dahil"));
   ust.appendChild(thDahil);
-  ["Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih", "Satıcı VKN", "Yön",
-   "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran", "Not"].forEach((b) =>
+  ["Defterde", "Beyanda", "Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih",
+   "Satıcı VKN", "Yön", "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran",
+   "Not"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
   tablo.appendChild(faturaSutunSuzgecleri(suz));
@@ -3747,7 +3753,7 @@ function faturaListesiniCiz() {
   if (!gorunen.length) {
     const bos = document.createElement("tr");
     bos.appendChild(hucre("td", "Seçilen yıl ve satıcıya ait fatura yok.",
-                          { className: "sessiz" })).colSpan = 13;
+                          { className: "sessiz" })).colSpan = 15;
     tablo.appendChild(bos);
   }
 
@@ -3756,12 +3762,55 @@ function faturaListesiniCiz() {
 
     const tdDahil = document.createElement("td");
     const kutu = document.createElement("input");
-    kutu.type = "checkbox"; kutu.checked = !!f.dahil; kutu.style.width = "auto";
+    const beyanDisi = (f.beyana_yansitildi || "Evet") === "Hayır";
+    kutu.type = "checkbox";
+    kutu.checked = !!f.dahil && !beyanDisi;
+    kutu.style.width = "auto";
+    // Reddedilecek şey indirimdir: beyana yansımamış bir belgenin indirimi
+    // zaten yok, tarhiyata giremez. Sunucu da bunu zorlar; kutu burada
+    // kapatılarak kullanıcı etkisiz bir işaret koymaya çalışmasın.
+    kutu.disabled = beyanDisi;
+    if (beyanDisi) {
+      kutu.title = "Beyannameye yansıtılmamış fatura tarhiyata giremez: "
+                 + "reddedilecek bir indirim yoktur.";
+    }
     kutu.addEventListener("change", async () => {
       f.dahil = kutu.checked; isaretle(false); await faturalariTazele();
     });
     tdDahil.appendChild(kutu);
     tr.appendChild(tdDahil);
+
+    // Fatura düzenlenmesi, deftere kaydedilmesi ve beyana yansıtılması üç
+    // ayrı olgudur. Satıcının fatura düzenlemiş olması mükellefin onu
+    // deftere işlediği anlamına gelmez; deftere işlemiş olması da KDV'sini
+    // indirim konusu yaptığı anlamına gelmez.
+    const durumKutusu = (alan, baslik) => {
+      const td = document.createElement("td");
+      const k = document.createElement("input");
+      k.type = "checkbox";
+      k.checked = (f[alan] || "Evet") !== "Hayır";
+      k.style.width = "auto";
+      k.title = baslik;
+      k.addEventListener("change", async () => {
+        f[alan] = k.checked ? "Evet" : "Hayır";
+        // Deftere kaydedilmemiş bir fatura, aksi işaretlenmedikçe beyana da
+        // yansımamıştır; olağan hâl budur ve iki tiki ayrı ayrı kaldırmak
+        // zorunda bırakmak gereksiz.
+        if (alan === "deftere_kaydedildi" && !k.checked
+            && (f.beyana_yansitildi || "Evet") !== "Hayır") {
+          f.beyana_yansitildi = "Hayır";
+        }
+        isaretle(false);
+        await faturalariTazele();
+      });
+      td.appendChild(k);
+      tr.appendChild(td);
+    };
+    durumKutusu("deftere_kaydedildi", "Yasal deftere kaydedilmiş");
+    durumKutusu("beyana_yansitildi",
+                "KDV'si beyannamede indirim konusu yapılmış. "
+                + "İşaretli değilse fatura tarhiyata girmez: reddedilecek "
+                + "bir indirim yoktur.");
 
     // Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş faturalar:
     // VUK mükerrer 355 özel usulsüzlük cezasının matrahını oluşturur.
