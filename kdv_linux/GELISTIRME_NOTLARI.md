@@ -104,6 +104,19 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-10-02 — **Künyedeki genel beyan artık kapanış maddesine düşüyor.**
+      Bir önceki düzeltme eksik kalmıştı: alanı görünür kıldım ama künyedeki
+      metin hâlâ her satıcı maddesine yedek olarak giriyordu. Müfettişin
+      kastı farklıymış — o metin mükellefin **incelemenin bütünü** hakkındaki
+      beyanı ve tutanağın son maddelerine, itirazların yer aldığı yere ait.
+      Artık `_genel_beyan_maddesi` ile kapanışta kendi maddesi olarak
+      yazılıyor, "başkaca itiraz" maddesinden hemen önce. Satıcı maddelerine
+      yalnızca o satıcıya ilişkin beyan giriyor; girilmemişse kırmızı
+      **[mükellefin bu satıcıya ilişkin beyanı]** yer tutucusu kalıyor ki
+      eksik olduğu belgede görünsün.
+      Satıcı yoksa `_sorular_maddesi` beyanı zaten yazdığı için kapanış
+      maddesi o dosyalarda tekrarlanmıyor (`genel_beyan` bayrağı).
+
 - [x] 2026-10-02 — **Satıcı başına mükellef beyanı görünür kılındı.** Kullanıcı
       17 sahteci satıcılık bir dosyada künyedeki beyanı doldurup hepsinde aynı
       metnin çıktığını bildirdi. Alan aslında **vardı** ve doğru çalışıyordu

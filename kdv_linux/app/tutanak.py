@@ -729,7 +729,12 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
         return kapsanan, yazilan_vknler
     M = ik.mukellef_sozu
     sorular = ik.satirlar(kunye, "sorular")
-    genel_cevap = " ".join(ik.satirlar(kunye, "mukellef_beyani"))
+    # Kunyedeki "Mükellefin beyanı / itirazı" BURAYA DUSMEZ. O, mukellefin
+    # incelemeye iliskin genel beyanidir ve tutanagin kapanis maddelerinde
+    # kendi maddesi olarak yazilir (_genel_beyan_maddesi). Satici maddesine
+    # yalnizca o saticiya iliskin beyan girer; girilmemisse kirmizi yer
+    # tutucu kalir ki doldurulmasi gerektigi belgede gorunsun.
+    genel_cevap = ""
 
     for s in satici_satirlari:
         # Saticinin LISTEDEKI butun faturalari yazilir; tarhiyata girmeyenler
@@ -1000,7 +1005,7 @@ def _soru_metni(kunye, veri_no, s, sorular, cevap):
             "“%s” şeklinde ifade ve beyanda bulunmuştur."
             % (ik.soru_muhatabi(kunye, ek="e"), veri_no, ik.satici_unvani(s),
                hususlar, ik.soru_muhatabi(kunye, buyuk=False),
-               cevap or "[mükellefin beyanı]"))
+               cevap or "[mükellefin bu satıcıya ilişkin beyanı]"))
 
 
 def _tespit_maddesi(b, kunye, sayac, yillar, donemler):
@@ -1051,8 +1056,13 @@ def _sorular_maddesi(b, kunye, sayac, satici_satirlari):
     _madde(b, sayac, giris)
 
 
-def _standart_maddeler(b, kunye, sayac, donemler):
-    """Her tutanakta yer alan usul maddeleri."""
+def _standart_maddeler(b, kunye, sayac, donemler, genel_beyan=True):
+    """Her tutanakta yer alan usul maddeleri.
+
+    `genel_beyan=False`, mukellefin genel beyaninin daha yukarida
+    yazildigi anlamina gelir: satici yoksa _sorular_maddesi onu zaten
+    yaziyor, burada tekrarlanmamali.
+    """
     _madde(b, sayac,
            "Mükellefe Rapor Değerlendirme Komisyonlarında dinlenme talebinin "
            "olup olmadığı sorulmuş olup, mükellef cevaben; “%s” şeklinde ifade "
@@ -1079,11 +1089,29 @@ def _standart_maddeler(b, kunye, sayac, donemler):
            "Mükellefe; mükellef hakkında verilmiş herhangi bir özelge olup "
            "olmadığı sorulmuş, mükellef cevaben; “%s” şeklinde ifade ve beyanda "
            "bulunmuştur." % ik.deger(kunye, "ozelge_cevabi"))
+    if genel_beyan:
+        _genel_beyan_maddesi(b, kunye, sayac)
     _madde(b, sayac,
            "Mükellefe incelemeye veya bu tutanakta yer alan hususlara ilişkin "
            "başkaca itiraz ve mülahazaları olup olmadığı soruldu; mükellef "
            "cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
            % ik.deger(kunye, "baskaca_itiraz"))
+
+
+def _genel_beyan_maddesi(b, kunye, sayac):
+    """Mukellefin incelemeye iliskin GENEL beyani; kapanis maddelerinden biri.
+
+    Satici maddelerindeki beyanlardan ayridir: orada mukellef her satici icin
+    ayri ayri konusur, burada incelemenin butunu hakkinda. Bos birakilirsa
+    madde hic yazilmaz - her tutanakta bulunmasi gereken bir madde degildir.
+    """
+    beyan = " ".join(ik.satirlar(kunye, "mukellef_beyani")).strip()
+    if not beyan:
+        return
+    _madde(b, sayac,
+           "Mükellefe incelemeye ilişkin beyan ve itirazı sorulmuş olup, %s "
+           "cevaben; “%s” şeklinde ifade ve beyanda bulunmuştur."
+           % (ik.soru_muhatabi(kunye, buyuk=False), beyan))
 
 
 def _yaziyla(sayi):
@@ -1164,7 +1192,8 @@ def tutanak_uret(inceleme, kunye, yillar, sonuc, bulgular=None, calisma=None,
     if not satici_satirlari:
         _tespit_maddesi(b, kunye, sayac, yillar, donemler)
         _sorular_maddesi(b, kunye, sayac, satici_satirlari)
-    _standart_maddeler(b, kunye, sayac, donemler)
+    _standart_maddeler(b, kunye, sayac, donemler,
+                       genel_beyan=bool(satici_satirlari))
 
     _kapanis(b, kunye)
     return b
