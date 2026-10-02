@@ -13,6 +13,16 @@ oturumda buradan devam edilir.
 
 ## Bekleyenler
 
+- [ ] **Beyanname özeti alanı da sütunlu tabloya çevrilmeli.**
+      `vergi_beyan_ozeti` (yıl | açıklama | tutar) defter alanıyla aynı
+      tasarımda: serbest metin, dikey çizgiyle ayrılmış. Word/Excel'den
+      yapıştırınca hücreler alt alta gelip hepsi ilk sütuna düşüyor — defter
+      alanında sahada böyle çıktı. Çevirmeden önce dikkat: Gelir/Kurumlar
+      beyannamesi PDF'inden okutma yolu (`vbAktar`) alanı doğrudan
+      `$("k_vergi_beyan_ozeti").value = metin` ile dolduruyor; alan tabloya
+      dönerse o satır sessizce etkisiz kalır ve ekran tazelenmez. Satır
+      alanını yeniden çizen bir çağrıyla değiştirilmeli.
+
 ### Belge biçimi
 
 - [~] **Belge biçimi dairenin formatına getirilecek.** Örnek tutanak ve rapor
@@ -103,6 +113,17 @@ oturumda buradan devam edilir.
   Madde metinleri birincil kaynaktan doğrulanmadı.
 
 ## Yapılanlar
+
+- [x] 2026-10-02 — **İbraz edilen defterler sütunlu tabloya çevrildi.**
+      Alan serbest metindi, hücreler dikey çizgiyle ayrılıyordu; kullanıcı
+      Word/Excel'den yapıştırınca hücreler alt alta gelip hepsi ilk sütuna
+      düşüyordu, elle yazmak da zahmetliydi. Artık `satirlar` türünde, dört
+      sütunlu (Yılı · Defterin Türü · Tasdik Tarihi ve Numarası · Tasdik
+      Makamı) ve "+ Defter ekle" düğmesi var — faaliyet konuları ve
+      görevlendirme yazıları gibi.
+      **Depolama biçimi değişmedi** (satır başına bir kayıt, hücreler dikey
+      çizgiyle ayrılmış), bu yüzden eski çalışmalar olduğu gibi okunuyor ve
+      belge üreticisi (`cizgili_satirlar`) hiç değişmedi.
 
 - [x] 2026-10-02 — **Künyedeki genel beyan artık kapanış maddesine düşüyor.**
       Bir önceki düzeltme eksik kalmıştı: alanı görünür kıldım ama künyedeki

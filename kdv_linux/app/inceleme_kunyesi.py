@@ -36,6 +36,19 @@ IS_EMRI_KOLONLARI = [
      "varsayilan": "Sahte Belge Kullanma"},
 ]
 
+# Ibraz edilen defterler: her defter bir satir. Serbest metin olarak
+# "yil | tur | tasdik | makam" yazdirmak sahada ise yaramadi - Word ya da
+# Excel'den yapistirildiginda hucreler cogu zaman alt alta geliyor ve
+# hepsi ilk sutuna dusuyor. Her sutun icin ayri kutucuk aciliyor; calismada
+# yine ayni bicimde (dikey cizgiyle ayrilmis) saklandigi icin eski
+# calismalar ve belge ureticisi oldugu gibi okumaya devam ediyor.
+DEFTER_KOLONLARI = [
+    {"kod": "yil", "etiket": "Yılı", "tur": "metin"},
+    {"kod": "tur", "etiket": "Defterin Türü", "tur": "metin"},
+    {"kod": "tasdik", "etiket": "Tasdik Tarihi ve Numarası", "tur": "metin"},
+    {"kod": "makam", "etiket": "Tasdik Makamı", "tur": "metin"},
+]
+
 # Faaliyet konusu tek sutunlu bir satir alanidir: mukellefin birden cok
 # faaliyet konusu varsa her biri ayri satira yazilir.
 FAALIYET_KOLONLARI = [
@@ -188,10 +201,14 @@ BOLUMLER = [
                       "gösterir."},
             {"kod": "tutanak_sayfa", "etiket": "Tutanak sayfa sayısı", "tur": "sayi",
              "varsayilan": 3},
-            {"kod": "defter_bilgileri", "etiket": "İbraz edilen defterler", "tur": "uzun",
-             "ipucu": "Her satıra bir defter; alanları dikey çizgiyle ayırın: "
-                      "yıl | defterin türü | tasdik tarihi ve numarası | tasdik makamı. "
-                      "Örn: 2023 | Yevmiye Defteri | 25.12.2022 - 55555 | Mersin 17. Noterliği"},
+            {"kod": "defter_bilgileri", "etiket": "İbraz edilen defterler",
+             "tur": "satirlar", "kolonlar": DEFTER_KOLONLARI,
+             "ekle_etiketi": "+ Defter ekle",
+             "ipucu": "Her defter için (+) düğmesiyle yeni satır açın. Sıra "
+                      "numarası kendiliğinden verilir. Boş bırakılan hücreler "
+                      "belgede kırmızı yer tutucu olarak görünür. Örn: 2023 · "
+                      "Yevmiye Defteri · 25.12.2022 - 55555 · Mersin 17. "
+                      "Noterliği"},
             {"kod": "vergi_beyan_ozeti",
              "etiket": "Gelir / Kurumlar Vergisi beyanname özeti", "tur": "uzun",
              "ipucu": "Her satıra bir kalem: yıl | açıklama | tutar. Örn: "
