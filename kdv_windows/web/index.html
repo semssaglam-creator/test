@@ -3365,8 +3365,8 @@ function faturaEkraniniCiz() {
 function faturaSaticiTablosunuCiz() {
   const tablo = $("fatSaticiTablo");
   tablo.innerHTML = "";
-  const bas = ["VKN", "Unvan", "Kullanma Durumu", "İş Emri", "Fatura", "Matrah",
-               "KDV", "Dönem Aralığı", "Tarhiyat", ""];
+  const bas = ["VKN", "Unvan", "Kullanma Durumu", "İş Emri", "Beyan", "Fatura",
+               "Matrah", "KDV", "Dönem Aralığı", "Tarhiyat", ""];
   const ust = document.createElement("tr");
   bas.forEach((b) => ust.appendChild(hucre("th", b)));
   tablo.appendChild(ust);
@@ -3407,6 +3407,20 @@ function faturaSaticiTablosunuCiz() {
     });
     tdEmri.appendChild(kutu);
     tr.appendChild(tdEmri);
+
+    // Mükellef her satıcı için ayrı beyanda bulunabilir; beyanı girilmemiş
+    // satıcılar künyedeki ORTAK beyana düşer. Bu sütun hangisinin kendi
+    // beyanı olduğunu bir bakışta gösterir — 17 satıcılık bir dosyada
+    // kartları tek tek açmadan görmenin başka yolu yok.
+    const kendiBeyan = ((durum.calisma.saticilar[s.vkn] || {}).cevap || "").trim();
+    const tdBeyan = hucre("td", kendiBeyan ? "kendi beyanı" : "ortak",
+                          { className: kendiBeyan ? "" : "sessiz" });
+    tdBeyan.title = kendiBeyan
+      ? kendiBeyan
+      : "Bu satıcı için ayrı beyan girilmemiş; künyedeki ortak beyan "
+        + "kullanılacak. Ayrı beyan için “Düzenle” kartındaki “Mükellefin bu "
+        + "satıcıya ilişkin beyanı” alanını doldurun.";
+    tr.appendChild(tdBeyan);
 
     tr.appendChild(hucre("td", String(s.adet), { className: "sag" }));
     tr.appendChild(hucre("td", tl(s.matrah), { className: "sag" }));

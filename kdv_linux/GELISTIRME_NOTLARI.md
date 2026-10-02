@@ -104,6 +104,19 @@ oturumda buradan devam edilir.
 
 ## Yapılanlar
 
+- [x] 2026-10-02 — **Satıcı başına mükellef beyanı görünür kılındı.** Kullanıcı
+      17 sahteci satıcılık bir dosyada künyedeki beyanı doldurup hepsinde aynı
+      metnin çıktığını bildirdi. Alan aslında **vardı** ve doğru çalışıyordu
+      (`SATICI_ALANLARI.cevap`, satıcı kartında); sorun bulunabilirlikti —
+      künyedeki ortak alan hiçbir yerde "bu yalnızca yedek" demiyordu ve
+      satıcı kartını açmadan hangisinin kendi beyanı olduğu görülemiyordu.
+      Künyedeki alanın adı **"Mükellefin beyanı / itirazı (ortak)"** oldu ve
+      ipucu, satıcı başına beyanın nereye yazılacağını söylüyor. Satıcı
+      döküm tablosuna **Beyan** sütunu eklendi: "kendi beyanı" / "ortak",
+      üzerine gelince metnin kendisi görünüyor. 17 satıcılık bir dosyada
+      kartları tek tek açmadan eksikleri görmenin başka yolu yoktu.
+      Kod değişmedi; davranış zaten doğruydu.
+
 - [x] 2026-10-01 — **Malın cinsi ve yevmiye bilgileri artık fatura listesinden
       girilebiliyor.** Bu üç alan portal dökümlerinde gelmiyor, defter
       kaydından elle giriliyordu; ama girilecek bir yer yoktu — belgelerde

@@ -175,7 +175,15 @@ BOLUMLER = [
             {"kod": "sorular", "etiket": "Sorulan hususlar ve alınan cevaplar",
              "tur": "uzun",
              "ipucu": "Her satır belgede ayrı bir madde olarak numaralanır."},
-            {"kod": "mukellef_beyani", "etiket": "Mükellefin beyanı / itirazı", "tur": "uzun"},
+            {"kod": "mukellef_beyani",
+             "etiket": "Mükellefin beyanı / itirazı (ortak)", "tur": "uzun",
+             "ipucu": "Burası ORTAK beyandır: yalnızca kendi beyanı girilmemiş "
+                      "satıcılar için kullanılır. Mükellef her satıcı için ayrı "
+                      "beyanda bulunduysa, beyanları Sahte Belge / Faturalar "
+                      "ekranında satıcının “Düzenle” kartındaki “Mükellefin bu "
+                      "satıcıya ilişkin beyanı” alanına yazın; satıcı dökümü "
+                      "tablosundaki Beyan sütunu hangilerinin girildiğini "
+                      "gösterir."},
             {"kod": "tutanak_sayfa", "etiket": "Tutanak sayfa sayısı", "tur": "sayi",
              "varsayilan": 3},
             {"kod": "defter_bilgileri", "etiket": "İbraz edilen defterler", "tur": "uzun",
