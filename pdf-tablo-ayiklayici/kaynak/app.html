@@ -191,11 +191,12 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
   </main>
 </div>
 
-<script>window.__libErr=[];window.addEventListener("error",function(e){window.__libErr.push((e.message||"hata")+(e.lineno?" (satır "+e.lineno+")":""));});</script>
+<script>window.__libErr=[];/* Eklentilerin eklediği modül yükleyicilerini (define/module/exports) kütüphaneler yüklenirken gizle */window.__hidden={};["define","module","exports","require"].forEach(function(k){if(k in window){window.__hidden[k]=window[k];try{window[k]=undefined;}catch(e){}}});window.addEventListener("error",function(e){window.__libErr.push((e.message||"hata")+(e.lineno?" (satır "+e.lineno+")":""));});</script>
 <script>/*__PDFJS__*/</script>
 <script>/*__PDFWORKER__*/</script>
 <script>/*__XLSX__*/</script>
 <script>/*__CORE__*/</script>
+<script>if(!window.pdfjsLib&&window["pdfjs-dist/build/pdf"])window.pdfjsLib=window["pdfjs-dist/build/pdf"];Object.keys(window.__hidden).forEach(function(k){try{window[k]=window.__hidden[k];}catch(e){}});</script>
 <script>
 var SAMPLE_B64 = "/*__SAMPLE__*/";
 var DEFAULT_HEADERS = ["Sıra No","Vergi No","TC Kimlik No","Plaka No","Adı Soyadı / Ünvanı","Adres","Vergi Dönemi","Ana Vergi Kodu","Vergi Kodu","Ana Takip Dosya No","Takip Dosya No","Vergi Aslı Borcu Toplamı","KGZ Toplamı","Ceza Tutarı","Toplam Borç"];
