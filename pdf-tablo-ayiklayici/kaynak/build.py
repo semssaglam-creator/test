@@ -3,12 +3,11 @@ h=open('app.html',encoding='utf-8').read()
 def lib(p):
     s=open(p,encoding='utf-8').read()
     return s.replace('</script','<\\/script').replace('<!--','<\\!--').replace('<script','<\\script')
-# Her kütüphane, sayfadaki define/module/exports/require'ı göremeyeceği kapalı bir fonksiyonda çalışır
-def wrap(src, tail=''):
-    return '(function(define,module,exports,require){\n'+src+'\n'+tail+'\n}).call(window);'
-rep={'/*__PDFJS__*/':wrap(lib('pdfjs-dist-3.11.174/package/legacy/build/pdf.min.js'),'if(!window.pdfjsLib&&window["pdfjs-dist/build/pdf"])window.pdfjsLib=window["pdfjs-dist/build/pdf"];'),
-     '/*__PDFWORKER__*/':wrap(lib('pdfjs-dist-3.11.174/package/legacy/build/pdf.worker.min.js')),
-     '/*__XLSX__*/':wrap(lib('xlsx-0.18.5/package/dist/xlsx.full.min.js'),'if(typeof XLSX!=="undefined")window.XLSX=XLSX;'),
+import base64
+def b64(p): return base64.b64encode(open(p,'rb').read()).decode()
+rep={'/*__B64PDF__*/':b64('pdfjs-dist-3.11.174/package/legacy/build/pdf.min.js'),
+     '/*__B64WORKER__*/':b64('pdfjs-dist-3.11.174/package/legacy/build/pdf.worker.min.js'),
+     '/*__B64XLSX__*/':b64('xlsx-0.18.5/package/dist/xlsx.full.min.js'),
      '/*__CORE__*/':open('core.js',encoding='utf-8').read(),
      '/*__SAMPLE__*/':open('ornek.b64').read().strip()}
 for k,v in rep.items():

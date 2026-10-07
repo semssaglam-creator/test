@@ -89,7 +89,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 <body>
 <div class="drop" aria-hidden="true">PDF dosyasını buraya bırak</div>
 <header class="top">
-  <h1>Çizgisiz Tablo Ayıklayıcı <small style="font-weight:400;color:var(--muted);font-size:12px">sürüm 1.5</small></h1>
+  <h1>Çizgisiz Tablo Ayıklayıcı <small style="font-weight:400;color:var(--muted);font-size:12px">sürüm 1.6</small></h1>
   <span class="file" id="fileName">—</span>
   <span class="grow"></span>
   <input type="file" id="fileInput" accept="application/pdf,.pdf" class="sr">
@@ -193,9 +193,31 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 </div>
 
 <script>window.__libErr=[];/* Eklentilerin eklediği modül yükleyicilerini (define/module/exports) kütüphaneler yüklenirken gizle */window.__hidden={};["define","module","exports","require"].forEach(function(k){if(k in window){window.__hidden[k]=window[k];try{window[k]=undefined;}catch(e){}}});window.addEventListener("error",function(e){window.__libErr.push((e.message||"hata")+(e.lineno?" (satır "+e.lineno+")":""));});</script>
-<script>/*__PDFJS__*/</script>
-<script>/*__PDFWORKER__*/</script>
-<script>/*__XLSX__*/</script>
+<div hidden id="b64-pdf">/*__B64PDF__*/</div>
+<div hidden id="b64-worker">/*__B64WORKER__*/</div>
+<div hidden id="b64-xlsx">/*__B64XLSX__*/</div>
+<script>
+/* Kütüphaneler base64 veri olarak gömülü: kurum ağ filtreleri indirilen dosyadaki büyük betikleri temizleyebiliyor. */
+(function () {
+  window.__libLen = {};
+  function run(id, tail) {
+    var el = document.getElementById(id);
+    var txt = el ? el.textContent.replace(/\s+/g, "") : "";
+    window.__libLen[id] = txt.length;
+    if (!txt) { window.__libErr.push(id + " boş"); return; }
+    try {
+      var bin = atob(txt), u = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      var code = new TextDecoder("utf-8").decode(u);
+      (new Function("define", "module", "exports", "require", code + "\n;" + (tail || ""))).call(window);
+    } catch (e) { window.__libErr.push(id + ": " + (e && e.message || e)); }
+    if (el) el.textContent = "";
+  }
+  run("b64-pdf", 'if(!window.pdfjsLib&&window["pdfjs-dist/build/pdf"])window.pdfjsLib=window["pdfjs-dist/build/pdf"];');
+  run("b64-worker");
+  run("b64-xlsx", 'if(typeof XLSX!=="undefined")window.XLSX=XLSX;');
+})();
+</script>
 <script>/*__CORE__*/</script>
 <script>if(!window.pdfjsLib&&window["pdfjs-dist/build/pdf"])window.pdfjsLib=window["pdfjs-dist/build/pdf"];Object.keys(window.__hidden).forEach(function(k){try{window[k]=window.__hidden[k];}catch(e){}});</script>
 <script>
@@ -625,9 +647,10 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   $("skipTop").value = 0;
   syncLabels();
   if (!lib) {
-    var dg = ["Sürüm: 1.5", "Tarayıcı: " + navigator.userAgent,
+    var dg = ["Sürüm: 1.6", "Tarayıcı: " + navigator.userAgent,
       "pdfjsLib: " + typeof window.pdfjsLib + " · pdfjsWorker: " + typeof window.pdfjsWorker + " · XLSX: " + typeof window.XLSX,
       "define: " + typeof window.define + " · module: " + typeof window.module + " · exports: " + typeof window.exports,
+      "Core: " + typeof window.Core + " · veri uzunlukları: " + JSON.stringify(window.__libLen || {}) + " · dosya boyutu (karakter): " + document.documentElement.outerHTML.length,
       "Hatalar: " + (window.__libErr.length ? window.__libErr.join(" | ") : "yok")];
     $("diagTxt").textContent = dg.join("\n"); $("diag").hidden = false;
     status("PDF kitaplığı bu tarayıcıda çalışmadı. Aşağıdaki tanı bilgisini gönder.", true);
