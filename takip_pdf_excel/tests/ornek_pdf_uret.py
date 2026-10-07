@@ -25,7 +25,7 @@ pdfmetrics.registerFont(TTFont("D", "/usr/share/fonts/truetype/dejavu/DejaVuSans
 W, H = 1000, 595
 FS, LH = 6.5, 7.6
 # (sol x, genişlik, hizalama)
-COLS = [(20, 22, "r"), (44, 48, "l"), (94, 52, "l"), (148, 36, "l"), (186, 92, "l"), (280, 118, "l"),
+COLS = [(20, 22, "c"), (44, 48, "l"), (94, 52, "l"), (148, 36, "l"), (186, 92, "l"), (280, 118, "l"),
         (400, 58, "l"), (460, 22, "c"), (484, 22, "c"), (508, 100, "l"), (612, 100, "l"),
         (716, 50, "r"), (772, 36, "r"), (812, 36, "r"), (852, 50, "r")]
 HEADS = [["Sıra", "No"], ["Vergi No"], ["TC Kimlik", "No"], ["Plaka", "No"], ["Soyad Ad/Unvanı"],
@@ -38,11 +38,11 @@ ADRES_B = ["DENEME CAD. TEST APT", "Kapı No:12 B Daire No:3", "MERKEZ ÖRNEKİL
 ADRES_C = ["CUMHURİYET CAD. No:8", "ÖRNEKİL"]
 
 
-def kayitlar():
+def kayitlar(n=70):
     r = [("1", "1111111110", "", "", ["ÖRNEK BİLİŞİM", "İTHALAT İHRACAT", "SANAYİ VE TİCARET", "LİMİTED ŞİRKETİ"],
           ADRES_B, "07/2026-07/2026", "0015", "1048", "2026090900Euj0000001", "2026090900Eux0000001",
           "791,00", "0,00", "0,00", "791,00")]
-    for i in range(2, 71):
+    for i in range(2, n + 1):
         asli, ceza, top = ("64,10", "0,00", "64,10") if i % 3 else ("0,00", "125,00", "125,00")
         if i == 14:
             asli, top = "1.714,29", "1.714,29"
@@ -61,7 +61,7 @@ def kayitlar():
     return r
 
 
-def uret(yol, bicim):
+def uret(yol, bicim, n=70):
     c = canvas.Canvas(yol, pagesize=(W, H))
 
     def yaz(x, y, s, al="l", harf=False):
@@ -107,7 +107,7 @@ def uret(yol, bicim):
 
     bolunen = []
     y = baslik()
-    for r in kayitlar():
+    for r in kayitlar(n):
         n = max(len(r[4]), len(r[5]), 1)
         sigan = int((y - 40) // LH) + 1      # bu sayfaya sığan satır sayısı
         if n > sigan and (bicim not in ("bolunmus", "tekrarli") or sigan < 1):
@@ -150,5 +150,9 @@ if __name__ == "__main__":
         yol = os.path.join(BURADA, "ornekler", "sahte_takip_{}.pdf".format(b))
         bolunenler[b] = uret(yol, b)
         print(yol, "bölünen kayıtlar:", bolunenler[b])
+    # uzun: 1-4 haneli Sıra No'lar (ORTALI sütunda 1-99 kayık durur; 1.1'de okunmuyordu)
+    yol = os.path.join(BURADA, "ornekler", "sahte_takip_uzun.pdf")
+    bolunenler["uzun"] = uret(yol, "tekrarli", n=1100)
+    print(yol, "bölünen kayıt sayısı:", len(bolunenler["uzun"]))
     with open(os.path.join(BURADA, "ornekler", "bolunen_kayitlar.json"), "w") as f:
         json.dump(bolunenler, f)

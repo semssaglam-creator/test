@@ -52,6 +52,15 @@ Vergi Aslı Borcu Toplamı, KGZ Toplamı, Ceza Tutarı, Toplam Borç
    - Devam parçasında Sıra No tekrar yazılmışsa (kullanıcının önerisi) aynı
      Sıra No'lu ardışık parçalar birleşir; çelişen değer varsa uyarı verir.
    - Sıra No ardışık değilse (atlama/tekrar) uyarı verir.
+   - **1.2:** Sıra No sütunu en sık x değeriyle değil, aday satırların yatay
+     ARALIĞIYLA (min x0 – max x1) bulunur. 1.1'de kullanıcının PDF'inde 1-99
+     arası hiç okunmadı: sütun ortalı/sola yaslı olunca 1-2 haneli numaralar,
+     sayıca çoğunluktaki 4 haneli numaralardan birkaç pt kayık duruyordu.
+     Tanınmayan satırlar önceki kayda yapıştığından o kayıtların tutar
+     hücrelerine iki değer düşüyor ve okunamıyordu (kullanıcının "birleşen
+     satırlarda Aslı/KGZ okunmuyor" şikâyeti büyük olasılıkla buydu; gerçek
+     PDF'te doğrulanmadı). Artık bir hücreye birden çok değer düşerse açık uyarı.
+     Test: `sahte_takip_uzun.pdf` (1100 kayıt, ortalı Sıra No, bölünen kayıtlar).
    Dönem hücresi bitişik sütunla tek kelime gelirse (`OĞLU11/2021-11/2021`) ayrılır.
 7. **ALL CAPS ad/adres olduğu gibi bırakılır.** Bu bir döküm, resmî belge
    değil; yazım düzeltmesi veriyi değiştirir.

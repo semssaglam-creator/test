@@ -101,7 +101,10 @@ def _split_fused(words):
 
 
 def _sira_kolonu(pages):
-    """Sıra No sütununu bul: satırın en solundaki tamsayı + hemen sağında VKN/TCKN."""
+    """Sıra No sütununun yatay aralığı: satırın en solundaki tamsayı + hemen sağında
+    VKN/TCKN olan satırlardan. Aralık (en küçük x0, en büyük x1) kullanılır, en sık
+    değer değil: sütun ORTALI ya da sola yaslıysa 1-2 haneli numaralar 4 haneli
+    çoğunluktan kayık durur ve 1.1'de 1-99 arası kayıtlar hiç tanınmadı."""
     x0s, x1s = [], []
     for _, words in pages:
         for line in _lines(words):
@@ -109,7 +112,9 @@ def _sira_kolonu(pages):
                     (VKN.match(line[1]["text"]) or TCKN.match(line[1]["text"])):
                 x0s.append(line[0]["x0"])
                 x1s.append(line[0]["x1"])
-    return _mode(x0s), _mode(x1s)
+    if not x0s:
+        return None, None
+    return min(x0s), max(x1s)
 
 
 def _collect_records(sayfalar):
@@ -129,8 +134,7 @@ def _collect_records(sayfalar):
         anchors = []
         for line in _lines(words):
             w = line[0]
-            if INT.match(w["text"]) and len(line) > 1 and \
-                    (abs(w["x1"] - sx1) <= 3 or abs(w["x0"] - sx0) <= 3):
+            if INT.match(w["text"]) and len(line) > 1 and sx0 - 2 <= w["x0"] and w["x1"] <= sx1 + 2:
                 anchors.append(w)
         h = (anchors[0]["bottom"] - anchors[0]["top"]) if anchors else \
             (records[-1]["h"] if records else 8.0)
@@ -270,6 +274,7 @@ def ayristir(sayfalar):
 
         toks = b["sag"]
         cells = {c: [] for c in RIGHT_COLS}
+        cok_degerli = []
         if len(toks) == len(RIGHT_COLS) or not centers:
             for c, w in zip(RIGHT_COLS, toks):
                 cells[c].append(w)
@@ -280,7 +285,11 @@ def ayristir(sayfalar):
                 cells[RIGHT_COLS[i]].append(w)
         for c in RIGHT_COLS:
             row[c] = " ".join(w["text"] for w in cells[c])
-        parcalar.append({"satir": row, "uyarilar": uyarilar, "sorunlu": [],
+            if len(cells[c]) > 1:
+                cok_degerli.append(c)
+                uyarilar.append("{}: birden çok değer ({}); iki kayıt karışmış olabilir, PDF ile "
+                                "karşılaştırın".format(c, row[c]))
+        parcalar.append({"satir": row, "uyarilar": uyarilar, "sorunlu": cok_degerli,
                          "sayfa": r["page"], "sag_sayisi": len(toks)})
 
     # Sayfa bölünmesinde Sıra No tekrar yazılmışsa parçaları birleştir.

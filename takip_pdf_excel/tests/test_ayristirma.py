@@ -68,6 +68,16 @@ class Ayristirma(unittest.TestCase):
             with self.subTest(bicim=b):
                 self.assertGreaterEqual(len(bolunen[b]), 2)
 
+    def test_uzun_liste_1den_1100e(self):
+        """Ortalı Sıra No sütununda 1-4 haneli numaraların hepsi tanınmalı."""
+        k = oku("uzun")
+        self.assertEqual([r["degerler"][0] for r in k], list(range(1, 1101)))
+        beklenen = {r["degerler"][0]: r for r in oku("hucre")}
+        for r in k[:70]:   # ilk 70 kayıt kısa listeyle aynı veri
+            self.assertEqual(r["degerler"], beklenen[r["degerler"][0]]["degerler"])
+        # yalnızca örneğe bilerek konan iki hatalı kayıt uyarı vermeli
+        self.assertEqual([r["degerler"][0] for r in k if r["uyarilar"]], [20, 21])
+
     def test_ayni_sira_no_birlesir(self):
         k = oku("tekrarli")
         sira = [r["degerler"][0] for r in k]

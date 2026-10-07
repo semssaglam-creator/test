@@ -1,6 +1,6 @@
 import sys
 
-SURUM = "1.1"
+SURUM = "1.2"
 
 
 def _modulleri_sil(ad):
