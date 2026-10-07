@@ -100,22 +100,52 @@ def _split_fused(words):
     return out
 
 
-def _collect_records(sayfalar):
-    records = []
-    for page_no, _, words in sayfalar:
-        words = _split_fused(words)
-        anchors = sorted((w for w in words if PERIOD.match(w["text"])), key=lambda w: w["top"])
-        if not anchors:
-            continue
-        h = anchors[0]["bottom"] - anchors[0]["top"]
-        eps = h * 0.5
+def _sira_kolonu(pages):
+    """Sıra No sütununu bul: satırın en solundaki tamsayı + hemen sağında VKN/TCKN."""
+    x0s, x1s = [], []
+    for _, words in pages:
+        for line in _lines(words):
+            if len(line) > 1 and INT.match(line[0]["text"]) and \
+                    (VKN.match(line[1]["text"]) or TCKN.match(line[1]["text"])):
+                x0s.append(line[0]["x0"])
+                x1s.append(line[0]["x1"])
+    return _mode(x0s), _mode(x1s)
 
-        # Sayfa başında, başlık bloğunun altında kalan satırlar önceki kaydın devamıdır.
-        pre = [w for w in words if w["top"] < anchors[0]["top"] - eps]
+
+def _collect_records(sayfalar):
+    """Kayıtları topla. Çapa: Sıra No hücresi (her kaydın ilk satırında, en solda).
+
+    Bir kayıt sayfa sonunda bölünebilir: sonraki sayfada başlığın altında, ilk
+    Sıra No'dan önce kalan satırlar önceki kaydın devamıdır. Devam parçasında Sıra
+    No tekrar yazılmışsa o parça ayrı kayıt olarak toplanır, ayristir() aynı Sıra
+    No'lu ardışık kayıtları birleştirir.
+    """
+    pages = [(no, _split_fused(words)) for no, _, words in sayfalar]
+    sx0, sx1 = _sira_kolonu(pages)
+    if sx0 is None:
+        return []
+    records = []
+    for page_no, words in pages:
+        anchors = []
+        for line in _lines(words):
+            w = line[0]
+            if INT.match(w["text"]) and len(line) > 1 and \
+                    (abs(w["x1"] - sx1) <= 3 or abs(w["x0"] - sx0) <= 3):
+                anchors.append(w)
+        h = (anchors[0]["bottom"] - anchors[0]["top"]) if anchors else \
+            (records[-1]["h"] if records else 8.0)
+        eps = h * 0.5
+        ilk_top = anchors[0]["top"] - eps if anchors else float("inf")
+
+        # Sayfa başı: başlık bloğunun altında, ilk Sıra No'dan önceki satırlar.
+        pre = [w for w in words if w["top"] < ilk_top]
         header_bottom = max((l[-1]["bottom"] for l in _lines(pre) if _is_header_line(l)), default=None)
-        if records and header_bottom is not None:
-            cont = [w for w in pre if w["top"] > header_bottom]
-            records[-1]["cont"].extend(_cut_at_gap(cont, h * 2.5))
+        if records and pre:
+            cont = [w for w in pre if header_bottom is None or w["top"] > header_bottom]
+            if header_bottom is None:   # başlık yoksa yalnızca ilk kayda bitişik satırlar
+                cont = list(reversed(_cut_at_gap_up(cont, ilk_top, h * 2.5)))
+            for w in _cut_at_gap(cont, h * 2.5):
+                records[-1]["cont"].append(dict(w, page=page_no))
 
         for i, a in enumerate(anchors):
             top = a["top"] - eps
@@ -126,8 +156,55 @@ def _collect_records(sayfalar):
     return records
 
 
-def _right_tokens(r):
-    return sorted((w for w in r["words"] if w["x0"] > r["anchor"]["x1"]), key=lambda w: w["x0"])
+def _cut_at_gap_up(words, alt, max_gap):
+    """alt sınırdan yukarı doğru, aralarında max_gap'ten büyük boşluk olmayan satırlar."""
+    out, prev = [], alt
+    for line in reversed(_lines(words)):
+        if prev - line[-1]["bottom"] > max_gap:
+            break
+        out.extend(line)
+        prev = line[0]["top"]
+    return out
+
+
+def _metin(ana, devam):
+    """Ana parça + sonraki sayfadaki devam parçası; satır sırası korunur."""
+    return " ".join(t for t in (_join(ana), _join(devam)) if t)
+
+
+def _bolumle(r, n0, a0, p0, p1):
+    """Kaydın kelimelerini sütun bölgelerine ayır."""
+    split = a0 - 2 if a0 is not None else float("inf")
+    sonuc = {"ad": ([], []), "adres": ([], []), "donem": [], "sag": []}
+    for parca, kume in ((0, r["words"]), (1, r["cont"])):
+        for w in kume:
+            if w is r["anchor"]:
+                continue
+            if PERIOD.match(w["text"]) and w["x0"] > n0:
+                sonuc["donem"].append(w)
+            elif w["x0"] > p1 - 1:
+                sonuc["sag"].append(w)
+            elif n0 - 2 <= w["x0"] and w["x1"] <= p0 + 1:
+                sonuc["ad" if w["x0"] < split else "adres"][parca].append(w)
+    sonuc["sag"].sort(key=lambda w: w["x0"])
+    return sonuc
+
+
+def _birlestir(a, b):
+    """Aynı Sıra No'lu iki parçayı tek kayıtta birleştir (b, a'nın devamı)."""
+    for i, c in enumerate(COLUMNS):
+        va, vb = a["satir"][c], b["satir"][c]
+        if va in ("", None):
+            a["satir"][c] = vb
+        elif vb in ("", None) or va == vb:
+            continue
+        elif c in ("Soyad Ad/Unvanı", "Adres"):
+            if vb not in va:
+                a["satir"][c] = va + " " + vb
+        else:
+            a["uyarilar"].append("Sayfa bölünmesinde {} iki farklı değer: {!r} / {!r}".format(c, va, vb))
+            a["sorunlu"].append(c)
+    a["uyarilar"] += [u for u in b["uyarilar"] if u.startswith("Sayfa bölünmesinde")]
 
 
 def ayristir(sayfalar):
@@ -141,14 +218,20 @@ def ayristir(sayfalar):
         raise PdfHata("PDF'te takip kaydı bulunamadı. Metni seçilebilen bir takip listesi "
                       "PDF'i mi? (Taranmış/görüntü PDF okunamaz.)")
 
-    # Kalibrasyon: ad sütunu sol kenarı (n0) ve adres sütunu sol kenarı (a0)
+    # Kalibrasyon: dönem sütunu (p0-p1), ad sütunu sol kenarı (n0), adres sol kenarı (a0)
+    donemler = [w for r in records for w in r["words"] + r["cont"] if PERIOD.match(w["text"])]
+    if not donemler:
+        raise PdfHata("Vergi Dönemi sütunu bulunamadı; PDF biçimi beklenenden farklı.")
+    p0 = _mode([w["x0"] for w in donemler])
+    p1 = max(w["x1"] for w in donemler if abs(w["x0"] - p0) <= 3)
+
     name_starts = []
     for r in records:
         a = r["anchor"]
-        first = [w for w in r["words"] if abs(w["top"] - a["top"]) <= r["h"] * 0.6 and w["x1"] < a["x0"]]
-        text = [w for w in sorted(first, key=lambda w: w["x0"])
-                if not (INT.match(w["text"]) or VKN.match(w["text"]) or TCKN.match(w["text"])
-                        or PLAKA.match(w["text"]))]
+        first = sorted((w for w in r["words"] if abs(w["top"] - a["top"]) <= r["h"] * 0.6
+                        and w["x1"] < p0 and w is not a), key=lambda w: w["x0"])
+        text = [w for w in first if not (INT.match(w["text"]) or VKN.match(w["text"])
+                                         or TCKN.match(w["text"]) or PLAKA.match(w["text"]))]
         if text:
             name_starts.append(text[0]["x0"])
         r["first"] = first
@@ -156,41 +239,36 @@ def ayristir(sayfalar):
     if n0 is None:
         raise PdfHata("Ad/Unvan sütunu tespit edilemedi; PDF biçimi beklenenden farklı.")
     a0 = _mode([w["x0"] for r in records for w in r["words"] + r["cont"]
-                if n0 + 15 < w["x0"] and w["x1"] <= r["anchor"]["x0"]])
+                if n0 + 15 < w["x0"] and w["x1"] <= p0 + 1])
 
-    # Kalibrasyon: dönemin sağındaki 8 sütunun merkezleri
-    full = [t for t in (_right_tokens(r) for r in records) if len(t) == len(RIGHT_COLS)]
+    bolumler = [_bolumle(r, n0, a0, p0, p1) for r in records]
+    full = [b["sag"] for b in bolumler if len(b["sag"]) == len(RIGHT_COLS)]
     centers = [sum((t[i]["x0"] + t[i]["x1"]) / 2 for t in full) / len(full)
                for i in range(len(RIGHT_COLS))] if full else None
 
-    sonuc = []
-    for r in records:
-        a = r["anchor"]
+    parcalar = []
+    for r, b in zip(records, bolumler):
         row = dict.fromkeys(COLUMNS, "")
-        row["Vergi Dönemi"] = a["text"]
-        uyarilar, sorunlu = [], []
-
+        uyarilar = []
+        row["Sıra No"] = int(r["anchor"]["text"])
         plaka = []
         for w in r["first"]:
             t = w["text"]
             if w["x0"] >= n0 - 2:
                 continue
-            if row["Sıra No"] == "" and INT.match(t):
-                row["Sıra No"] = int(t)
-            elif VKN.match(t):
+            if VKN.match(t):
                 row["Vergi No"] = t
             elif TCKN.match(t):
                 row["TC Kimlik No"] = t
             else:
                 plaka.append(w)
         row["Plaka No"] = _join(plaka)
+        row["Soyad Ad/Unvanı"] = _metin(*b["ad"])
+        row["Adres"] = _metin(*b["adres"])
+        if b["donem"]:
+            row["Vergi Dönemi"] = " ".join(w["text"] for w in b["donem"])
 
-        text = [w for w in r["words"] + r["cont"] if n0 - 2 <= w["x0"] and w["x1"] <= a["x0"] + 1]
-        split = a0 - 2 if a0 is not None else float("inf")
-        row["Soyad Ad/Unvanı"] = _join([w for w in text if w["x0"] < split])
-        row["Adres"] = _join([w for w in text if w["x0"] >= split])
-
-        toks = _right_tokens(r)
+        toks = b["sag"]
         cells = {c: [] for c in RIGHT_COLS}
         if len(toks) == len(RIGHT_COLS) or not centers:
             for c, w in zip(RIGHT_COLS, toks):
@@ -200,10 +278,31 @@ def ayristir(sayfalar):
                 cx = (w["x0"] + w["x1"]) / 2
                 i = min(range(len(centers)), key=lambda i: abs(centers[i] - cx))
                 cells[RIGHT_COLS[i]].append(w)
-            uyarilar.append("Sağ tarafta {} değer var (beklenen {}); konuma göre yerleştirildi, "
-                            "kontrol edin".format(len(toks), len(RIGHT_COLS)))
         for c in RIGHT_COLS:
             row[c] = " ".join(w["text"] for w in cells[c])
+        parcalar.append({"satir": row, "uyarilar": uyarilar, "sorunlu": [],
+                         "sayfa": r["page"], "sag_sayisi": len(toks)})
+
+    # Sayfa bölünmesinde Sıra No tekrar yazılmışsa parçaları birleştir.
+    kayitlar = []
+    for p in parcalar:
+        if kayitlar and kayitlar[-1]["satir"]["Sıra No"] == p["satir"]["Sıra No"]:
+            _birlestir(kayitlar[-1], p)
+            kayitlar[-1]["sag_sayisi"] += p["sag_sayisi"]
+        else:
+            kayitlar.append(p)
+
+    sonuc = []
+    onceki = None
+    for k in kayitlar:
+        row, uyarilar, sorunlu = k["satir"], k["uyarilar"], k["sorunlu"]
+        if k["sag_sayisi"] != len(RIGHT_COLS):
+            uyarilar.append("Sağ tarafta {} değer var (beklenen {}); konuma göre yerleştirildi, "
+                            "kontrol edin".format(k["sag_sayisi"], len(RIGHT_COLS)))
+        if onceki is not None and row["Sıra No"] != onceki + 1:
+            uyarilar.append("Sıra No {} → {}: arada kayıt eksik ya da fazla olabilir".format(onceki, row["Sıra No"]))
+            sorunlu.append("Sıra No")
+        onceki = row["Sıra No"]
 
         for c in AMOUNT_COLS:
             ham = row[c]
@@ -220,13 +319,13 @@ def ayristir(sayfalar):
         if not row["Vergi No"] and not row["TC Kimlik No"]:
             sorunlu += ["Vergi No", "TC Kimlik No"]
             uyarilar.append("Vergi No / TC Kimlik No bulunamadı")
-        for c in ("Sıra No", "Soyad Ad/Unvanı", "Ana Takip Dosya No", "Takip Dosya No"):
+        for c in ("Soyad Ad/Unvanı", "Vergi Dönemi", "Ana Takip Dosya No", "Takip Dosya No"):
             if row[c] == "":
                 sorunlu.append(c)
                 uyarilar.append("{} boş".format(c))
 
         sonuc.append({"degerler": [row[c] for c in COLUMNS], "uyarilar": uyarilar,
-                      "sorunlu": sorunlu, "sayfa": r["page"]})
+                      "sorunlu": sorunlu, "sayfa": k["sayfa"]})
     return sonuc
 
 

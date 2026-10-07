@@ -9,6 +9,8 @@ alt satıra taşan unvan/adres, sayfa sonunda tekrar eden başlık.
   hucre  : her hücre satırı ayrı BT/Tj
   tek_bt : bütün sayfa tek BT bloğu içinde Tm ile konumlanmış
   harf   : unvan ve adres harf harf konumlanmış (harf aralığı ayarlı üreticiler)
+  bolunmus: sayılar dikeyde ortalı; kayıtlar sayfa sonunda İKİ SAYFAYA bölünür
+  tekrarli: bolunmus + devam parçasında Sıra No ve Vergi No tekrar yazılır
 
 Kullanım: python3 tests/ornek_pdf_uret.py
 """
@@ -33,13 +35,14 @@ HEADS = [["Sıra", "No"], ["Vergi No"], ["TC Kimlik", "No"], ["Plaka", "No"], ["
 
 ADRES_A = ["ÖRNEK MAH. 1001 SK. DENEME", "SİTESİ Kapı No:5 Daire", "No:7 KURGU İLÇE ÖRNEKİL"]
 ADRES_B = ["DENEME CAD. TEST APT", "Kapı No:12 B Daire No:3", "MERKEZ ÖRNEKİL"]
+ADRES_C = ["CUMHURİYET CAD. No:8", "ÖRNEKİL"]
 
 
 def kayitlar():
     r = [("1", "1111111110", "", "", ["ÖRNEK BİLİŞİM", "İTHALAT İHRACAT", "SANAYİ VE TİCARET", "LİMİTED ŞİRKETİ"],
           ADRES_B, "07/2026-07/2026", "0015", "1048", "2026090900Euj0000001", "2026090900Eux0000001",
           "791,00", "0,00", "0,00", "791,00")]
-    for i in range(2, 33):
+    for i in range(2, 71):
         asli, ceza, top = ("64,10", "0,00", "64,10") if i % 3 else ("0,00", "125,00", "125,00")
         if i == 14:
             asli, top = "1.714,29", "1.714,29"
@@ -49,8 +52,9 @@ def kayitlar():
         if i == 21:
             top = "99,99"       # aritmetik tutmuyor: uyarı çıkmalı
         r.append((str(i), "2222222220", "12345678901" if i == 7 else "", "34ABC123" if i == 8 else "",
-                  ["DENEME KİŞİ", "ÖRNEKOĞLU"] if i % 2 else ["TEST İSİM SOYİSİM"],
-                  ADRES_A if i % 2 else ADRES_B, "{:02d}/2021-{:02d}/2021".format(i % 12 + 1, i % 12 + 1),
+                  (["UZUN UNVANLI ÖRNEK", "TEKSTİL GIDA İNŞAAT", "SANAYİ VE TİCARET", "ANONİM ŞİRKETİ"]
+                   if i % 7 == 0 else ["DENEME KİŞİ", "ÖRNEKOĞLU"] if i % 2 else ["TEST İSİM SOYİSİM"]),
+                  ADRES_C if i % 3 == 0 else ADRES_A if i % 2 else ADRES_B, "{:02d}/2021-{:02d}/2021".format(i % 12 + 1, i % 12 + 1),
                   "0033" if i % 4 == 0 else "0015", "1047" if i % 5 == 0 else "1048",
                   "2026090900Euj0000002", "2026090900Eux00000{:02d}".format(i),
                   asli, kgz, ceza, top))
@@ -61,6 +65,7 @@ def uret(yol, bicim):
     c = canvas.Canvas(yol, pagesize=(W, H))
 
     def yaz(x, y, s, al="l", harf=False):
+        c.setFont("D", FS)
         w = pdfmetrics.stringWidth(s, "D", FS)
         x = {"l": x, "r": x - w, "c": x - w / 2}[al]
         if harf:
@@ -85,31 +90,65 @@ def uret(yol, bicim):
                 c.drawCentredString(x + w / 2, H - 50 - (j - len(satirlar) + 3) * 7.5, t)
         return H - 75
 
-    y = baslik()
-    for r in kayitlar():
-        n = max(len(r[4]), len(r[5]), 1)
-        if y - n * LH < 40:
-            c.setFont("D", 7)
-            c.drawString(20, 20, "(*) Kodlar için bkz. açıklama")
-            c.showPage()
-            y = baslik()
-        c.setFont("D", FS)
+    def satir_ogeleri(r, n):
+        """(satır kaydırması, x, metin, hizalama, harf_harf) listesi."""
+        ogeler = []
         degerler = list(r[:4]) + [None, None] + list(r[6:])
         for k, ((x, w, al), v) in enumerate(zip(COLS, degerler)):
             if k in (4, 5):
                 for j, t in enumerate(r[k]):
-                    yaz(x, y - j * LH, t, harf=(bicim == "harf"))
+                    ogeler.append((j, x, t, "l", bicim == "harf"))
             elif v:
-                yaz({"l": x, "r": x + w, "c": x + w / 2}[al], y, v, al)
-        y -= n * LH + 4
+                # bolunmus: dönem ve sağdaki sayılar dikeyde ORTALI (satır bölününce
+                # sıra/ad bir sayfada, dönem/tutarlar sonraki sayfada kalabilir)
+                kay = (n - 1) / 2 if (bicim in ("bolunmus", "tekrarli") and k >= 6) else 0
+                ogeler.append((kay, {"l": x, "r": x + w, "c": x + w / 2}[al], v, al, False))
+        return ogeler
+
+    bolunen = []
+    y = baslik()
+    for r in kayitlar():
+        n = max(len(r[4]), len(r[5]), 1)
+        sigan = int((y - 40) // LH) + 1      # bu sayfaya sığan satır sayısı
+        if n > sigan and (bicim not in ("bolunmus", "tekrarli") or sigan < 1):
+            c.setFont("D", 7)
+            c.drawString(20, 20, "(*) Kodlar için bkz. açıklama")
+            c.showPage()
+            y, sigan = baslik(), n
+        c.setFont("D", FS)
+        ogeler = satir_ogeleri(r, n)
+        for kay, x, t, al, harf in ogeler:
+            if kay < sigan:
+                yaz(x, y - kay * LH, t, al, harf)
+        if n > sigan:                         # satır sayfa sonunda bölünüyor (alt çizgi yok)
+            bolunen.append(int(r[0]))
+            c.setFont("D", 7)
+            c.drawString(20, 20, "(*) Kodlar için bkz. açıklama")
+            c.showPage()
+            y = baslik()
+            c.setFont("D", FS)
+            if bicim == "tekrarli":           # devam parçasında Sıra No ve VKN tekrar yazılır
+                for kay, x, t, al, harf in ogeler[:2]:
+                    yaz(x, y, t, al, harf)
+            for kay, x, t, al, harf in ogeler:
+                if kay >= sigan:
+                    yaz(x, y - (kay - sigan) * LH, t, al, harf)
+            y -= (n - sigan) * LH + 4
+        else:
+            y -= n * LH + 4
         c.setLineWidth(0.3)
         c.line(20, y + LH - 2, 905, y + LH - 2)
     c.save()
+    return bolunen
 
 
 if __name__ == "__main__":
+    import json
     os.makedirs(os.path.join(BURADA, "ornekler"), exist_ok=True)
-    for b in ("hucre", "tek_bt", "harf"):
+    bolunenler = {}
+    for b in ("hucre", "tek_bt", "harf", "bolunmus", "tekrarli"):
         yol = os.path.join(BURADA, "ornekler", "sahte_takip_{}.pdf".format(b))
-        uret(yol, b)
-        print(yol)
+        bolunenler[b] = uret(yol, b)
+        print(yol, "bölünen kayıtlar:", bolunenler[b])
+    with open(os.path.join(BURADA, "ornekler", "bolunen_kayitlar.json"), "w") as f:
+        json.dump(bolunenler, f)

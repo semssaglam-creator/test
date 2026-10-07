@@ -42,9 +42,17 @@ Vergi Aslı Borcu Toplamı, KGZ Toplamı, Ceza Tutarı, Toplam Borç
    yazılmış metin kelimeye birleşmiyordu.
 5. **Okunamayan tutar asla 0 yazılmaz** (boş + kırmızı + Kontrol sütunu) ve
    her kayıtta Toplam Borç = Aslı + KGZ + Ceza denetlenir.
-6. **Çapa = Vergi Dönemi hücresi.** Sıra No yerine dönem seçildi: her kaydın
-   ilk satırında mutlaka var ve biçimi kesin (AA/YYYY-AA/YYYY). Dönem hücresi
-   bitişik sütunla tek kelime gelirse (`OĞLU11/2021-11/2021`) ayrılır.
+6. **Çapa = Sıra No hücresi (1.1).** 1.0'da çapa Vergi Dönemi'ydi; kullanıcının
+   241 sayfalık gerçek PDF'inde sayfa sonunda bölünen kayıtlar iki satıra
+   ayrıldı, Sıra No'suz parça kırmızı/tanınmayan satır oldu. Artık:
+   - Sıra No sütunu, "satırın en solunda tamsayı + hemen sağında VKN/TCKN"
+     satırlarından kalibre edilir; kayıt Sıra No'dan bir sonrakine kadardır.
+   - Sayfa başında, başlık altında, ilk Sıra No'dan önceki satırlar önceki
+     kaydın devamıdır (ayrı sütun bölgelerine göre, sırası korunarak eklenir).
+   - Devam parçasında Sıra No tekrar yazılmışsa (kullanıcının önerisi) aynı
+     Sıra No'lu ardışık parçalar birleşir; çelişen değer varsa uyarı verir.
+   - Sıra No ardışık değilse (atlama/tekrar) uyarı verir.
+   Dönem hücresi bitişik sütunla tek kelime gelirse (`OĞLU11/2021-11/2021`) ayrılır.
 7. **ALL CAPS ad/adres olduğu gibi bırakılır.** Bu bir döküm, resmî belge
    değil; yazım düzeltmesi veriyi değiştirir.
 8. **Arşiv .tar.gz; başlatıcı `Takip PDF Excel.desktop`** — `sh calistir.sh`
@@ -54,7 +62,11 @@ Vergi Aslı Borcu Toplamı, KGZ Toplamı, Ceza Tutarı, Toplam Borç
 `python3 -m unittest discover -s tests` (stdlib). Örnek PDF'ler sahte veriyle
 `tests/ornek_pdf_uret.py` ile üretilir (reportlab, yalnızca geliştirmede) —
 üç yazım biçimi: hücre başına BT, tek BT, harf harf. Üçü de `beklenen.json` ile
-birebir aynı çıkmalı. **Depo herkese açık: gerçek mükellef verisi koymayın.**
+birebir aynı çıkmalı. 1.1'de iki biçim eklendi: `bolunmus` (sayılar dikeyde
+ortalı, kayıtlar sayfa sonunda bölünür) ve `tekrarli` (devam parçasında Sıra No
+tekrar yazılır). Üretici gerçekten bölünen kayıtları `bolunen_kayitlar.json`a
+yazar; test bunun boş olmadığını denetler (önce hiçbir kayıt bölünmüyordu ve
+test boşuna geçiyordu). 1.0 kodu bu PDF'lerde yüzlerce bozuk satır üretti. **Depo herkese açık: gerçek mükellef verisi koymayın.**
 Arayüz headless Chromium (Playwright) ile denendi: yükleme, önizleme, kırmızı
 hücreler, bozuk PDF mesajı, Excel indirme. Python 3.8 / 3.9 / 3.11 / 3.13'te
 testler geçti.

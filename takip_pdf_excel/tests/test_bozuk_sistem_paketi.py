@@ -24,7 +24,7 @@ class BozukSistemPaketi(unittest.TestCase):
         r = subprocess.run([sys.executable, "-I", "-c", KOD.format(kok=KOK, sahte=SAHTE, pdf=PDF)],
                            capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr[-2000:])
-        self.assertEqual(r.stdout.strip(), "32")
+        self.assertEqual(r.stdout.strip(), "70")
         self.assertIn("'cryptography' paketi yüklenemedi", r.stderr)
 
 

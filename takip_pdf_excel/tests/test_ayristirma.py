@@ -19,7 +19,7 @@ from app.excel import excel_olustur  # noqa: E402
 from app.pdf_kelime import PdfHata  # noqa: E402
 
 ORNEK = os.path.join(KOK, "tests", "ornekler")
-BICIMLER = ("hucre", "tek_bt", "harf")
+BICIMLER = ("hucre", "tek_bt", "harf", "bolunmus", "tekrarli")
 
 
 def oku(bicim):
@@ -33,7 +33,9 @@ class Ayristirma(unittest.TestCase):
             beklenen = json.load(f)
         for b in BICIMLER:
             with self.subTest(bicim=b):
-                self.assertEqual(oku(b), beklenen)
+                # "sayfa" bölünme biçimine göre değişir; değer ve uyarılar birebir aynı olmalı
+                self.assertEqual([(k["degerler"], k["uyarilar"], k["sorunlu"]) for k in oku(b)],
+                                 [(k["degerler"], k["uyarilar"], k["sorunlu"]) for k in beklenen])
 
     def test_bos_tutar_sifir_yazilmaz(self):
         k = {r["degerler"][0]: r for r in oku("hucre")}
@@ -49,7 +51,7 @@ class Ayristirma(unittest.TestCase):
 
     def test_sayfa_gecisi_ve_alanlar(self):
         k = oku("hucre")
-        self.assertEqual([r["degerler"][0] for r in k], list(range(1, 33)))
+        self.assertEqual([r["degerler"][0] for r in k], list(range(1, 71)))
         self.assertGreater(k[-1]["sayfa"], 1)
         r7 = {r["degerler"][0]: r for r in k}[7]["degerler"]
         self.assertEqual(r7[COLUMNS.index("TC Kimlik No")], "12345678901")
@@ -57,6 +59,19 @@ class Ayristirma(unittest.TestCase):
         self.assertEqual(r8[COLUMNS.index("Plaka No")], "34ABC123")
         for r in k:  # alt bilgi kayda karışmamalı
             self.assertNotIn("Kodlar", " ".join(str(v) for v in r["degerler"]))
+
+    def test_sayfa_bolunmesi_gercekten_var(self):
+        """Örnekte bölünen kayıt yoksa yukarıdaki birebir test bölünmeyi korumaz."""
+        with open(os.path.join(ORNEK, "bolunen_kayitlar.json"), encoding="utf-8") as f:
+            bolunen = json.load(f)
+        for b in ("bolunmus", "tekrarli"):
+            with self.subTest(bicim=b):
+                self.assertGreaterEqual(len(bolunen[b]), 2)
+
+    def test_ayni_sira_no_birlesir(self):
+        k = oku("tekrarli")
+        sira = [r["degerler"][0] for r in k]
+        self.assertEqual(sira, sorted(set(sira)))
 
     def test_pdf_olmayan_dosya(self):
         with self.assertRaises(PdfHata):
