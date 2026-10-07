@@ -131,8 +131,9 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
         <span>Ek kalemlerde boş kalan hücreleri üstten doldur</span>
         <div class="chips" id="fillCols" role="group" aria-label="Üstten doldurulacak sütunlar"></div>
       </div>
+      <label class="chk"><input type="checkbox" id="autoStart" checked> <span>Her sayfada, anahtar sütunu sayı olan ilk satırdan öncesini atla (sayfa başlığı, tutanak, sütun başlıkları)</span></label>
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <label class="field" for="skipTop">Her sayfada üstten atla
+        <label class="field" for="skipTop">Ayrıca üstten atla
           <input type="number" id="skipTop" min="0" max="50" value="0"></label>
         <label class="field" for="skipBottom">alttan atla
           <input type="number" id="skipBottom" min="0" max="50" value="0"></label>
@@ -328,20 +329,32 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   window.addEventListener("unhandledrejection", function (e) { status("Beklenmeyen hata: " + errText(e.reason), true); });
 
   // ---------- Hesaplama ----------
-  function linesOf(i, o) {
+  function linesOf(i, o, useStart) {
     var P = S.pages[i];
     var lines = Core.buildLines(P.words, o);
     var dropProse = $("dropProse").checked;
-    // 1) tutanak/açıklama paragraflarını işaretle
+    // 1) tutanak/açıklama paragraflarını işaretle: art arda en az 2 geniş düz metin satırı (tek satırlık sayfa başlığı sayılmaz)
+    var wide = lines.map(function (L) { return dropProse && L.segs.length <= 2 && L.segs.some(function (s) { return s.w > P.W * 0.45; }); });
+    lines.forEach(function (L, k) { L.prose = wide[k] && (wide[k - 1] || wide[k + 1]); });
     lines.forEach(function (L, k) {
-      L.prose = dropProse && L.segs.length <= 2 && L.segs.some(function (s) { return s.w > P.W * 0.45; });
       var prev = lines[k - 1];
-      if (!L.prose && dropProse && prev && prev.prose && L.segs.length <= 2 && !L.segs.some(function (s) { return /\d,\d{2}\b/.test(s.s); })) L.prose = true;
+      if (!L.prose && prev && prev.prose && wide[k - 1] && L.segs.length <= 2 && !L.segs.some(function (s) { return /\d,\d{2}\b/.test(s.s); })) L.prose = true;
     });
     // 2) üstten/alttan atlama yalnızca paragraf dışı satırları sayar (her sayfada aynı sayı işe yarasın)
     var rest = lines.filter(function (L) { return !L.prose; });
     rest.forEach(function (L, k) { L.skip = k < o.skipTop || k >= rest.length - o.skipBottom; });
     lines.forEach(function (L) { if (L.prose) L.skip = true; });
+    // 3) otomatik başlangıç: anahtar sütunda yalnızca sayı olan ilk satıra kadar her şeyi atla
+    if (useStart && $("autoStart").checked && S.divs.length) {
+      var key = +$("keyCol").value || 0, first = -1;
+      for (var k = 0; k < lines.length && first < 0; k++) {
+        if (lines[k].skip) continue;
+        var txt = lines[k].items.filter(function (w) { var c = 0; while (c < S.divs.length && w.x + w.w / 2 > S.divs[c]) c++; return c === key; })
+          .map(function (w) { return w.s; }).join("");
+        if (/^\d+$/.test(txt)) first = k;
+      }
+      if (first > 0) for (var j = 0; j < first; j++) lines[j].skip = true;
+    }
     return lines;
   }
   function detect() {
@@ -358,7 +371,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
     if (!S.pages.length) return;
     var o = opts(), pl = pageList();
     S.rows = pl.map(function (i) {
-      var lines = linesOf(i, o).filter(function (L) { return !L.skip; });
+      var lines = linesOf(i, o, true).filter(function (L) { return !L.skip; });
       return { page: i, rows: Core.toRows(lines, S.divs, o) };
     });
     var nc = S.divs.length + 1, want = headers().length;
@@ -393,7 +406,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
 
   function drawOverlay() {
     var ov = $("ov"); if (!S.pages.length) return;
-    var P = S.pages[S.cur], o = opts(), lines = linesOf(S.cur, o);
+    var P = S.pages[S.cur], o = opts(), lines = linesOf(S.cur, o, true);
     ov.setAttribute("viewBox", "0 0 " + P.W + " " + P.H);
     ov.setAttribute("preserveAspectRatio", "none");
     var h = [], k = 1 / scale;
@@ -596,6 +609,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   $("rowTol").addEventListener("input", function () { syncLabels(); recompute(); });
   ["skipTop", "skipBottom"].forEach(function (id) { $(id).addEventListener("input", detect); });
   $("dropProse").addEventListener("change", detect);
+  $("autoStart").addEventListener("change", recompute);
   ["mergeWrap", "wrapNoNumbers", "keyCol"].forEach(function (id) { $(id).addEventListener("change", recompute); });
   ["numConv", "dateConv", "showAll"].forEach(function (id) { $(id).addEventListener("change", renderTable); });
   $("pageRange").addEventListener("change", detect);
@@ -606,7 +620,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
 
   // ---------- Başlangıç: örnek belge ----------
   $("headers").value = DEFAULT_HEADERS.join("\n");
-  $("skipTop").value = 4;
+  $("skipTop").value = 0;
   syncLabels();
   if (!lib) { status("PDF kitaplığı bu tarayıcıda çalışmadı. Tarayıcı: " + navigator.userAgent + (window.__libErr.length ? " · Hata: " + window.__libErr[0] : "") + ". Firefox ya da Chrome'u güncelleyip tekrar dene.", true); return; }
   var bin = atob(SAMPLE_B64), bytes = new Uint8Array(bin.length);
