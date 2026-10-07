@@ -1,0 +1,17 @@
+TAKİP PDF → EXCEL
+=================
+Kurulum (bir kez):   bash kur.sh
+Çalıştırma:          Uygulama menüsü → "Takip PDF → Excel"
+                     veya terminalde:  takip2excel           (pencere)
+                                       takip2excel a.pdf b.pdf -o sonuc.xlsx
+
+Ne yapar:
+- PDF'teki her kaydı 15 sütuna ayırır: Sıra No, Vergi No, TC Kimlik No, Plaka No,
+  Soyad Ad/Unvanı, Adres, Vergi Dönemi, Ana Vergi Kodu, Vergi Kodu, Ana Takip Dosya No,
+  Takip Dosya No, Vergi Aslı Borcu Toplamı, KGZ Toplamı, Ceza Tutarı, Toplam Borç
+- Çok satırlı unvan/adres tek hücrede birleşir; tutarlar sayıya çevrilir, en altta TOPLAM satırı.
+- Birden çok PDF seçilirse hepsi tek Excel'de alt alta birleşir.
+- Toplam Borç ≠ Aslı+KGZ+Ceza ise ya da eksik değer varsa günlükte UYARI verir.
+
+Not: PDF'in metin katmanı olmalı (Okular'da metin seçilebiliyorsa uygundur).
+Taranmış/görüntü PDF'ler desteklenmez.
