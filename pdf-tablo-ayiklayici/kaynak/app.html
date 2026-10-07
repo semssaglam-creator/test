@@ -93,6 +93,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
   <span class="file" id="fileName">—</span>
   <span class="grow"></span>
   <input type="file" id="fileInput" accept="application/pdf,.pdf" class="sr">
+  <span id="pwBox" hidden><input type="password" id="pw" placeholder="PDF parolası" aria-label="PDF parolası"> <button class="btn" id="pwBtn" type="button">Aç</button></span>
   <button class="btn" id="openBtn" type="button">PDF aç…</button>
   <button class="btn primary" id="xlsxBtn" type="button" disabled>Excel'e aktar (.xlsx)</button>
   <button class="btn" id="csvBtn" type="button" disabled>CSV</button>
@@ -137,6 +138,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
           <input type="number" id="skipBottom" min="0" max="50" value="0"></label>
       </div>
       <p class="hint">Sayfa başlığı ve tekrarlanan sütun başlıkları gibi satırlar. Önizlemede gri görünür.</p>
+      <label class="chk"><input type="checkbox" id="dropProse" checked> <span>Tutanak, açıklama gibi düz metin paragraflarını tabloya alma</span></label>
       <label class="row" for="rowTol">Aynı satır sayılacak dikey sapma <span class="v" id="rowTolV"></span></label>
       <input type="range" id="rowTol" min="0.5" max="6" step="0.5" value="2">
       <label class="row" for="wordGap">Kelime aralığı eşiği <span class="v" id="wordGapV"></span></label>
@@ -147,7 +149,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
       <h2>Çıktı</h2>
       <div class="field">
         <label for="pageRange">Sayfa aralığı (boş = tümü)</label>
-        <input type="text" id="pageRange" placeholder="ör. 1-12, 15">
+        <input type="text" id="pageRange" placeholder="ör. 2-  ya da  1-12, 15">
       </div>
       <label class="chk"><input type="checkbox" id="numConv" checked> <span>Tutarları sayıya çevir (1.234,56 → 1234,56)</span></label>
       <label class="chk"><input type="checkbox" id="dateConv" checked> <span>gg.aa.yyyy tarihlerini tarih hücresi yap</span></label>
@@ -188,6 +190,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
   </main>
 </div>
 
+<script>window.__libErr=[];window.addEventListener("error",function(e){window.__libErr.push((e.message||"hata")+(e.lineno?" (satır "+e.lineno+")":""));});</script>
 <script>/*__PDFJS__*/</script>
 <script>/*__PDFWORKER__*/</script>
 <script>/*__XLSX__*/</script>
@@ -236,8 +239,8 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
     if (!t) return S.pages.map(function (_, i) { return i; });
     var set = {};
     t.split(/[,;\s]+/).forEach(function (p) {
-      var m = p.match(/^(\d+)(?:-(\d+))?$/); if (!m) return;
-      var a = +m[1], b = m[2] ? +m[2] : a;
+      var m = p.match(/^(\d+)(-)?(\d+)?$/); if (!m) return;
+      var a = +m[1], b = m[3] ? +m[3] : (m[2] ? n : a);
       for (var i = Math.max(1, Math.min(a, b)); i <= Math.min(n, Math.max(a, b)); i++) set[i - 1] = 1;
     });
     var arr = Object.keys(set).map(Number).sort(function (a, b) { return a - b; });
@@ -273,35 +276,72 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   // ---------- PDF yükleme ----------
   function status(msg, err) { var s = $("status"); s.textContent = msg || ""; s.className = "status" + (err ? " err" : ""); }
 
-  async function loadPdf(bytes, name) {
+  var pending = null;
+  function errText(e) { return (e && (e.name ? e.name + ": " : "") + (e.message || String(e))) || "bilinmeyen hata"; }
+  async function loadPdf(bytes, name, password) {
     status("PDF okunuyor…");
+    var doc;
     try {
-      if (S.doc) { try { S.doc.destroy(); } catch (e) {} }
-      S.doc = await lib.getDocument({ data: bytes, isEvalSupported: false }).promise;
-    } catch (e) { status("PDF açılamadı: dosya bozuk ya da şifreli olabilir.", true); return; }
+      var copy = bytes.slice(0);
+      var opts = { data: copy, isEvalSupported: false, stopAtErrors: false };
+      if (password) opts.password = password;
+      doc = await lib.getDocument(opts).promise;
+    } catch (e) {
+      if (e && e.name === "PasswordException") {
+        pending = { bytes: bytes, name: name };
+        $("pwBox").hidden = false; $("pw").value = ""; $("pw").focus();
+        status(password ? "Parola yanlış. Tekrar dene." : "Bu PDF parolalı. Parolayı yazıp Aç'a bas.", true);
+        return;
+      }
+      var head = Array.prototype.map.call(bytes.slice(0, 5), function (c) { return String.fromCharCode(c); }).join("");
+      status(head.indexOf("%PDF") !== 0
+        ? "Bu dosya PDF değil (başı \"" + head.replace(/[^\x20-\x7e]/g, "?") + "\"). Dosyayı PDF olarak yeniden indirip dene."
+        : "PDF açılamadı. Ayrıntı: " + errText(e), true);
+      return;
+    }
+    $("pwBox").hidden = true; pending = null;
+    if (S.doc) { try { S.doc.destroy(); } catch (e) {} }
+    S.doc = doc;
     S.name = name; $("fileName").textContent = name; S.pages = []; S.cur = 0; S.sel = -1;
-    var total = 0;
+    var total = 0, bad = [];
     for (var p = 1; p <= S.doc.numPages; p++) {
       status("Sayfa " + p + " / " + S.doc.numPages + " okunuyor…");
-      var pg = await S.doc.getPage(p), vp = pg.getViewport({ scale: 1 });
-      var words = [];
-      try { words = await Core.extractWords(pg, vp, lib); } catch (e) { words = []; }
-      if (!words.length) { try { words = Core.itemsFromText(await pg.getTextContent(), vp, lib.Util); } catch (e) {} }
+      var W = 595, H = 842, words = [];
+      try {
+        var pg = await S.doc.getPage(p), vp = pg.getViewport({ scale: 1 });
+        W = vp.width; H = vp.height;
+        try { words = await Core.extractWords(pg, vp, lib); } catch (e) { words = []; }
+        if (!words.length) { try { words = Core.itemsFromText(await pg.getTextContent(), vp, lib.Util); } catch (e) {} }
+      } catch (e) { bad.push(p + " (" + errText(e) + ")"); }
       total += words.length;
-      S.pages.push({ W: vp.width, H: vp.height, words: words });
+      S.pages.push({ W: W, H: H, words: words });
     }
-    if (!total) { status("Bu PDF'te seçilebilir metin yok (taranmış görüntü olabilir). Bu araç taranmış belgeleri okuyamaz.", true); }
-    else status("");
+    if (!total) status("Bu PDF'te seçilebilir metin yok (taranmış görüntü olabilir). Bu araç taranmış belgeleri okuyamaz." + (bad.length ? " Okunamayan sayfalar: " + bad.join(", ") : ""), true);
+    else status(bad.length ? "Okunamayan sayfalar atlandı: " + bad.join(", ") : "", !!bad.length);
     detect();
-    renderPage();
+    try { await renderPage(); } catch (e) { status("Önizleme çizilemedi, tablo yine de hazır. Ayrıntı: " + errText(e), true); }
     ["xlsxBtn", "csvBtn", "copyBtn"].forEach(function (id) { $(id).disabled = !total; });
   }
+  $("pwBtn").addEventListener("click", function () { if (pending) loadPdf(pending.bytes, pending.name, $("pw").value); });
+  $("pw").addEventListener("keydown", function (e) { if (e.key === "Enter" && pending) loadPdf(pending.bytes, pending.name, $("pw").value); });
+  window.addEventListener("error", function (e) { status("Beklenmeyen hata: " + (e.message || "bilinmiyor"), true); });
+  window.addEventListener("unhandledrejection", function (e) { status("Beklenmeyen hata: " + errText(e.reason), true); });
 
   // ---------- Hesaplama ----------
   function linesOf(i, o) {
     var P = S.pages[i];
     var lines = Core.buildLines(P.words, o);
-    lines.forEach(function (L, k) { L.skip = k < o.skipTop || k >= lines.length - o.skipBottom; });
+    var dropProse = $("dropProse").checked;
+    // 1) tutanak/açıklama paragraflarını işaretle
+    lines.forEach(function (L, k) {
+      L.prose = dropProse && L.segs.length <= 2 && L.segs.some(function (s) { return s.w > P.W * 0.45; });
+      var prev = lines[k - 1];
+      if (!L.prose && dropProse && prev && prev.prose && L.segs.length <= 2 && !L.segs.some(function (s) { return /\d,\d{2}\b/.test(s.s); })) L.prose = true;
+    });
+    // 2) üstten/alttan atlama yalnızca paragraf dışı satırları sayar (her sayfada aynı sayı işe yarasın)
+    var rest = lines.filter(function (L) { return !L.prose; });
+    rest.forEach(function (L, k) { L.skip = k < o.skipTop || k >= rest.length - o.skipBottom; });
+    lines.forEach(function (L) { if (L.prose) L.skip = true; });
     return lines;
   }
   function detect() {
@@ -536,6 +576,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   function readFile(f) {
     var r = new FileReader();
     r.onload = function () { loadPdf(new Uint8Array(r.result), f.name); };
+    r.onerror = function () { status("Dosya okunamadı: " + errText(r.error), true); };
     r.readAsArrayBuffer(f);
   }
   var dragDepth = 0;
@@ -554,6 +595,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   ["minGap", "wordGap"].forEach(function (id) { $(id).addEventListener("input", function () { syncLabels(); detect(); }); });
   $("rowTol").addEventListener("input", function () { syncLabels(); recompute(); });
   ["skipTop", "skipBottom"].forEach(function (id) { $(id).addEventListener("input", detect); });
+  $("dropProse").addEventListener("change", detect);
   ["mergeWrap", "wrapNoNumbers", "keyCol"].forEach(function (id) { $(id).addEventListener("change", recompute); });
   ["numConv", "dateConv", "showAll"].forEach(function (id) { $(id).addEventListener("change", renderTable); });
   $("pageRange").addEventListener("change", detect);
@@ -566,7 +608,7 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   $("headers").value = DEFAULT_HEADERS.join("\n");
   $("skipTop").value = 4;
   syncLabels();
-  if (!lib) { status("PDF kitaplığı yüklenemedi.", true); return; }
+  if (!lib) { status("PDF kitaplığı bu tarayıcıda çalışmadı. Tarayıcı: " + navigator.userAgent + (window.__libErr.length ? " · Hata: " + window.__libErr[0] : "") + ". Firefox ya da Chrome'u güncelleyip tekrar dene.", true); return; }
   var bin = atob(SAMPLE_B64), bytes = new Uint8Array(bin.length);
   for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   loadPdf(bytes, "ÖRNEK — sahte veriyle borç listesi.pdf");

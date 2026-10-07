@@ -126,6 +126,8 @@ var Core = (function () {
       lines.forEach(function (L) {
         var parts = useItems ? L.items : L.segs;
         if (!parts.length) return;
+        // Tutanak/açıklama gibi düz metin satırı: tek parça, sayfanın yarısından geniş
+        if (L.segs.length <= 2 && L.segs.some(function (s) { return s.w > pageWidth * 0.45; })) return;
         n++;
         parts.forEach(function (s) {
           var a = Math.max(0, Math.round(s.x)), b = Math.min(W - 1, Math.round(s.x + s.w) - 1);
