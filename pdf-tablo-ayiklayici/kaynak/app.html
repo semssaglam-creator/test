@@ -89,7 +89,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
 <body>
 <div class="drop" aria-hidden="true">PDF dosyasını buraya bırak</div>
 <header class="top">
-  <h1>Çizgisiz Tablo Ayıklayıcı</h1>
+  <h1>Çizgisiz Tablo Ayıklayıcı <small style="font-weight:400;color:var(--muted);font-size:12px">sürüm 1.5</small></h1>
   <span class="file" id="fileName">—</span>
   <span class="grow"></span>
   <input type="file" id="fileInput" accept="application/pdf,.pdf" class="sr">
@@ -100,6 +100,7 @@ kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-b
   <button class="btn" id="copyBtn" type="button" disabled>Tabloyu kopyala</button>
 </header>
 
+<div id="diag" hidden style="margin:16px 16px 0;padding:12px 14px;border:1px solid var(--warn);border-radius:8px;background:var(--surface);font-size:13px"><b>Tanı bilgisi</b> (bunu kopyalayıp gönderebilirsin):<pre id="diagTxt" style="white-space:pre-wrap;font-family:var(--mono);font-size:12px;margin:6px 0 0;user-select:all"></pre></div>
 <div class="layout">
   <aside>
     <section class="group">
@@ -623,7 +624,15 @@ var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvan�
   $("headers").value = DEFAULT_HEADERS.join("\n");
   $("skipTop").value = 0;
   syncLabels();
-  if (!lib) { status("PDF kitaplığı bu tarayıcıda çalışmadı. Tarayıcı: " + navigator.userAgent + (window.__libErr.length ? " · Hata: " + window.__libErr[0] : "") + ". Firefox ya da Chrome'u güncelleyip tekrar dene.", true); return; }
+  if (!lib) {
+    var dg = ["Sürüm: 1.5", "Tarayıcı: " + navigator.userAgent,
+      "pdfjsLib: " + typeof window.pdfjsLib + " · pdfjsWorker: " + typeof window.pdfjsWorker + " · XLSX: " + typeof window.XLSX,
+      "define: " + typeof window.define + " · module: " + typeof window.module + " · exports: " + typeof window.exports,
+      "Hatalar: " + (window.__libErr.length ? window.__libErr.join(" | ") : "yok")];
+    $("diagTxt").textContent = dg.join("\n"); $("diag").hidden = false;
+    status("PDF kitaplığı bu tarayıcıda çalışmadı. Aşağıdaki tanı bilgisini gönder.", true);
+    $("openBtn").disabled = true; return;
+  }
   var bin = atob(SAMPLE_B64), bytes = new Uint8Array(bin.length);
   for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   loadPdf(bytes, "ÖRNEK — sahte veriyle borç listesi.pdf");
