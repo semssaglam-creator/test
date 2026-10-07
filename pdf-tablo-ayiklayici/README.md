@@ -23,3 +23,18 @@ Taranmış (görüntü) PDF'leri okumaz; metni seçilebilen PDF gerekir.
 ## Kaynak
 
 `kaynak/` klasöründe arayüz (`app.html`), ayrıştırma çekirdeği (`core.js`), paketleme betiği (`build.py`) ve sahte verili örnek PDF üreticisi (`mk3.py`) var. Paketleme için pdfjs-dist 3.11.174 ve xlsx 0.18.5 gerekir.
+
+## Linux betiği (arayüzsüz)
+
+Tarayıcı kullanmadan, doğrudan PDF'ten Excel üretir:
+
+```bash
+wget https://github.com/semssaglam-creator/test/raw/HEAD/pdf-tablo-ayiklayici/tablo2excel.py
+wget https://github.com/semssaglam-creator/test/raw/HEAD/pdf-tablo-ayiklayici/cevir.sh
+chmod +x cevir.sh
+./cevir.sh liste.pdf                  # liste.xlsx oluşur
+./cevir.sh liste.pdf --sayfalar 1     # yalnızca 1. sayfa
+./cevir.sh liste.pdf --parola 1234    # parolalı PDF
+```
+
+İlk çalıştırmada `pdfplumber` ve `openpyxl` paketlerini `~/.tablo2excel` klasörüne kurar; sonra internet gerekmez.
