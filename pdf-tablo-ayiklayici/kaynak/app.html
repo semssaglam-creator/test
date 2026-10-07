@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Çizgisiz Tablo Ayıklayıcı</title>
+<style>
+/* Düzen: üst şerit + solda ayar sütunu, sağda sayfa önizlemesi; altta sonuç tablosu */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --sunk:#e7ebe9; --line:#cfd6d3;
+  --fg:#17201d; --muted:#5b6964; --accent:#1c5d8c; --accent-soft:#dbe8f2;
+  --sel:#c26a00; --skip:rgba(120,130,126,.22); --colA:rgba(28,93,140,.10); --colB:rgba(28,140,104,.12);
+  --ok:#1f7a4d; --warn:#9a5b00;
+  --sans: system-ui,-apple-system,"Segoe UI","Noto Sans","Ubuntu","Cantarell",sans-serif;
+  --mono: ui-monospace,"SF Mono","DejaVu Sans Mono","Liberation Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121816; --surface:#1a2220; --sunk:#232d2a; --line:#33403c;
+  --fg:#e3ebe8; --muted:#94a39e; --accent:#6fb0e0; --accent-soft:#1f3546;
+  --sel:#f0a040; --skip:rgba(160,170,166,.18); --colA:rgba(111,176,224,.14); --colB:rgba(90,200,150,.14);
+  --ok:#5cc28c; --warn:#e0a54a; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#121816; --surface:#1a2220; --sunk:#232d2a; --line:#33403c;
+  --fg:#e3ebe8; --muted:#94a39e; --accent:#6fb0e0; --accent-soft:#1f3546;
+  --sel:#f0a040; --skip:rgba(160,170,166,.18); --colA:rgba(111,176,224,.14); --colB:rgba(90,200,150,.14);
+  --ok:#5cc28c; --warn:#e0a54a; color-scheme:dark }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans)}
+header.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header.top h1{font-size:17px;margin:0;letter-spacing:-.01em}
+header.top .file{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40ch}
+header.top .grow{flex:1}
+.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px;padding:16px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.group{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.group h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0}
+label.row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
+label.row span.v{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.hint{font-size:12px;color:var(--muted);margin:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=number],input[type=text],select,textarea{font:inherit;font-size:13px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:5px 7px;min-width:0}
+textarea{font-family:var(--mono);font-size:12px;resize:vertical;min-height:120px;line-height:1.5}
+input[type=number]{width:72px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips button{font:inherit;font-size:11.5px;padding:3px 8px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--muted);cursor:pointer}
+.chips button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--fg)}
+main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0}
+.panel .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.panel .bar .t{font-weight:600;font-size:13px}
+.panel .bar .s{color:var(--muted);font-size:12.5px}
+.pager{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.stage{position:relative;overflow:auto;background:var(--sunk);padding:12px;max-height:72vh}
+.page{position:relative;margin:0 auto;box-shadow:0 1px 4px rgba(0,0,0,.18);background:#fff}
+.page canvas{display:block}
+.page svg{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.drop{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--accent) 18%,transparent);border:3px dashed var(--accent);font-weight:600;font-size:16px;z-index:3;border-radius:8px}
+body.dragging .drop{display:flex}
+.tablewrap{overflow:auto;max-height:60vh}
+table{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;width:max-content;min-width:100%}
+th,td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:left;vertical-align:top;max-width:280px}
+th{position:sticky;top:0;background:var(--sunk);font-size:11.5px;font-weight:600;z-index:1}
+th small{display:block;color:var(--muted);font-weight:400;font-family:var(--mono)}
+td.n{text-align:right;font-family:var(--mono);font-size:12px}
+td.d{font-family:var(--mono);font-size:12px}
+td.idx,th.idx{color:var(--muted);font-family:var(--mono);font-size:11px;text-align:right}
+tr.pg td{background:var(--accent-soft);color:var(--muted);font-size:11px;padding:2px 8px}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--accent-soft);color:var(--fg)}
+.badge.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.status{font-size:12.5px;color:var(--muted)}
+.status.err{color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);padding:8px 12px;border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:14px;height:10px;vertical-align:-1px;margin-right:4px;border-radius:2px}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="drop" aria-hidden="true">PDF dosyasını buraya bırak</div>
+<header class="top">
+  <h1>Çizgisiz Tablo Ayıklayıcı</h1>
+  <span class="file" id="fileName">—</span>
+  <span class="grow"></span>
+  <input type="file" id="fileInput" accept="application/pdf,.pdf" class="sr">
+  <button class="btn" id="openBtn" type="button">PDF aç…</button>
+  <button class="btn primary" id="xlsxBtn" type="button" disabled>Excel'e aktar (.xlsx)</button>
+  <button class="btn" id="csvBtn" type="button" disabled>CSV</button>
+  <button class="btn" id="copyBtn" type="button" disabled>Tabloyu kopyala</button>
+</header>
+
+<div class="layout">
+  <aside>
+    <section class="group">
+      <h2>Sütunlar</h2>
+      <div class="field">
+        <label for="headers">Sütun başlıkları (soldan sağa, her satıra bir tane)</label>
+        <textarea id="headers" spellcheck="false"></textarea>
+        <p class="hint">Başlık sayısı, aranacak sütun sayısını belirler. Boş bırakırsan sütunlar otomatik bulunur.</p>
+      </div>
+      <label class="row" for="minGap">Otomatik modda en dar sütun aralığı <span class="v" id="minGapV"></span></label>
+      <input type="range" id="minGap" min="1" max="20" step="0.5" value="2.5">
+      <button class="btn" type="button" id="redetect">Sütunları yeniden bul</button>
+      <p class="hint">Önizlemede boş yere tıkla: çizgi ekler. Çizgiyi sürükle: kaydırır. Çizgiye tıklayıp <kbd>Del</kbd>: siler.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="button" id="delSel" disabled>Seçili çizgiyi sil</button>
+        <button class="btn" type="button" id="clearDiv">Tüm çizgileri kaldır</button>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>Satırlar</h2>
+      <label class="chk"><input type="checkbox" id="mergeWrap" checked> <span>Alt satıra kayan metni üstteki kayda ekle</span></label>
+      <div class="field">
+        <label for="keyCol">Anahtar sütun: boşsa satır devam satırıdır</label>
+        <select id="keyCol"></select>
+      </div>
+      <label class="chk"><input type="checkbox" id="wrapNoNumbers" checked> <span>Tutar içeren satırı her zaman yeni satır say (aynı mükellefin ek borç kalemi)</span></label>
+      <div class="field">
+        <span>Ek kalemlerde boş kalan hücreleri üstten doldur</span>
+        <div class="chips" id="fillCols" role="group" aria-label="Üstten doldurulacak sütunlar"></div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <label class="field" for="skipTop">Her sayfada üstten atla
+          <input type="number" id="skipTop" min="0" max="50" value="0"></label>
+        <label class="field" for="skipBottom">alttan atla
+          <input type="number" id="skipBottom" min="0" max="50" value="0"></label>
+      </div>
+      <p class="hint">Sayfa başlığı ve tekrarlanan sütun başlıkları gibi satırlar. Önizlemede gri görünür.</p>
+      <label class="row" for="rowTol">Aynı satır sayılacak dikey sapma <span class="v" id="rowTolV"></span></label>
+      <input type="range" id="rowTol" min="0.5" max="6" step="0.5" value="2">
+      <label class="row" for="wordGap">Kelime aralığı eşiği <span class="v" id="wordGapV"></span></label>
+      <input type="range" id="wordGap" min="0.2" max="1.5" step="0.05" value="0.4">
+    </section>
+
+    <section class="group">
+      <h2>Çıktı</h2>
+      <div class="field">
+        <label for="pageRange">Sayfa aralığı (boş = tümü)</label>
+        <input type="text" id="pageRange" placeholder="ör. 1-12, 15">
+      </div>
+      <label class="chk"><input type="checkbox" id="numConv" checked> <span>Tutarları sayıya çevir (1.234,56 → 1234,56)</span></label>
+      <label class="chk"><input type="checkbox" id="dateConv" checked> <span>gg.aa.yyyy tarihlerini tarih hücresi yap</span></label>
+      <label class="chk"><input type="checkbox" id="perSheet"> <span>Her PDF sayfası ayrı Excel sayfası</span></label>
+      <p class="hint">Vergi No, TC Kimlik No, takip dosya no ve sıfırla başlayan kodlar metin olarak kalır; baştaki sıfırlar kaybolmaz.</p>
+    </section>
+  </aside>
+
+  <main>
+    <section class="panel">
+      <div class="bar">
+        <span class="t">Sayfa önizlemesi</span>
+        <span class="pager"><button class="btn" id="prev" type="button" aria-label="Önceki sayfa">‹</button>
+          <span id="pageLbl">–</span>
+          <button class="btn" id="next" type="button" aria-label="Sonraki sayfa">›</button></span>
+        <span class="badge" id="colBadge">–</span>
+        <span class="status" id="status" role="status"></span>
+      </div>
+      <div class="stage" id="stage">
+        <div class="page" id="page"><canvas id="cv"></canvas><svg id="ov" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--colA)"></i><i style="background:var(--colB)"></i>Sütuna atanan kelimeler</span>
+        <span><i style="background:var(--accent)"></i>Sütun sınırı</span>
+        <span><i style="background:var(--skip)"></i>Atlanan satır</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="bar">
+        <span class="t">Excel'e gidecek tablo</span>
+        <span class="s" id="tblInfo"></span>
+        <span class="grow" style="flex:1"></span>
+        <label class="chk" style="font-size:12.5px"><input type="checkbox" id="showAll"> <span>Tüm sayfaları göster</span></label>
+      </div>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </section>
+  </main>
+</div>
+
+<script>/*__PDFJS__*/</script>
+<script>/*__PDFWORKER__*/</script>
+<script>/*__XLSX__*/</script>
+<script>/*__CORE__*/</script>
+<script>
+var SAMPLE_B64 = "/*__SAMPLE__*/";
+var DEFAULT_HEADERS = ["Sıra No","Vergi No","TC Kimlik No","Plaka No","Adı Soyadı / Ünvanı","Adres","Vergi Dönemi","Ana Vergi Kodu","Vergi Kodu","Ana Takip Dosya No","Takip Dosya No","Vergi Aslı Borcu Toplamı","KGZ Toplamı","Ceza Tutarı","Toplam Borç"];
+var DEFAULT_FILL = ["Sıra No","Vergi No","TC Kimlik No","Adı Soyadı / Ünvanı","Adres"];
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var lib = window.pdfjsLib;
+  var S = {
+    doc: null, name: "", pages: [], // pages[i] = {W,H,words}
+    cur: 0, divs: [], sel: -1, fill: null, rows: null
+  };
+
+  // ---------- Ayarlar ----------
+  function headers() {
+    var t = $("headers").value.trim();
+    if (!t) return [];
+    var parts = t.indexOf("\n") >= 0 ? t.split(/\n/) : t.split(/[;\t]/);
+    return parts.map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function colName(i) {
+    var h = headers()[i];
+    var L = ""; var n = i + 1; while (n > 0) { var m = (n - 1) % 26; L = String.fromCharCode(65 + m) + L; n = Math.floor((n - 1) / 26); }
+    return { letter: L, label: h || L };
+  }
+  function opts() {
+    return {
+      rowTol: +$("rowTol").value, wordGap: +$("wordGap").value, minGap: +$("minGap").value, noise: 0.03,
+      target: headers().length, keyCol: +$("keyCol").value || 0,
+      mergeWrap: $("mergeWrap").checked, wrapNoNumbers: $("wrapNoNumbers").checked,
+      dropEmpty: true, fillCols: fillIdx(),
+      skipTop: Math.max(0, +$("skipTop").value || 0), skipBottom: Math.max(0, +$("skipBottom").value || 0)
+    };
+  }
+  function fillIdx() {
+    var out = [];
+    document.querySelectorAll("#fillCols button").forEach(function (b, i) { if (b.getAttribute("aria-pressed") === "true") out.push(i); });
+    return out;
+  }
+  function pageList() {
+    var n = S.pages.length, t = $("pageRange").value.trim();
+    if (!t) return S.pages.map(function (_, i) { return i; });
+    var set = {};
+    t.split(/[,;\s]+/).forEach(function (p) {
+      var m = p.match(/^(\d+)(?:-(\d+))?$/); if (!m) return;
+      var a = +m[1], b = m[2] ? +m[2] : a;
+      for (var i = Math.max(1, Math.min(a, b)); i <= Math.min(n, Math.max(a, b)); i++) set[i - 1] = 1;
+    });
+    var arr = Object.keys(set).map(Number).sort(function (a, b) { return a - b; });
+    return arr.length ? arr : S.pages.map(function (_, i) { return i; });
+  }
+
+  function syncLabels() {
+    $("minGapV").textContent = $("minGap").value + " pt";
+    $("rowTolV").textContent = $("rowTol").value + " pt";
+    $("wordGapV").textContent = (+$("wordGap").value).toFixed(2) + " em";
+    $("minGap").disabled = headers().length > 1;
+  }
+
+  function rebuildColumnControls() {
+    var nc = S.divs.length + 1;
+    var ks = $("keyCol"), prevK = ks.value;
+    ks.innerHTML = "";
+    for (var i = 0; i < nc; i++) { var o = document.createElement("option"); o.value = i; o.textContent = colName(i).letter + " · " + colName(i).label; ks.appendChild(o); }
+    ks.value = prevK && +prevK < nc ? prevK : "0";
+    var box = $("fillCols"), prev = fillIdx();
+    var hs = headers();
+    if (S.fill === null) S.fill = hs.map(function (h, i) { return DEFAULT_FILL.indexOf(h) >= 0 ? i : -1; }).filter(function (i) { return i >= 0; });
+    else S.fill = prev;
+    box.innerHTML = "";
+    for (var j = 0; j < nc; j++) {
+      var b = document.createElement("button"); b.type = "button";
+      b.textContent = colName(j).label; b.setAttribute("aria-pressed", S.fill.indexOf(j) >= 0 ? "true" : "false");
+      b.addEventListener("click", function () { this.setAttribute("aria-pressed", this.getAttribute("aria-pressed") === "true" ? "false" : "true"); S.fill = fillIdx(); recompute(); });
+      box.appendChild(b);
+    }
+  }
+
+  // ---------- PDF yükleme ----------
+  function status(msg, err) { var s = $("status"); s.textContent = msg || ""; s.className = "status" + (err ? " err" : ""); }
+
+  async function loadPdf(bytes, name) {
+    status("PDF okunuyor…");
+    try {
+      if (S.doc) { try { S.doc.destroy(); } catch (e) {} }
+      S.doc = await lib.getDocument({ data: bytes, isEvalSupported: false }).promise;
+    } catch (e) { status("PDF açılamadı: dosya bozuk ya da şifreli olabilir.", true); return; }
+    S.name = name; $("fileName").textContent = name; S.pages = []; S.cur = 0; S.sel = -1;
+    var total = 0;
+    for (var p = 1; p <= S.doc.numPages; p++) {
+      status("Sayfa " + p + " / " + S.doc.numPages + " okunuyor…");
+      var pg = await S.doc.getPage(p), vp = pg.getViewport({ scale: 1 });
+      var words = [];
+      try { words = await Core.extractWords(pg, vp, lib); } catch (e) { words = []; }
+      if (!words.length) { try { words = Core.itemsFromText(await pg.getTextContent(), vp, lib.Util); } catch (e) {} }
+      total += words.length;
+      S.pages.push({ W: vp.width, H: vp.height, words: words });
+    }
+    if (!total) { status("Bu PDF'te seçilebilir metin yok (taranmış görüntü olabilir). Bu araç taranmış belgeleri okuyamaz.", true); }
+    else status("");
+    detect();
+    renderPage();
+    ["xlsxBtn", "csvBtn", "copyBtn"].forEach(function (id) { $(id).disabled = !total; });
+  }
+
+  // ---------- Hesaplama ----------
+  function linesOf(i, o) {
+    var P = S.pages[i];
+    var lines = Core.buildLines(P.words, o);
+    lines.forEach(function (L, k) { L.skip = k < o.skipTop || k >= lines.length - o.skipBottom; });
+    return lines;
+  }
+  function detect() {
+    if (!S.pages.length) return;
+    var o = opts(), pl = pageList();
+    var sets = pl.map(function (i) { return linesOf(i, o).filter(function (L) { return !L.skip; }); });
+    var W = Math.max.apply(null, pl.map(function (i) { return S.pages[i].W; }));
+    S.divs = Core.detectDividers(sets, W, o);
+    S.sel = -1;
+    rebuildColumnControls();
+    recompute();
+  }
+  function recompute() {
+    if (!S.pages.length) return;
+    var o = opts(), pl = pageList();
+    S.rows = pl.map(function (i) {
+      var lines = linesOf(i, o).filter(function (L) { return !L.skip; });
+      return { page: i, rows: Core.toRows(lines, S.divs, o) };
+    });
+    var nc = S.divs.length + 1, want = headers().length;
+    var b = $("colBadge");
+    b.textContent = nc + " sütun" + (want > 1 && want !== nc ? " · başlıkta " + want : "");
+    b.className = "badge" + (want > 1 && want !== nc ? " warn" : "");
+    drawOverlay();
+    renderTable();
+  }
+
+  // ---------- Önizleme ----------
+  var renderTask = null, scale = 1;
+  async function renderPage() {
+    if (!S.doc) return;
+    $("pageLbl").textContent = (S.cur + 1) + " / " + S.pages.length;
+    $("prev").disabled = S.cur <= 0; $("next").disabled = S.cur >= S.pages.length - 1;
+    var pg = await S.doc.getPage(S.cur + 1);
+    var P = S.pages[S.cur];
+    var avail = $("stage").clientWidth - 24;
+    scale = Math.max(0.6, Math.min(2.2, avail / P.W));
+    var dpr = window.devicePixelRatio || 1;
+    var vp = pg.getViewport({ scale: scale * dpr });
+    var cv = $("cv");
+    cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+    cv.style.width = (P.W * scale) + "px"; cv.style.height = (P.H * scale) + "px";
+    $("page").style.width = (P.W * scale) + "px";
+    if (renderTask) { try { renderTask.cancel(); } catch (e) {} }
+    renderTask = pg.render({ canvasContext: cv.getContext("2d"), viewport: vp });
+    try { await renderTask.promise; } catch (e) {}
+    drawOverlay();
+  }
+
+  function drawOverlay() {
+    var ov = $("ov"); if (!S.pages.length) return;
+    var P = S.pages[S.cur], o = opts(), lines = linesOf(S.cur, o);
+    ov.setAttribute("viewBox", "0 0 " + P.W + " " + P.H);
+    ov.setAttribute("preserveAspectRatio", "none");
+    var h = [], k = 1 / scale;
+    lines.forEach(function (L) {
+      var top = Math.min.apply(null, L.items.map(function (w) { return w.y - w.fs * 0.85; }));
+      var bot = Math.max.apply(null, L.items.map(function (w) { return w.y + w.fs * 0.2; }));
+      if (L.skip) { h.push('<rect x="0" y="' + top + '" width="' + P.W + '" height="' + (bot - top) + '" fill="var(--skip)"/>'); return; }
+      L.items.forEach(function (w) {
+        var c = 0; while (c < S.divs.length && w.x + w.w / 2 > S.divs[c]) c++;
+        h.push('<rect x="' + w.x + '" y="' + (w.y - w.fs * 0.8) + '" width="' + Math.max(0.5, w.w) + '" height="' + (w.fs * 0.98) + '" fill="' + (c % 2 ? "var(--colB)" : "var(--colA)") + '"/>');
+      });
+    });
+    // sütun etiketleri
+    var edges = [0].concat(S.divs, [P.W]);
+    for (var i = 0; i < edges.length - 1; i++) {
+      var cx = (edges[i] + edges[i + 1]) / 2;
+      h.push('<text x="' + cx + '" y="' + (10 * k) + '" font-size="' + (9 * k) + '" text-anchor="middle" fill="var(--accent)" font-family="system-ui,sans-serif" font-weight="700" style="pointer-events:none">' + colName(i).letter + '</text>');
+    }
+    S.divs.forEach(function (x, i) {
+      var sel = i === S.sel, col = sel ? "var(--sel)" : "var(--accent)";
+      h.push('<g data-i="' + i + '" style="cursor:ew-resize">' +
+        '<line x1="' + x + '" x2="' + x + '" y1="0" y2="' + P.H + '" stroke="transparent" stroke-width="' + (12 * k) + '"/>' +
+        '<line x1="' + x + '" x2="' + x + '" y1="' + (13 * k) + '" y2="' + P.H + '" stroke="' + col + '" stroke-width="' + ((sel ? 2 : 1.2) * k) + '"/>' +
+        '<circle cx="' + x + '" cy="' + (16 * k) + '" r="' + (3.5 * k) + '" fill="' + col + '"/></g>');
+    });
+    ov.innerHTML = h.join("");
+    $("delSel").disabled = S.sel < 0;
+  }
+
+  // sürükle / ekle / sil
+  (function () {
+    var ov = $("ov"), drag = null;
+    function ptX(e) { var r = ov.getBoundingClientRect(); return (e.clientX - r.left) / r.width * S.pages[S.cur].W; }
+    ov.addEventListener("pointerdown", function (e) {
+      if (!S.pages.length) return;
+      var g = e.target.closest("g[data-i]");
+      ov.setPointerCapture(e.pointerId);
+      if (g) { S.sel = +g.getAttribute("data-i"); drag = { i: S.sel, moved: false }; }
+      else drag = { add: ptX(e), x0: e.clientX };
+      drawOverlay();
+    });
+    ov.addEventListener("pointermove", function (e) {
+      if (!drag || drag.i === undefined) return;
+      var x = Math.round(ptX(e) * 10) / 10;
+      S.divs[drag.i] = x; drag.moved = true;
+      var line = ov.querySelectorAll("g[data-i]")[drag.i];
+      if (line) line.querySelectorAll("line,circle").forEach(function (el) { if (el.tagName === "circle") el.setAttribute("cx", x); else { el.setAttribute("x1", x); el.setAttribute("x2", x); } });
+    });
+    ov.addEventListener("pointerup", function (e) {
+      if (!drag) return;
+      if (drag.add !== undefined && Math.abs(e.clientX - drag.x0) < 4) {
+        var x = Math.round(drag.add * 10) / 10;
+        S.divs.push(x); S.divs.sort(function (a, b) { return a - b; }); S.sel = S.divs.indexOf(x);
+        rebuildColumnControls(); recompute();
+      } else if (drag.moved) {
+        var v = S.divs[drag.i]; S.divs.sort(function (a, b) { return a - b; }); S.sel = S.divs.indexOf(v); recompute();
+      }
+      drag = null;
+    });
+    function delSel() { if (S.sel < 0) return; S.divs.splice(S.sel, 1); S.sel = -1; rebuildColumnControls(); recompute(); }
+    $("delSel").addEventListener("click", delSel);
+    document.addEventListener("keydown", function (e) {
+      if ((e.key === "Delete" || e.key === "Backspace") && S.sel >= 0 && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); delSel(); }
+      if (e.key === "Escape") { S.sel = -1; drawOverlay(); }
+    });
+  })();
+
+  // ---------- Değer dönüşümü ----------
+  // Sütun tipi: bir sütundaki tüm dolu hücreler sayıysa sayı, tarihse tarih; aksi halde metin
+  var DATE_RE = /^(\d{2})[.\/](\d{2})[.\/](\d{4})$/;
+  function colTypes() {
+    var nc = S.divs.length + 1, t = [], o2 = { numConv: $("numConv").checked, dateConv: $("dateConv").checked };
+    for (var c = 0; c < nc; c++) t.push({ num: o2.numConv, date: o2.dateConv, any: false });
+    S.rows.forEach(function (b) { b.rows.forEach(function (r) { r.forEach(function (v, c) {
+      if (!v) return; var T = t[c]; T.any = true;
+      if (T.num && Core.toNumber(v) === null) T.num = false;
+      if (T.date && !DATE_RE.test(v)) T.date = false;
+    }); }); });
+    return t.map(function (T) { return T.any ? (T.date ? "d" : T.num ? "n" : "s") : "s"; });
+  }
+  function cellValue(s, type) {
+    if (!s) return { t: "z" };
+    if (type === "d") {
+      var m = s.match(DATE_RE), d = +m[1], mo = +m[2], y = +m[3];
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return { t: "n", v: (Date.UTC(y, mo - 1, d) - Date.UTC(1899, 11, 30)) / 864e5, z: "dd.mm.yyyy", kind: "d" };
+    }
+    if (type === "n") {
+      var n = Core.toNumber(s);
+      if (n !== null) return { t: "n", v: n, z: /,\d/.test(s) ? "#,##0.00" : "0", kind: "n" };
+    }
+    return { t: "s", v: s };
+  }
+
+  // ---------- Sonuç tablosu ----------
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function renderTable() {
+    var nc = S.divs.length + 1, types = colTypes();
+    var all = $("showAll").checked;
+    var blocks = all ? S.rows : S.rows.filter(function (b) { return b.page === S.cur; });
+    var total = S.rows.reduce(function (a, b) { return a + b.rows.length; }, 0);
+    var h = ['<thead><tr><th class="idx">#</th>'];
+    for (var c = 0; c < nc; c++) { var cn = colName(c); h.push("<th>" + esc(cn.label) + "<small>" + cn.letter + " · " + ({ n: "sayı", d: "tarih", s: "metin" })[types[c]] + "</small></th>"); }
+    h.push("</tr></thead><tbody>");
+    var shown = 0, LIMIT = 800;
+    if (!all && !blocks.length) h.push('<tr class="pg"><td colspan="' + (nc + 1) + '">Bu sayfa seçili sayfa aralığının dışında.</td></tr>');
+    blocks.forEach(function (b) {
+      if (all) h.push('<tr class="pg"><td colspan="' + (nc + 1) + '">PDF sayfa ' + (b.page + 1) + " · " + b.rows.length + " satır</td></tr>");
+      b.rows.forEach(function (r, ri) {
+        if (shown++ >= LIMIT) return;
+        h.push('<tr><td class="idx">' + (ri + 1) + "</td>");
+        r.forEach(function (v, c) { var cv = cellValue(v, types[c]); h.push("<td" + (cv.kind === "n" ? ' class="n"' : cv.kind === "d" ? ' class="d"' : "") + ">" + esc(v) + "</td>"); });
+        h.push("</tr>");
+      });
+    });
+    h.push("</tbody>");
+    $("tbl").innerHTML = h.join("");
+    var here = (S.rows.filter(function (b) { return b.page === S.cur; })[0] || { rows: [] }).rows.length;
+    $("tblInfo").textContent = (all ? "" : "Bu sayfa " + here + " satır · ") + "Toplam " + total + " satır, " + nc + " sütun" + (shown > LIMIT ? " · önizlemede ilk " + LIMIT + " satır" : "");
+  }
+
+  // ---------- Dışa aktarma ----------
+  function exportAoa() {
+    var nc = S.divs.length + 1, hs = [];
+    for (var c = 0; c < nc; c++) hs.push(colName(c).label);
+    return { hs: hs, blocks: S.rows };
+  }
+  function sheetFrom(hs, rows) {
+    var types = colTypes();
+    var ws = {}, R = rows.length + 1, C = hs.length, widths = hs.map(function (h) { return Math.min(40, h.length + 2); });
+    hs.forEach(function (h, c) { ws[XLSX.utils.encode_cell({ r: 0, c: c })] = { t: "s", v: h }; });
+    rows.forEach(function (r, ri) {
+      r.forEach(function (v, c) {
+        var cv = cellValue(v, types[c]); if (cv.t === "z") return;
+        var cell = { t: cv.t, v: cv.v }; if (cv.z) cell.z = cv.z;
+        ws[XLSX.utils.encode_cell({ r: ri + 1, c: c })] = cell;
+        widths[c] = Math.min(60, Math.max(widths[c], String(v).length + 1));
+      });
+    });
+    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, R - 1), c: Math.max(0, C - 1) } });
+    ws["!cols"] = widths.map(function (w) { return { wch: w }; });
+    ws["!autofilter"] = { ref: ws["!ref"] };
+    ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+    return ws;
+  }
+  function baseName() { return (S.name || "tablo").replace(/\.pdf$/i, ""); }
+  function save(blob, name) {
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  $("xlsxBtn").addEventListener("click", function () {
+    var e = exportAoa(), wb = XLSX.utils.book_new();
+    if ($("perSheet").checked) e.blocks.forEach(function (b) { XLSX.utils.book_append_sheet(wb, sheetFrom(e.hs, b.rows), "Sayfa " + (b.page + 1)); });
+    else XLSX.utils.book_append_sheet(wb, sheetFrom(e.hs, [].concat.apply([], e.blocks.map(function (b) { return b.rows; }))), "Tablo");
+    var out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    save(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), baseName() + ".xlsx");
+    status("Excel dosyası indirildi: " + baseName() + ".xlsx");
+  });
+  function delimited(sep) {
+    var e = exportAoa(), q = function (v) { v = v == null ? "" : String(v); return /["\n\r;\t,]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var lines = [e.hs.map(q).join(sep)];
+    e.blocks.forEach(function (b) { b.rows.forEach(function (r) { lines.push(r.map(q).join(sep)); }); });
+    return lines.join("\r\n");
+  }
+  $("csvBtn").addEventListener("click", function () {
+    // Türkçe Excel ; ayırıcı bekler; BOM ile Türkçe karakterler doğru açılır
+    save(new Blob(["﻿" + delimited(";")], { type: "text/csv;charset=utf-8" }), baseName() + ".csv");
+    status("CSV indirildi (; ayırıcılı).");
+  });
+  $("copyBtn").addEventListener("click", function () {
+    var txt = delimited("\t");
+    var done = function () { status("Tablo panoya kopyalandı. Excel'de bir hücreye yapıştır."); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+    function fallback() { var t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); done(); } catch (e) { status("Kopyalanamadı; CSV olarak indir.", true); } t.remove(); }
+  });
+
+  // ---------- Olaylar ----------
+  $("openBtn").addEventListener("click", function () { $("fileInput").click(); });
+  $("fileInput").addEventListener("change", function () { var f = this.files[0]; if (f) readFile(f); this.value = ""; });
+  function readFile(f) {
+    var r = new FileReader();
+    r.onload = function () { loadPdf(new Uint8Array(r.result), f.name); };
+    r.readAsArrayBuffer(f);
+  }
+  var dragDepth = 0;
+  document.addEventListener("dragenter", function (e) { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); });
+  document.addEventListener("dragleave", function () { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  document.addEventListener("drop", function (e) {
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging");
+    var f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f && /pdf$/i.test(f.type || f.name)) readFile(f); else status("Yalnızca PDF dosyası bırakabilirsin.", true);
+  });
+  $("prev").addEventListener("click", function () { if (S.cur > 0) { S.cur--; S.sel = -1; renderPage(); renderTable(); } });
+  $("next").addEventListener("click", function () { if (S.cur < S.pages.length - 1) { S.cur++; S.sel = -1; renderPage(); renderTable(); } });
+  $("redetect").addEventListener("click", detect);
+  $("clearDiv").addEventListener("click", function () { S.divs = []; S.sel = -1; rebuildColumnControls(); recompute(); });
+  ["minGap", "wordGap"].forEach(function (id) { $(id).addEventListener("input", function () { syncLabels(); detect(); }); });
+  $("rowTol").addEventListener("input", function () { syncLabels(); recompute(); });
+  ["skipTop", "skipBottom"].forEach(function (id) { $(id).addEventListener("input", detect); });
+  ["mergeWrap", "wrapNoNumbers", "keyCol"].forEach(function (id) { $(id).addEventListener("change", recompute); });
+  ["numConv", "dateConv", "showAll"].forEach(function (id) { $(id).addEventListener("change", renderTable); });
+  $("pageRange").addEventListener("change", detect);
+  var ht = null;
+  $("headers").addEventListener("input", function () { syncLabels(); clearTimeout(ht); ht = setTimeout(function () { S.fill = null; detect(); }, 400); });
+  var rt = null;
+  window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(renderPage, 200); });
+
+  // ---------- Başlangıç: örnek belge ----------
+  $("headers").value = DEFAULT_HEADERS.join("\n");
+  $("skipTop").value = 4;
+  syncLabels();
+  if (!lib) { status("PDF kitaplığı yüklenemedi.", true); return; }
+  var bin = atob(SAMPLE_B64), bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  loadPdf(bytes, "ÖRNEK — sahte veriyle borç listesi.pdf");
+})();
+</script>
+</body>
+</html>
