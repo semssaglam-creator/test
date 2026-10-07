@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Takip PDF → Excel
+Comment=Takip listesi PDF'ini sütunlara ayırıp Excel'e aktarır
+Exec=sh -c 'sh "$(dirname "$1")/calistir.sh"' _ %k
+Icon=x-office-spreadsheet
+Terminal=false
+Categories=Office;

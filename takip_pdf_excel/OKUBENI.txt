@@ -1,0 +1,49 @@
+TAKİP PDF → EXCEL
+=================
+Takip listesi PDF'indeki kayıtları sütunlara ayırıp Excel dosyası yapar.
+Kurulum gerekmez; internet gerekmez. PDF bilgisayarınızdan dışarı çıkmaz.
+
+
+AÇMAK
+-----
+1. Arşivi bir klasöre çıkarın (sağ tık → "Buraya Çıkar").
+2. Klasördeki "Takip PDF Excel" simgesine (Takip PDF Excel.desktop) çift tıklayın.
+   İlk seferde "güvenilmeyen uygulama" uyarısı çıkarsa:
+   sağ tık → "Çalıştırmaya İzin Ver" (Allow Launching), sonra yeniden çift tıklayın.
+3. Tarayıcıda uygulama sayfası açılır.
+
+   Masaüstüne ve uygulama menüsüne kalıcı kısayol isterseniz:
+   kisayol_olustur.sh dosyasına sağ tık → "Programı Çalıştır" (Run as a Program).
+
+
+KULLANMAK
+---------
+1. PDF dosyalarını sayfadaki kutuya sürükleyin ya da kutuya tıklayıp seçin.
+   Birden çok PDF seçilebilir; hepsi tek tabloda alt alta birleşir.
+2. Tabloyu kontrol edin. KIRMIZI hücreler okunamayan ya da tutmayan değerlerdir
+   (ör. Toplam Borç ≠ Aslı + KGZ + Ceza). Bunları PDF ile karşılaştırın.
+   Okunamayan tutar ASLA sıfır yazılmaz; boş bırakılır.
+3. "Excel'e Aktar" deyin. Dosya İndirilenler klasörüne iner.
+
+Kapatmak: tarayıcı sekmesini kapatın. Uygulama 15 dakika sonra kendiliğinden kapanır.
+
+Not: PDF'in metni seçilebilir olmalı (Okular'da metin seçebiliyorsanız uygundur).
+Taranmış (görüntü) PDF'ler okunamaz.
+
+
+ÇİFT TIKLAYINCA HİÇBİR ŞEY OLMUYORSA
+------------------------------------
+Bu Linux masaüstlerinde sık görülür ve uygulamayla ilgisi yoktur:
+
+1. Dosya yöneticileri .sh dosyalarını çift tıklayınca ÇALIŞTIRMAZ; metin
+   düzenleyicide açar ya da hiçbir şey yapmaz. .sh dosyaları için
+   sağ tık → "Programı Çalıştır" kullanın.
+2. .desktop simgesi "güvenilir" işaretlenmemişse sessizce hiçbir şey yapmaz:
+   sağ tık → "Çalıştırmaya İzin Ver".
+3. Arşiv sürükle-bırak ile açıldıysa çalıştırma izni kaybolmuş olabilir:
+   dosyaya sağ tık → Özellikler → İzinler → "Programı çalıştırmaya izin ver".
+
+Hangisi olduğunu anlamak için klasörde "acilis_kaydi.txt" dosyasına bakın:
+- Dosya HİÇ OLUŞMADIYSA uygulama hiç başlatılamamış demektir → yukarıdaki 1/2/3.
+- Dosya oluştuysa uygulama çalışmıştır; bir hata varsa içinde yazar.
+  Destek isterken bu dosyayı gönderin.

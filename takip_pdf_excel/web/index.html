@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Takip PDF → Excel</title>
+<style>
+  :root { --mavi:#305496; --kirmizi:#c00000; --acik:#fce4d6; --koyu:#f8cbad; --gri:#f3f4f6; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "Segoe UI", "Noto Sans", "DejaVu Sans", sans-serif; background:#fafafa; color:#222; }
+  header { background:var(--mavi); color:#fff; padding:12px 20px; display:flex; align-items:center; gap:16px; }
+  header h1 { font-size:18px; margin:0; font-weight:600; }
+  main { padding:16px 20px; }
+  #birak { border:2px dashed #9aa7c0; border-radius:8px; padding:28px; text-align:center; background:#fff; cursor:pointer; }
+  #birak.uzerinde { background:#eef3ff; border-color:var(--mavi); }
+  #birak b { color:var(--mavi); }
+  .araclar { display:flex; gap:10px; align-items:center; margin:14px 0; flex-wrap:wrap; }
+  button { font:inherit; padding:8px 16px; border-radius:6px; border:1px solid #888; background:#fff; cursor:pointer; }
+  button.ana { background:var(--mavi); color:#fff; border-color:var(--mavi); }
+  button:disabled { opacity:.45; cursor:default; }
+  #ozet { font-size:14px; }
+  #ozet .uyari { color:var(--kirmizi); font-weight:600; }
+  #dosyalar { font-size:13px; margin:8px 0 0; padding-left:18px; }
+  #dosyalar .hata { color:var(--kirmizi); }
+  .tablo-kutu { overflow:auto; max-height:62vh; background:#fff; border:1px solid #ddd; }
+  table { border-collapse:collapse; font-size:12px; }
+  th, td { border:1px solid #d0d0d0; padding:3px 6px; vertical-align:top; }
+  th { background:var(--mavi); color:#fff; position:sticky; top:0; font-weight:600; }
+  td { white-space:nowrap; }
+  td.sayi { text-align:right; }
+  td.genis { min-width:220px; white-space:normal; }
+  tr.uyarili td { background:var(--acik); }
+  td.sorunlu { background:var(--koyu) !important; }
+  td.kontrol { color:var(--kirmizi); font-weight:600; min-width:200px; white-space:normal; }
+  #mesaj { color:var(--kirmizi); font-weight:600; }
+</style>
+</head>
+<body>
+<header><h1>Takip PDF → Excel</h1><span style="font-size:13px;opacity:.85">Takip listesi PDF'ini sütunlara ayırır</span></header>
+<main>
+  <div id="birak">
+    PDF dosyalarını buraya <b>sürükleyip bırakın</b> ya da <b>tıklayıp seçin</b>.<br>
+    <small>Birden çok PDF seçilebilir; hepsi tek tabloda birleşir.</small>
+    <input id="secici" type="file" accept=".pdf,application/pdf" multiple hidden>
+  </div>
+  <ul id="dosyalar"></ul>
+  <div class="araclar">
+    <button id="excel" class="ana" disabled>Excel'e Aktar</button>
+    <button id="temizle" disabled>Temizle</button>
+    <span id="ozet"></span>
+    <span id="mesaj"></span>
+  </div>
+  <div class="tablo-kutu"><table id="tablo"></table></div>
+</main>
+<script>
+"use strict";
+let SUTUNLAR = [];
+let kayitlar = [];          // {degerler, uyarilar, sorunlu, sayfa, dosya}
+let ilkDosyaAdi = "";
+const TUTAR = ["Vergi Aslı Borcu Toplamı", "KGZ Toplamı", "Ceza Tutarı", "Toplam Borç"];
+const $ = (id) => document.getElementById(id);
+const tl = (n) => n.toLocaleString("tr-TR", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+function mesaj(m) { $("mesaj").textContent = m || ""; }
+
+async function dosyaIsle(dosya) {
+  const li = document.createElement("li");
+  li.textContent = dosya.name + " — okunuyor…";
+  $("dosyalar").appendChild(li);
+  try {
+    const y = await fetch("/api/ayristir", {method: "POST", body: dosya});
+    const j = await y.json();
+    if (!y.ok) throw new Error(j.hata || ("HTTP " + y.status));
+    SUTUNLAR = j.sutunlar;
+    j.kayitlar.forEach(k => { k.dosya = dosya.name; kayitlar.push(k); });
+    if (!ilkDosyaAdi) ilkDosyaAdi = dosya.name;
+    const u = j.kayitlar.filter(k => k.uyarilar.length).length;
+    li.textContent = dosya.name + " — " + j.kayitlar.length + " kayıt" + (u ? ", " + u + " kayıtta uyarı" : "");
+  } catch (e) {
+    li.className = "hata";
+    li.textContent = dosya.name + " — OKUNAMADI: " + (e.message === "Failed to fetch"
+      ? "uygulama kapanmış görünüyor; uygulamayı yeniden açın" : e.message);
+  }
+}
+
+async function dosyalarEkle(liste) {
+  mesaj("");
+  for (const d of liste) {
+    if (!/\.pdf$/i.test(d.name)) { mesaj(d.name + " PDF değil, atlandı."); continue; }
+    await dosyaIsle(d);
+  }
+  ciz();
+}
+
+function ciz() {
+  const t = $("tablo");
+  t.innerHTML = "";
+  $("excel").disabled = $("temizle").disabled = !kayitlar.length;
+  if (!kayitlar.length) { $("ozet").textContent = ""; return; }
+  const bas = t.insertRow();
+  [...SUTUNLAR, "Kontrol", "Kaynak PDF"].forEach(s => {
+    const th = document.createElement("th"); th.textContent = s; bas.appendChild(th);
+  });
+  const toplam = {};
+  TUTAR.forEach(s => toplam[s] = 0);
+  for (const k of kayitlar) {
+    const tr = t.insertRow();
+    if (k.uyarilar.length) tr.className = "uyarili";
+    k.degerler.forEach((v, i) => {
+      const s = SUTUNLAR[i], td = tr.insertCell();
+      if (TUTAR.includes(s)) {
+        td.className = "sayi";
+        td.textContent = v === null ? "" : tl(v);
+        if (v !== null) toplam[s] += v;
+      } else {
+        td.textContent = v;
+        if (s === "Soyad Ad/Unvanı" || s === "Adres") td.className = "genis";
+      }
+      if (k.sorunlu.includes(s)) td.classList.add("sorunlu");
+    });
+    const kt = tr.insertCell(); kt.className = "kontrol"; kt.textContent = k.uyarilar.join("; ");
+    tr.insertCell().textContent = k.dosya + " s." + k.sayfa;
+  }
+  const u = kayitlar.filter(k => k.uyarilar.length).length;
+  $("ozet").innerHTML = "";
+  $("ozet").append(kayitlar.length + " kayıt · Toplam Borç: " + tl(toplam["Toplam Borç"]) + " TL ");
+  if (u) {
+    const s = document.createElement("span"); s.className = "uyari";
+    s.textContent = "· " + u + " kayıtta uyarı var (kırmızı hücreleri PDF ile karşılaştırın)";
+    $("ozet").append(s);
+  }
+}
+
+async function excelAktar() {
+  mesaj("");
+  $("excel").disabled = true;
+  try {
+    const y = await fetch("/api/excel", {method: "POST", headers: {"Content-Type": "application/json"},
+                                         body: JSON.stringify({kayitlar})});
+    if (!y.ok) { const j = await y.json(); throw new Error(j.hata || ("HTTP " + y.status)); }
+    const blob = await y.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = ilkDosyaAdi.replace(/\.pdf$/i, "") + ".xlsx";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (e) {
+    mesaj("Excel oluşturulamadı: " + (e.message === "Failed to fetch"
+      ? "uygulama kapanmış görünüyor; uygulamayı yeniden açın (tablo bu sayfada duruyor)" : e.message));
+  } finally {
+    $("excel").disabled = !kayitlar.length;
+  }
+}
+
+const birak = $("birak");
+birak.addEventListener("click", () => $("secici").click());
+$("secici").addEventListener("change", e => { dosyalarEkle([...e.target.files]); e.target.value = ""; });
+birak.addEventListener("dragover", e => { e.preventDefault(); birak.classList.add("uzerinde"); });
+birak.addEventListener("dragleave", () => birak.classList.remove("uzerinde"));
+birak.addEventListener("drop", e => {
+  e.preventDefault(); birak.classList.remove("uzerinde");
+  dosyalarEkle([...e.dataTransfer.files]);
+});
+$("excel").addEventListener("click", excelAktar);
+$("temizle").addEventListener("click", () => {
+  kayitlar = []; ilkDosyaAdi = ""; $("dosyalar").innerHTML = ""; mesaj(""); ciz();
+});
+// Sayfa açık olduğu sürece sunucuya haber ver; kapanınca sunucu kendini kapatır.
+const nabiz = () => fetch("/api/nabiz", {method: "POST"}).catch(() => {});
+nabiz(); setInterval(nabiz, 30000);
+</script>
+</body>
+</html>
