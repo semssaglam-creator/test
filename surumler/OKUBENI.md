@@ -6,9 +6,11 @@ sebebi, kalıcı bir indirme bağlantısı vermektir.
 
 **Bu paketlerdeki son değişiklik (2026-10-09):** Vergi Suçları Raporu (VSR)
 eklendi. Sahte belge raporu ya da düzeltme kabul raporu indirilirken,
-"Bilerek kullanma" işaretli yıllar için VSR de kendiliğinden üretilip
-pakete konuyor. Künyede yeni bir "Vergi Suçları Raporu" bölümü var
-(savcılık, failin kimlik bilgileri, tarhiyatı öneren raporun tarih/sayısı).
+"Bilerek kullanma" işaretliyse VSR de kendiliğinden üretilip pakete konuyor.
+VSR bütün inceleme dönemi için tek düzenlenir; yıllar sonuç tablosunda yıl
+yıl satırlanır. Künyede yeni bir "Vergi Suçları Raporu" bölümü var
+(savcılık, failin kimlik bilgileri ve her yılın tarhiyat raporunun
+tarih/sayısı).
 
 ## Linux
 

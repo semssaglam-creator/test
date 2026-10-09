@@ -672,10 +672,26 @@ oturumda buradan devam edilir.
       bilgiler de o tabloyla verilir.
 
       **Elle istenmesi gerekmiyor:** sahte belge raporu ya da düzeltme kabul
-      raporu indirilirken, "Bilerek kullanma" işaretli her yıl için VSR de
-      üretilip pakete konuyor (paket adı "..._ve_VSR_..." olur). Bilmeden
-      kullanmada üretilmiyor — 306 Sıra No'lu Tebliğ gereği suç yok. Çok
-      yıllı dosyada yalnızca bilerek kullanmanın bulunduğu yıl için çıkıyor.
+      raporu indirilirken, "Bilerek kullanma" işaretliyse VSR de üretilip
+      pakete konuyor (paket adı "..._ve_VSR_..." olur). Bilmeden kullanmada
+      üretilmiyor — 306 Sıra No'lu Tebliğ gereği suç yok.
+
+      **VSR bütün inceleme dönemi için TEK düzenlenir** — tarhiyat raporu gibi
+      yıl yıl değil (müfettişin kararı, 2026-10-09; ilk sürüm yanlış olarak
+      yıl yıl ayrı rapor üretiyordu). Yıllar raporun içinde: giriş ve sonuç
+      bölümleri yılları birlikte anıyor, atıflar çoğullaşıyor ("...sayılı,
+      ...sayılı Vergi İnceleme Raporlarında"), V. bölümdeki tablo her yıl
+      için bir satır açıp sonuna TOPLAM satırı koyuyor. Her satırın vergi ve
+      ceza tutarı o yılın verisinden hesaplanıyor; dosya toplamını her satıra
+      yazmak cezayı yıl sayısı kadar büyük gösterirdi.
+
+      Künyedeki "Tarhiyat öneren rapor(lar)" alanı bu yüzden satır tablosu:
+      her yılın raporunun tarih ve sayısı ayrı satıra girilir (2020 ·
+      20.10.2025 · 2025-[2013]/72). Tek yıl inceleniyorsa yıl hücresi boş
+      bırakılabilir. İlk sürümdeki tek alanlı biçim (`vir_tarihi`,
+      `vir_sayisi`) `normalize` içinde göç ettiriliyor — göç ORADA olmak
+      zorunda, çünkü normalize tanımsız anahtarları atıyor ve eski değerler
+      aksi hâlde okuyucuya hiç ulaşmıyor.
 
       Fail ayrımı: kurumlarda kanuni temsilci, gerçek kişide mükellefin
       kendisi; hapis cezası tüzel kişiye uygulanamadığı için IV. bölümdeki
@@ -693,8 +709,9 @@ oturumda buradan devam edilir.
       etmeme raporu için defter tasdik makamı. Hiçbiri zorunlu alan değil;
       boş kalanlar belgede kırmızı yer tutucu olur.
 
-      Gerileme denetimi: `testler/vsr_testi.py` (30 denetim). Hem üretilip
-      üretilmediğini hem metindeki ek hatalarını kolluyor; üç mutasyonla
+      Gerileme denetimi: `testler/vsr_testi.py`. Üretilip üretilmediğini, KAÇ
+      belge üretildiğini (tek rapor), çoğul ek uyumunu, yıl yıl tablo
+      satırlarını ve metindeki ek hatalarını kolluyor; mutasyonlarla
       gerçekten tuttuğu doğrulandı.
 
 ---

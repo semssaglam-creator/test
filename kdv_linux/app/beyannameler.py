@@ -618,8 +618,13 @@ def duzeltme_karsilastirmalari(duzen):
     return sonuc
 
 
-def duzeltmeyle_dogan_vergi(duzen):
+def duzeltmeyle_dogan_vergi(duzen, yil=None):
     """Duzeltme beyannameleriyle ODENECEK hale gelen KDV toplami.
+
+    `yil` verilirse yalnizca o yilin duzeltmeleri sayilir. Vergi suclari
+    raporunun sonuc tablosu yil yil satir actigindan, her satirin cezasi o
+    yilin ziyasindan hesaplanmalidir; dosya toplamini her satira yazmak
+    cezayi yil sayisi kadar buyuk gosterir.
 
     Vergi ziyai cezasinin matrahi budur. Faturalardaki KDV toplamiyla
     KARISTIRILMAMALI: duzeltme indirimi cikarir, ama cikarilan indirim once
@@ -635,10 +640,23 @@ def duzeltmeyle_dogan_vergi(duzen):
     """
     toplam = 0.0
     for adim in duzeltme_adimlari(duzen):
+        if yil is not None and str(adim.get("yil")) != str(yil):
+            continue
         for satir in adim["satirlar"]:
             if satir["kod"] == "odenmesi_gereken_kdv" and satir["fark"] > 0:
                 toplam += satir["fark"]
     return round(toplam, 2)
+
+
+def duzeltme_yil_ziyalari(duzen):
+    """Yil -> duzeltmeyle dogan vergi. Duzeltmesi olmayan yil listede yoktur."""
+    yillar = {}
+    for adim in duzeltme_adimlari(duzen):
+        for satir in adim["satirlar"]:
+            if satir["kod"] == "odenmesi_gereken_kdv" and satir["fark"] > 0:
+                yil = adim.get("yil")
+                yillar[yil] = round(yillar.get(yil, 0.0) + satir["fark"], 2)
+    return yillar
 
 
 def duzeltme_adimlari(duzen):

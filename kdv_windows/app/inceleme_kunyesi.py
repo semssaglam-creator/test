@@ -55,6 +55,15 @@ FAALIYET_KOLONLARI = [
     {"kod": "konu", "etiket": "Faaliyet konusu", "tur": "metin"},
 ]
 
+# Tarhiyati oneren rapor(lar). Tarhiyat raporu YIL YIL duzenlenir, vergi
+# suclari raporu ise butun donem icin TEK duzenlenir; bu yuzden VSR birden
+# cok rapora atif yapar ve her birinin tarih/sayisi ayri girilmelidir.
+VIR_KOLONLARI = [
+    {"kod": "yil", "etiket": "Yılı", "tur": "metin"},
+    {"kod": "tarih", "etiket": "Raporun Tarihi", "tur": "metin"},
+    {"kod": "sayi", "etiket": "Raporun Sayısı", "tur": "metin"},
+]
+
 BOLUMLER = [
     {
         "kod": "gorevlendirme",
@@ -276,14 +285,16 @@ BOLUMLER = [
         "kod": "vergi_sucu",
         "baslik": "Vergi Suçları Raporu",
         "alanlar": [
-            {"kod": "vir_tarihi", "etiket": "Tarhiyat öneren raporun tarihi",
-             "tur": "tarih",
-             "ipucu": "Vergi suçları raporu, tarhiyatı öneren vergi inceleme "
-                      "raporuna her bölümünde atıf yapar ve sonuç tablosunda "
-                      "onu anar. Boş bırakılırsa belgede kırmızı yer tutucu "
-                      "kalır."},
-            {"kod": "vir_sayisi", "etiket": "Tarhiyat öneren raporun sayısı",
-             "tur": "metin", "ipucu": "Örn: 2025-[2013]/72"},
+            {"kod": "vir_bilgileri",
+             "etiket": "Tarhiyat öneren rapor(lar)",
+             "tur": "satirlar", "kolonlar": VIR_KOLONLARI,
+             "ekle_etiketi": "+ Rapor ekle",
+             "ipucu": "Vergi suçları raporu bütün inceleme dönemi için TEK "
+                      "düzenlenir; tarhiyat raporu ise her yıl için ayrı. Bu "
+                      "yüzden incelenen her yılın raporunu (+) düğmesiyle ayrı "
+                      "satıra yazın: 2020 · 20.10.2025 · 2025-[2013]/72. Tek "
+                      "yıl inceleniyorsa yıl hücresini boş bırakabilirsiniz. "
+                      "Boş kalan hücreler belgede kırmızı yer tutucu olur."},
             {"kod": "vsr_savcilik", "etiket": "Yetkili Cumhuriyet Başsavcılığı",
              "tur": "metin",
              "ipucu": "Yalnızca yer adını yazmanız yeter: “Adana” yazılırsa "
@@ -347,6 +358,15 @@ def normalize(ham):
         eski = str(ham.get("faaliyet_konusu") or "").strip()
         if eski:
             ham["faaliyet_konulari"] = eski
+    # Vergi suclari raporunun ilk surumunde tarhiyat raporunun tarihi ve
+    # sayisi tek alanda tutuluyordu; artik yil yil girilen bir satir alani.
+    # Gocun BURADA olmasi gerekiyor: asagidaki dongu tanimsiz anahtarlari
+    # atar, yani eski degerler `vir_kayitlari`ye hic ulasmaz.
+    if not str(ham.get("vir_bilgileri") or "").strip():
+        eski_tarih = str(ham.get("vir_tarihi") or "").strip()
+        eski_sayi = str(ham.get("vir_sayisi") or "").strip()
+        if eski_tarih or eski_sayi:
+            ham["vir_bilgileri"] = " | %s | %s" % (eski_tarih, eski_sayi)
     kunye = {}
     for kod, tanim in _ALANLAR.items():
         deger = ham.get(kod, tanim.get("varsayilan", ""))
@@ -511,6 +531,51 @@ def cizgili_satirlar(kunye, kod, alan_sayisi, tutucular=None):
                 parcalar[i] = "[%s]" % ad
         tablo.append(parcalar)
     return tablo
+
+
+def vir_kayitlari(kunye, yillar=None):
+    """Tarhiyati oneren rapor(lar)in yil / tarih / sayi dokumu.
+
+    Doner: [{"yil", "tarih", "sayi"}]. `yillar` verilirse sonuc o yillara
+    daraltilir ve her yil icin BIR kayit doner (eksikse hucreler bos).
+
+    Iki kolaylik var, ikisi de sahada gerekli oldu:
+
+    - Yili yazilmamis satirlar, `yillar` siraya dizildiginde sirayla
+      dagitilir. Tek yil incelenen dosyalarda (ezici cogunluk) kullanici
+      yil hucresini doldurmak zorunda kalmasin diye.
+    - VSR'nin ilk surumunde rapor tarihi ve sayisi tek alanda tutuluyordu
+      (`vir_tarihi`, `vir_sayisi`). O alanlar dolu ve yeni tablo bossa
+      eski deger okunur; boylece once kaydedilmis calismalarda belge
+      sessizce bos cikmaz.
+    """
+    kunye = kunye or {}
+    yilli, yilsiz = {}, []
+    for yil, tarih, sayi in cizgili_satirlar(kunye, "vir_bilgileri", 3):
+        kayit = {"yil": yil, "tarih": tarih, "sayi": sayi}
+        if yil:
+            yilli[yil] = kayit
+        elif tarih or sayi:
+            yilsiz.append(kayit)
+
+    if not yilli and not yilsiz:
+        eski_tarih = str(kunye.get("vir_tarihi") or "").strip()
+        eski_sayi = str(kunye.get("vir_sayisi") or "").strip()
+        if eski_tarih or eski_sayi:
+            yilsiz.append({"yil": "", "tarih": eski_tarih, "sayi": eski_sayi})
+
+    if yillar is None:
+        return [yilli[k] for k in sorted(yilli)] + yilsiz
+
+    sonuc = []
+    for sira, y in enumerate(sorted(yillar)):
+        kayit = yilli.get(str(y))
+        if kayit is None:
+            kayit = yilsiz[sira] if sira < len(yilsiz) else {}
+        sonuc.append({"yil": str(y),
+                      "tarih": kayit.get("tarih") or "",
+                      "sayi": kayit.get("sayi") or ""})
+    return sonuc
 
 
 def kurum_mu(kunye):

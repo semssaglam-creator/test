@@ -43,9 +43,15 @@ Degerlendirme Komisyonunun mutalaasiyla savciliga bildirilir.
 - VSR **tarhiyat onermez.** Onerilen tarhiyat ebeveyn rapordadir; VSR onu
   yalnizca V. bolumdeki tabloda anar (etkin pismanlik, VUK gecici 34).
 - VSR **ayri istenmez.** Sahte belge raporu ya da duzeltme kabul raporu
-  indirilirken, `gerekli_mi(calisma, yil=y)` dogru donen her yil icin
-  uretilip ayni pakete konur. Yeni bir rapor turu eklerseniz ayni seyi
-  yapin; mufettisin ikinci bir dugmeye basmasi gerekmesin.
+  indirilirken, `gerekli_mi(calisma)` dogru donuyorsa uretilip ayni pakete
+  konur. Yeni bir rapor turu eklerseniz ayni seyi yapin; mufettisin ikinci
+  bir dugmeye basmasi gerekmesin.
+- VSR **butun inceleme donemi icin TEK duzenlenir**, tarhiyat raporu gibi
+  yil yil DEGIL. Yillar raporun icinde: atiflar cogullasir ve V. bolumdeki
+  tablo her yil icin bir satir acar. Her satirin vergi/ceza tutari O YILIN
+  verisinden hesaplanir (`_yil_tutarlari`); dosya toplamini her satira
+  yazmak cezayi yil sayisi kadar buyutur. Kunyedeki "Tarhiyat oneren
+  rapor(lar)" alani bu yuzden yil-tarih-sayi satir tablosudur.
 
 **Fail**, kurumlarda kanuni temsilci, gercek kiside mukellefin kendisidir
 (`suc_duyurusu_hedefi`). Hapis cezasi tuzel kisiye uygulanamaz; "mukellef

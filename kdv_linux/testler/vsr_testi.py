@@ -9,10 +9,15 @@ hallerde URETILDIGI ve hangi hallerde URETILMEDIGI:
 
   - sahte belgeyi BILEREK kullanma isaretli -> uretilir
   - BILMEDEN kullanma -> uretilmez (306 Sira No'lu Teblig; suc yoktur)
-  - cok yilli dosyada -> yalnizca bilerek kullanmanin oldugu yil icin
+  - cok yilli dosyada -> yine TEK rapor; yillar V. bolumdeki tabloda yil yil
+    satirlanir ve atiflar cogullasir ("Vergi Inceleme Raporlarinda")
   - duzeltme kabul raporunda (bilerek) -> uretilir, ama tarh edilecek vergi
     yoktur ve ceza duzeltme uzerine kesilen yarim katin UC KATA tamamlanmis
     halidir
+
+Tek rapor olmasi mufettisin karari (2026-10-09): tarhiyat raporu yil yil
+duzenlenir, VSR butun donem icin tek. Ilk surum yil yil ayri rapor
+uretiyordu, yanlisti - bu yuzden "kac belge uretildigi" burada denetleniyor.
 
 Ayrica daha once uretilen metinde gorulen dilbilgisi kusurlarini kolluyor;
 bunlar `%s` kaliplarina yanlis ek secilmesinden dogmustu ve belgede
@@ -116,7 +121,10 @@ def ornek(kurum=True, bilerek=True, duzeltme=False, iki_yil=False):
                   "kanuni_temsilci": "MEHMET DEMİR",
                   "temsilci_tckn": "11111111110",
                   "mukellef_tckn": "22222222220",
-                  "vir_tarihi": "20.10.2025", "vir_sayisi": "2025-[2013]/72",
+                  # Tarhiyat raporu yil yil duzenlenir; her yilin tarih ve
+                  # sayisi ayri satirda girilir.
+                  "vir_bilgileri": "2020 | 20.10.2025 | 2025-[2013]/72"
+                  + ("\n2021 | 25.10.2025 | 2025-[2013]/80" if iki_yil else ""),
                   "vsr_savcilik": "Adana", "fail_baba_anne": "Ali - Ayşe",
                   "fail_dogum_yeri": "ADANA",
                   "fail_dogum_tarihi": "05.04.1983"},
@@ -143,19 +151,22 @@ print("\n1) Sahte belge raporu istenirken")
 h = istekci()
 c = ornek(bilerek=True)
 _belgeler, _inceleme, vsr = h._rapor_hazirla({"calisma": c})
-denetle([y for y, _ in vsr] == [2020], "bilerek kullanmada VSR üretiliyor")
+denetle(vsr is not None, "bilerek kullanmada VSR üretiliyor")
 h._rapor_gonder({"calisma": c})
 ad, tur, govde = h.gonderilen[-1]
 icerik = paket_icerigi(govde) if tur == "application/zip" else [ad]
 denetle(any("Vergi_suclari_raporu" in n for n in icerik),
         "indirilen pakette VSR dosyası var")
 denetle("VSR" in ad, "paket adı VSR içerdiğini söylüyor")
+denetle(not any(n.startswith("2020_") and "Vergi_suclari" in n
+                for n in icerik),
+        "VSR dosya adında yıl yok (tek rapor)")
 
-metin = vsr[0][1].duz_metin()
+metin = vsr.duz_metin()
 denetle("kurumun hakkında" not in metin,
         "“hakkında” yalın ad ile kullanılıyor (ilgi eki fazla değil)")
-denetle("Vergi İnceleme Raporu mükellefin" not in metin
-        and "Vergi İnceleme Raporunda mükellefin bilerek sahte belge "
+denetle("Vergi İnceleme Raporu mükellef" not in metin
+        and "Vergi İnceleme Raporunda mükellef kurumun bilerek sahte belge "
             "kullandığı" in metin,
         "rapora atıf bulunma hâlinde (“Raporunda”)")
 denetle("Vergi İnceleme Raporu ayrıntılı" not in metin,
@@ -176,33 +187,58 @@ print("\n2) Bilmeden kullanmada")
 h = istekci()
 c = ornek(bilerek=False)
 _b, _i, vsr = h._rapor_hazirla({"calisma": c})
-denetle(vsr == [], "VSR üretilmiyor")
+denetle(vsr is None, "VSR üretilmiyor")
 
 print("\n3) Gerçek kişi mükellefte")
 h = istekci()
 c = ornek(kurum=False, bilerek=True)
 _b, _i, vsr = h._rapor_hazirla({"calisma": c})
-denetle(len(vsr) == 1, "VSR üretiliyor")
-m = vsr[0][1].duz_metin()
+denetle(vsr is not None, "VSR üretiliyor")
+m = vsr.duz_metin()
 denetle("kanuni temsilci" not in m, "kanuni temsilciden söz edilmiyor")
 denetle("Dolayısıyla mükellef hakkında" in m,
         "ceza mükellefin kendisi hakkında isteniyor")
 
-print("\n4) İki yıllı dosyada")
+print("\n4) İki yıllı dosyada TEK VSR")
 h = istekci()
 c = ornek(bilerek=True, iki_yil=True)
-belgeler, _i, vsr = h._rapor_hazirla({"calisma": c})
-denetle([y for y, _ in belgeler] == [2020, 2021], "her yıl için rapor var")
-denetle([y for y, _ in vsr] == [2020],
-        "VSR yalnızca bilerek kullanmanın olduğu yıl için üretiliyor")
+belgeler, inceleme, vsr = h._rapor_hazirla({"calisma": c})
+denetle([y for y, _ in belgeler] == [2020, 2021],
+        "tarhiyat raporu her yıl için ayrı")
+denetle(vsr is not None, "VSR üretiliyor")
+h._rapor_gonder({"calisma": c})
+ad, tur, govde = h.gonderilen[-1]
+icerik = paket_icerigi(govde)
+denetle(sum(1 for n in icerik if "Vergi_suclari_raporu" in n) == 1,
+        "pakette TEK VSR var, yıl yıl değil")
+
+m = vsr.duz_metin()
+denetle("2020 ve 2021 hesap dönemleri" in m,
+        "giriş bölümü iki yılı birlikte anıyor")
+denetle("Vergi İnceleme Raporları" in m,
+        "iki rapora atıf çoğul yazılıyor (“Raporları”)")
+denetle("Vergi İnceleme Raporlarında" in m, "çoğul atıf bulunma hâlinde")
+denetle("2025-[2013]/72" in m and "2025-[2013]/80" in m,
+        "her yılın rapor sayısı metinde geçiyor")
+denetle("Söz konusu raporlarda" in m, "“söz konusu raporlarda” çoğul")
+denetle("2025-[2013]/72 sayılı, 25.10.2025 tarih" in m,
+        "raporlar virgülle sıralanıyor (“sayılı ve ... tarih ve” değil)")
+# V. bolumdeki tablo yil yil satir acmali ve TOPLAM satiri tasimali.
+tablo = [s for s in m.strip().split("\n") if "\tKDV\t" in s]
+denetle(len(tablo) == 2, "tablo iki yıl için iki satır açıyor")
+denetle(tablo[0].startswith("20.10.2025\t2025-[2013]/72\t2020")
+        and tablo[1].startswith("25.10.2025\t2025-[2013]/80\t2021"),
+        "her satır o yılın raporunun tarih/sayısını taşıyor")
+denetle("TOPLAM" in m.strip().split("\n")[-1],
+        "çok yıllı tabloda TOPLAM satırı var")
 
 # ---------------------------------------------------- 5) duzeltme kabul raporu
 print("\n5) Düzeltme kabul raporu istenirken")
 h = istekci()
 c = ornek(bilerek=True, duzeltme=True)
 _b, _i, bilerek, vsr = h._kabul_raporu_hazirla({"calisma": c})
-denetle(bilerek and len(vsr) == 1, "bilerek kullanmada VSR üretiliyor")
-m = vsr[0][1].duz_metin()
+denetle(bilerek and vsr is not None, "bilerek kullanmada VSR üretiliyor")
+m = vsr.duz_metin()
 denetle("düzeltme beyannameleri ile katma değer vergisi indirimlerinden "
         "çıkarılmış" in m, "tutarların beyandan çıkarıldığı yazılıyor")
 denetle("[ceza tutarı]" in m,
@@ -212,25 +248,74 @@ denetle("[oran]" not in m, "oran düzeltme ölçütünden hesaplanıyor")
 h = istekci()
 c = ornek(bilerek=False, duzeltme=True)
 _b, _i, bilerek, vsr = h._kabul_raporu_hazirla({"calisma": c})
-denetle(not bilerek and vsr == [],
+denetle(not bilerek and vsr is None,
         "bilmeden kullanmada (vergi tekniği raporu) VSR üretilmiyor")
 
 print("\n6) Düzeltmede tutarlar")
 c = ornek(bilerek=True, duzeltme=True)
 sonuc, _bulgular = W._hesapla(c)
 belge = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
-                     sonuc, c, V.FIIL_SAHTE_BELGE, 2020, {"ziya": 20000.0})
+                     sonuc, c, V.FIIL_SAHTE_BELGE,
+                     {"yil_ziyasi": {2020: 20000.0}})
 son = belge.duz_metin().strip().split("\n")[-1]
 denetle("\t0,00\t" in son, "tarh edilecek vergi 0,00 yazılıyor")
 denetle("60.000,00" in son, "ceza 3 kat (20.000 x 3) yazılıyor")
 
-print("\n7) İbraz etmeme halinde")
+# Cok yilli duzeltmede her satirin cezasi O YILIN ziyasindan gelmeli;
+# dosya toplamini her satira yazmak cezayi yil sayisi kadar buyutur.
+c = ornek(bilerek=True, duzeltme=True, iki_yil=True)
+sonuc, _bulgular = W._hesapla(c)
+belge = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
+                     sonuc, c, V.FIIL_SAHTE_BELGE,
+                     {"yil_ziyasi": {2020: 20000.0, 2021: 10000.0}})
+tablo = [s for s in belge.duz_metin().strip().split("\n") if "\tKDV\t" in s]
+denetle(len(tablo) == 2 and "60.000,00" in tablo[0]
+        and "30.000,00" in tablo[1],
+        "her yılın cezası o yılın ziyasından hesaplanıyor")
+denetle("90.000,00" in belge.duz_metin().strip().split("\n")[-1],
+        "TOPLAM satırı yılların cezasını topluyor")
+
+print("\n7) Künyedeki rapor bilgileri")
+# Tek yilli dosyada yil hucresi bos birakilabilmeli.
+c = ornek(bilerek=True)
+c["kunye"]["vir_bilgileri"] = " | 20.10.2025 | 2025-[2013]/72"
+sonuc, _bulgular = W._hesapla(c)
+m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
+                 sonuc, c).duz_metin()
+denetle("20.10.2025 tarih ve 2025-[2013]/72 sayılı" in m,
+        "yıl hücresi boş bırakılan satır tek yıla bağlanıyor")
+tablo = [s for s in m.strip().split("\n") if "\tKDV\t" in s]
+denetle(len(tablo) == 1 and "\t2020\t" in tablo[0],
+        "tabloda yıl künyeden değil incelemeden geliyor")
+
+# VSR'nin ilk surumunde tarih ve sayi tek alanda tutuluyordu; once
+# kaydedilmis calismalarda belge sessizce bos cikmamali.
+c = ornek(bilerek=True)
+del c["kunye"]["vir_bilgileri"]
+c["kunye"]["vir_tarihi"] = "20.10.2025"
+c["kunye"]["vir_sayisi"] = "2025-[2013]/72"
+sonuc, _bulgular = W._hesapla(c)
+m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
+                 sonuc, c).duz_metin()
+denetle("20.10.2025 tarih ve 2025-[2013]/72 sayılı" in m,
+        "eski tek alanlı biçim de okunuyor")
+
+# Hic girilmemisse kirmizi yer tutucu kalmali, sessizce bos gecmemeli.
+c = ornek(bilerek=True)
+del c["kunye"]["vir_bilgileri"]
+sonuc, _bulgular = W._hesapla(c)
+m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
+                 sonuc, c).duz_metin()
+denetle("[rapor tarihi] tarih ve [rapor sayısı] sayılı" in m,
+        "girilmemiş rapor bilgisi kırmızı yer tutucu bırakıyor")
+
+print("\n8) İbraz etmeme halinde")
 c = ornek(bilerek=True)
 c["kunye"]["defter_ibraz"] = "İbraz edilmedi"
 c["kunye"]["defter_tasdik_makami"] = "Adana 7. Noterliği tasdik kayıtları"
 sonuc, _bulgular = W._hesapla(c)
 belge = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
-                     sonuc, c, V.FIIL_IBRAZ_ETMEME, 2020)
+                     sonuc, c, V.FIIL_IBRAZ_ETMEME)
 m = belge.duz_metin()
 denetle(V.gerekli_mi(c, V.FIIL_IBRAZ_ETMEME), "ibraz etmeme VSR'yi gerektiriyor")
 denetle("359 uncu maddesinin a bendinde" in m, "359/a bendine atıf yapılıyor")
