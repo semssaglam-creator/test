@@ -621,8 +621,15 @@ class Istekci(BaseHTTPRequestHandler):
         Tutanak butun inceleme donemi icin tek duzenlenirken rapor her yil
         icin ayri duzenlenir. Bu yuzden burada (yil, belge) ciftlerinden olusan
         bir liste doner; tek yil incelenmisse listede tek eleman bulunur.
+
+        Ucuncu dondurulen deger, ayni yapidaki vergi suclari raporu
+        listesidir: sahte belgeyi BILEREK kullanma tespit edilen yillarda,
+        tarhiyat oneren rapora EK OLARAK bir VSR duzenlenmesi VUK 367
+        geregince zorunludur, bu yuzden rapor istendiginde o da birlikte
+        uretilir. Bilerek kullanma yoksa liste bostur.
         """
         from . import sahte_belge_raporu
+        from . import vergi_sucu_raporu
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
@@ -637,7 +644,13 @@ class Istekci(BaseHTTPRequestHandler):
                                               duzeltme, y, karsilastirmalar,
                                               dokumler))
             for y in rapor_yillari]
-        return belgeler, inceleme
+        vsr_belgeler = [
+            (y, vergi_sucu_raporu.rapor_uret(
+                inceleme, calisma.get("kunye"), yillar, sonuc, calisma,
+                vergi_sucu_raporu.FIIL_SAHTE_BELGE, y))
+            for y in rapor_yillari
+            if vergi_sucu_raporu.gerekli_mi(calisma, yil=y)]
+        return belgeler, inceleme, vsr_belgeler
 
     def _beyan_dokumleri(self, calisma):
         """Raporun III. bolumu icin ilk beyan ve son hal dokumleri."""
@@ -676,7 +689,7 @@ class Istekci(BaseHTTPRequestHandler):
 
     def _rapor_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()
-        belgeler, _inceleme = self._rapor_hazirla(veri)
+        belgeler, _inceleme, vsr_belgeler = self._rapor_hazirla(veri)
         kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
         # Birden cok yil varsa onizleme raporlari alt alta gosterir; hangi
         # yila ait olduklari araya konan ayrac satiriyla belli olur.
@@ -686,14 +699,26 @@ class Istekci(BaseHTTPRequestHandler):
                 parcalar.append("=" * 30 + (" %s YILI RAPORU " % yil)
                                 + "=" * 30 + "\n")
             parcalar.append(belge.duz_metin())
+        # VSR ayri bir belgedir; onizlemede de ayrac ile ayrilir ki indirilen
+        # paketteki ikinci dosyanin ne oldugu ekranda da gorunsun.
+        for yil, belge in vsr_belgeler:
+            parcalar.append(
+                "=" * 30
+                + (" %s VERGİ SUÇLARI RAPORU " % yil if yil
+                   else " VERGİ SUÇLARI RAPORU ")
+                + "=" * 30 + "\n")
+            parcalar.append(belge.duz_metin())
         return {"metin": "\n".join(parcalar),
                 "eksikler": ik.eksik_alanlar(kunye)}
 
     def _rapor_gonder(self, veri):
         from . import sahte_belge_raporu
-        belgeler, inceleme = self._rapor_hazirla(veri)
+        from . import vergi_sucu_raporu
+        belgeler, inceleme, vsr_belgeler = self._rapor_hazirla(veri)
         dosyalar = [(sahte_belge_raporu.dosya_adi(inceleme, yil), belge.bayt())
                     for yil, belge in belgeler]
+        dosyalar += [(vergi_sucu_raporu.dosya_adi(inceleme, yil), belge.bayt())
+                     for yil, belge in vsr_belgeler]
         self._ciktilara_yaz(dosyalar)
         if len(dosyalar) == 1:
             ad, govde = dosyalar[0]
@@ -707,7 +732,9 @@ class Istekci(BaseHTTPRequestHandler):
         with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
             for ad, govde in dosyalar:
                 z.writestr(ad, govde)
-        self._belge_gonder(paket.getvalue(), sahte_belge_raporu.paket_adi(inceleme),
+        self._belge_gonder(paket.getvalue(),
+                           sahte_belge_raporu.paket_adi(inceleme,
+                                                        bool(vsr_belgeler)),
                            "application/zip")
 
     def _kabul_raporu_hazirla(self, veri):
@@ -721,6 +748,7 @@ class Istekci(BaseHTTPRequestHandler):
         kullaniciya bildirilir.
         """
         from . import duzeltme_kabul_raporu
+        from . import vergi_sucu_raporu
         faturalar = _fatura_modulu()
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
@@ -742,7 +770,17 @@ class Istekci(BaseHTTPRequestHandler):
                 bulgular, karsilastirmalar, y, ziya))
             for y in (duzeltme_kabul_raporu.rapor_yillari(sonuc) or [None])]
         bilerek = bool(faturalar.bilerek_kullananlar(satirlar))
-        return belgeler, inceleme, bilerek
+        # Bilerek kullanmada tarhiyat yoktur ama fiil VUK 359/b kapsamindadir;
+        # kesilmis cezanin uc kata tamamlanmasi istenirken ayrica suc duyurusu
+        # da gerekir, bu yuzden VIR'in yanina VSR de uretilir. Bilmeden
+        # kullanmada (vergi tekniği raporu) suc yoktur, VSR uretilmez.
+        vsr_belgeler = [
+            (y, vergi_sucu_raporu.rapor_uret(
+                inceleme, calisma.get("kunye"), yillar, sonuc, calisma,
+                vergi_sucu_raporu.FIIL_SAHTE_BELGE, y, {"ziya": ziya}))
+            for y in (duzeltme_kabul_raporu.rapor_yillari(sonuc) or [None])
+            if vergi_sucu_raporu.gerekli_mi(calisma, yil=y)]
+        return belgeler, inceleme, bilerek, vsr_belgeler
 
     def _duzeltmeyle_dogan_vergi(self, calisma):
         """Duzeltme beyannameleriyle odenecek hale gelen KDV.
@@ -762,7 +800,8 @@ class Istekci(BaseHTTPRequestHandler):
 
     def _kabul_raporu_onizleme(self, veri):
         ik, _tutanak = _belge_modulleri()
-        belgeler, _inceleme, _bilerek = self._kabul_raporu_hazirla(veri)
+        belgeler, _inceleme, _bilerek, vsr_belgeler = \
+            self._kabul_raporu_hazirla(veri)
         kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
         parcalar = []
         for yil, belge in belgeler:
@@ -770,14 +809,25 @@ class Istekci(BaseHTTPRequestHandler):
                 parcalar.append("=" * 30 + (" %s YILI RAPORU " % yil)
                                 + "=" * 30 + "\n")
             parcalar.append(belge.duz_metin())
+        for yil, belge in vsr_belgeler:
+            parcalar.append(
+                "=" * 30
+                + (" %s VERGİ SUÇLARI RAPORU " % yil if yil
+                   else " VERGİ SUÇLARI RAPORU ")
+                + "=" * 30 + "\n")
+            parcalar.append(belge.duz_metin())
         return {"metin": "\n".join(parcalar),
                 "eksikler": ik.eksik_alanlar(kunye)}
 
     def _kabul_raporu_gonder(self, veri):
         from . import duzeltme_kabul_raporu as R
-        belgeler, inceleme, bilerek = self._kabul_raporu_hazirla(veri)
+        from . import vergi_sucu_raporu
+        belgeler, inceleme, bilerek, vsr_belgeler = \
+            self._kabul_raporu_hazirla(veri)
         dosyalar = [(R.dosya_adi(inceleme, yil, bilerek), belge.bayt())
                     for yil, belge in belgeler]
+        dosyalar += [(vergi_sucu_raporu.dosya_adi(inceleme, yil), belge.bayt())
+                     for yil, belge in vsr_belgeler]
         self._ciktilara_yaz(dosyalar)
         if len(dosyalar) == 1:
             ad, govde = dosyalar[0]
@@ -789,7 +839,8 @@ class Istekci(BaseHTTPRequestHandler):
         with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
             for ad, govde in dosyalar:
                 z.writestr(ad, govde)
-        self._belge_gonder(paket.getvalue(), R.paket_adi(inceleme, bilerek),
+        self._belge_gonder(paket.getvalue(),
+                           R.paket_adi(inceleme, bilerek, bool(vsr_belgeler)),
                            "application/zip")
 
     def _ciktilara_yaz(self, dosyalar):

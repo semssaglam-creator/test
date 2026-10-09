@@ -272,6 +272,41 @@ BOLUMLER = [
                       "hesaplanıp cümleye kendiliğinden eklenir."},
         ],
     },
+    {
+        "kod": "vergi_sucu",
+        "baslik": "Vergi Suçları Raporu",
+        "alanlar": [
+            {"kod": "vir_tarihi", "etiket": "Tarhiyat öneren raporun tarihi",
+             "tur": "tarih",
+             "ipucu": "Vergi suçları raporu, tarhiyatı öneren vergi inceleme "
+                      "raporuna her bölümünde atıf yapar ve sonuç tablosunda "
+                      "onu anar. Boş bırakılırsa belgede kırmızı yer tutucu "
+                      "kalır."},
+            {"kod": "vir_sayisi", "etiket": "Tarhiyat öneren raporun sayısı",
+             "tur": "metin", "ipucu": "Örn: 2025-[2013]/72"},
+            {"kod": "vsr_savcilik", "etiket": "Yetkili Cumhuriyet Başsavcılığı",
+             "tur": "metin",
+             "ipucu": "Yalnızca yer adını yazmanız yeter: “Adana” yazılırsa "
+                      "belgede “Adana Cumhuriyet Başsavcılığına” biçiminde "
+                      "geçer."},
+            {"kod": "fail_baba_anne", "etiket": "Failin baba - anne adı",
+             "tur": "metin",
+             "ipucu": "Suçun faili kurumlarda KANUNİ TEMSİLCİ, gerçek kişi "
+                      "mükellefte mükellefin kendisidir. Bu bölümdeki kimlik "
+                      "bilgileri raporun IV. bölümündeki tabloya girer."},
+            {"kod": "fail_dogum_yeri", "etiket": "Failin doğum yeri", "tur": "metin"},
+            {"kod": "fail_dogum_tarihi", "etiket": "Failin doğum tarihi", "tur": "tarih"},
+            {"kod": "fail_adresi", "etiket": "Failin adresi", "tur": "uzun",
+             "ipucu": "Boş bırakılırsa faaliyet adresi kullanılır."},
+            {"kod": "defter_tasdik_makami",
+             "etiket": "Defter tasdik makamı (ibraz etmeme raporunda)",
+             "tur": "metin",
+             "ipucu": "Defter ve belge ibraz etmeme nedeniyle düzenlenen vergi "
+                      "suçları raporunda, defterlerin varlığının hangi tasdik "
+                      "kayıtlarıyla sabit olduğu yazılır. Örn: Mersin 17. "
+                      "Noterliği tasdik kayıtları."},
+        ],
+    },
 ]
 
 # Taslagin anlamli olmasi icin gercekten gereken alanlar. Eksikse belge yine

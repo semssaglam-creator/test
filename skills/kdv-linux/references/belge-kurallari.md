@@ -33,6 +33,32 @@ edilecek vergi iki halde de yoktur, ama duzenlenecek belge farklidir:
 
 Baslik ve dosya adi da tura gore degisir (`belge_turu`, `dosya_adi`).
 
+## Vergi Suclari Raporu (VSR) — ayri belge, elle istenmez
+
+VUK 359 kapsamindaki fiil tespit edildiginde, tarhiyat oneren rapordan AYRI
+bir vergi suclari raporu duzenlenir ve VUK 367 geregince Rapor
+Degerlendirme Komisyonunun mutalaasiyla savciliga bildirilir.
+`vergi_sucu_raporu.py` bunu uretir. Iki seyi karistirmayin:
+
+- VSR **tarhiyat onermez.** Onerilen tarhiyat ebeveyn rapordadir; VSR onu
+  yalnizca V. bolumdeki tabloda anar (etkin pismanlik, VUK gecici 34).
+- VSR **ayri istenmez.** Sahte belge raporu ya da duzeltme kabul raporu
+  indirilirken, `gerekli_mi(calisma, yil=y)` dogru donen her yil icin
+  uretilip ayni pakete konur. Yeni bir rapor turu eklerseniz ayni seyi
+  yapin; mufettisin ikinci bir dugmeye basmasi gerekmesin.
+
+**Fail**, kurumlarda kanuni temsilci, gercek kiside mukellefin kendisidir
+(`suc_duyurusu_hedefi`). Hapis cezasi tuzel kisiye uygulanamaz; "mukellef
+hakkinda ceza" yazmak faili yanlis gosterir.
+
+**Duzeltme kabul halinde** tutarlar farklidir: tarh edilecek vergi 0,00,
+ceza ise duzeltme uzerine kesilen yarim katin uc kata tamamlanmis hali.
+`rapor_uret(..., kabul={"ziya": tutar})` bu hali kurar.
+
+**359/a (defter-belge gizleme) madde metni kirmizi yer tutucudur** ve bu
+KASITLIDIR: bendin dogrulanmis metni elde yok, uydurulmadi. Birincil
+kaynaktan dogrulanmadan yazmayin.
+
 ## Cezanin matrahi
 
 Faturalardaki KDV toplami **degildir**. Duzeltme indirimi cikarir, ama

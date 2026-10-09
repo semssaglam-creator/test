@@ -520,7 +520,8 @@ def dosya_adi(inceleme, yil=None, bilerek=False):
     return ("%s_taslagi_%s.docx" % (_on_ek(bilerek), ad)).replace(" ", "_")
 
 
-def paket_adi(inceleme, bilerek=False):
+def paket_adi(inceleme, bilerek=False, vsr=False):
     ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
                  if c.isalnum() or c in " -_").strip() or "rapor"
-    return ("%s_%s.zip" % (_on_ek(bilerek), ad)).replace(" ", "_")
+    on = _on_ek(bilerek) + ("_ve_VSR" if vsr else "")
+    return ("%s_%s.zip" % (on, ad)).replace(" ", "_")

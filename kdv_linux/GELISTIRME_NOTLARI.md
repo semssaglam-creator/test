@@ -663,6 +663,55 @@ oturumda buradan devam edilir.
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
       paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
       yazılıyor.
+- [x] **Vergi Suçları Raporu (VSR) eklendi.** (`app/vergi_sucu_raporu.py`)
+      Örnek rapordan çıkarılan yapı: I-GİRİŞ, II-YAPILAN TESPİTLER,
+      III-SUÇUN UNSURLARI (3.1 kanuni / 3.2 maddi / 3.3 manevi), IV-SUÇUN
+      FAİLİ (kimlik tablosu), V-SONUÇ (üç numaralı madde + tarhiyat önerisi
+      tablosu). Rapor **kendisi tarhiyat önermez**; tarhiyatı öneren raporu
+      V. bölümdeki tabloda anar, etkin pişmanlık (VUK geçici 34) için gereken
+      bilgiler de o tabloyla verilir.
+
+      **Elle istenmesi gerekmiyor:** sahte belge raporu ya da düzeltme kabul
+      raporu indirilirken, "Bilerek kullanma" işaretli her yıl için VSR de
+      üretilip pakete konuyor (paket adı "..._ve_VSR_..." olur). Bilmeden
+      kullanmada üretilmiyor — 306 Sıra No'lu Tebliğ gereği suç yok. Çok
+      yıllı dosyada yalnızca bilerek kullanmanın bulunduğu yıl için çıkıyor.
+
+      Fail ayrımı: kurumlarda kanuni temsilci, gerçek kişide mükellefin
+      kendisi; hapis cezası tüzel kişiye uygulanamadığı için IV. bölümdeki
+      kimlik tablosu ve ceza cümlesi buna göre kuruluyor.
+
+      Düzeltme kabul raporuna eklenen VSR'de tutarlar farklı: tarh edilecek
+      vergi 0,00 (tutar beyandan çıkarılmıştır), ceza ise düzeltme üzerine
+      kesilen yarım katın **üç kata tamamlanmış** hâli. Oran da ebeveyn
+      raporla aynı ölçütten (`duzeltme_kabul_orani`) alınıyor; sahte belge
+      ölçütü o dosyada sıfır döner.
+
+      Künyeye "Vergi Suçları Raporu" bölümü eklendi: tarhiyat öneren raporun
+      tarih/sayısı, yetkili Cumhuriyet Başsavcılığı (yalnızca yer adı yeter),
+      failin baba-anne adı / doğum yeri / doğum tarihi / adresi ve ibraz
+      etmeme raporu için defter tasdik makamı. Hiçbiri zorunlu alan değil;
+      boş kalanlar belgede kırmızı yer tutucu olur.
+
+      Gerileme denetimi: `testler/vsr_testi.py` (30 denetim). Hem üretilip
+      üretilmediğini hem metindeki ek hatalarını kolluyor; üç mutasyonla
+      gerçekten tuttuğu doğrulandı.
+
+---
+
+## VSR'de bekleyenler
+
+- [ ] **VUK 359/a madde metni eksik.** Defter ve belge ibraz etmeme (gizleme)
+      hâlinde VSR üretiliyor ama 3.1'deki madde metni **kasıtlı olarak
+      kırmızı yer tutucu**: bendin birincil kaynaktan doğrulanmış metni
+      elimizde yok, uydurulmadı. Müfettişten birebir metin ya da bir ibraz
+      etmeme VSR örneği gelince yazılacak.
+- [ ] **"Defter ve belge ibraz etmeme raporu" (ebeveyn rapor) yok.** VSR'nin
+      ibraz etmeme dalı hazır (`FIIL_IBRAZ_ETMEME`), ama ekleneceği tarhiyat
+      öneren rapor henüz yazılmadı. O rapor yazılınca VSR aynı yolla —
+      indirme paketine eklenerek — bağlanacak. Tetikleyici de hazır:
+      künyedeki defter ibraz durumu "İbraz edilmedi" ise
+      `gerekli_mi(..., FIIL_IBRAZ_ETMEME)` doğru döner.
 
 ---
 

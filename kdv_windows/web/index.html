@@ -2557,7 +2557,9 @@ $("raporIndir").addEventListener("click", async () => {
   try {
     await belgeIndir("/api/sahte_belge_raporu", belgeDosyaAdi("Sahte_belge_raporu"),
                      "Rapor taslağı indirildi. İncelenen her yıl için ayrı rapor " +
-                     "üretilir; kopyaları ciktilar klasörüne bırakıldı.");
+                     "üretilir; bilerek kullanma işaretlenen yıllar için ayrıca " +
+                     "vergi suçları raporu (VSR) eklenir. Kopyaları ciktilar " +
+                     "klasörüne bırakıldı.");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 
@@ -2565,8 +2567,10 @@ $("kabulIndir").addEventListener("click", async () => {
   try {
     await belgeIndir("/api/duzeltme_kabul_raporu",
                      belgeDosyaAdi("Duzeltme_kabul_raporu"),
-                     "Düzeltme kabul raporu taslağı indirildi. Kopyası " +
-                     "ciktilar klasörüne bırakıldı.");
+                     "Düzeltme kabul raporu taslağı indirildi. Bilerek kullanma " +
+                     "işaretliyse vergi inceleme raporunun yanına vergi suçları " +
+                     "raporu (VSR) da eklenir. Kopyası ciktilar klasörüne " +
+                     "bırakıldı.");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 

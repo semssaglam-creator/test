@@ -1473,8 +1473,13 @@ def dosya_adi(inceleme, yil=None):
     return ("Sahte_belge_raporu_taslagi_%s.docx" % ad).replace(" ", "_")
 
 
-def paket_adi(inceleme):
-    """Birden cok yilin raporu tek dosyada gonderilirken kullanilan ad."""
+def paket_adi(inceleme, vsr=False):
+    """Birden cok belge tek dosyada gonderilirken kullanilan ad.
+
+    Paketin icinde vergi suclari raporu da varsa bu ad ile belirtilir;
+    aksi halde dosyayi acmadan icerigi anlasilmiyor.
+    """
     ad = "".join(c for c in (inceleme.get("ad_unvan") or "rapor")
                  if c.isalnum() or c in " -_").strip() or "rapor"
-    return ("Sahte_belge_raporlari_%s.zip" % ad).replace(" ", "_")
+    on = "Sahte_belge_raporu_ve_VSR" if vsr else "Sahte_belge_raporlari"
+    return ("%s_%s.zip" % (on, ad)).replace(" ", "_")

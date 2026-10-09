@@ -39,6 +39,7 @@ ust aciklamasini okuyun, hepsinde niye oyle yazildigi anlatilir.
 | `tutanak.py` | Tutanak taslagi. |
 | `sahte_belge_raporu.py` | Tarhiyatli sahte belge kullanma raporu. |
 | `duzeltme_kabul_raporu.py` | Tarhiyatsiz rapor (VTR / VIR ayrimi). |
+| `vergi_sucu_raporu.py` | Vergi Suclari Raporu (VUK 359). Tarhiyat ONERMEZ; yukaridaki iki rapordan biri indirilirken "bilerek kullanma" isaretli yillar icin kendiliginden pakete eklenir. |
 | `belge_docx.py` | Word uretimi; `Belge` sinifi, kirmizi yer tutucu. |
 | `excel_export.py` | Excel calisma kitabi cikti. |
 | `mevzuat.py` | Belgelerde gecen kanun metinleri. |

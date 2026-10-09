@@ -4,6 +4,12 @@ Bu klasör, indirilebilir **hazır paketleri** tutar. Kaynak koddan üretilirler
 (`kdv_linux/paketle.sh`, `kdv_windows/paketle.sh`); burada durmalarının tek
 sebebi, kalıcı bir indirme bağlantısı vermektir.
 
+**Bu paketlerdeki son değişiklik (2026-10-09):** Vergi Suçları Raporu (VSR)
+eklendi. Sahte belge raporu ya da düzeltme kabul raporu indirilirken,
+"Bilerek kullanma" işaretli yıllar için VSR de kendiliğinden üretilip
+pakete konuyor. Künyede yeni bir "Vergi Suçları Raporu" bölümü var
+(savcılık, failin kimlik bilgileri, tarhiyatı öneren raporun tarih/sayısı).
+
 ## Linux
 
     https://github.com/semssaglam-creator/test/raw/refs/heads/claude/dosya-gorunurlugu-3p8f9d/surumler/KDV_Inceleme_Calismasi_Linux.tar.gz
