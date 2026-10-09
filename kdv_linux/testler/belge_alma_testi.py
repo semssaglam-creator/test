@@ -384,6 +384,50 @@ esit(iki["yillar"][0]["ust_sinir"], 500000.0, "2022 üst sınırı")
 esit(iki["yillar"][1]["ust_sinir"], 1000000.0, "2023 üst sınırı")
 esit(iki["ham_toplam"], 20000.0, "iki yılın toplamı")
 
+# ------------------------------------------------- 8) belgedeki had tablosu
+print("\n8) Belgedeki had tablosu yıla daralıyor")
+# Rapor yil yil yaziliyor, kunyeye ise butun inceleme donemine ait sinirlar
+# bir arada giriliyor. Daraltma olmadan 2022 raporu 2023'un sinirlarini da
+# yaziyordu - sahada boyle cikti.
+from app import sahte_belge_raporu as R                              # noqa: E402
+from app.belge_docx import Belge                                     # noqa: E402
+
+UC_DONEM = ("01.01.2022 | 31.07.2022 | 500 | 190.000\n"
+            "01.08.2022 | 31.12.2022 | 1.000 | 500.000\n"
+            "01.01.2023 |  | 2.000 | 1.000.000")
+k = kunye(UC_DONEM)
+
+
+def had_tablosu(yillar):
+    b = Belge()
+    R._had_paragraflari(b, k, yillar)
+    return b.duz_metin()
+
+
+m2022 = had_tablosu([2022])
+denetle("01.01.2022 - 31.07.2022" in m2022 and "01.08.2022 - 31.12.2022" in m2022,
+        "2022 raporu 2022'nin iki sınır dönemini gösteriyor")
+denetle("01.01.2023" not in m2022 and "2.000,00" not in m2022,
+        "2022 raporu 2023'ün sınırlarını GÖSTERMİYOR")
+
+m2023 = had_tablosu([2023])
+denetle("01.01.2023 ve sonrası" in m2023, "2023 raporu kendi dönemini gösteriyor")
+denetle("31.07.2022" not in m2023 and "190.000,00" not in m2023,
+        "2023 raporu 2022'nin sınırlarını GÖSTERMİYOR")
+
+# Yil verilmezse (ya da bos liste) daraltma yapilmaz: butun donemler yazilir.
+hepsi = had_tablosu(None)
+denetle("31.07.2022" in hepsi and "01.01.2023" in hepsi,
+        "yıl verilmezse bütün sınır dönemleri yazılıyor")
+
+# Bir yili KISMEN kapsayan satir o yila girer: 01.06.2022-30.06.2023
+# araligindaki bir had, hem 2022 hem 2023 raporunda gorunmeli.
+k = kunye("01.06.2022 | 30.06.2023 | 500 | 190.000")
+denetle("01.06.2022 - 30.06.2023" in had_tablosu([2022]),
+        "iki yıla yayılan sınır dönemi ilk yılda görünüyor")
+denetle("01.06.2022 - 30.06.2023" in had_tablosu([2023]),
+        "iki yıla yayılan sınır dönemi ikinci yılda da görünüyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

@@ -271,7 +271,10 @@ def _belge_alma_usulsuzlugu(b, kunye, ouc, sira_no):
         b.paragraf("“%s”" % metin, girinti=1, italik=True)
     b.paragraf("hükmü yer almaktadır.", girinti=1)
 
-    _had_paragraflari(b, kunye)
+    # Had tablosu raporun KENDI yillarina daraltilir: rapor yil yil
+    # yazildigindan, 2022 raporunda 2023'un sinirlarini gostermek hem
+    # yaniltici hem gereksizdi.
+    _had_paragraflari(b, kunye, [o["yil"] for o in ouc["yillar"]])
 
     b.paragraf(
         "Raporun ileriki bölümlerinde açıklandığı üzere, %s bir kısım mal ve "
@@ -337,13 +340,21 @@ def _belge_alma_usulsuzlugu(b, kunye, ouc, sira_no):
         b.paragraf(cumle, girinti=1)
 
 
-def _had_paragraflari(b, kunye):
+def _had_paragraflari(b, kunye, yillar=None):
     """Kunyeye girilen sinir donemlerini belgeye yazar.
+
+    `yillar` verilirse tablo yalnizca o yillari kapsayan had satirlarini
+    gosterir. Kunyeye butun inceleme donemine ait sinirlar bir arada
+    girildiginden, daraltma olmadan 2022 raporu 2023'un sinirlarini da
+    yaziyordu.
 
     Oran kanunda yazili oldugu icin sabit; sinirlar girilmemisse cumle
     uydurulmaz, kirmizi yer tutucu kalir.
     """
     hadler = ik.belge_alma_hadleri(kunye)
+    if yillar:
+        hadler = [h for h in hadler
+                  if any(F.had_yili_kapsiyor(h, y) for y in yillar)]
     if not hadler:
         b.paragraf(
             "[Belge başına alt sınır ve bir takvim yılında kesilebilecek üst "

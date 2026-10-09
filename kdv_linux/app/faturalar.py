@@ -1030,7 +1030,7 @@ def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None):
         # olan sinir uygulanir. Tartismali bir hal cikarsa mufettis raporu
         # elle duzeltir.
         sinirlar = [h.get("ust_sinir") for h in hadler
-                    if h.get("ust_sinir") and _yil_kapsiyor(h, yil)]
+                    if h.get("ust_sinir") and had_yili_kapsiyor(h, yil)]
         ust = sinirlar[-1] if sinirlar else None
         yil_ozetleri.append({
             "yil": yil,
@@ -1057,8 +1057,12 @@ def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None):
     }
 
 
-def _yil_kapsiyor(had, yil):
-    """Had satiri verilen takvim yilinin herhangi bir gununu kapsiyor mu."""
+def had_yili_kapsiyor(had, yil):
+    """Had satiri verilen takvim yilinin herhangi bir gununu kapsiyor mu.
+
+    Rapor yil yil yazildigi icin belgeye yazilacak had tablosu da o yila
+    daraltilmalidir; `sahte_belge_raporu` bunu buradan soruyor.
+    """
     bas, bit = had.get("baslangic"), had.get("bitis")
     if bas and bas[0] > yil:
         return False

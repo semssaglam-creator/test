@@ -754,10 +754,16 @@ oturumda buradan devam edilir.
       sınırlardır, müfettiş binlik ayraçla yazar — tek noktadan sonra tam üç
       hane varsa nokta binlik ayracı sayılıyor.
 
+      Belgedeki had tablosu **raporun kendi yıllarına daraltılıyor.** Künyeye
+      bütün inceleme dönemine ait sınırlar bir arada girildiğinden, daraltma
+      olmadan 2022 raporu 2023'ün sınırlarını da yazıyordu (sahada böyle
+      çıktı, 2026-10-09). Bir yılı kısmen kapsayan sınır dönemi o yıla girer.
+
       Gerileme denetimi: `testler/belge_alma_testi.py`. Çapası müfettişin
       örnek raporunun **131 satırının tamamı**: her satırın cezası ve iki
       TOPLAM rakamı (2.352.614,70 ve 236.943,99) birebir tutuyor. 01.08.2022
-      geçişi gerçek tarihler üzerinde 77./78. satırlarda doğrulanıyor.
+      geçişi gerçek tarihler üzerinde 77./78. satırlarda doğrulanıyor. Had
+      tablosunun yıla daralması ayrıca kolluyor.
 
 ---
 
