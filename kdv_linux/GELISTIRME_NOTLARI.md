@@ -714,6 +714,65 @@ oturumda buradan devam edilir.
       satırlarını ve metindeki ek hatalarını kolluyor; mutasyonlarla
       gerçekten tuttuğu doğrulandı.
 
+- [x] **Belge alma özel usulsüzlüğü (VUK 353/1) eklendi.** Mükellef, gerçekten
+      aldığı mal ve hizmeti sahte faturayla belgelendirdiğinde "alınması icap
+      eden fatura"yı almamış olur. Fiil mükerrer 355'teki tevsik etmemeden
+      **ayrıdır** ve aynı raporda yan yana durabilir:
+      - muk. 355 → ödeme banka/PTT belgesiyle tevsik edilmemiş → %5
+      - 353/1 → gerçek fatura hiç alınmamış → %10
+
+      Rapordaki yeri: II/A altında ikinci alt başlık ("2- ... 353/1. Maddesine
+      Göre Gerçek Fatura Almama Fiili"). Tevsik bölümü kapalıysa "1-" olur;
+      numara sabit yazılmıyor, sonuç bölümündeki atıf da buna göre kayıyor.
+
+      **Ceza oranı kanunda yazılı olduğu için sabit (%10); alt ve üst sınırlar
+      künyeden TARİH ARALIKLI alınıyor.** Yıl bazlı tek bir alan yetmiyor:
+      2022'de 7417 sayılı Kanunla sınırlar yıl İÇİNDE değişti (01.08.2022'den
+      itibaren 500 → 1.000 ve 190.000 → 500.000). Künyedeki "Belge alma cezası
+      hadleri" tablosu başlangıç | bitiş | alt sınır | yıllık üst sınır
+      alıyor; bitiş boş bırakılırsa "o tarihten sonrası" demek. Bir faturanın
+      tarihi hiçbir satıra denk gelmezse **cezası uydurulmuyor**, satır
+      işaretleniyor ve belgede kırmızı yer tutucu kalıyor.
+
+      Hesaba giren faturalar: "dahil" bırakılan ve hakkında VTR bulunan
+      satıcılardan alınanların tamamı. Ölçüt iki şeye **bakmıyor**, ikisi de
+      bilinçli:
+      - *bilerek/bilmeden*: 353/1 kasıt aramayan nesnel bir fiil; 306 Sıra
+        No'lu Tebliğ'in kasıt tartışması vergi ziyaı cezası ve 359 içindir.
+      - *tarhiyat*: tutar düzeltme beyannamesiyle indirimlerden çıkarılmış
+        olsa bile gerçek fatura alınmamış olması değişmez. Bu yüzden `sayilir`
+        KULLANILMIYOR — kullanılsaydı düzeltmeli dosyalarda küme boşalırdı.
+      Müfettişin tek süzgeci fatura satırındaki "Dahil" kutucuğu.
+
+      Yıllık üst sınır yıl yıl uygulanıyor; yıl içinde sınır değiştiyse yılın
+      SON geçerli sınırı esas alınıyor (ceza yıl kapandıktan sonra kesilir).
+      Tartışmalı bir hâl çıkarsa raporu elle düzeltin.
+
+      Hadleri okuyan `_had_tutari` ayrı yazıldı: `paste_parser.tutar_coz`
+      "1.000" ve "190.000"ı 1,0 ve 190,0 diye okuyor. Beyan dökümlerinde bu
+      doğru bir varsayım ama bu alana yazılanlar kanundaki yuvarlak
+      sınırlardır, müfettiş binlik ayraçla yazar — tek noktadan sonra tam üç
+      hane varsa nokta binlik ayracı sayılıyor.
+
+      Gerileme denetimi: `testler/belge_alma_testi.py`. Çapası müfettişin
+      örnek raporunun **131 satırının tamamı**: her satırın cezası ve iki
+      TOPLAM rakamı (2.352.614,70 ve 236.943,99) birebir tutuyor. 01.08.2022
+      geçişi gerçek tarihler üzerinde 77./78. satırlarda doğrulanıyor.
+
+---
+
+## Özel usulsüzlükte bekleyen
+
+- [ ] **Düzeltme kabul raporunda 353/1 bölümü yok.** Hesap düzeltmeli
+      satıcıları bilerek kapsıyor (fatura alınmamış olması düzeltmeyle
+      değişmez), ama o raporda yazdıracak bir bölüm henüz yok. Faturaların
+      TAMAMI düzeltmeyle çıkarılmış bir dosyada 353/1 cezası hesaplanıyor
+      fakat belgeye girmiyor. Müfettiş isterse eklenecek.
+- [ ] **TOPLAM satırındaki "Ceza Alt Sınırı" hücresi boş.** Örnek raporda bu
+      hücrede alt sınırların toplamı (92.500,00) yazıyor; anlamlı bir toplam
+      olmadığı için boş bırakıldı. Dairenin formatına birebir uyulması
+      isteniyorsa doldurulur.
+
 ---
 
 ## VSR'de bekleyenler

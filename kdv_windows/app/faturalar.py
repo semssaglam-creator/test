@@ -908,6 +908,165 @@ def ozel_usulsuzluk(faturalar, alt_had, ust_sinir, saticilar=None):
     }
 
 
+# --------------------------------------- VUK 353/1: belge alma zorunlulugu
+# Mukellef, gercekten aldigi mal ve hizmeti sahte faturayla belgelendirdiginde
+# "alinmasi icap eden fatura"yi almamis olur. Fiil muk. 355'teki tevsik
+# etmemeden AYRIDIR ve ikisi ayni raporda yan yana durabilir:
+#   - muk. 355: odeme banka/PTT belgesiyle tevsik edilmemis  -> %5
+#   - 353/1   : gercek fatura hic alinmamis                  -> %10
+# Oran kanunda yazili oldugu icin sabittir. Belge basina ALT SINIR ve bir
+# belge turu icin yilda kesilebilecek UST SINIR ise yil yil - 2022'de yil
+# ICINDE, 7417 sayili Kanunla 01.08.2022'den itibaren - degisir; bu yuzden
+# kunyeden TARIH ARALIKLI olarak alinir ve uygulama hicbirini tahmin etmez.
+BELGE_ALMA_ORANI = 0.10
+
+
+def _gun(metin):
+    """"2022-08-01" ya da "01.08.2022" -> (2022, 8, 1); cozulemezse None.
+
+    Iki bicim de kabul edilir: fatura tarihleri uygulamada ISO tutulur, ama
+    kunyeye hadleri yazan mufettis gun.ay.yil yazmayi bekler.
+    """
+    ham = str(metin or "").strip()
+    if not ham:
+        return None
+    for ayirac, ters in (("-", False), (".", True), ("/", True)):
+        if ayirac in ham:
+            parcalar = ham.split(ayirac)
+            if len(parcalar) != 3:
+                continue
+            if ters:
+                parcalar = list(reversed(parcalar))
+            try:
+                yil, ay, gun = (int(p) for p in parcalar)
+            except ValueError:
+                continue
+            if 1 <= ay <= 12 and 1 <= gun <= 31:
+                return (yil, ay, gun)
+    return None
+
+
+def _had_bul(hadler, gun):
+    """Verilen gune denk gelen had satirini bulur.
+
+    Baslangic ve bitis DAHILDIR. Bitis bos birakilabilir ("... ve sonrasi");
+    baslangic bos birakilirsa satir o tarihe kadar her gunu kapsar. Boyle
+    acik uclu satirlara izin vermek gerekiyor: kanun degisikliklerinin
+    cogunda "su tarihten itibaren" denir, bir bitis verilmez.
+    """
+    if gun is None:
+        return None
+    for had in hadler or []:
+        bas, bit = had.get("baslangic"), had.get("bitis")
+        if bas and gun < bas:
+            continue
+        if bit and gun > bit:
+            continue
+        return had
+    return None
+
+
+def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None):
+    """Gercek fatura almama fiilinden dogan ozel usulsuzluk cezasi (VUK 353/1).
+
+    Hesaba giren faturalar: kullanicinin "dahil" biraktigi ve hakkinda vergi
+    tekniği raporu bulunan bir saticidan alinmis olanlar. Olcut BILEREK /
+    BILMEDEN ayrimina BAKMAZ - 353/1 kasit aramayan nesnel bir fiildir, 306
+    Sira No'lu Teblig'in kasit tartismasi vergi ziyai cezasi ve 359 icindir.
+
+    Olcut tarhiyata da BAKMAZ: tutar duzeltme beyannamesiyle indirimlerden
+    cikarilmis olsa bile gercek fatura alinmamis olmasi degismez. Bu yuzden
+    `sayilir` kullanilmaz ve ceza duzeltme kabul raporunda da dogabilir.
+
+    Ceza belge basina hesaplanir: belge tutarinin (KDV dahil) yuzde onu, o
+    tarihteki alt sinirin altina inmemek uzere. Yillik ust sinir yil yil
+    uygulanir.
+
+    Tarih olarak FATURA tarihi alinir, yevmiye tarihi degil: fiil belgenin
+    alindigi anda islenmistir ve hangi alt sinirin gecerli oldugunu o gun
+    belirler.
+    """
+    hadler = hadler or []
+    satirlar = []
+    for f in faturalar or []:
+        if not f.get("dahil"):
+            continue
+        if not (saticilar or {}).get(f.get("satici_vkn") or ""):
+            continue
+        matrah = float(f.get("matrah") or 0.0)
+        kdv = float(f.get("kdv") or 0.0)
+        toplam = float(f.get("toplam") or 0.0) or (matrah + kdv)
+        gun = _gun(f.get("tarih"))
+        had = _had_bul(hadler, gun)
+        yuzde_on = round(toplam * BELGE_ALMA_ORANI, 2)
+        alt_sinir = had.get("alt_sinir") if had else None
+        satirlar.append({
+            "fatura_no": f.get("fatura_no") or "",
+            "tarih": f.get("tarih") or "",
+            "satici_vkn": f.get("satici_vkn") or "",
+            # Yillik ust sinir fatura tarihine gore uygulanir; kayit yili
+            # baska bir yila dusse de fiil fatura tarihinde islenmistir.
+            "yil": gun[0] if gun else f.get("kayit_yil"),
+            "matrah": round(matrah, 2),
+            "kdv": round(kdv, 2),
+            "toplam": round(toplam, 2),
+            "yuzde_on": yuzde_on,
+            "alt_sinir": alt_sinir,
+            # Had bulunamazsa ceza UYDURULMAZ: satir isaretlenir, belge o
+            # hucreleri kirmizi yer tutucu olarak yazar ve mufettis hangi
+            # faturanin haddini girmedigini gorur.
+            "had_yok": had is None,
+            "ceza": (round(max(yuzde_on, alt_sinir), 2)
+                     if alt_sinir is not None else None),
+        })
+    satirlar.sort(key=lambda s: (s["yil"] or 0, s["tarih"], s["fatura_no"]))
+
+    yil_ozetleri = []
+    for yil in sorted({s["yil"] for s in satirlar if s["yil"]}):
+        oyil = [s for s in satirlar if s["yil"] == yil]
+        ham = round(sum(s["ceza"] or 0.0 for s in oyil), 2)
+        # Yil icinde ust sinir degistiyse, yilin SON gecerli siniri esas
+        # alinir: ceza yil kapandiktan sonra kesilir ve o anda yururlukte
+        # olan sinir uygulanir. Tartismali bir hal cikarsa mufettis raporu
+        # elle duzeltir.
+        sinirlar = [h.get("ust_sinir") for h in hadler
+                    if h.get("ust_sinir") and _yil_kapsiyor(h, yil)]
+        ust = sinirlar[-1] if sinirlar else None
+        yil_ozetleri.append({
+            "yil": yil,
+            "belge_sayisi": len(oyil),
+            "belge_tutari": round(sum(s["toplam"] for s in oyil), 2),
+            "ham_toplam": ham,
+            "ust_sinir": ust,
+            "ust_sinir_uygulandi": bool(ust) and ham > ust,
+            "kesilecek": round(min(ham, ust), 2) if ust else ham,
+            "eksik_had": any(s["had_yok"] for s in oyil),
+        })
+
+    return {
+        "satirlar": satirlar,
+        "yillar": yil_ozetleri,
+        "belge_sayisi": len(satirlar),
+        "belge_tutari": round(sum(s["toplam"] for s in satirlar), 2),
+        "yuzde_on_toplam": round(sum(s["yuzde_on"] for s in satirlar), 2),
+        "ham_toplam": round(sum(s["ceza"] or 0.0 for s in satirlar), 2),
+        "kesilecek": round(sum(y["kesilecek"] for y in yil_ozetleri), 2),
+        "ust_sinir_uygulandi": any(y["ust_sinir_uygulandi"]
+                                   for y in yil_ozetleri),
+        "eksik_had": any(s["had_yok"] for s in satirlar),
+    }
+
+
+def _yil_kapsiyor(had, yil):
+    """Had satiri verilen takvim yilinin herhangi bir gununu kapsiyor mu."""
+    bas, bit = had.get("baslangic"), had.get("bitis")
+    if bas and bas[0] > yil:
+        return False
+    if bit and bit[0] < yil:
+        return False
+    return True
+
+
 def toplamlar(faturalar, saticilar=None):
     """Tarhiyata giren alis faturalarinin genel toplami."""
     dahil = [f for f in (faturalar or []) if sayilir(f, saticilar)]

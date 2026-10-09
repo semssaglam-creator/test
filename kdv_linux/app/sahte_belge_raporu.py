@@ -167,20 +167,32 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari, yil=None):
 
 
 # ---------------------------------------------------------------- II. usul
-def _usul(b, kunye, donemler, ouc):
+def _usul(b, kunye, donemler, ouc, ouc353=None):
     """II- USUL İNCELEMELERİ.
 
     Genel usulsuzluk basligi bilerek yok: defter tasdiki ve ibrazi tutanakta
     zaten tespit ediliyor, raporda ayri bir bolum acmak tekrar oluyordu.
-    Bolum, varsa usul notu ve ozel usulsuzluk cezasindan olusur.
+    Bolum, varsa usul notu ve ozel usulsuzluk cezalarindan olusur.
+
+    Iki ozel usulsuzluk fiili AYRIDIR ve ayni raporda yan yana durabilir:
+    muk. 355 odemenin bankadan gectiginin tevsik edilmemesi, 353/1 ise
+    gercek faturanin hic alinmamasidir.
     """
     b.baslik("II- USUL İNCELEMELERİ", 1)
 
     for satir in ik.satirlar(kunye, "usul_notu"):
         b.paragraf(satir, girinti=1)
 
-    if ouc and ouc["satirlar"]:
-        _ozel_usulsuzluk(b, kunye, ouc)
+    tevsik_var = bool(ouc and ouc["satirlar"])
+    belge_var = bool(ouc353 and ouc353["satirlar"])
+    if tevsik_var or belge_var:
+        b.baslik("A- Özel Usulsüzlük Cezası", 2)
+        if tevsik_var:
+            _ozel_usulsuzluk(b, kunye, ouc)
+        if belge_var:
+            # Tevsik bolumu yoksa bu fiil "1-" olur; numara sabit yazilamaz.
+            _belge_alma_usulsuzlugu(b, kunye, ouc353,
+                                    2 if tevsik_var else 1)
     elif not ik.satirlar(kunye, "usul_notu"):
         b.paragraf("Usul yönünden tenkidi gerektiren bir husus tespit "
                    "edilmemiştir.", girinti=1)
@@ -189,7 +201,6 @@ def _usul(b, kunye, donemler, ouc):
 def _ozel_usulsuzluk(b, kunye, ouc):
     """VUK muk. 355 — odemeleri tevsik etmeme fiili."""
     M = ik.mukellef_sozu
-    b.baslik("A- Özel Usulsüzlük Cezası", 2)
     b.baslik("1- 213 Sayılı Vergi Usul Kanunu’nun Mükerrer 355. Maddesine Göre "
              "Ödemelerini Tevsik Etmeme Fiili", 2)
 
@@ -240,6 +251,142 @@ def _ozel_usulsuzluk(b, kunye, ouc):
                   "ile sınırlı olduğundan, kesilecek ceza %s TL’dir."
                   % (_tl(ouc["ust_sinir"]), _tl(ouc["kesilecek"])))
     b.paragraf(sonuc, girinti=1)
+
+
+def _belge_alma_usulsuzlugu(b, kunye, ouc, sira_no):
+    """VUK 353/1 — gercek fatura almama fiili.
+
+    Fiilin mantigi: mal ve hizmetin gercekten alindigi kabul edilse bile,
+    sahte oldugu VTR ile sabit olan belge VUK 229'daki fatura degildir.
+    Dolayisiyla mukellef "alinmasi icap eden fatura"yi almamistir. Bolum bu
+    zinciri kurar, cunku ceza tam buna dayaniyor.
+    """
+    M = ik.mukellef_sozu
+    b.baslik("%d- 213 Sayılı Vergi Usul Kanunu’nun 353/1. Maddesine Göre "
+             "Gerçek Fatura Almama Fiili" % sira_no, 2)
+
+    for baslik, metin in mevzuat.maddeler(["vuk_353_1"]):
+        b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120,
+                   aralik_sonra=40)
+        b.paragraf("“%s”" % metin, girinti=1, italik=True)
+    b.paragraf("hükmü yer almaktadır.", girinti=1)
+
+    _had_paragraflari(b, kunye)
+
+    b.paragraf(
+        "Raporun ileriki bölümlerinde açıklandığı üzere, %s bir kısım mal ve "
+        "hizmet alışlarını, sahte belge düzenlediği yönünde hakkında vergi "
+        "tekniği raporu bulunan mükelleflerden aldığı faturalarla "
+        "belgelendirdiği tespit edilmiştir." % M(kunye, ek="in"), girinti=1)
+    b.paragraf(
+        "Bu faturalarda yer alan mal ve hizmetlerin %s tarafından gerçekten "
+        "alındığı kabul edilmekle birlikte, gerçekte kimlerden alındığı tam "
+        "ve doğru olarak tespit edilememiştir. Sahte olduğu vergi tekniği "
+        "raporu ile sabit olan belgelerin 213 sayılı Vergi Usul Kanunu’nun "
+        "229. maddesinde tanımlanan fatura olarak kabulü mümkün değildir. "
+        "Mal ve hizmetin gerçekte alınmış olduğunun kabulü de faturanın sahte "
+        "olduğu durumunu ortadan kaldırmamaktadır."
+        % M(kunye), girinti=1)
+    b.paragraf(
+        "Dolayısıyla %s adına, mal ve hizmet alışlarına ilişkin olarak 213 "
+        "sayılı Vergi Usul Kanununda belirtilen şekilde gerçek fatura "
+        "almamasından dolayı aynı Kanunun 353/1. maddesine göre özel "
+        "usulsüzlük cezası kesilmesi gerekmektedir. Buna göre kesilmesi "
+        "gereken özel usulsüzlük cezası aşağıdaki tabloda gösterildiği "
+        "gibi hesaplanmıştır." % M(kunye), girinti=1)
+
+    satirlar = []
+    for i, s in enumerate(ouc["satirlar"], 1):
+        satirlar.append([
+            str(i), _tarih_gun_ay_yil(s["tarih"]), s["fatura_no"],
+            _tl(s["toplam"]), _tl(s["yuzde_on"]),
+            _tl(s["alt_sinir"]) if s["alt_sinir"] is not None else "[alt sınır]",
+            _tl(s["ceza"]) if s["ceza"] is not None else "[ceza]"])
+    satirlar.append(["", "", "TOPLAM", _tl(ouc["belge_tutari"]),
+                     _tl(ouc["yuzde_on_toplam"]), "",
+                     _tl(ouc["ham_toplam"])])
+    b.tablo(["Sıra\nNo", "Fatura Tarihi", "Fatura No", "Belge Toplam\nTutarı",
+             "Toplam Bedelin\n%10’u", "Ceza Alt\nSınırı",
+             "Kesilmesi Gereken Özel\nUsulsüzlük Cezası (TL)"], satirlar,
+            hizalar=["orta", "orta", "sol", "sag", "sag", "sag", "sag"],
+            oranlar=[0.45, 0.95, 1.1, 1.15, 1.15, 0.95, 1.4],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+    if ouc["eksik_had"]:
+        b.paragraf(
+            "Tarihi künyeye girilen sınır dönemlerinden hiçbirine denk "
+            "gelmeyen faturalar bulunduğundan, o satırların ceza tutarları "
+            "boş bırakılmıştır. Künyedeki “Belge alma cezası hadleri” "
+            "bölümüne ilgili dönemi ekleyiniz.", girinti=1, renk=KIRMIZI)
+
+    for ozet in ouc["yillar"]:
+        cumle = ("%s %s KDV dâhil %s TL tutarındaki %d adet alışı için gerçek "
+                 "belge almayarak anılan Kanun hükmüne aykırı davrandığından, "
+                 "%s adına 213 sayılı Vergi Usul Kanununun 353/1. maddesi "
+                 "uyarınca %s TL özel usulsüzlük cezası kesilmesi "
+                 "gerekmektedir."
+                 % (M(kunye, buyuk=True), "%s %s" % (
+                        ozet["yil"], ik.donem_adi(kunye, False, "bulunma")),
+                    _tl(ozet["belge_tutari"]), ozet["belge_sayisi"],
+                    M(kunye), _tl(ozet["ham_toplam"])))
+        if ozet["ust_sinir_uygulandi"]:
+            cumle += (" Ancak bir takvim yılı içinde her bir belge nevi için "
+                      "kesilebilecek toplam ceza %s TL ile sınırlı olduğundan, "
+                      "kesilecek ceza %s TL’dir."
+                      % (_tl(ozet["ust_sinir"]), _tl(ozet["kesilecek"])))
+        b.paragraf(cumle, girinti=1)
+
+
+def _had_paragraflari(b, kunye):
+    """Kunyeye girilen sinir donemlerini belgeye yazar.
+
+    Oran kanunda yazili oldugu icin sabit; sinirlar girilmemisse cumle
+    uydurulmaz, kirmizi yer tutucu kalir.
+    """
+    hadler = ik.belge_alma_hadleri(kunye)
+    if not hadler:
+        b.paragraf(
+            "[Belge başına alt sınır ve bir takvim yılında kesilebilecek üst "
+            "sınır, künyedeki “Belge alma cezası hadleri” bölümüne "
+            "girilmelidir.]", girinti=1, renk=KIRMIZI)
+        return
+    b.paragraf("Söz konusu madde uyarınca uygulanacak ceza oranı ile alt ve "
+               "üst sınırlar aşağıdaki gibidir:", girinti=1)
+    satirlar = []
+    for had in hadler:
+        satirlar.append([
+            _had_donemi(had),
+            # Oran kanunda yazili, yuvarlak bir sayi: "%10,00" degil "%10".
+            "%%%g" % (F.BELGE_ALMA_ORANI * 100),
+            _tl(had["alt_sinir"]) if had["alt_sinir"] else "[alt sınır]",
+            _tl(had["ust_sinir"]) if had["ust_sinir"] else "[üst sınır]"])
+    b.tablo(["Dönem", "Ceza Oranı", "Belge Başına\nAlt Sınır (TL)",
+             "Bir Takvim Yılı\nÜst Sınırı (TL)"], satirlar,
+            hizalar=["sol", "orta", "sag", "sag"],
+            oranlar=[1.6, 0.8, 1.1, 1.2], buyukluk=TABLO_PUNTOSU)
+
+
+def _had_donemi(had):
+    """"01.01.2022 - 31.07.2022" / "01.08.2022 ve sonrası" gibi."""
+    bas = _gunu_yaz(had["baslangic"])
+    bit = _gunu_yaz(had["bitis"])
+    if bas and bit:
+        return "%s - %s arası" % (bas, bit)
+    if bas:
+        return "%s ve sonrası" % bas
+    if bit:
+        return "%s tarihine kadar" % bit
+    return "[dönem]"
+
+
+def _gunu_yaz(gun):
+    return "%02d.%02d.%04d" % (gun[2], gun[1], gun[0]) if gun else ""
+
+
+def _tarih_gun_ay_yil(iso):
+    """ISO tarihi belgede gun.ay.yil olarak yazar."""
+    from .faturalar import _gun
+    return _gunu_yaz(_gun(iso)) or (iso or "[tarih]")
 
 
 # --------------------------------------------------------------- III. hesap
@@ -1240,7 +1387,8 @@ def _uzlasma(b, kunye, satici_satirlari, ceza=None):
 
 
 # ------------------------------------------------------------------- V. sonuc
-def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
+def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc,
+           ouc353=None):
     b.baslik("V- SONUÇ", 1)
     M = ik.mukellef_sozu
     tarhiyatli = [d for d in donemler if _var(d["tarhiyat"]["toplam_fark"])]
@@ -1284,12 +1432,24 @@ def _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc):
                ik.resen_madde_kodu(kunye), M(kunye), kat))
         sira += 1
 
-    if ouc and ouc["satirlar"]:
+    tevsik_var = bool(ouc and ouc["satirlar"])
+    if tevsik_var:
         maddeler.append(
             "%d- Raporun II/A.1 bölümünde ayrıntılı olarak açıklandığı üzere; "
             "213 sayılı Vergi Usul Kanunu’nun mükerrer 355. maddesi hükmü "
             "gereğince toplam %s TL özel usulsüzlük cezası kesilmesi gerektiği,"
             % (sira, _tl(ouc["kesilecek"])))
+        sira += 1
+
+    if ouc353 and ouc353["satirlar"]:
+        # Atif yapilan alt bolum numarasi, tevsik bolumunun bulunup
+        # bulunmamasina gore kayiyor; II/A.2 diye sabit yazilamaz.
+        maddeler.append(
+            "%d- Raporun II/A.%d bölümünde ayrıntılı olarak açıklandığı üzere; "
+            "gerçek fatura almama fiili nedeniyle 213 sayılı Vergi Usul "
+            "Kanunu’nun 353/1. maddesi hükmü gereğince toplam %s TL özel "
+            "usulsüzlük cezası kesilmesi gerektiği,"
+            % (sira, 2 if tevsik_var else 1, _tl(ouc353["kesilecek"])))
         sira += 1
 
     if bilerek:
@@ -1450,18 +1610,23 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     if ik.secim_mi(kunye, "ouc_uygula", "Evet"):
         ouc = F.ozel_usulsuzluk(liste, kunye.get("ouc_alt_had"),
                                 kunye.get("ouc_ust_sinir"), saticilar)
+    ouc353 = None
+    if ik.secim_mi(kunye, "ouc353_uygula", "Evet"):
+        ouc353 = F.belge_alma_usulsuzlugu(liste,
+                                          ik.belge_alma_hadleri(kunye),
+                                          saticilar)
 
     # Belge dogrudan "I- GİRİŞ" ile baslar. Baslik/rapor no/tarih blogu
     # bilerek yok: dairenin kullandigi raporlarda bu bilgiler rapor kapak
     # sayfasinda yer aliyor, metnin basinda tekrarlanmiyor.
     b = Belge()
     _giris(b, inceleme, kunye, donemler, satici_satirlari, yil)
-    _usul(b, kunye, donemler, ouc)
+    _usul(b, kunye, donemler, ouc, ouc353)
     _hesap(b, kunye, donemler, duzeltme,
            belgeye_giren_bulgular(bulgular, donemler), dokumler)
     _elestiri(b, kunye, liste, satici_satirlari, donemler, sonuc, ceza, oran,
               saticilar, inceleme, karsilastirmalar, madde_no)
-    _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc)
+    _sonuc(b, inceleme, kunye, satici_satirlari, donemler, ceza, ouc, ouc353)
     return b
 
 

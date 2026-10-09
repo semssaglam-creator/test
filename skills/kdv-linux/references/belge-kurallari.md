@@ -33,6 +33,32 @@ edilecek vergi iki halde de yoktur, ama duzenlenecek belge farklidir:
 
 Baslik ve dosya adi da tura gore degisir (`belge_turu`, `dosya_adi`).
 
+## Iki ozel usulsuzluk fiili ayridir
+
+Raporun II/A bolumunde iki ayri fiil yan yana durabilir; karistirmayin:
+
+| Fiil | Madde | Oran | Olcut |
+|---|---|---|---|
+| Odemeyi banka/PTT belgesiyle tevsik etmeme | muk. 355 | %5 | Fatura satirinda "tevsik edilmemis" tiki |
+| Gercek faturayi hic almama | 353/1 | %10 | "Dahil" birakilan + hakkinda VTR bulunan saticidan alinan faturalarin TAMAMI |
+
+353/1'in olcutu iki seye BAKMAZ, ikisi de bilincli:
+
+- **bilerek / bilmeden**: 353/1 kasit aramayan nesnel bir fiildir. 306 Sira
+  No'lu Teblig'in kasit tartismasi vergi ziyai cezasi ve 359 icindir.
+- **tarhiyat**: tutar duzeltme beyannamesiyle indirimlerden cikarilmis olsa
+  bile gercek fatura alinmamis olmasi degismez. Bu yuzden `sayilir`
+  KULLANILMAZ — kullanilsaydi duzeltmeli dosyalarda kume bosalirdi.
+
+Ceza orani kanunda yazili oldugu icin sabit; **alt ve ust sinirlar kunyeden
+TARIH ARALIKLI alinir** (`belge_alma_hadleri`). Yil bazli tek bir alan
+yetmez: 2022'de 7417 sayili Kanunla sinirlar yil ICINDE degisti. Bir
+faturanin tarihi hicbir had satirina denk gelmezse cezasi UYDURULMAZ; satir
+`had_yok` ile isaretlenir ve belgede kirmizi yer tutucu kalir.
+
+Hadleri okurken `paste_parser.tutar_coz` KULLANILMAZ: "1.000" ve "190.000"i
+1,0 ve 190,0 diye okur. `inceleme_kunyesi._had_tutari` bunun icin var.
+
 ## Vergi Suclari Raporu (VSR) — ayri belge, elle istenmez
 
 VUK 359 kapsamindaki fiil tespit edildiginde, tarhiyat oneren rapordan AYRI

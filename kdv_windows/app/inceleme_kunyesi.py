@@ -64,6 +64,16 @@ VIR_KOLONLARI = [
     {"kod": "sayi", "etiket": "Raporun Sayısı", "tur": "metin"},
 ]
 
+# VUK 353/1 ceza sinirlari. Tarih ARALIKLI tutulmasi gerekiyor: 2022'de
+# 7417 sayili Kanunla sinirlar yil ICINDE (01.08.2022'den itibaren) degisti,
+# yil bazli tek bir alan o yili yanlis hesapliyordu.
+BELGE_ALMA_KOLONLARI = [
+    {"kod": "baslangic", "etiket": "Başlangıç", "tur": "metin"},
+    {"kod": "bitis", "etiket": "Bitiş", "tur": "metin"},
+    {"kod": "alt_sinir", "etiket": "Belge Başına Alt Sınır (TL)", "tur": "metin"},
+    {"kod": "ust_sinir", "etiket": "Yıllık Üst Sınır (TL)", "tur": "metin"},
+]
+
 BOLUMLER = [
     {
         "kod": "gorevlendirme",
@@ -178,6 +188,33 @@ BOLUMLER = [
             {"kod": "ouc_ust_sinir", "etiket": "Bir hesap dönemi üst sınırı (TL)",
              "tur": "metin",
              "ipucu": "2023 için 5.500.000. Boş bırakılırsa sınır uygulanmaz."},
+            {"kod": "ouc353_uygula",
+             "etiket": "Özel usulsüzlük (belge alma — VUK 353/1) hesaplansın",
+             "tur": "secim", "secenekler": ["Hayır", "Evet"],
+             "varsayilan": "Hayır",
+             "ipucu": "Mükellef, gerçekten aldığı mal ve hizmeti sahte "
+                      "faturayla belgelendirdiğinde alınması gereken gerçek "
+                      "faturayı almamış olur. Hesaba, Faturalar sekmesinde "
+                      "“dahil” bırakılan ve hakkında VTR bulunan satıcılardan "
+                      "alınan belgelerin TAMAMI girer; bilerek/bilmeden "
+                      "ayrımına ve tarhiyata bakılmaz (353/1 kasıt aramayan "
+                      "nesnel bir fiildir ve tutar düzeltmeyle çıkarılmış olsa "
+                      "da fatura alınmamış olması değişmez). Hesaba girmesini "
+                      "istemediğiniz satırın “Dahil” kutucuğunu kaldırın."},
+            {"kod": "ouc353_hadleri",
+             "etiket": "Belge alma cezası hadleri (VUK 353/1)",
+             "tur": "satirlar", "kolonlar": BELGE_ALMA_KOLONLARI,
+             "ekle_etiketi": "+ Had ekle",
+             "ipucu": "Ceza oranı kanunda yazılı olduğu için sabittir (belge "
+                      "tutarının %10'u); alt ve üst sınırlar yıl yıl, hatta "
+                      "2022'de yıl içinde değiştiği için buraya girilir. Her "
+                      "sınır dönemi için (+) ile satır açın. 2022 örneği: "
+                      "01.01.2022 · 31.07.2022 · 500 · 190.000 ve "
+                      "01.08.2022 · (boş) · 1.000 · 500.000 (7417 sayılı "
+                      "Kanun). Bitiş boş bırakılırsa “o tarihten sonrası” "
+                      "demektir. Bir faturanın tarihi hiçbir satıra denk "
+                      "gelmezse cezası uydurulmaz; belgede kırmızı yer tutucu "
+                      "kalır."},
         ],
     },
     {
@@ -576,6 +613,47 @@ def vir_kayitlari(kunye, yillar=None):
                       "tarih": kayit.get("tarih") or "",
                       "sayi": kayit.get("sayi") or ""})
     return sonuc
+
+
+def _had_tutari(ham):
+    """Kunyeye yazilan TL haddini sayiya cevirir.
+
+    `paste_parser.tutar_coz` burada KULLANILAMAZ: tek noktali "1.000" ve
+    "190.000" gibi degerleri 1,0 ve 190,0 diye okuyor. Beyan dokumlerinde
+    bu dogru bir varsayim (orada "1.000" ondalikli bir tutar olabilir), ama
+    bu alana yazilan seyler kanundaki yuvarlak sinirlardir ve mufettis
+    bunlari Turkce binlik ayracla yazar. Bu yuzden tek noktadan sonra TAM
+    UC hane geliyorsa nokta binlik ayraci sayilir.
+    """
+    metin = str(ham or "").strip().replace("TL", "").replace("₺", "")
+    metin = metin.replace(" ", "").replace(" ", "")
+    if not metin:
+        return None
+    if "," not in metin and re.fullmatch(r"\d{1,3}(\.\d{3})+", metin):
+        metin = metin.replace(".", "")
+    from .paste_parser import tutar_coz
+    deger = tutar_coz(metin)
+    return deger if deger and deger > 0 else None
+
+
+def belge_alma_hadleri(kunye):
+    """VUK 353/1 ceza sinirlarini tarih araligi listesine cevirir.
+
+    Doner: [{"baslangic": (y,a,g)|None, "bitis": (y,a,g)|None,
+             "alt_sinir": float|None, "ust_sinir": float|None}]
+    Baslangica gore sirali; `faturalar._had_bul` bu siraya guveniyor.
+    """
+    from .faturalar import _gun
+    hadler = []
+    for bas, bit, alt, ust in cizgili_satirlar(kunye, "ouc353_hadleri", 4):
+        baslangic, bitis = _gun(bas), _gun(bit)
+        alt_sinir, ust_sinir = _had_tutari(alt), _had_tutari(ust)
+        if not (baslangic or bitis or alt_sinir or ust_sinir):
+            continue
+        hadler.append({"baslangic": baslangic, "bitis": bitis,
+                       "alt_sinir": alt_sinir, "ust_sinir": ust_sinir})
+    hadler.sort(key=lambda h: h["baslangic"] or (0, 0, 0))
+    return hadler
 
 
 def kurum_mu(kunye):

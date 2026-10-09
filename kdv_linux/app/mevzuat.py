@@ -112,6 +112,22 @@ MADDELER.update({
         "nispetinde özel usulsüzlük cezası kesilir. Bu şekilde ceza kesilen "
         "mükellefler hakkında bir takvim yılı içinde kesilecek toplam ceza "
         "ilgili yıl için belirlenen üst sınırı aşamaz."),
+    "vuk_229": (
+        "213 sayılı VUK md. 229 — Fatura",
+        "Fatura, satılan emtia veya yapılan iş karşılığında müşterinin borçlandığı "
+        "meblağı göstermek üzere emtiayı satan veya işi yapan tüccar tarafından "
+        "müşteriye verilen ticari vesikadır."),
+    "vuk_353_1": (
+        "213 sayılı VUK md. 353/1 — Belge Alma ve Verme Zorunluluğuna Uymama",
+        "Verilmesi ve alınması icap eden fatura, gider pusulası, müstahsil "
+        "makbuzu ile serbest meslek makbuzlarının verilmemesi, alınmaması veya "
+        "düzenlenen bu belgelerde gerçek meblağdan farklı meblağlara yer "
+        "verilmesi halinde; bu belgeleri düzenlemek ve almak zorunda olanların "
+        "her birine, her bir belge için bu belgelere yazılması gereken "
+        "meblağın veya meblağ farkının %10'u nispetinde özel usulsüzlük cezası "
+        "kesilir. Bu suretle kesilecek özel usulsüzlük cezasının toplamı, her "
+        "bir belge nevine ilişkin olmak üzere, her bir tespit için ve bir "
+        "takvim yılı içinde ilgili yıl için belirlenen üst sınırı aşamaz."),
     "vuk_mk257": (
         "213 sayılı VUK mükerrer md. 257 — Yetki",
         "Maliye Bakanlığı, mükelleflere muameleleri ile ilgili tahsilat ve "
