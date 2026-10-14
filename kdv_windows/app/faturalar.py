@@ -83,8 +83,10 @@ SATICI_ALANLARI = [
     # alanlar olmadan satici belgelere giremez, yil sirasina da yerlesemez.
     {"kod": "elle_yil", "etiket": "Belgelerin ait olduğu yıl", "tur": "metin",
      "yalniz_elle": True,
-     "ipucu": "Tutanakta maddeler yıl sırasına göre dizilir; bu satıcının "
-              "hangi sıraya gireceğini bu yıl belirler."},
+     "ipucu": "Rapor her yıl için ayrı yazılır; bu satıcı YALNIZCA burada "
+              "yazdığınız yılın raporunda görünür. Boş bırakılırsa hangi yıla "
+              "ait olduğu bilinemediğinden her yılın raporunda çıkar. "
+              "Tutanakta maddelerin yıl sırası da bundan kurulur."},
     {"kod": "elle_adet", "etiket": "Belge adedi", "tur": "metin",
      "yalniz_elle": True},
     {"kod": "elle_matrah", "etiket": "Matrah (KDV hariç)", "tur": "metin",
@@ -469,8 +471,15 @@ def is_emrine_gore_ayir(satici_satirlari):
     return olanlar, sonradan
 
 
-def satici_ozeti(faturalar, saticilar=None):
+def satici_ozeti(faturalar, saticilar=None, yil=None):
     """Satici bazinda fatura adedi ve tutar toplamlari.
+
+    `yil` verilirse ELLE EKLENEN saticilar o yila daraltilir. Gerekiyor:
+    rapor yil yil yazilir ve `faturalar` daraltilarak gelir, ama elle
+    eklenen saticinin fatura satiri YOKTUR - daraltma onu elemez ve satici
+    butun yillarin raporunda gorunurdu. Yilini kendi kaydinda tasir
+    (`elle_yil`). Yil girilmemisse satici yine her yilda gorunur; sessizce
+    dusurmek, mufettisin hic farketmeyecegi bir veri kaybi olurdu.
 
 Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
     listedeki BUTUN alis faturalari sayilir. Sahte belge duzenledigi tespit
@@ -551,8 +560,13 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
     # varsa listedeki kazanir: gercek fatura verisi her zaman onceliklidir.
     yazilanlar = {g["vkn"] for g in satirlar}
     for vkn in sorted(elle_vknler(saticilar)):
-        if vkn not in yazilanlar:
-            satirlar.append(_elle_satiri(vkn, saticilar.get(vkn) or {}))
+        if vkn in yazilanlar:
+            continue
+        satir = _elle_satiri(vkn, saticilar.get(vkn) or {})
+        if yil is not None and satir["ilk_yil"] is not None \
+                and satir["ilk_yil"] != yil:
+            continue
+        satirlar.append(satir)
 
     # Sira once YILA, sonra buyuklige gore kurulur. Tutanakta maddeler bu
     # sirayla yazildigi icin okuyan kisi donemi takip edebilsin: 2021'de
@@ -1349,6 +1363,16 @@ def bilerek_yillari(faturalar, saticilar=None):
     bilerek kullanma fiili islenmistir.
     """
     vknler = bilerek_vknler(saticilar)
-    return sorted({f["kayit_yil"] for f in (faturalar or [])
-                   if f.get("dahil") and f.get("kayit_yil")
-                   and (f.get("satici_vkn") or "") in vknler})
+    yillar = {f["kayit_yil"] for f in (faturalar or [])
+              if f.get("dahil") and f.get("kayit_yil")
+              and (f.get("satici_vkn") or "") in vknler}
+    # Elle eklenen saticinin fatura satiri yoktur; yili kendi kaydindadir.
+    # Atlanirsa, yalnizca elle eklenmis bir bilerek satici bulunan yil hic
+    # bilerek sayilmaz ve VSR o yili atlardi.
+    for vkn in vknler:
+        bilgi = (saticilar or {}).get(vkn) or {}
+        if elle_eklenmis_mi(bilgi):
+            yil = _elle_satiri(vkn, bilgi)["ilk_yil"]
+            if yil:
+                yillar.add(yil)
+    return sorted(yillar)

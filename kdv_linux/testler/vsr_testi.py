@@ -34,6 +34,7 @@ import zipfile
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, KOK)
 
+from app import faturalar as F                                       # noqa: E402
 from app import vergi_sucu_raporu as V                               # noqa: E402
 from app import web_server as W                                      # noqa: E402
 from app.satirlar import VERI_KODLARI                                # noqa: E402
@@ -356,6 +357,54 @@ m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
                  sonuc, c).duz_metin()
 denetle("[rapor tarihi] tarih ve [rapor sayısı] sayılı" in m,
         "girilmemiş rapor bilgisi kırmızı yer tutucu bırakıyor")
+
+print("\n7b) Elle eklenen satıcı yalnızca kendi yılının raporunda")
+# Sahada boyle cikti (2026-10-14): fatura listesi bulunmayan, elle eklenen
+# bir satici (2021 icin sahteci, is emri yok) HER yilin raporunda
+# goruluyordu. Sebep: rapor yil yil yazilirken `faturalar` daraltiliyor ama
+# elle eklenen saticinin fatura satiri YOK, daraltma onu elemiyordu.
+#
+# Unvanlar belgede Turkce kucultmeden geciyor; denetimde Turkce'ye ozgu
+# harf TASIMAYAN bir unvan secildi ("ELLE-X" -> "elle-x"). "YILSIZ" gibi
+# bir unvan "yılsız" olur ve duz arama tutmaz - bu tuzaga bir kez dusuldu.
+ELLE_VKN = "4444444444"
+
+
+def elle_satici_ile(elle_yil):
+    c = ornek(bilerek=True, iki_yil=True, ikinci_yil_bilerek=True)
+    c["saticilar"][ELLE_VKN] = {
+        "elle": "Evet", "unvan": "ELLE-X LTD", "kullanma": "Bilerek kullanma",
+        "vergi_dairesi": "5 OCAK VD", "vtr_no": "2025/55",
+        "vtr_tarihi": "01.02.2025", "elle_yil": elle_yil, "elle_adet": "3",
+        "elle_matrah": "90.000", "elle_kdv": "18.000",
+        "not": "sahte belge düzenlediği"}
+    h = istekci()
+    belgeler, _inceleme, _vsr = h._rapor_hazirla({"calisma": c})
+    return {yil: "elle-x" in belge.duz_metin().lower()
+            for yil, belge in belgeler}
+
+
+gorunum = elle_satici_ile("2021")
+denetle(gorunum.get(2021) is True, "kendi yılının raporunda görünüyor")
+denetle(gorunum.get(2020) is False, "başka yılın raporunda GÖRÜNMÜYOR")
+
+# Yil girilmemisse sessizce dusurulmemeli: mufettisin farketmeyecegi bir
+# veri kaybi olurdu. Her yilda gorunur, alanin ipucu bunu soyluyor.
+yilsiz = elle_satici_ile("")
+denetle(all(yilsiz.values()),
+        "yılı girilmemiş satıcı her yılda görünüyor (sessizce düşmüyor)")
+
+# Elle eklenen bilerek satici, VSR'nin yil kapsamina da girmeli: fatura
+# satiri olmadigindan `bilerek_yillari` onu atlarsa o yil hic bilerek
+# sayilmaz ve VSR yili atlardi.
+c = ornek(bilerek=False, iki_yil=False)          # listedeki satici bilmeden
+c["saticilar"][ELLE_VKN] = {
+    "elle": "Evet", "unvan": "ELLE-X LTD", "kullanma": "Bilerek kullanma",
+    "elle_yil": "2020", "elle_adet": "3", "elle_matrah": "90.000",
+    "elle_kdv": "18.000", "not": "sahte belge düzenlediği"}
+liste = F.normalize(c["faturalar"], c["mukellef"]["vkn_tckn"])
+denetle(F.bilerek_yillari(liste, c["saticilar"]) == [2020],
+        "elle eklenen bilerek satıcının yılı VSR kapsamına giriyor")
 
 print("\n8) İbraz etmeme halinde")
 c = ornek(bilerek=True)

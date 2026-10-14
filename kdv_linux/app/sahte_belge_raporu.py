@@ -1614,7 +1614,10 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
                     for ad, satirlar in (dokumler or {}).items()}
     donemler = dolu_donemler(sonuc)
     saticilar = calisma.get("saticilar") or {}
-    satici_satirlari = F.satici_ozeti(liste, saticilar)
+    # Yil veriliyor: elle eklenen saticinin fatura satiri olmadigindan
+    # `liste` daraltmasi onu elemez, kendi `elle_yil`ine bakilmasi gerekir.
+    satici_satirlari = F.satici_ozeti(liste, saticilar,
+                                      int(yil) if yil is not None else None)
     ceza = F.ceza_dagilimi(liste, saticilar, sonuc)
     oran = F.sahte_belge_orani(liste, sonuc, saticilar)
     ouc = None

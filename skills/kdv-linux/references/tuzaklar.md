@@ -4,6 +4,25 @@ Hepsi gercek arizalardir. Cogunun ortak ozelligi su: uygulama calisiyordu,
 kullanicida calismiyordu — ya da daha kotusu, calisiyor gorunup yanlis sayi
 yaziyordu.
 
+## 0. Elle eklenen saticinin fatura satiri YOKTUR
+
+Rapor yil yil yazilirken `_yila_indirge` fatura listesini daraltir. Elle
+eklenen satici (`elle: "Evet"`) bu daraltmadan GECMEZ, cunku listede hic
+satiri yoktur; yilini kendi kaydinda (`elle_yil`) tasir. `satici_ozeti`'ye
+`yil` vermeyi unutursaniz satici BUTUN yillarin raporunda gorunur — sahada
+boyle cikti. Yil cikaran her hesap icin ayni tuzak gecerli;
+`bilerek_yillari` de bu yuzden elle saticilara ayrica bakar.
+
+Yil girilmemisse satici her yilda gorunmeye devam eder. Sessizce dusurmek
+mufettisin farketmeyecegi bir veri kaybi olurdu.
+
+## 0b. Unvanlar belgede Turkce kucultmeden gecer
+
+Denetim yazarken Turkce'ye ozgu harf TASIMAYAN bir unvan secin: "YILSIZ"
+belgede "yılsız" olur ve `"yilsiz" in metin` tutmaz. "ELLE-X" gibi notr bir
+ad kullanin. Bu tuzak bir kez yanlis olcume yol acti: duzeltmenin
+gerilemeye sebep oldugu sanildi, oysa yalnizca arama tutmuyordu.
+
 ## 1. Sessiz sifir (en tehlikelisi)
 
 Yeni beyanname bicimi, tutari tumden sifir olan BOLUMU basligiyla birlikte

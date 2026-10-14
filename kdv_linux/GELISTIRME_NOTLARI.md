@@ -663,6 +663,25 @@ oturumda buradan devam edilir.
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
       paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
       yazılıyor.
+- [x] **Elle eklenen satıcı artık yalnızca kendi yılının raporunda.** Sahada
+      böyle çıktı (2026-10-14): fatura listesi bulunmayan, elle eklenmiş bir
+      satıcı (örn. yalnızca 2021 için sahteci, iş emri yok) HER yılın
+      raporunda görünüyordu. Sebep: rapor yıl yıl yazılırken fatura listesi
+      daraltılıyor, ama elle eklenen satıcının fatura satırı YOK — daraltma
+      onu elemiyordu. `satici_ozeti` artık bir `yil` alıyor ve elle eklenen
+      satıcıyı kendi `elle_yil`ine göre süzüyor.
+
+      Yılı **girilmemişse** satıcı yine her yılda görünüyor: sessizce
+      düşürmek, müfettişin hiç farketmeyeceği bir veri kaybı olurdu. Alanın
+      ipucu metni bu etkiyi artık söylüyor.
+
+      Aynı kusur `bilerek_yillari`nda da vardı — elle eklenen satıcıların
+      yılı hiç görülmüyordu, dolayısıyla yalnızca elle eklenmiş bir bilerek
+      satıcı bulunan yıl VSR'de atlanırdı. O da düzeltildi.
+
+      Tuzak: ünvanlar belgede Türkçe küçültmeden geçiyor. Denetim yazarken
+      Türkçe'ye özgü harf taşımayan bir ünvan seçin — "YILSIZ" → "yılsız"
+      olur ve düz arama tutmaz (bu tuzağa bir kez düşüldü).
 - [x] **Vergi Suçları Raporu (VSR) eklendi.** (`app/vergi_sucu_raporu.py`)
       Örnek rapordan çıkarılan yapı: I-GİRİŞ, II-YAPILAN TESPİTLER,
       III-SUÇUN UNSURLARI (3.1 kanuni / 3.2 maddi / 3.3 manevi), IV-SUÇUN
