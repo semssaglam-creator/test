@@ -737,6 +737,17 @@ oturumda buradan devam edilir.
       kullanılmıyor, çünkü tutar düzeltmeyle çıkarılmış olsa da fiil
       işlenmiştir.
 
+      **3.2'deki oran YIL YIL yazılıyor** (müfettişin kararı, 2026-10-14):
+      "…payının 2020 hesap döneminde %5,00, 2021 hesap döneminde %30,00 ve
+      2022 hesap döneminde %10,00 olarak hesaplandığı görülmektedir." Tek bir
+      birleşik yüzde, bir yılın ağır diğerinin hafif olduğu dosyalarda ikisini
+      de yanlış temsil ediyordu. Her yılın payı o yılın faturalarından, böleni
+      o yılın beyan edilen indiriminden kuruluyor
+      (`sahte_belge_orani_yillara`), böylece yıllar birbirinden bağımsız
+      okunabiliyor. Tek yıl kalırsa yıl adı tekrarlanmıyor, sade yüzde
+      yazılıyor. "Gibi yüksek oranlara tekabül ettiği" nitelemesi yalnızca
+      BÜTÜN yıllar eşiğin üstündeyse yazılıyor.
+
       **3.2'deki oran da yalnızca bilerek kullanılan belgelerden kuruluyor.**
       Oran orada KASTIN delili olarak sunulduğundan, bilmeyerek kullanılan
       tutarı paya katmak kasıt kurulmayan bir rakamla kasıt kanıtlamak olur.

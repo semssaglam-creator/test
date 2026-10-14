@@ -269,26 +269,13 @@ def _unsurlar(b, kunye, donemler, oran, fiil, virler):
     if fiil == FIIL_SAHTE_BELGE:
         # "hakkinda" yalin ad ister: "mukellef kurum hakkinda". Buraya
         # ilgi ekli bicim ("mukellef kurumun hakkinda") yazilmaz.
-        if oran and oran.get("oran") is not None:
-            # "gibi yuksek bir orana" ibaresi yalnizca gercekten yuksek bir
-            # oranda yazilir; %1'lik bir payi "yuksek" diye nitelemek raporu
-            # itiraz edilebilir hale getirir. Esik yalnizca CUMLENIN
-            # kuruluşunu belirler, bilerek kullanma kanaatini belirlemez -
-            # kanaat satici bazinda muffettis tarafindan verilmistir.
-            pay = ("Müfettişliğimizce %s hakkında düzenlenen %s ayrıntılı "
-                   "açıklandığı üzere, %s kullandığı sahte faturaların toplam "
-                   "indirimleri içindeki payının %%%s %s"
-                   % (M(kunye), _vir_de(virler), M(kunye, ek="in"),
-                      _tl(oran["oran"]),
-                      "gibi yüksek bir orana tekabül ettiği görülmektedir. "
-                      if oran["oran"] >= 25.0
-                      else "olarak hesaplandığı görülmektedir. "))
-        else:
-            pay = ("Müfettişliğimizce %s hakkında düzenlenen %s ayrıntılı "
-                   "açıklandığı üzere, %s kullandığı sahte faturaların toplam "
-                   "indirimleri içindeki payı [oran] olarak hesaplanmıştır. "
-                   % (M(kunye), _vir_de(virler),
-                      M(kunye, ek="in")))
+        # "payinin ... hesaplandigi" - yan cumle ilgi eki ister; "payi"
+        # yazmak cumleyi bozuyordu.
+        pay = ("Müfettişliğimizce %s hakkında düzenlenen %s ayrıntılı "
+               "açıklandığı üzere, %s kullandığı sahte faturaların toplam "
+               "indirimleri içindeki payının %s "
+               % (M(kunye), _vir_de(virler), M(kunye, ek="in"),
+                  _oran_ifadesi(kunye, oran)))
         b.paragraf(
             pay + "%s sahte belge niteliğinde olduğu tespit "
             "edilen faturalardaki mal ve hizmeti gerçekten aldığı, ancak "
@@ -335,6 +322,40 @@ def _unsurlar(b, kunye, donemler, oran, fiil, virler):
            if fiil == FIIL_SAHTE_BELGE
            else "%s defter ve belgeleri gizlediği" % M(kunye, ek="in"),
            _FIIL_ADI[fiil]), girinti=1)
+
+
+def _oran_ifadesi(kunye, oranlar):
+    """3.2'deki oran ibaresi. Oran YIL YIL yazilir.
+
+    Mufettisin karari (2026-10-14): tek bir birlesik yuzde, bir yilin agir
+    digerinin hafif oldugu dosyalarda ikisini de yanlis temsil ediyordu.
+
+    "gibi yuksek bir orana tekabul ettigi" ibaresi yalnizca BUTUN yillar
+    esigin ustundeyse yazilir; %1'lik bir payi "yuksek" diye nitelemek
+    raporu itiraz edilebilir hale getirir. Esik yalnizca CUMLENIN kurulusunu
+    belirler, bilerek kullanma kanaatini belirlemez - kanaat satici bazinda
+    mufettis tarafindan verilmistir.
+    """
+    # Butun bicimler "...hesaplandigi / tekabul ettigi gorulmektedir" diye
+    # bitiyor; cumlenin basindaki "payinin" ilgi eki hepsinde tutuyor.
+    olculenler = [o for o in (oranlar or []) if o.get("oran") is not None]
+    if not olculenler:
+        return "[oran] olarak hesaplandığı görülmektedir."
+
+    yuksek = all(o["oran"] >= 25.0 for o in olculenler)
+    if len(olculenler) == 1:
+        govde = "%%%s" % _tl(olculenler[0]["oran"])
+    else:
+        # "2020 hesap doneminde %12,34" parcalari; sonuncusu "ve" ile baglanir.
+        parcalar = ["%s %s %%%s"
+                    % (o["yil"], ik.donem_adi(kunye, False, "bulunma"),
+                       _tl(o["oran"]))
+                    for o in olculenler]
+        govde = turkce.liste(parcalar)
+    return govde + (" gibi yüksek oranlara tekabül ettiği görülmektedir."
+                    if yuksek and len(olculenler) > 1 else
+                    " gibi yüksek bir orana tekabül ettiği görülmektedir."
+                    if yuksek else " olarak hesaplandığı görülmektedir.")
 
 
 def _madde_metni(b, fiil):
@@ -577,12 +598,11 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma,
     # kullanilan belgelerden kurulmali; bilmeden kullanilan tutari paya
     # katmak, kasit kurulmayan bir rakamla kasit kanitlamak olur.
     bilerek_vknler = F.bilerek_vknler(saticilar)
-    # Duzeltme kabul halinde faturalar tarhiyat disi birakildigi icin
-    # `sahte_belge_orani` sifir doner; oran, ebeveyn raporla ayni olcutten
-    # (`duzeltme_kabul_orani`) alinmali ki iki belgedeki yuzde birbirini tutsun.
-    oran = (F.duzeltme_kabul_orani(liste, sonuc, saticilar, bilerek_vknler)
-            if kabul is not None
-            else F.sahte_belge_orani(liste, sonuc, saticilar, bilerek_vknler))
+    # Oran YIL YIL yaziliyor; duzeltme kabul halinde faturalar tarhiyat disi
+    # birakildigi icin olcut `duzeltme_kabul_orani`ne geciyor, yoksa normal
+    # olcut sifir donerdi.
+    oran = F.sahte_belge_orani_yillara(liste, sonuc, saticilar,
+                                       bilerek_vknler, kabul is not None)
 
     b = Belge()
     b.paragraf("VERGİ SUÇLARI RAPORU", kalin=True, hiza="orta")

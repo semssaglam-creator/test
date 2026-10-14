@@ -1327,6 +1327,40 @@ def duzeltme_kabul_uygun_mu(satici_satirlari):
     return True, ""
 
 
+def sahte_belge_orani_yillara(faturalar, sonuc, saticilar=None,
+                              vkn_suzgeci=None, duzeltme=False):
+    """`sahte_belge_orani`yi yil yil hesaplar.
+
+    Vergi suclari raporu orani yil yil yaziyor (mufettisin karari,
+    2026-10-14): tek bir birlesik yuzde, bir yilin agir digerinin hafif
+    oldugu dosyalarda ikisini de yanlis temsil ediyordu.
+
+    Her yil icin pay o yilin faturalarindan, bolen o yilin beyan edilen
+    indirimlerinden kurulur; bu yuzden yillarin orani birbirinden bagimsiz
+    okunabilir. Yil sirasinda doner.
+
+    `duzeltme` dogruysa olcut `duzeltme_kabul_orani`ne gecer - duzeltme
+    kabul raporuna eklenen VSR'de faturalar tarhiyat disi birakildigindan
+    normal olcut sifir donerdi.
+    """
+    olcut = duzeltme_kabul_orani if duzeltme else sahte_belge_orani
+    yillar = sorted({f.get("kayit_yil") for f in (faturalar or [])
+                     if f.get("kayit_yil")})
+    sonuc_donemleri = (sonuc or {}).get("donemler") or []
+    cikti = []
+    for yil in yillar:
+        yil_listesi = [f for f in faturalar if f.get("kayit_yil") == yil]
+        yil_sonucu = {"donemler": [d for d in sonuc_donemleri
+                                   if d["yil"] == yil]}
+        ozet = olcut(yil_listesi, yil_sonucu, saticilar, vkn_suzgeci)
+        if ozet.get("oran") is None and not ozet.get("sahte_kdv"):
+            # O yilda suzgecten gecen belge yok; yil hic anilmasin.
+            continue
+        ozet["yil"] = yil
+        cikti.append(ozet)
+    return cikti
+
+
 def duzeltme_kabul_orani(faturalar, sonuc, saticilar=None, vkn_suzgeci=None):
     """Duzeltmeyle cikarilan / kayda alinmayan KDV'nin indirimler icindeki payi.
 

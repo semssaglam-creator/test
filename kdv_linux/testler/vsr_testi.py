@@ -35,6 +35,7 @@ KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, KOK)
 
 from app import faturalar as F                                       # noqa: E402
+from app import inceleme_kunyesi as IK                               # noqa: E402
 from app import vergi_sucu_raporu as V                               # noqa: E402
 from app import web_server as W                                      # noqa: E402
 from app.satirlar import VERI_KODLARI                                # noqa: E402
@@ -255,6 +256,9 @@ denetle("TOPLAM" not in m, "tek satırlı tabloda TOPLAM satırı yok")
 denetle("payının %0,62" in m,
         "oran yalnızca bilerek kullanılan belgelerden hesaplanıyor")
 denetle("%1,35" not in m, "bilmeyerek kullanılan tutar orana girmiyor")
+# Tek bilerek yil kaldi; yil adi yazilmasin, sade yuzde yeter.
+denetle("2020 hesap döneminde %0,62" not in m,
+        "tek yılda oran yıl adı tekrarlanmadan yazılıyor")
 
 print("\n4b) İki yılın İKİSİ de bilerek")
 h = istekci()
@@ -357,6 +361,49 @@ m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
                  sonuc, c).duz_metin()
 denetle("[rapor tarihi] tarih ve [rapor sayısı] sayılı" in m,
         "girilmemiş rapor bilgisi kırmızı yer tutucu bırakıyor")
+
+print("\n4c) Oran yıl yıl yazılıyor")
+# Mufettisin karari (2026-10-14): tek bir birlesik yuzde, bir yilin agir
+# digerinin hafif oldugu dosyalarda ikisini de yanlis temsil ediyordu.
+# Yillara belirgin olarak farkli buyuklukte sahte belge konuldu.
+c = ornek(bilerek=True, iki_yil=True, ikinci_yil_bilerek=True)
+# 2020: 6.000 / 960.000 = %0,62   |   2021: 20.000 / 960.000 = %2,08
+h = istekci()
+_b, _i, vsr3 = h._rapor_hazirla({"calisma": c})
+m3 = vsr3.duz_metin()
+denetle("2020 hesap döneminde %0,62 ve 2021 hesap döneminde %2,08" in m3,
+        "her yılın oranı ayrı ayrı ve yıl adıyla yazılıyor")
+denetle("payının 2020" in m3, "cümle ilgi ekiyle kuruluyor (“payının”)")
+# Birlesik oran 26.000 / 1.920.000 = %1,35; artik hic yazilmamali.
+denetle("%1,35" not in m3, "yılları birleştiren tek oran yazılmıyor")
+
+# Cumlenin butun bicimleri. "yuksek" nitelemesi yalnizca BUTUN yillar
+# esigin ustundeyse yazilir; %1'lik bir payi "yuksek" demek raporu itiraz
+# edilebilir hale getirir.
+kurum = IK.normalize({"mukellef_turu": "Kurum (sermaye şirketi)"})
+gercek = IK.normalize({"mukellef_turu": "Gerçek kişi"})
+denetle(V._oran_ifadesi(kurum, [{"yil": 2020, "oran": 1.25}])
+        == "%1,25 olarak hesaplandığı görülmektedir.",
+        "tek yıl, düşük oran: sade yüzde")
+denetle("gibi yüksek bir orana tekabül ettiği"
+        in V._oran_ifadesi(kurum, [{"yil": 2020, "oran": 42.5}]),
+        "tek yıl, yüksek oran: “yüksek bir orana”")
+karisik = V._oran_ifadesi(kurum, [{"yil": 2020, "oran": 5.0},
+                                  {"yil": 2021, "oran": 30.0}])
+denetle("yüksek" not in karisik,
+        "bir yıl eşiğin altındaysa “yüksek” denmiyor")
+ikisi_yuksek = V._oran_ifadesi(kurum, [{"yil": 2020, "oran": 40.0},
+                                       {"yil": 2021, "oran": 55.0}])
+denetle("gibi yüksek oranlara tekabül ettiği" in ikisi_yuksek,
+        "iki yıl da yüksekse çoğul: “yüksek oranlara”")
+denetle("2020 takvim yılında" in V._oran_ifadesi(
+            gercek, [{"yil": 2020, "oran": 8.0}, {"yil": 2021, "oran": 9.0}]),
+        "gerçek kişide “takvim yılında” deniyor")
+denetle(V._oran_ifadesi(kurum, []) == "[oran] olarak hesaplandığı görülmektedir.",
+        "ölçülemeyen oran kırmızı yer tutucu bırakıyor")
+denetle(V._oran_ifadesi(kurum, [{"yil": 2020, "oran": None}])
+        == "[oran] olarak hesaplandığı görülmektedir.",
+        "oranı None olan yıl yer tutucuya düşüyor")
 
 print("\n7b) Elle eklenen satıcı yalnızca kendi yılının raporunda")
 # Sahada boyle cikti (2026-10-14): fatura listesi bulunmayan, elle eklenen
