@@ -196,11 +196,29 @@ BOLUMLER = [
                       "faturayla belgelendirdiğinde alınması gereken gerçek "
                       "faturayı almamış olur. Hesaba, Faturalar sekmesinde "
                       "“dahil” bırakılan ve hakkında VTR bulunan satıcılardan "
-                      "alınan belgelerin TAMAMI girer; bilerek/bilmeden "
-                      "ayrımına ve tarhiyata bakılmaz (353/1 kasıt aramayan "
-                      "nesnel bir fiildir ve tutar düzeltmeyle çıkarılmış olsa "
-                      "da fatura alınmamış olması değişmez). Hesaba girmesini "
-                      "istemediğiniz satırın “Dahil” kutucuğunu kaldırın."},
+                      "alınan belgeler girer; tarhiyata bakılmaz (tutar "
+                      "düzeltmeyle çıkarılmış olsa da fatura alınmamış olması "
+                      "değişmez). Kapsamı aşağıdaki iki alan daraltır."},
+            {"kod": "ouc353_kapsam",
+             "etiket": "Belge alma cezasının kapsamı", "tur": "secim",
+             "secenekler": ["Yalnızca bilerek kullanma olan belgeler",
+                            "Bütün sahte belgeler"],
+             "varsayilan": "Yalnızca bilerek kullanma olan belgeler",
+             "ipucu": "VUK 353/1 kasıt aramayan nesnel bir fiildir; kanun "
+                      "bilerek/bilmeden ayrımı yapmaz. Bu yüzden ayrım "
+                      "uygulamaya değil SİZE bırakılmıştır. “Yalnızca bilerek” "
+                      "seçiliyse, kullanma durumu “Bilmeden” olan satıcıların "
+                      "belgeleri hesaba hiç girmez; o satıcılardan başka "
+                      "belgesi olmayan yılda bölüm de açılmaz. Karma yılda "
+                      "ayrım satıcı satıcı yapılır, yıl bütünüyle elenmez."},
+            {"kod": "ouc353_haric_yillar",
+             "etiket": "Belge alma cezasından hariç tutulacak yıllar",
+             "tur": "metin",
+             "ipucu": "Örn: 2019, 2023. Bu yılların belgeleri hesaba hiç "
+                      "girmez ve o yılın raporunda bölüm açılmaz. Kapsam "
+                      "seçiminden BAĞIMSIZDIR: zamanaşımı gibi başka bir "
+                      "gerekçeyle bir yılı çıkarmak için kullanın. Boş "
+                      "bırakılırsa hiçbir yıl çıkarılmaz."},
             {"kod": "ouc353_hadleri",
              "etiket": "Belge alma cezası hadleri (VUK 353/1)",
              "tur": "satirlar", "kolonlar": BELGE_ALMA_KOLONLARI,
@@ -634,6 +652,35 @@ def _had_tutari(ham):
     from .paste_parser import tutar_coz
     deger = tutar_coz(metin)
     return deger if deger and deger > 0 else None
+
+
+def yil_listesi(kunye, kod):
+    """Virgul / bosluk / satirla ayrilmis yil listesini sayi kumesine cevirir.
+
+    "2019, 2023" / "2019 2023" / alt alta yazim - hepsi kabul edilir. Dort
+    haneli olmayan parcalar atilir; mufettis yanlis bir sey yazdiysa belge
+    sessizce bos yila gore hesaplanmasin.
+    """
+    ham = str((kunye or {}).get(kod) or "")
+    parcalar = re.split(r"[,;\s]+", ham.replace("\r\n", "\n"))
+    yillar = set()
+    for p in parcalar:
+        p = p.strip()
+        if len(p) == 4 and p.isdigit():
+            yillar.add(int(p))
+    return yillar
+
+
+def belge_alma_kapsami(kunye, saticilar):
+    """VUK 353/1 hesabina girecek satici VKN kumesi; daraltma yoksa None.
+
+    None donmesi "butun sahteci saticilar" demektir ve `belge_alma_
+    usulsuzlugu`ye suzgec verilmemesiyle aynidir.
+    """
+    if secim_mi(kunye, "ouc353_kapsam", "Bütün sahte belgeler"):
+        return None
+    from .faturalar import bilerek_vknler
+    return bilerek_vknler(saticilar)
 
 
 def belge_alma_hadleri(kunye):

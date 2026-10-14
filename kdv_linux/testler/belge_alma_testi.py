@@ -428,6 +428,65 @@ denetle("01.06.2022 - 30.06.2023" in had_tablosu([2022]),
 denetle("01.06.2022 - 30.06.2023" in had_tablosu([2023]),
         "iki yıla yayılan sınır dönemi ikinci yılda da görünüyor")
 
+# ----------------------------------------------------------- 9) kapsam
+print("\n9) Kapsamı daraltan iki süzgeç")
+# 353/1 kasit aramayan nesnel bir fiildir; kanun bilerek/bilmeden ayrimi
+# yapmaz. Bu yuzden ayrim uygulamaya degil MUFETTISE birakildi (karari,
+# 2026-10-14). Iki ayri suzgec var ve birbirinden bagimsiz calismali.
+KARMA = [("2022-03-10", "K-1", 50000.0),     # bilerek satici
+         ("2022-04-10", "K-2", 40000.0)]     # bilmeden satici
+karma_liste = F.normalize(
+    [dict(f, duzenleyen_vkn=vkn) for f, vkn in
+     zip(faturalar(KARMA), ("1111111111", "2222222222"))], "1234567890")
+KARMA_SATICILAR = {
+    "1111111111": {"unvan": "BİLEREK LTD", "kullanma": "Bilerek kullanma"},
+    "2222222222": {"unvan": "BİLMEDEN LTD", "kullanma": "Bilmeden kullanma"}}
+
+hepsi = F.belge_alma_usulsuzlugu(karma_liste, hadler, KARMA_SATICILAR)
+esit(hepsi["ham_toplam"], 9000.0, "süzgeçsiz: iki belge de sayılıyor")
+
+# Kapsam suzgeci: yalnizca bilerek kullanilan belgeler.
+yalniz = F.belge_alma_usulsuzlugu(karma_liste, hadler, KARMA_SATICILAR,
+                                  F.bilerek_vknler(KARMA_SATICILAR))
+esit(yalniz["ham_toplam"], 5000.0,
+     "kapsam süzgeci: yalnızca bilerek kullanılan belge sayılıyor")
+denetle(len(yalniz["satirlar"]) == 1
+        and yalniz["satirlar"][0]["fatura_no"] == "K-1",
+        "karma yılda ayrım satıcı satıcı yapılıyor, yıl bütünüyle elenmiyor")
+
+# Yil suzgeci: kapsam secimiyle bagimsiz.
+haricli = F.belge_alma_usulsuzlugu(karma_liste, hadler, KARMA_SATICILAR,
+                                   None, {2022})
+denetle(haricli["satirlar"] == [], "hariç tutulan yılın belgeleri sayılmıyor")
+denetle(F.belge_alma_usulsuzlugu(karma_liste, hadler, KARMA_SATICILAR,
+                                 None, {2021})["satirlar"] != [],
+        "başka bir yılı hariç tutmak 2022'yi etkilemiyor")
+
+# Ikisi birlikte
+ikisi = F.belge_alma_usulsuzlugu(karma_liste, hadler, KARMA_SATICILAR,
+                                 F.bilerek_vknler(KARMA_SATICILAR), {2022})
+denetle(ikisi["satirlar"] == [], "iki süzgeç birlikte çalışıyor")
+
+print("\n9b) Künyeden okunan kapsam")
+denetle(ik.belge_alma_kapsami(
+            ik.normalize({"ouc353_kapsam": "Bütün sahte belgeler"}),
+            KARMA_SATICILAR) is None,
+        "“Bütün sahte belgeler” daraltma yapmıyor")
+denetle(ik.belge_alma_kapsami(ik.normalize({}), KARMA_SATICILAR)
+        == {"1111111111"},
+        "varsayılan “yalnızca bilerek”: bilerek satıcının VKN'si")
+denetle(ik.yil_listesi(ik.normalize({"ouc353_haric_yillar": "2019, 2023"}),
+                       "ouc353_haric_yillar") == {2019, 2023},
+        "virgüllü yıl listesi okunuyor")
+denetle(ik.yil_listesi(ik.normalize({"ouc353_haric_yillar": "2019 2023\n2020"}),
+                       "ouc353_haric_yillar") == {2019, 2020, 2023},
+        "boşluk ve satırla ayrılmış liste de okunuyor")
+denetle(ik.yil_listesi(ik.normalize({"ouc353_haric_yillar": "19, abc, 2021"}),
+                       "ouc353_haric_yillar") == {2021},
+        "dört haneli olmayan parçalar atılıyor")
+denetle(ik.yil_listesi(ik.normalize({}), "ouc353_haric_yillar") == set(),
+        "boş bırakılırsa hiçbir yıl çıkarılmıyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

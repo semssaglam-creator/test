@@ -1626,9 +1626,10 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
                                 kunye.get("ouc_ust_sinir"), saticilar)
     ouc353 = None
     if ik.secim_mi(kunye, "ouc353_uygula", "Evet"):
-        ouc353 = F.belge_alma_usulsuzlugu(liste,
-                                          ik.belge_alma_hadleri(kunye),
-                                          saticilar)
+        ouc353 = F.belge_alma_usulsuzlugu(
+            liste, ik.belge_alma_hadleri(kunye), saticilar,
+            ik.belge_alma_kapsami(kunye, saticilar),
+            ik.yil_listesi(kunye, "ouc353_haric_yillar"))
 
     # Belge dogrudan "I- GİRİŞ" ile baslar. Baslik/rapor no/tarih blogu
     # bilerek yok: dairenin kullandigi raporlarda bu bilgiler rapor kapak

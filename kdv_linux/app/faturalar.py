@@ -990,17 +990,29 @@ def _had_bul(hadler, gun):
     return None
 
 
-def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None):
+def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None,
+                           vkn_suzgeci=None, haric_yillar=None):
     """Gercek fatura almama fiilinden dogan ozel usulsuzluk cezasi (VUK 353/1).
 
     Hesaba giren faturalar: kullanicinin "dahil" biraktigi ve hakkinda vergi
-    tekniği raporu bulunan bir saticidan alinmis olanlar. Olcut BILEREK /
-    BILMEDEN ayrimina BAKMAZ - 353/1 kasit aramayan nesnel bir fiildir, 306
-    Sira No'lu Teblig'in kasit tartismasi vergi ziyai cezasi ve 359 icindir.
+    tekniği raporu bulunan bir saticidan alinmis olanlar.
 
-    Olcut tarhiyata da BAKMAZ: tutar duzeltme beyannamesiyle indirimlerden
+    Olcut tarhiyata BAKMAZ: tutar duzeltme beyannamesiyle indirimlerden
     cikarilmis olsa bile gercek fatura alinmamis olmasi degismez. Bu yuzden
     `sayilir` kullanilmaz ve ceza duzeltme kabul raporunda da dogabilir.
+
+    Kapsami iki suzgec daraltir; ikisi de MUFETTISIN karari olup kunyeden
+    gelir, uygulama kendiliginden daraltmaz:
+
+      `vkn_suzgeci`  - yalnizca bu saticilarin belgeleri sayilir. Kunyede
+                       "yalnizca bilerek kullanma olan belgeler" secilince
+                       `bilerek_vknler` verilir. 353/1 kasit aramayan nesnel
+                       bir fiil oldugu icin bu HUKUKI bir zorunluluk degil,
+                       mufettisin tercihidir.
+      `haric_yillar` - bu yillarin belgeleri hic sayilmaz (zamanasimi gibi
+                       baska gerekcelerle bir yili cikarmak icin). Hem fatura
+                       hem kayit yiline bakilir: yil sonunu asan bir belgeyi
+                       mufettis hangi yil diye yazarsa o tutar.
 
     Ceza belge basina hesaplanir: belge tutarinin (KDV dahil) yuzde onu, o
     tarihteki alt sinirin altina inmemek uzere. Yillik ust sinir yil yil
@@ -1011,16 +1023,24 @@ def belge_alma_usulsuzlugu(faturalar, hadler, saticilar=None):
     belirler.
     """
     hadler = hadler or []
+    haric = {int(y) for y in (haric_yillar or []) if str(y).strip()}
     satirlar = []
     for f in faturalar or []:
         if not f.get("dahil"):
             continue
-        if not (saticilar or {}).get(f.get("satici_vkn") or ""):
+        vkn = f.get("satici_vkn") or ""
+        if not (saticilar or {}).get(vkn):
+            continue
+        if vkn_suzgeci is not None and vkn not in vkn_suzgeci:
+            continue
+        gun = _gun(f.get("tarih"))
+        # Yil sonunu asan belgelerde fatura yili ile kayit yili ayrisabilir;
+        # mufettis hangisini yazarsa o yil haric tutulmali.
+        if haric and ({gun[0] if gun else None, f.get("kayit_yil")} & haric):
             continue
         matrah = float(f.get("matrah") or 0.0)
         kdv = float(f.get("kdv") or 0.0)
         toplam = float(f.get("toplam") or 0.0) or (matrah + kdv)
-        gun = _gun(f.get("tarih"))
         had = _had_bul(hadler, gun)
         yuzde_on = round(toplam * BELGE_ALMA_ORANI, 2)
         alt_sinir = had.get("alt_sinir") if had else None

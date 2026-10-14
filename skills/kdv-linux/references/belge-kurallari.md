@@ -42,13 +42,17 @@ Raporun II/A bolumunde iki ayri fiil yan yana durabilir; karistirmayin:
 | Odemeyi banka/PTT belgesiyle tevsik etmeme | muk. 355 | %5 | Fatura satirinda "tevsik edilmemis" tiki |
 | Gercek faturayi hic almama | 353/1 | %10 | "Dahil" birakilan + hakkinda VTR bulunan saticidan alinan faturalarin TAMAMI |
 
-353/1'in olcutu iki seye BAKMAZ, ikisi de bilincli:
+353/1'in olcutu **tarhiyata BAKMAZ**: tutar duzeltme beyannamesiyle
+indirimlerden cikarilmis olsa bile gercek fatura alinmamis olmasi degismez.
+Bu yuzden `sayilir` KULLANILMAZ — kullanilsaydi duzeltmeli dosyalarda kume
+bosalirdi.
 
-- **bilerek / bilmeden**: 353/1 kasit aramayan nesnel bir fiildir. 306 Sira
-  No'lu Teblig'in kasit tartismasi vergi ziyai cezasi ve 359 icindir.
-- **tarhiyat**: tutar duzeltme beyannamesiyle indirimlerden cikarilmis olsa
-  bile gercek fatura alinmamis olmasi degismez. Bu yuzden `sayilir`
-  KULLANILMAZ — kullanilsaydi duzeltmeli dosyalarda kume bosalirdi.
+**Bilerek / bilmeden ayrimi KODA GOMULMEZ.** 353/1 kasit aramayan nesnel bir
+fiildir ve kanun bu ayrimi yapmaz; dolayisiyla ayrim mufettisin tercihidir ve
+kunyeden gelir (`belge_alma_kapsami`, varsayilan "yalnizca bilerek"). Ayrim
+satici satici uygulanir, yil butunuyle elenmez. Ayrica kapsam seciminden
+BAGIMSIZ bir "haric tutulacak yillar" alani var (`ouc353_haric_yillar`):
+zamanasimi gibi baska gerekceler icin.
 
 Ceza orani kanunda yazili oldugu icin sabit; **alt ve ust sinirlar kunyeden
 TARIH ARALIKLI alinir** (`belge_alma_hadleri`). Yil bazli tek bir alan

@@ -775,14 +775,24 @@ oturumda buradan devam edilir.
       işaretleniyor ve belgede kırmızı yer tutucu kalıyor.
 
       Hesaba giren faturalar: "dahil" bırakılan ve hakkında VTR bulunan
-      satıcılardan alınanların tamamı. Ölçüt iki şeye **bakmıyor**, ikisi de
-      bilinçli:
-      - *bilerek/bilmeden*: 353/1 kasıt aramayan nesnel bir fiil; 306 Sıra
-        No'lu Tebliğ'in kasıt tartışması vergi ziyaı cezası ve 359 içindir.
-      - *tarhiyat*: tutar düzeltme beyannamesiyle indirimlerden çıkarılmış
-        olsa bile gerçek fatura alınmamış olması değişmez. Bu yüzden `sayilir`
-        KULLANILMIYOR — kullanılsaydı düzeltmeli dosyalarda küme boşalırdı.
-      Müfettişin tek süzgeci fatura satırındaki "Dahil" kutucuğu.
+      satıcılardan alınanlar. Ölçüt **tarhiyata bakmıyor**: tutar düzeltme
+      beyannamesiyle indirimlerden çıkarılmış olsa bile gerçek fatura
+      alınmamış olması değişmez. Bu yüzden `sayilir` KULLANILMIYOR —
+      kullanılsaydı düzeltmeli dosyalarda küme boşalırdı.
+
+      **Kapsamı künyeden iki süzgeç daraltıyor** (müfettişin kararı,
+      2026-10-14). 353/1 kasıt aramayan nesnel bir fiil olduğu ve kanun
+      bilerek/bilmeden ayrımı yapmadığı için bu ayrım uygulamaya değil
+      müfettişe bırakıldı:
+      - **Kapsam** (`ouc353_kapsam`): "Yalnızca bilerek kullanma olan
+        belgeler" (varsayılan) / "Bütün sahte belgeler". Ayrım satıcı satıcı
+        yapılıyor, yıl bütünüyle elenmiyor — karma bir yılda yalnızca bilerek
+        satıcının belgeleri sayılır. O satıcılardan belgesi olmayan yılda
+        bölüm hiç açılmaz.
+      - **Hariç yıllar** (`ouc353_haric_yillar`): "2019, 2023" gibi. Kapsam
+        seçiminden bağımsız; zamanaşımı gibi başka gerekçeler için. Yıl
+        sonunu aşan belgelerde hem fatura hem kayıt yılına bakılıyor, böylece
+        müfettiş hangisini yazarsa o tutuyor.
 
       Yıllık üst sınır yıl yıl uygulanıyor; yıl içinde sınır değiştiyse yılın
       SON geçerli sınırı esas alınıyor (ceza yıl kapandıktan sonra kesilir).
