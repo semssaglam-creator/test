@@ -812,7 +812,7 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
 
 
 # --------------------------------------------------------- oran ve ozel usulsuzluk
-def sahte_belge_orani(faturalar, sonuc, saticilar=None):
+def sahte_belge_orani(faturalar, sonuc, saticilar=None, vkn_suzgeci=None):
     """Sahte belgelerin mukellefin toplam alislari icindeki payini hesaplar.
 
     Bu oran, "bilerek kullanma" kanaatinin en cok dayandirildigi olcuttur:
@@ -824,8 +824,18 @@ def sahte_belge_orani(faturalar, sonuc, saticilar=None):
     indirilecek KDV toplami. Matrah yerine KDV secilmesinin nedeni, fatura
     dokumunde her zaman KDV bulunmasi ama alis matrahinin beyannamede ayrica
     yer almamasidir.
+
+    `vkn_suzgeci` verilirse pay yalnizca o saticilarin faturalarindan kurulur
+    ve bolen de yalnizca o faturalarin bulundugu yillarin indirimine iner.
+    Vergi suclari raporu bunu `bilerek_vknler` ile kullanir: oran, orada
+    KASTIN delili olarak sunuldugu icin bilmeden kullanilan belgeleri
+    icermemelidir - yoksa rapor, kasit kurulmayan bir tutarla kasit
+    kanitlamaya calisir.
     """
     dahil = [f for f in (faturalar or []) if sayilir(f, saticilar)]
+    if vkn_suzgeci is not None:
+        dahil = [f for f in dahil
+                 if (f.get("satici_vkn") or "") in vkn_suzgeci]
     sahte_kdv = sum(float(f.get("kdv") or 0.0) for f in dahil)
     yillar = {f.get("kayit_yil") for f in dahil if f.get("kayit_yil")}
     toplam_indirim = sum(
@@ -1283,16 +1293,23 @@ def duzeltme_kabul_uygun_mu(satici_satirlari):
     return True, ""
 
 
-def duzeltme_kabul_orani(faturalar, sonuc, saticilar=None):
+def duzeltme_kabul_orani(faturalar, sonuc, saticilar=None, vkn_suzgeci=None):
     """Duzeltmeyle cikarilan / kayda alinmayan KDV'nin indirimler icindeki payi.
 
     `sahte_belge_orani` ile ayni olcut, ama ters kume uzerinde: orada tarhiyata
     GIREN faturalar sayilir, burada tarhiyat disi birakilanlar. Duzeltme kabul
     raporunda bilerek/bilmeden degerlendirmesi bu orana dayanir.
+
+    `vkn_suzgeci`, `sahte_belge_orani`dakiyle ayni ise yarar: vergi suclari
+    raporu orani kastin delili olarak sundugundan paya yalnizca bilerek
+    kullanilan belgeler girer.
     """
     ilgili = [f for f in (faturalar or [])
               if f.get("dahil")
               and tarhiyat_disi_birakildi_mi(f.get("satici_vkn"), saticilar)]
+    if vkn_suzgeci is not None:
+        ilgili = [f for f in ilgili
+                  if (f.get("satici_vkn") or "") in vkn_suzgeci]
     kdv = sum(float(f.get("kdv") or 0.0) for f in ilgili)
     yillar = {f.get("kayit_yil") for f in ilgili if f.get("kayit_yil")}
     toplam_indirim = sum(
@@ -1311,3 +1328,27 @@ def bilerek_kullananlar(satici_satirlari):
     """Kullanma durumu "Bilerek kullanma" olan saticilar."""
     return [s for s in (satici_satirlari or [])
             if str(s.get("kullanma") or "") == "Bilerek kullanma"]
+
+
+def bilerek_vknler(saticilar):
+    """Kullanma durumu "Bilerek kullanma" olan saticilarin VKN kumesi."""
+    return {vkn for vkn, bilgi in (saticilar or {}).items()
+            if str((bilgi or {}).get("kullanma") or "") == "Bilerek kullanma"}
+
+
+def bilerek_yillari(faturalar, saticilar=None):
+    """Bilerek kullanma tespit edilen yillar (kayit yili).
+
+    Suc duyurusu ve vergi suclari raporu YALNIZCA bu yillara iliskindir.
+    Dort yilin ucunde bilerek, birinde bilmeden kullanma varsa VSR o dordunu
+    birlikte anmamali: bilmeden kullanilan yilda 306 Sira No'lu Teblig
+    geregi kasit, dolayisiyla suc yoktur.
+
+    Olcut `dahil` isaretli faturalar uzerinden kurulur; `sayilir`
+    KULLANILMAZ, cunku tutar duzeltmeyle indirimlerden cikarilmis olsa da
+    bilerek kullanma fiili islenmistir.
+    """
+    vknler = bilerek_vknler(saticilar)
+    return sorted({f["kayit_yil"] for f in (faturalar or [])
+                   if f.get("dahil") and f.get("kayit_yil")
+                   and (f.get("satici_vkn") or "") in vknler})

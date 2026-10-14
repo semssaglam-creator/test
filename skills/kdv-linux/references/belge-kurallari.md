@@ -72,6 +72,13 @@ Degerlendirme Komisyonunun mutalaasiyla savciliga bildirilir.
   indirilirken, `gerekli_mi(calisma)` dogru donuyorsa uretilip ayni pakete
   konur. Yeni bir rapor turu eklerseniz ayni seyi yapin; mufettisin ikinci
   bir dugmeye basmasi gerekmesin.
+- VSR **yalnizca BILEREK kullanma olan yillara iliskindir.** Dort yilin
+  ucunde bilerek, birinde bilmeden kullanma varsa o dorduncu yil raporda HIC
+  anilmaz: ne cumlelerde ne V. bolumdeki tabloda (`bilerek_yillari`).
+- **3.2'deki oran da yalnizca bilerek kullanilan belgelerden kurulur.** Oran
+  orada KASTIN delilidir; bilmeden kullanilan tutari paya katmak, kasit
+  kurulmayan bir rakamla kasit kanitlamak olur. `sahte_belge_orani` ve
+  `duzeltme_kabul_orani` bunun icin `vkn_suzgeci` alir.
 - VSR **butun inceleme donemi icin TEK duzenlenir**, tarhiyat raporu gibi
   yil yil DEGIL. Yillar raporun icinde: atiflar cogullasir ve V. bolumdeki
   tablo her yil icin bir satir acar. Her satirin vergi/ceza tutari O YILIN

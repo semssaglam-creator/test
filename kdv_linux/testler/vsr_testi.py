@@ -50,8 +50,15 @@ def denetle(kosul, aciklama):
 
 
 # ------------------------------------------------------------------- ornek
-def ornek(kurum=True, bilerek=True, duzeltme=False, iki_yil=False):
-    """Tek saticili, tek yilli en kucuk dosya; her hal icin uyarlanir."""
+def ornek(kurum=True, bilerek=True, duzeltme=False, iki_yil=False,
+          ikinci_yil_bilerek=False):
+    """Tek saticili, tek yilli en kucuk dosya; her hal icin uyarlanir.
+
+    `iki_yil` ikinci bir yil ekler. O yilin saticisi varsayilan olarak
+    BILMEDEN kullanma; `ikinci_yil_bilerek` ile bilerek yapilir. Ikisi ayri
+    hal: birincisi "bilmeyerek olan yil rapora girmemeli"yi, ikincisi
+    "iki bilerek yil tek raporda cogul anilmali"yi denetler.
+    """
     def beyan():
         b = {k: [0.0] * 12 for k in VERI_KODLARI}
         for ay in range(12):
@@ -91,16 +98,19 @@ def ornek(kurum=True, bilerek=True, duzeltme=False, iki_yil=False):
     yillar = [{"yil": 2020, "beyan": beyan(), "ay_sayisi": 12,
                "elestiri": elestiri()}]
     if iki_yil:
-        # Ikinci yilda yalnizca BILMEDEN kullanilan bir satici var; o yil
-        # icin suc duyurusu gerekmez, dolayisiyla VSR de uretilmemeli.
         yillar.append({"yil": 2021, "beyan": beyan(), "ay_sayisi": 12,
                        "elestiri": elestiri()})
+        # KDV'si birinci yilin saticisindan BUYUK secildi: oran suzgeci
+        # calismazsa pay belirgin olarak degisir, boylece denetim ayirt eder.
         fat.append({"duzenleyen_vkn": "3333333333", "alici_vkn": "1234567890",
                     "tarih": "2021-04-10", "fatura_no": "B-1",
-                    "matrah": 10000.0, "kdv": 2000.0, "toplam": 12000.0,
+                    "matrah": 100000.0, "kdv": 20000.0, "toplam": 120000.0,
                     "dahil": True})
-        sat["3333333333"] = {"unvan": "BİLMEDEN-1 LTD",
-                             "kullanma": "Bilmeden kullanma",
+        sat["3333333333"] = {"unvan": ("BİLEREK-2 LTD" if ikinci_yil_bilerek
+                                       else "BİLMEDEN-1 LTD"),
+                             "kullanma": ("Bilerek kullanma"
+                                          if ikinci_yil_bilerek
+                                          else "Bilmeden kullanma"),
                              "vergi_dairesi": "5 OCAK VD",
                              "vtr_no": "2025-[2014]/9",
                              "vtr_tarihi": "04.03.2025",
@@ -182,6 +192,12 @@ denetle("Dolayısıyla kanuni temsilci hakkında" in metin,
 # %1,25'lik bir pay "yuksek" diye nitelenmemeli.
 denetle("gibi yüksek bir orana" not in metin,
         "düşük oran “yüksek” diye nitelenmiyor")
+# Giris cumlesi sadelestirildi: "kasitli olarak, yani bilerek ve isteyerek"
+# uc kez ayni seyi soyluyordu (mufettisin karari, 2026-10-14).
+denetle("faturaları bilerek kullandığı tespit edilmiştir" in metin,
+        "giriş cümlesi sade: “bilerek kullandığı tespit edilmiştir”")
+denetle("kasıtlı olarak, yani" not in metin,
+        "eş anlamlı kelimeler yan yana yazılmıyor")
 
 print("\n2) Bilmeden kullanmada")
 h = istekci()
@@ -213,23 +229,53 @@ denetle(sum(1 for n in icerik if "Vergi_suclari_raporu" in n) == 1,
         "pakette TEK VSR var, yıl yıl değil")
 
 m = vsr.duz_metin()
-denetle("2020 ve 2021 hesap dönemleri" in m,
-        "giriş bölümü iki yılı birlikte anıyor")
-denetle("Vergi İnceleme Raporları" in m,
-        "iki rapora atıf çoğul yazılıyor (“Raporları”)")
-denetle("Vergi İnceleme Raporlarında" in m, "çoğul atıf bulunma hâlinde")
-denetle("2025-[2013]/72" in m and "2025-[2013]/80" in m,
-        "her yılın rapor sayısı metinde geçiyor")
-denetle("Söz konusu raporlarda" in m, "“söz konusu raporlarda” çoğul")
-denetle("2025-[2013]/72 sayılı, 25.10.2025 tarih" in m,
-        "raporlar virgülle sıralanıyor (“sayılı ve ... tarih ve” değil)")
-# V. bolumdeki tablo yil yil satir acmali ve TOPLAM satiri tasimali.
+# Bu dosyada 2021 BILMEDEN kullanma. VSR yalnizca suc islenen yillara
+# iliskindir; 2021 raporda HIC anilmamali - ne cumlelerde ne tabloda.
+# (Sahada boyle cikti: dort yillik bir incelemede uc yil bilerek, bir yil
+# bilmedenken VSR dort yili birlikte aniyordu.)
+denetle("2020 hesap dönemi" in m and "2020 ve 2021" not in m,
+        "giriş bölümü yalnızca bilerek olan yılı anıyor")
+denetle("2021" not in m, "bilmeyerek olan yıl raporda hiç geçmiyor")
+denetle("2025-[2013]/80" not in m,
+        "bilmeyerek olan yılın tarhiyat raporuna atıf yapılmıyor")
+denetle("Vergi İnceleme Raporu " in m and "Vergi İnceleme Raporları" not in m,
+        "tek yıl kaldığı için atıf tekil")
 tablo = [s for s in m.strip().split("\n") if "\tKDV\t" in s]
-denetle(len(tablo) == 2, "tablo iki yıl için iki satır açıyor")
-denetle(tablo[0].startswith("20.10.2025\t2025-[2013]/72\t2020")
-        and tablo[1].startswith("25.10.2025\t2025-[2013]/80\t2021"),
+denetle(len(tablo) == 1, "tablo yalnızca bilerek olan yıl için satır açıyor")
+denetle(tablo[0].startswith("20.10.2025\t2025-[2013]/72\t2020"),
+        "satır 2020'nin raporunu taşıyor")
+denetle("TOPLAM" not in m, "tek satırlı tabloda TOPLAM satırı yok")
+
+# Oran, 3.2'de KASTIN delili. Bilmeden kullanilan 20.000 TL KDV paya
+# GIRMEMELI: payda yalnizca bilerek kullanilan 6.000 TL olmali ve bolen de
+# yalnizca 2020'nin indirimine inmeli (12 x 80.000 = 960.000).
+# 6.000 / 960.000 = %0,62 (0,625 Python'da 0,62'ye yuvarlanir).
+# Suzgec calismazsa 26.000 / 1.920.000 = %1,35 cikiyor - ayirt edici deger bu.
+denetle("payının %0,62" in m,
+        "oran yalnızca bilerek kullanılan belgelerden hesaplanıyor")
+denetle("%1,35" not in m, "bilmeyerek kullanılan tutar orana girmiyor")
+
+print("\n4b) İki yılın İKİSİ de bilerek")
+h = istekci()
+c = ornek(bilerek=True, iki_yil=True, ikinci_yil_bilerek=True)
+_b, _i, vsr2 = h._rapor_hazirla({"calisma": c})
+m2 = vsr2.duz_metin()
+denetle("2020 ve 2021 hesap dönemleri" in m2,
+        "giriş bölümü iki yılı birlikte anıyor")
+denetle("Vergi İnceleme Raporları" in m2,
+        "iki rapora atıf çoğul yazılıyor (“Raporları”)")
+denetle("Vergi İnceleme Raporlarında" in m2, "çoğul atıf bulunma hâlinde")
+denetle("2025-[2013]/72" in m2 and "2025-[2013]/80" in m2,
+        "her yılın rapor sayısı metinde geçiyor")
+denetle("Söz konusu raporlarda" in m2, "“söz konusu raporlarda” çoğul")
+denetle("2025-[2013]/72 sayılı, 25.10.2025 tarih" in m2,
+        "raporlar virgülle sıralanıyor (“sayılı ve ... tarih ve” değil)")
+tablo2 = [s for s in m2.strip().split("\n") if "\tKDV\t" in s]
+denetle(len(tablo2) == 2, "tablo iki yıl için iki satır açıyor")
+denetle(tablo2[0].startswith("20.10.2025\t2025-[2013]/72\t2020")
+        and tablo2[1].startswith("25.10.2025\t2025-[2013]/80\t2021"),
         "her satır o yılın raporunun tarih/sayısını taşıyor")
-denetle("TOPLAM" in m.strip().split("\n")[-1],
+denetle("TOPLAM" in m2.strip().split("\n")[-1],
         "çok yıllı tabloda TOPLAM satırı var")
 
 # ---------------------------------------------------- 5) duzeltme kabul raporu
@@ -263,7 +309,9 @@ denetle("60.000,00" in son, "ceza 3 kat (20.000 x 3) yazılıyor")
 
 # Cok yilli duzeltmede her satirin cezasi O YILIN ziyasindan gelmeli;
 # dosya toplamini her satira yazmak cezayi yil sayisi kadar buyutur.
-c = ornek(bilerek=True, duzeltme=True, iki_yil=True)
+# Iki yilin IKISI de bilerek olmali: bilmeyerek olan yil rapora hic
+# girmediginden tablo tek satira duser ve bu denetim anlamsizlasir.
+c = ornek(bilerek=True, duzeltme=True, iki_yil=True, ikinci_yil_bilerek=True)
 sonuc, _bulgular = W._hesapla(c)
 belge = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
                      sonuc, c, V.FIIL_SAHTE_BELGE,

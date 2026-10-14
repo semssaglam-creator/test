@@ -709,10 +709,31 @@ oturumda buradan devam edilir.
       etmeme raporu için defter tasdik makamı. Hiçbiri zorunlu alan değil;
       boş kalanlar belgede kırmızı yer tutucu olur.
 
+      **VSR yalnızca bilerek kullanma olan yıllara ilişkindir.** Dört yıllık
+      bir incelemede üç yıl bilerek, bir yıl bilmeyerek ise o dördüncü yıl
+      raporda hiç anılmıyor — ne giriş/sonuç cümlelerinde ne V. bölümdeki
+      tabloda. Bilmeyerek kullanmada 306 Sıra No'lu Tebliğ gereği kasıt,
+      dolayısıyla suç yok. (Sahada böyle çıktı, 2026-10-14; önce dört yıl
+      birlikte anılıyordu.) Ölçüt `faturalar.bilerek_yillari`; `sayilir`
+      kullanılmıyor, çünkü tutar düzeltmeyle çıkarılmış olsa da fiil
+      işlenmiştir.
+
+      **3.2'deki oran da yalnızca bilerek kullanılan belgelerden kuruluyor.**
+      Oran orada KASTIN delili olarak sunulduğundan, bilmeyerek kullanılan
+      tutarı paya katmak kasıt kurulmayan bir rakamla kasıt kanıtlamak olur.
+      `sahte_belge_orani` / `duzeltme_kabul_orani` artık bir `vkn_suzgeci`
+      alıyor; VSR bunu `bilerek_vknler` ile veriyor, böylece bölen de
+      yalnızca bilerek olan yılların indirimine iniyor.
+
+      Giriş cümlesi sadeleştirildi: "kasıtlı olarak, yani bilerek ve
+      isteyerek" üç kez aynı şeyi söylüyordu; artık "bilerek kullandığı
+      tespit edilmiştir" (müfettişin kararı, 2026-10-14).
+
       Gerileme denetimi: `testler/vsr_testi.py`. Üretilip üretilmediğini, KAÇ
       belge üretildiğini (tek rapor), çoğul ek uyumunu, yıl yıl tablo
-      satırlarını ve metindeki ek hatalarını kolluyor; mutasyonlarla
-      gerçekten tuttuğu doğrulandı.
+      satırlarını, **bilmeyerek olan yılın rapora hiç girmediğini**, **oranın
+      süzgeçten geçtiğini** ve metindeki ek hatalarını kolluyor;
+      mutasyonlarla gerçekten tuttuğu doğrulandı.
 
 - [x] **Belge alma özel usulsüzlüğü (VUK 353/1) eklendi.** Mükellef, gerçekten
       aldığı mal ve hizmeti sahte faturayla belgelendirdiğinde "alınması icap

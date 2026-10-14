@@ -129,12 +129,14 @@ def _giris(b, inceleme, kunye, donemler, fiil, virler):
 
     if fiil == FIIL_SAHTE_BELGE:
         b.paragraf(
+            # "kasitli olarak, yani bilerek ve isteyerek" uc kez ayni seyi
+            # soyluyordu; mufettisin karari (2026-10-14): "bilerek" yeter.
             "%s yasal defter ve belgeleri üzerinden yapılan inceleme "
             "neticesinde Müfettişliğimizce %s tanzim edilmiştir. %s, %s işbu "
             "raporun II nci bölümünde unvanları belirtilen mükellefler "
             "tarafından sahte veya muhteviyatı itibarıyla yanıltıcı belge "
-            "olarak düzenlenen faturaları kasıtlı olarak, yani bilerek ve "
-            "isteyerek kullandığı kanaatine varılmıştır."
+            "olarak düzenlenen faturaları bilerek kullandığı tespit "
+            "edilmiştir."
             % (_donem_ifadesi(kunye, donemler), _vir_ifadesi(virler),
                _rapor_sozu(virler, buyuk=True), M(kunye, ek="in")), girinti=1)
     else:
@@ -557,18 +559,30 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma,
     mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
     liste = F.normalize(calisma.get("faturalar"), mukellef_vkn)
     saticilar = calisma.get("saticilar") or {}
-    donemler = dolu_donemler(sonuc)
+
+    # Rapor YALNIZCA bilerek kullanma tespit edilen yillara iliskindir.
+    # Dort yilin ucunde bilerek, birinde bilmeden kullanma varsa o dorduncu
+    # yil bu raporda hic anilmamali: ne giris/sonuc cumlelerinde, ne V.
+    # bolumdeki tabloda. Bilmeden kullanmada 306 Sira No'lu Teblig geregi
+    # kasit, dolayisiyla suc yoktur. (Sahada boyle cikti, 2026-10-14.)
+    bilerek_yillar = F.bilerek_yillari(liste, saticilar)
+    donemler = [d for d in dolu_donemler(sonuc)
+                if not bilerek_yillar or d["yil"] in bilerek_yillar]
     virler = _vir_kayitlari(kunye, donemler)
 
     # Yalnizca BILEREK kullanilan saticilar bu rapora girer: suc duyurusu
-    # onlara iliskin fiilden dogar. Bilmeden kullanilan belgeler 306 Sira
-    # No'lu Teblig geregi 359 kapsaminda degerlendirilmez.
+    # onlara iliskin fiilden dogar.
     satici_satirlari = F.bilerek_kullananlar(F.satici_ozeti(liste, saticilar))
+    # Oran 3.2'de KASTIN delili olarak sunuldugu icin yalnizca bilerek
+    # kullanilan belgelerden kurulmali; bilmeden kullanilan tutari paya
+    # katmak, kasit kurulmayan bir rakamla kasit kanitlamak olur.
+    bilerek_vknler = F.bilerek_vknler(saticilar)
     # Duzeltme kabul halinde faturalar tarhiyat disi birakildigi icin
     # `sahte_belge_orani` sifir doner; oran, ebeveyn raporla ayni olcutten
     # (`duzeltme_kabul_orani`) alinmali ki iki belgedeki yuzde birbirini tutsun.
-    oran = (F.duzeltme_kabul_orani(liste, sonuc, saticilar) if kabul is not None
-            else F.sahte_belge_orani(liste, sonuc, saticilar))
+    oran = (F.duzeltme_kabul_orani(liste, sonuc, saticilar, bilerek_vknler)
+            if kabul is not None
+            else F.sahte_belge_orani(liste, sonuc, saticilar, bilerek_vknler))
 
     b = Belge()
     b.paragraf("VERGİ SUÇLARI RAPORU", kalin=True, hiza="orta")
