@@ -641,8 +641,10 @@ class Istekci(BaseHTTPRequestHandler):
         TEK duzenlenir (yillar raporun icinde satirlanir), bu yuzden yil yil
         liste degil tek bir belge doner. Bilerek kullanma yoksa None.
         """
+        from . import devir_duzeltme_raporu
         from . import sahte_belge_raporu
         from . import vergi_sucu_raporu
+        faturalar = _fatura_modulu()
         calisma = veri.get("calisma") or {}
         sonuc, bulgular = _hesapla(calisma)
         yillar = _yillari_coz(calisma)
@@ -650,13 +652,34 @@ class Istekci(BaseHTTPRequestHandler):
         duzeltme = self._duzeltme_dokumu(calisma)
         karsilastirmalar = self._duzeltme_karsilastirmalari(calisma)
         dokumler = self._beyan_dokumleri(calisma)
-        rapor_yillari = sahte_belge_raporu.rapor_yillari(sonuc) or [None]
+
+        # Incelenen yillardan sonraki yillarda devir zinciri yuzunden
+        # odenecek cikiyorsa o yilin belgesi sahte belge kullanma raporu
+        # DEGIL, devir duzeltme raporudur; o yillar buradan cikarilir ki
+        # ayni yil icin iki belge uretilmesin.
+        mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+        liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+        saticilar = calisma.get("saticilar") or {}
+        devir_yillari = devir_duzeltme_raporu.rapor_yillari(sonuc, liste,
+                                                            saticilar)
+        rapor_yillari = [y for y in sahte_belge_raporu.rapor_yillari(sonuc)
+                         if y not in devir_yillari] or [None]
+        # Uclu: (yil, belge, dosya adi). Ad burada belirlenir, cunku iki ayri
+        # rapor turu uretiliyor ve gonderme tarafinin hangisinin hangisi
+        # oldugunu yeniden cozmesi gerekmesin.
         belgeler = [
             (y, sahte_belge_raporu.rapor_uret(inceleme, calisma.get("kunye"),
                                               yillar, sonuc, calisma, bulgular,
                                               duzeltme, y, karsilastirmalar,
-                                              dokumler))
+                                              dokumler),
+             sahte_belge_raporu.dosya_adi(inceleme, y))
             for y in rapor_yillari]
+        belgeler += [
+            (y, devir_duzeltme_raporu.rapor_uret(
+                inceleme, calisma.get("kunye"), sonuc, calisma, y),
+             devir_duzeltme_raporu.dosya_adi(inceleme, y))
+            for y in devir_yillari]
+        belgeler.sort(key=lambda u: (u[0] is not None, u[0]))
         vsr = (vergi_sucu_raporu.rapor_uret(
             inceleme, calisma.get("kunye"), yillar, sonuc, calisma)
             if vergi_sucu_raporu.gerekli_mi(calisma) else None)
@@ -702,12 +725,15 @@ class Istekci(BaseHTTPRequestHandler):
         belgeler, _inceleme, vsr = self._rapor_hazirla(veri)
         kunye = ik.normalize((veri.get("calisma") or {}).get("kunye"))
         # Birden cok yil varsa onizleme raporlari alt alta gosterir; hangi
-        # yila ait olduklari araya konan ayrac satiriyla belli olur.
+        # yila ait olduklari araya konan ayrac satiriyla belli olur. Devir
+        # duzeltme raporu ayri bir tur oldugundan ayracta da belirtilir.
         parcalar = []
-        for yil, belge in belgeler:
+        for yil, belge, ad in belgeler:
             if yil and len(belgeler) > 1:
-                parcalar.append("=" * 30 + (" %s YILI RAPORU " % yil)
-                                + "=" * 30 + "\n")
+                tur = (" DEVİR DÜZELTME RAPORU "
+                       if "Devir_duzeltme" in ad else " YILI RAPORU ")
+                parcalar.append("=" * 25 + (" %s%s" % (yil, tur))
+                                + "=" * 25 + "\n")
             parcalar.append(belge.duz_metin())
         parcalar += _vsr_onizleme_parcasi(vsr)
         return {"metin": "\n".join(parcalar),
@@ -717,8 +743,7 @@ class Istekci(BaseHTTPRequestHandler):
         from . import sahte_belge_raporu
         from . import vergi_sucu_raporu
         belgeler, inceleme, vsr = self._rapor_hazirla(veri)
-        dosyalar = [(sahte_belge_raporu.dosya_adi(inceleme, yil), belge.bayt())
-                    for yil, belge in belgeler]
+        dosyalar = [(ad, belge.bayt()) for _yil, belge, ad in belgeler]
         if vsr is not None:
             dosyalar.append((vergi_sucu_raporu.dosya_adi(inceleme), vsr.bayt()))
         self._ciktilara_yaz(dosyalar)

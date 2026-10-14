@@ -63,6 +63,25 @@ faturanin tarihi hicbir had satirina denk gelmezse cezasi UYDURULMAZ; satir
 Hadleri okurken `paste_parser.tutar_coz` KULLANILMAZ: "1.000" ve "190.000"i
 1,0 ve 190,0 diye okur. `inceleme_kunyesi._had_tutari` bunun icin var.
 
+## Devir zinciri incelenen yillarin OTESINE gecer
+
+Bir yilin indirimleri reddedildiginde o yilin Aralik devri kuculur ve devir
+ILERIYE akar. Mufettis sonraki yillari da calismaya ekler (devirin ne kadar
+etkilendigini gormek icin); kucuk devirle yeniden kurulan zincirde bir
+donemde odenecek vergi dogarsa o yil icin **devir duzeltme raporu**
+duzenlenir (`devir_duzeltme_raporu.py`), sahte belge kullanma raporu degil.
+O yillar `sahte_belge_raporu.rapor_yillari`'ndan cikarilir; aksi halde ayni
+yil icin iki belge uretilir.
+
+Yil secimi uc kosul arar ve ucu de gerekli: (1) o yilda sahte belge yok,
+(2) onunden gelen devir GERCEKTEN degismis, (3) o yilda fark var. Ikinci
+kosul olmadan, mufettisin o yila girdigi bir matrah ilavesinden dogan fark
+da bu raporu tetiklerdi - oysa o halde yazilacak belge bu DEGILDIR.
+
+Raporun en islevsel maddesi sonuc bolumunun "sonraki yilin Ocak devri vergi
+dairesince duzeltilsin" maddesidir; zincir boylece elle devam ettirilir.
+Yeni bir yil raporu eklerseniz bu maddeyi atlamayin.
+
 ## Vergi Suclari Raporu (VSR) — ayri belge, elle istenmez
 
 VUK 359 kapsamindaki fiil tespit edildiginde, tarhiyat oneren rapordan AYRI

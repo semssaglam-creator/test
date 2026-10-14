@@ -221,7 +221,7 @@ print("\n4) İki yıllı dosyada TEK VSR")
 h = istekci()
 c = ornek(bilerek=True, iki_yil=True)
 belgeler, inceleme, vsr = h._rapor_hazirla({"calisma": c})
-denetle([y for y, _ in belgeler] == [2020, 2021],
+denetle([u[0] for u in belgeler] == [2020, 2021],
         "tarhiyat raporu her yıl için ayrı")
 denetle(vsr is not None, "VSR üretiliyor")
 h._rapor_gonder({"calisma": c})
@@ -428,7 +428,7 @@ def elle_satici_ile(elle_yil):
     h = istekci()
     belgeler, _inceleme, _vsr = h._rapor_hazirla({"calisma": c})
     return {yil: "elle-x" in belge.duz_metin().lower()
-            for yil, belge in belgeler}
+            for yil, belge, _ad in belgeler}
 
 
 gorunum = elle_satici_ile("2021")

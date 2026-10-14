@@ -663,6 +663,49 @@ oturumda buradan devam edilir.
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
       paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
       yazılıyor.
+- [x] **Devir düzeltme raporu eklendi.** (`app/devir_duzeltme_raporu.py`)
+      Sahte belge raporu bir yılın indirimlerini reddettiğinde o yılın Aralık
+      devri küçülür. Devir ileriye aktığı için **incelenmeyen sonraki
+      yılların** beyanları da gerçek durumu yansıtmaz hâle gelir; küçük
+      devirle yeniden kurulan zincirde bir dönemde ödenecek vergi doğarsa o
+      yıl için ayrı bir rapor düzenlenir. Müfettişin örnek raporundan
+      çıkarılan yapı: I-GİRİŞ, II-USUL (tenkitler asıl rapordadır),
+      III-HESAP (III.1 beyan tablosu), IV-TESPİT VE TENKİT (IV.A re'sen
+      takdir nedeni, IV.B verileri, IV.C düzeltme + tarhiyat), V-SONUÇ.
+
+      **Rapor tarhiyat önerir:** kendi yılında doğan fark vergiyi ve VUK 341
+      ile 344 gereği **1 (bir) kat** vergi ziyaı cezasını ister. Dayanak VUK
+      30'un 4 ve 6 numaralı bentleri (beyanın gerçek durumu yansıtmaması).
+
+      Raporun en işlevsel maddesi V. bölümün 3. maddesi: bu yılın Aralık
+      devri de değiştiğinden **sonraki yılın Ocak devrinin vergi dairesince
+      düzeltilmesi** istenir. Zincir böylece elle devam ettirilir.
+
+      **Yıl seçimi üç koşul arıyor** (`rapor_yillari`), üçü de gerekli:
+      1. O yılda sahte belge YOK — belgesi olan yıl incelenen yıldır.
+      2. Önünden gelen devir GERÇEKTEN değişmiş (önceki yılın Aralık ayında
+         beyan edilen ≠ olması gereken). Bu olmadan fark, müfettişin o yıla
+         girdiği bir matrah ilavesinden de gelebilir ve yazılacak belge bu
+         rapor değildir. Önceki yıl çalışmada yoksa yıl seçilmez.
+      3. O yılda re'sen tarhı gereken bir fark VAR — devir küçülmesi her
+         zaman vergi doğurmaz, zincir farkı soğurabilir.
+
+      Bu yıllar `sahte_belge_raporu.rapor_yillari`'ndan **çıkarılıyor**;
+      aksi hâlde aynı yıl için iki belge üretiliyordu. `_rapor_hazirla`
+      artık `(yıl, belge, dosya adı)` üçlüsü döndürüyor — iki rapor türü
+      üretildiği için adı üreten yerin belirlemesi gerekiyor.
+
+      Gerileme denetimi: `testler/devir_duzeltme_testi.py`. Fikstür devir
+      zincirini elle kuruyor (beyan bloğu gerçekte beyannameden gelir ve
+      devir sütunlarını kendisi taşır).
+
+      **Fikstür yazarken üç tuzak:** (a) beyana `onceki_donem_devreden` /
+      `sonraki_donem_devreden` yazılmazsa beyan devri sıfır kalır ve rapor
+      tersine okunur; (b) `odenmesi_gereken_kdv` yazılmazsa yıl, devirle
+      ilgisi olmayan bir fark üretir; (c) "devir değişmediyse rapor yazılmaz"
+      denetimi ilk yazıldığında farkı da sıfır olan bir fikstüre dayanıyordu,
+      yanlış sebepten geçiyordu ve koşul kaldırıldığında hiç kızarmadı —
+      fikstür farkın gerçekten doğduğu bir hâle çevrildi.
 - [x] **Elle eklenen satıcı artık yalnızca kendi yılının raporunda.** Sahada
       böyle çıktı (2026-10-14): fatura listesi bulunmayan, elle eklenmiş bir
       satıcı (örn. yalnızca 2021 için sahteci, iş emri yok) HER yılın
