@@ -1181,17 +1181,29 @@ def _ceza_tablosu(b, ceza):
     genisletiyordu. Sutunlar bu yuzden verinin kendisinden secilir.
     """
     t = ceza["toplam"]
-    bilmeden_pay = lambda x: x["pay_bilmeden"] + x["pay_belirsiz"]
-    bilmeden_ceza = lambda x: x["ceza_bilmeden"] + x["ceza_belirsiz"]
+    # Bir kat ceza tasiyan uc kalem: bilmeden kullanilan belgeler, kullanma
+    # durumu secilmemis saticilar ve sahte belgeye atfedilemeyen kalan tutar.
+    bilmeden_ceza = lambda x: (x["ceza_bilmeden"] + x["ceza_belirsiz"]
+                               + x["ceza_dayanaksiz"])
 
+    # Matrah sutunlari ("Bilerek / Bilmeden Kullanilan Belgeler") kaldirildi
+    # (mufettisin karari, 2026-10-15): ceza artik tarh edilecek tutarin
+    # tamami uzerinden hesaplandigi icin o sutunlar ya "Re'sen Tarh Edilecek
+    # KDV" sutununu tekrarliyor ya da onun paylastirilmis halini gostererek
+    # tabloyu gereksiz genisletiyordu. Kat ayrimi ceza sutunlarinda duruyor.
     kolonlar = [("Re’sen Tarh\nEdilecek KDV", lambda x: x["tarh"])]
-    if _var(t["pay_bilerek"]) or _var(t["ceza_bilerek"]):
-        kolonlar += [("Bilerek Kullanılan\nBelgeler", lambda x: x["pay_bilerek"]),
-                     ("Vergi Ziyaı Cezası\n(3 kat)", lambda x: x["ceza_bilerek"])]
-    if _var(bilmeden_pay(t)) or _var(bilmeden_ceza(t)):
-        kolonlar += [("Bilmeden Kullanılan\nBelgeler", bilmeden_pay),
-                     ("Vergi Ziyaı Cezası\n(1 kat)", bilmeden_ceza)]
-    kolonlar.append(("Vergi Ziyaı Cezası\nToplamı", lambda x: x["ceza_toplam"]))
+    kat_sayisi = 0
+    if _var(t["ceza_bilerek"]):
+        kolonlar.append(("Vergi Ziyaı Cezası\n(3 kat)",
+                         lambda x: x["ceza_bilerek"]))
+        kat_sayisi += 1
+    if _var(bilmeden_ceza(t)):
+        kolonlar.append(("Vergi Ziyaı Cezası\n(1 kat)", bilmeden_ceza))
+        kat_sayisi += 1
+    # Tek kat varsa toplam sutunu onun aynisi olurdu.
+    if kat_sayisi != 1:
+        kolonlar.append(("Vergi Ziyaı Cezası\nToplamı",
+                         lambda x: x["ceza_toplam"]))
 
     satirlar = [["%s/%s" % (x["yil"], x["ay_adi"])]
                 + [_tl(al(x)) for _e, al in kolonlar]
@@ -1236,13 +1248,11 @@ def _ceza_degerlendirmesi(b, kunye, satici_satirlari, ceza):
     if ceza["satirlar"]:
         karisik = any(s["ceza_belirsiz"] for s in ceza["satirlar"])
         b.paragraf(
-            "Tarh edilmesi gereken vergi, dönem dönem, ilgili faturaları "
-            "düzenleyen mükellefler bakımından yapılan bilerek/bilmeden "
-            "kullanma nitelendirmesine göre paylaştırılmıştır. Bir dönemde "
-            "reddedilen katma değer vergisi ile tarh edilmesi gereken vergi "
-            "eşit olmayabilir; devir zinciri reddin bir kısmını "
-            "soğurabildiğinden, paylaştırma tarh edilen tutar üzerinden "
-            "yapılmıştır.", girinti=1)
+            "Vergi ziyaı cezası, dönem dönem re’sen tarh edilmesi gereken "
+            "katma değer vergisinin tamamı üzerinden hesaplanmıştır. Ceza "
+            "katı, ilgili faturaları düzenleyen mükellefler bakımından "
+            "yapılan bilerek/bilmeden kullanma nitelendirmesine göre "
+            "belirlenmiştir.", girinti=1)
         _ceza_tablosu(b, ceza)
         if karisik:
             b.paragraf(
@@ -1338,8 +1348,13 @@ def _uzlasma(b, kunye, satici_satirlari, ceza=None):
 
     satirlar = (ceza or {}).get("satirlar") or []
     toplam = (ceza or {}).get("toplam") or {}
+    # Uzlasma kapsami: yalnizca VUK 359 fiiliyle sebebiyet verilen ziyaa
+    # iliskin tarhiyat kapsam DISIDIR. Sahte belgeye atfedilemeyen tutar
+    # (matrah ilavesi gibi) 359 fiili olmadigi icin kapsam ICINDEDIR.
     kapsam_disi = _var(toplam.get("pay_bilerek"))
-    kapsamda = _var(toplam.get("pay_bilmeden")) or _var(toplam.get("pay_belirsiz"))
+    kapsamda = (_var(toplam.get("pay_bilmeden"))
+                or _var(toplam.get("pay_belirsiz"))
+                or _var(toplam.get("pay_dayanaksiz")))
     if not (kapsam_disi or kapsamda):          # fatura listesi henuz girilmemis
         kapsam_disi = _bilerek_mi(satici_satirlari)
         kapsamda = not kapsam_disi
@@ -1383,12 +1398,14 @@ def _uzlasma(b, kunye, satici_satirlari, ceza=None):
     tablo = []
     for x in satirlar:
         disi = x["pay_bilerek"]
-        ici = x["pay_bilmeden"] + x["pay_belirsiz"]
+        ici = x["pay_bilmeden"] + x["pay_belirsiz"] + x["pay_dayanaksiz"]
         if not (_var(disi) or _var(ici)):
             continue
         tablo.append(["%s/%s" % (x["yil"], x["ay_adi"]), _tl(ici), _tl(disi),
                       _tl(ici + disi)])
-    ici_toplam = toplam.get("pay_bilmeden", 0.0) + toplam.get("pay_belirsiz", 0.0)
+    ici_toplam = (toplam.get("pay_bilmeden", 0.0)
+                  + toplam.get("pay_belirsiz", 0.0)
+                  + toplam.get("pay_dayanaksiz", 0.0))
     tablo.append(["Toplam:", _tl(ici_toplam), _tl(toplam.get("pay_bilerek")),
                   _tl(ici_toplam + (toplam.get("pay_bilerek") or 0.0))])
     b.tablo(["Dönemi", "Uzlaşma Kapsamında\nTarh Edilecek KDV",

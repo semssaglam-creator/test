@@ -768,8 +768,17 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
 
     Bu yuzden once tarh edilen tutarin sahte belgeye atfedilebilecek kismi
     ayrilir (reddedilen KDV'yi asamaz), sonra bu kisim kategorilerin reddedilen
-    KDV'leri oraninda bolunur. Kalan tutar "diger tespitler" olarak ayri
-    gosterilir; cezasi bu raporun konusu degildir.
+    KDV'leri oraninda bolunur.
+
+    Ceza, tarh edilecek tutarin TAMAMI uzerinden hesaplanir: sahte belgeye
+    atfedilemeyen kalan tutar da cezasiz kalmaz, "belirsiz" sayilarak bir
+    kat ceza tasir. Uc kat yalnizca VUK 359'daki fiillere baglidir ve
+    matrah ilavesi gibi tespitler o kapsamda degildir.
+
+    `pay_*` alanlari yalnizca cezanin degil, uzlasma kapsami ayriminin da
+    kaynagidir: `pay_bilerek` kapsam DISI, `pay_bilmeden` + `pay_belirsiz`
+    kapsam ICI tutardir. 359 dayanagi olmayan tutarin "belirsiz"e eklenmesi
+    orada da dogru sonucu verir.
     """
     saticilar = saticilar or {}
     # Donem -> kategori -> reddedilen KDV
@@ -799,7 +808,24 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
             tutar = kategoriler.get(kategori, 0.0)
             pay = (sahte_pay * tutar / red_toplam) if red_toplam > 0.005 else 0.0
             paylar[kategori] = round(pay, 2)
-            ceza[kategori] = round(pay * CEZA_KATI[kategori], 2)
+        # Vergi ziyai cezasi, tarh edilecek tutarin TAMAMI uzerinden
+        # hesaplanir (mufettisin karari, 2026-10-15). Onceden yalnizca
+        # sahte belgeye atfedilen kisim (`sahte_pay`) cezalandiriliyordu;
+        # tarhiyatin matrah ilavesi gibi baska tespitlerden gelen kismi
+        # cezasiz kaliyordu.
+        #
+        # Bu kalan tutar AYRI bir kalemde ("dayanaksiz") tutulur, bilerek
+        # bir kat tasir ve "belirsiz"e KARISTIRILMAZ. Iki sebep:
+        #   - Uc kat yalnizca VUK 359'daki fiillerle ziyaa sebebiyet
+        #     verilmesi halinde uygulanir; matrah ilavesi 359 fiili degildir.
+        #   - "belirsiz", kullanma durumu SECILMEMIS saticilari isaret eder
+        #     ve rapor bunun icin kullaniciya uyari yaziyor. Kalan tutar oraya
+        #     eklenirse, butun saticilar siniflandirilmis olsa bile uyari
+        #     yersiz cikar.
+        paylar["dayanaksiz"] = round(tarh - sahte_pay, 2)
+        for kategori in ("bilerek", "bilmeden", "belirsiz"):
+            ceza[kategori] = round(paylar[kategori] * CEZA_KATI[kategori], 2)
+        ceza["dayanaksiz"] = paylar["dayanaksiz"]      # bir kat
 
         satirlar.append({
             "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
@@ -813,9 +839,12 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
             "pay_bilerek": paylar["bilerek"],
             "pay_bilmeden": paylar["bilmeden"],
             "pay_belirsiz": paylar["belirsiz"],
+            # Sahte belgeye atfedilemeyen, 359 dayanagi olmayan kisim.
+            "pay_dayanaksiz": paylar["dayanaksiz"],
             "ceza_bilerek": ceza["bilerek"],
             "ceza_bilmeden": ceza["bilmeden"],
             "ceza_belirsiz": ceza["belirsiz"],
+            "ceza_dayanaksiz": ceza["dayanaksiz"],
             "ceza_toplam": round(sum(ceza.values()), 2),
         })
 

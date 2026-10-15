@@ -121,6 +121,23 @@ ceza ise duzeltme uzerine kesilen yarim katin uc kata tamamlanmis hali.
 KASITLIDIR: bendin dogrulanmis metni elde yok, uydurulmadi. Birincil
 kaynaktan dogrulanmadan yazmayin.
 
+## Vergi ziyai cezasi tarhin TAMAMI uzerinden
+
+Ceza, re'sen tarh edilecek tutarin tamami uzerinden hesaplanir. Daha once
+yalnizca sahte belgeye atfedilebilen kisim (`min(tarh, reddedilen KDV)`)
+cezalandiriliyordu ve tarhiyatin baska bir tespitten gelen kismi cezasiz
+kaliyordu.
+
+Kat ayrimi korunur: **uc kat yalnizca VUK 359'daki fiillere baglidir**, bu
+yuzden 359 dayanagi olmayan tutar bir kat tasir ve `pay_dayanaksiz` /
+`ceza_dayanaksiz` diye AYRI bir kalemde tutulur. `pay_belirsiz`e
+karistirilmaz: "belirsiz" kullanma durumu SECILMEMIS saticilari isaret eder
+ve rapor bunun icin uyari yazar; karistirilirsa uyari yersiz cikar.
+
+Ceza tablosunda matrah sutunu YOKTUR (sadece tarh + kat basina ceza).
+`pay_*` alanlari veride durur, cunku uzlasma kapsami ayrimi onlardan
+beslenir: `pay_bilerek` kapsam disi, digerleri kapsam ici.
+
 ## Cezanin matrahi
 
 Faturalardaki KDV toplami **degildir**. Duzeltme indirimi cikarir, ama

@@ -663,6 +663,35 @@ oturumda buradan devam edilir.
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
       paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
       yazılıyor.
+- [x] **Vergi ziyaı cezası, tarh edilecek tutarın TAMAMI üzerinden.** Ceza
+      tablosundan matrah sütunları ("Bilerek / Bilmeden Kullanılan Belgeler")
+      kaldırıldı (müfettişin kararı, 2026-10-15). Tablo artık:
+      Dönemi | Re'sen Tarh Edilecek KDV | VZC (3 kat) | VZC (1 kat) | Toplam.
+      Tek kat varsa "Toplamı" sütunu yazılmıyor — aynısını tekrarlardı.
+
+      Önceki davranış: ceza yalnızca sahte belgeye atfedilebilen kısım
+      (`min(tarh, reddedilen KDV)`) üzerinden hesaplanıyordu; tarhiyatın
+      matrah ilavesi gibi başka bir tespitten gelen kısmı **cezasız**
+      kalıyordu. Artık o kısım da ceza taşıyor.
+
+      Kat ayrımı korunuyor: üç kat yalnızca VUK 359'daki fiillere bağlı
+      olduğundan, 359 dayanağı olmayan tutar **bir kat** taşır. Bu tutar
+      `pay_dayanaksiz` / `ceza_dayanaksiz` diye **ayrı bir kalemde** tutuluyor,
+      `pay_belirsiz`e karıştırılmıyor — "belirsiz" kullanma durumu
+      SEÇİLMEMİŞ satıcıları işaret eder ve rapor bunun için kullanıcıya uyarı
+      yazar; karıştırılsa bütün satıcılar sınıflandırılmış olsa bile uyarı
+      yersiz çıkardı (ilk denemede tam bu oldu).
+
+      `pay_*` alanları veriden kaldırılmadı: uzlaşma kapsamı ayrımı (Ç
+      bölümü) onlardan besleniyor. 359 dayanağı olmayan tutar uzlaşma
+      kapsamı İÇİNDE sayılıyor, çünkü matrah ilavesi 359 fiili değil.
+
+      Sonuç bölümündeki tablonun ceza sütunu aynı dağılımdan beslendiği için
+      kendiliğinden yeni tutarı yazıyor.
+
+      Gerileme denetimi: `testler/ceza_testi.py`. Ayırt edici fikstür: Ocak'ta
+      sahte belge (6.000 × 3 = 18.000), Şubat'ta faturası olmayan bir tespit
+      (4.000 × 1 = 4.000) → toplam 22.000; eski kodda 18.000'di.
 - [x] **Devir düzeltme raporu eklendi.** (`app/devir_duzeltme_raporu.py`)
       Sahte belge raporu bir yılın indirimlerini reddettiğinde o yılın Aralık
       devri küçülür. Devir ileriye aktığı için **incelenmeyen sonraki
