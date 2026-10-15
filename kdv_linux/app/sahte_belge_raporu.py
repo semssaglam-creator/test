@@ -1252,7 +1252,12 @@ def _ceza_degerlendirmesi(b, kunye, satici_satirlari, ceza):
             "katma değer vergisinin tamamı üzerinden hesaplanmıştır. Ceza "
             "katı, ilgili faturaları düzenleyen mükellefler bakımından "
             "yapılan bilerek/bilmeden kullanma nitelendirmesine göre "
-            "belirlenmiştir.", girinti=1)
+            "belirlenmiştir. Sahte belgelere ait katma değer vergisinin "
+            "indirimlerden çıkarılması sonraki döneme devreden katma değer "
+            "vergisini de azalttığından, bir dönemde reddedilen belge "
+            "bulunmasa dahi devir zincirinden doğan vergi farkı da aynı "
+            "fiilden kaynaklanmakta olup aynı ceza katına tabidir.",
+            girinti=1)
         _ceza_tablosu(b, ceza)
         if karisik:
             b.paragraf(

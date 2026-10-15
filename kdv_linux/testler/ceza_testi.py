@@ -11,8 +11,13 @@ Onceki davranis: ceza yalnizca sahte belgeye atfedilebilen kisim
 (`min(tarh, reddedilen KDV)`) uzerinden hesaplaniyordu. Tarhiyatin baska bir
 tespitten gelen kismi CEZASIZ kaliyordu - denetimin ayirt edici hali bu.
 
-Kat ayrimi korunur: uc kat yalnizca VUK 359'daki fiillere baglidir, bu
-yuzden 359 dayanagi olmayan tutar "belirsiz" sayilip bir kat tasir.
+Devreden KDV sahte belgeler yuzunden degistigi icin, DEVIRDEN dogan fark da
+sahte belgeye baglidir ve ayni kati tasir (mufettisin duzeltmesi,
+2026-10-15). Devir zinciri reddi bir ay sogurup vergiyi sonraki aya
+tasidiginda uc kat kaybolmamali.
+
+Uc kat yalnizca VUK 359'daki fiillere baglidir; beyan hatasi ya da matrah
+ilavesi gibi 359 dayanagi olmayan tutar bir kat tasir.
 
 `pay_*` alanlari veriden KALDIRILMAZ: ceza tablosundan cikarildilar ama
 uzlasma kapsami ayrimi (Ç bolumu) onlardan besleniyor - `pay_bilerek`
@@ -93,6 +98,46 @@ def ornek(kullanma="Bilerek kullanma", subat_cikar=0.0):
     }
 
 
+def devir_ornegi(kullanma="Bilerek kullanma"):
+    """Red bir ayi sogurur, vergi SONRAKI aylara tasinir.
+
+    Ocak'ta buyuk bir devir var; 10.000 TL'lik red o ayin devrini eritir ve
+    tarhiyat Subat ile Mart'ta dogar. O aylarda FATURA YOKTUR - ceza kati
+    yalnizca devir zincirinden okunabilir.
+    """
+    b = {k: [0.0] * 12 for k in VERI_KODLARI}
+    devir = 0.0
+    for ay in range(12):
+        b["matrah_toplami"][ay] = 500000.0
+        b["hesaplanan_kdv"][ay] = 90000.0
+        b["toplam_kdv"][ay] = 90000.0
+        ind = 100000.0 if ay == 0 else 85000.0
+        b["yurtici_alim_kdv"][ay] = ind
+        b["bu_donem_indirilecek"][ay] = ind
+        b["onceki_donem_devreden"][ay] = devir
+        toplam = devir + ind
+        b["indirimler_toplami"][ay] = toplam
+        if toplam >= 90000.0:
+            b["odenmesi_gereken_kdv"][ay] = 0.0
+            devir = round(toplam - 90000.0, 2)
+        else:
+            b["odenmesi_gereken_kdv"][ay] = round(90000.0 - toplam, 2)
+            devir = 0.0
+        b["sonraki_donem_devreden"][ay] = devir
+
+    e = {k: [0.0] * 12 for k in ("matrah_ilave", "hesaplanan_kdv_ilave",
+                                 "devir_cikar", "indirim_cikar",
+                                 "yuklenilen_cikar")}
+    e["indirim_cikar"][0] = 10000.0          # yalnızca Ocak'ta red
+    c = ornek(kullanma=kullanma)
+    c["yillar"] = [{"yil": 2022, "beyan": b, "ay_sayisi": 12, "elestiri": e}]
+    c["faturalar"] = [{"duzenleyen_vkn": "1111111111",
+                       "alici_vkn": "9999999999", "tarih": "2022-01-10",
+                       "fatura_no": "A-1", "matrah": 50000.0,
+                       "kdv": 10000.0, "toplam": 60000.0, "dahil": True}]
+    return c
+
+
 def dagilim(c):
     sonuc, _b = W._hesapla(c)
     liste = F.normalize(c["faturalar"], c["mukellef"]["vkn_tckn"])
@@ -153,6 +198,41 @@ esit(sum(s["pay_bilerek"] + s["pay_bilmeden"] + s["pay_belirsiz"]
 denetle(all(s["ceza_belirsiz"] == 0.0 for s in dag["satirlar"]),
         "sınıflandırılmamış satıcı yokken “belirsiz” cezası sıfır")
 
+# ------------------------------------------------ 1b) devirden dogan fark
+print("\n1b) Devirden doğan fark da aynı katı taşıyor")
+# Reddi bir ay sogurup vergiyi sonraki aya tasiyan hal. Subat ve Mart'ta
+# FATURA YOK; eski kodda o aylarin cezasi bir kat yaziliyordu ve devir
+# zinciri devreye girdigi anda uc kat kayboluyordu.
+c_devir = devir_ornegi()
+dag_d, sonuc_d = dagilim(c_devir)
+
+
+def ay_satiri(dag, ay_adi):
+    return next(s for s in dag["satirlar"] if s["ay_adi"] == ay_adi)
+
+
+esit(ay_satiri(dag_d, "Ocak")["tarh"], 0.0,
+     "Ocak'ta tarhiyat yok: devir reddi soğurdu")
+esit(ay_satiri(dag_d, "Ocak")["red_toplam"], 10000.0,
+     "Ocak'ta reddedilen KDV 10.000")
+for ay in ("Şubat", "Mart"):
+    s = ay_satiri(dag_d, ay)
+    esit(s["tarh"], 5000.0, "%s tarhiyatı devirden doğuyor" % ay)
+    esit(s["red_toplam"], 0.0, "%s'ta fatura yok" % ay)
+    esit(s["ceza_bilerek"], 15000.0,
+         "%s cezası ÜÇ kat (5.000 x 3) — eski kodda bir kattı" % ay)
+    esit(s["ceza_dayanaksiz"], 0.0,
+         "%s'ta tutar “dayanaksız” sayılmıyor" % ay)
+
+esit(dag_d["toplam"]["tarh"], 10000.0, "devirli dosyada toplam tarh")
+esit(dag_d["toplam"]["ceza_toplam"], 30000.0,
+     "toplam ceza = tarh x 3 (eski kodda 10.000'di)")
+
+# Bilmeden kullanmada ayni zincir bir kat tasimali.
+dag_db, _s = dagilim(devir_ornegi(kullanma="Bilmeden kullanma"))
+esit(dag_db["toplam"]["ceza_toplam"], 10000.0,
+     "bilmeden kullanmada devirden doğan fark bir kat")
+
 # ------------------------------------------------------------- 2) kat ayrimi
 print("\n2) Kat ayrımı korunuyor")
 c_bilmeden = ornek(kullanma="Bilmeden kullanma", subat_cikar=4000.0)
@@ -175,6 +255,11 @@ denetle("Vergi Ziyaı Cezası\n(1 kat)" in m, "1 kat sütunu duruyor")
 denetle("re’sen tarh edilmesi gereken katma değer vergisinin tamamı "
         "üzerinden hesaplanmıştır" in m,
         "açıklama paragrafı yeni hesabı anlatıyor")
+# Fatura bulunmayan bir donemin neden ayni kati tasidigi belgede yazmali;
+# aksi halde raporu okuyan "Subat'ta fatura yok, neden uc kat?" diye sorar.
+denetle("devir zincirinden doğan vergi farkı da aynı fiilden kaynaklanmakta "
+        "olup aynı ceza katına tabidir" in m,
+        "paragraf devir zincirini de gerekçelendiriyor")
 denetle("paylaştırma tarh edilen tutar üzerinden" not in m,
         "eski açıklama paragrafı kalkmış")
 

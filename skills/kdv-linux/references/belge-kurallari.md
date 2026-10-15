@@ -128,11 +128,22 @@ yalnizca sahte belgeye atfedilebilen kisim (`min(tarh, reddedilen KDV)`)
 cezalandiriliyordu ve tarhiyatin baska bir tespitten gelen kismi cezasiz
 kaliyordu.
 
-Kat ayrimi korunur: **uc kat yalnizca VUK 359'daki fiillere baglidir**, bu
-yuzden 359 dayanagi olmayan tutar bir kat tasir ve `pay_dayanaksiz` /
-`ceza_dayanaksiz` diye AYRI bir kalemde tutulur. `pay_belirsiz`e
-karistirilmaz: "belirsiz" kullanma durumu SECILMEMIS saticilari isaret eder
-ve rapor bunun icin uyari yazar; karistirilirsa uyari yersiz cikar.
+Tutar kaynagina gore uce ayrilir, cunku ceza kati KAYNAGA baglidir:
+
+1. Donemin kendi sahte belgesi -> o donemin kategori karmasi
+2. **Devir zincirinden gelen kisim** -> dosya genelindeki karma. Sahte
+   belgenin KDV'si indirimlerden cikarilinca devreden KDV de azalir; devir
+   reddi bir ay sogurup vergiyi sonraki aya tasidiginda o ayda reddedilen
+   belge bulunmasa bile fark AYNI fiilden dogar ve ayni kati tasir. Olcut
+   hesap motorunun kendi ayristirmasidir: `fark_devir["odenecek"]`.
+3. Kalan (beyan hatasi, matrah ilavesi) -> 359 fiili degil, bir kat.
+   `pay_dayanaksiz` / `ceza_dayanaksiz` diye AYRI kalemde tutulur,
+   `pay_belirsiz`e karistirilmaz: "belirsiz" kullanma durumu SECILMEMIS
+   saticilari isaret eder ve rapor bunun icin uyari yazar; karistirilirsa
+   uyari yersiz cikar.
+
+Devir zinciri yuzunden fatura bulunmayan bir donem de uc kat tasiyabilir;
+rapordaki aciklama paragrafi bunu gerekcelendirir. Kaldirmayin.
 
 Ceza tablosunda matrah sutunu YOKTUR (sadece tarh + kat basina ceza).
 `pay_*` alanlari veride durur, cunku uzlasma kapsami ayrimi onlardan

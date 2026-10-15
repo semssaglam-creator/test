@@ -793,6 +793,21 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
                                {"bilerek": 0.0, "bilmeden": 0.0, "belirsiz": 0.0})
         hucre[_kategori(f.get("satici_vkn") or "", saticilar)] += float(f.get("kdv") or 0.0)
 
+    # Dosya genelindeki kategori karmasi. Devirden dogan fark ONCEKI
+    # donemlerin reddinden geldigi icin kati tek bir donemin karmasina gore
+    # belirlenemez; dosya geneli kullanilir. Dosyalarin ezici cogunlugunda
+    # butun saticilar ayni durumda oldugundan bu, donem bazli karmayla ayni
+    # sonucu verir; karma dosyada da makul bir yaklasimdir.
+    genel = {"bilerek": 0.0, "bilmeden": 0.0, "belirsiz": 0.0}
+    for hucre in red.values():
+        for kategori, tutar in hucre.items():
+            genel[kategori] += tutar
+    genel_butun = sum(genel.values())
+    # Hic sahte belge yoksa devir de sahte belgeden dogmus olamaz; o halde
+    # devir payi hic ayrilmaz ve tutarin tamami "dayanaksiz" kalir.
+    genel_karma = ({k: v / genel_butun for k, v in genel.items()}
+                   if genel_butun > 0.005 else None)
+
     satirlar = []
     for d in (sonuc.get("donemler") or []):
         anahtar = (d["yil"], d["ay"])
@@ -802,29 +817,42 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
         if tarh <= 0.005 and red_toplam <= 0.005:
             continue
 
+        # Ceza, tarh edilecek tutarin TAMAMI uzerinden hesaplanir. Tutar
+        # once kaynagina gore ayrilir, cunku ceza kati kaynaga baglidir.
+        #
+        # 1) Bu donemin kendi sahte belgesi  -> o donemin kategori karmasi
+        # 2) DEVIR zincirinden gelen kisim   -> sahte belgeden dogmustur
+        # 3) Kalan (beyan hatasi, matrah ilavesi) -> 359 fiili degil, bir kat
         sahte_pay = min(tarh, red_toplam)
-        paylar, ceza = {}, {}
+        paylar = {}
         for kategori in ("bilerek", "bilmeden", "belirsiz"):
             tutar = kategoriler.get(kategori, 0.0)
             pay = (sahte_pay * tutar / red_toplam) if red_toplam > 0.005 else 0.0
-            paylar[kategori] = round(pay, 2)
-        # Vergi ziyai cezasi, tarh edilecek tutarin TAMAMI uzerinden
-        # hesaplanir (mufettisin karari, 2026-10-15). Onceden yalnizca
-        # sahte belgeye atfedilen kisim (`sahte_pay`) cezalandiriliyordu;
-        # tarhiyatin matrah ilavesi gibi baska tespitlerden gelen kismi
-        # cezasiz kaliyordu.
+            paylar[kategori] = pay
+
+        # Devreden KDV sahte belgeler yuzunden degistigi icin, devirden dogan
+        # fark da sahte belgeye baglidir ve ayni kati tasir (mufettisin
+        # duzeltmesi, 2026-10-15). Onceki surum bu tutari "dayanaksiz"
+        # sayip bir kat yaziyordu; devir zinciri reddi bir ay sogurup
+        # vergiyi sonraki aya tasidiginda uc kat kayboluyordu.
         #
-        # Bu kalan tutar AYRI bir kalemde ("dayanaksiz") tutulur, bilerek
-        # bir kat tasir ve "belirsiz"e KARISTIRILMAZ. Iki sebep:
-        #   - Uc kat yalnizca VUK 359'daki fiillerle ziyaa sebebiyet
-        #     verilmesi halinde uygulanir; matrah ilavesi 359 fiili degildir.
-        #   - "belirsiz", kullanma durumu SECILMEMIS saticilari isaret eder
-        #     ve rapor bunun icin kullaniciya uyari yaziyor. Kalan tutar oraya
-        #     eklenirse, butun saticilar siniflandirilmis olsa bile uyari
-        #     yersiz cikar.
-        paylar["dayanaksiz"] = round(tarh - sahte_pay, 2)
-        for kategori in ("bilerek", "bilmeden", "belirsiz"):
-            ceza[kategori] = round(paylar[kategori] * CEZA_KATI[kategori], 2)
+        # Hesap motoru farki zaten bilesenlerine ayiriyor; `fark_devir`
+        # tam olarak onunden gelen devrin etkisidir.
+        kalan = max(tarh - sahte_pay, 0.0)
+        devir_pay = 0.0
+        if genel_karma is not None:
+            devir_etkisi = max(float((d.get("fark_devir") or {})
+                                     .get("odenecek") or 0.0), 0.0)
+            devir_pay = min(kalan, devir_etkisi)
+            # Devir, ONCEKI donemlerin reddinden geldigi icin kati tek bir
+            # donemin karmasina gore belirlenemez; dosya geneli kullanilir.
+            for kategori, oran in genel_karma.items():
+                paylar[kategori] += devir_pay * oran
+        paylar["dayanaksiz"] = round(kalan - devir_pay, 2)
+
+        paylar = {k: round(v, 2) for k, v in paylar.items()}
+        ceza = {k: round(paylar[k] * CEZA_KATI[k], 2)
+                for k in ("bilerek", "bilmeden", "belirsiz")}
         ceza["dayanaksiz"] = paylar["dayanaksiz"]      # bir kat
 
         satirlar.append({

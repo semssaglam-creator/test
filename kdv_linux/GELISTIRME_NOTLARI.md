@@ -674,13 +674,29 @@ oturumda buradan devam edilir.
       matrah ilavesi gibi başka bir tespitten gelen kısmı **cezasız**
       kalıyordu. Artık o kısım da ceza taşıyor.
 
-      Kat ayrımı korunuyor: üç kat yalnızca VUK 359'daki fiillere bağlı
-      olduğundan, 359 dayanağı olmayan tutar **bir kat** taşır. Bu tutar
-      `pay_dayanaksiz` / `ceza_dayanaksiz` diye **ayrı bir kalemde** tutuluyor,
-      `pay_belirsiz`e karıştırılmıyor — "belirsiz" kullanma durumu
+      **Devirden doğan fark da aynı katı taşıyor.** Sahte belgenin KDV'si
+      indirimlerden çıkarılınca sonraki döneme devreden KDV de azalıyor;
+      devir zinciri reddi bir ay soğurup vergiyi sonraki aya taşıdığında o
+      ayda reddedilen belge bulunmasa bile fark aynı fiilden doğuyor. İlk
+      sürümde o tutar "dayanaksız" sayılıp bir kat yazılıyordu ve devir
+      devreye girdiği anda üç kat kayboluyordu (müfettişin düzeltmesi,
+      2026-10-15).
+
+      Tutar kaynağına göre üçe ayrılıyor; ceza katı kaynağa bağlı:
+      1. Dönemin **kendi** sahte belgesi → o dönemin kategori karması
+      2. **Devir** zincirinden gelen kısım (`fark_devir["odenecek"]`, hesap
+         motorunun kendi ayrıştırması) → dosya genelindeki kategori karması
+      3. Kalan (beyan hatası, matrah ilavesi) → 359 fiili değil, bir kat
+
+      3. kalem `pay_dayanaksiz` / `ceza_dayanaksiz` diye **ayrı bir kalemde**
+      tutuluyor, `pay_belirsiz`e karıştırılmıyor — "belirsiz" kullanma durumu
       SEÇİLMEMİŞ satıcıları işaret eder ve rapor bunun için kullanıcıya uyarı
       yazar; karıştırılsa bütün satıcılar sınıflandırılmış olsa bile uyarı
       yersiz çıkardı (ilk denemede tam bu oldu).
+
+      Rapordaki açıklama paragrafı devir zincirini de gerekçelendiriyor;
+      aksi hâlde raporu okuyan "o ayda fatura yok, neden üç kat?" diye
+      sorardı.
 
       `pay_*` alanları veriden kaldırılmadı: uzlaşma kapsamı ayrımı (Ç
       bölümü) onlardan besleniyor. 359 dayanağı olmayan tutar uzlaşma
@@ -689,9 +705,14 @@ oturumda buradan devam edilir.
       Sonuç bölümündeki tablonun ceza sütunu aynı dağılımdan beslendiği için
       kendiliğinden yeni tutarı yazıyor.
 
-      Gerileme denetimi: `testler/ceza_testi.py`. Ayırt edici fikstür: Ocak'ta
-      sahte belge (6.000 × 3 = 18.000), Şubat'ta faturası olmayan bir tespit
-      (4.000 × 1 = 4.000) → toplam 22.000; eski kodda 18.000'di.
+      Gerileme denetimi: `testler/ceza_testi.py`. İki ayırt edici fikstür:
+      - Ocak'ta sahte belge (6.000 × 3), Şubat'ta faturası olmayan bir tespit
+        (4.000 × 1) → 22.000; cezanın tarhın tamamını kapsadığını gösterir
+        (eski kodda 18.000'di).
+      - Red bir ayı soğurup vergiyi sonraki aylara taşıyan devir zinciri:
+        Ocak'ta red var ama tarhiyat yok, Şubat ve Mart'ta fatura yok ama
+        tarhiyat var → her biri 5.000 × 3 = 15.000, toplam 30.000 = tarh × 3
+        (devir düzeltmesinden önce 10.000'di).
 - [x] **Devir düzeltme raporu eklendi.** (`app/devir_duzeltme_raporu.py`)
       Sahte belge raporu bir yılın indirimlerini reddettiğinde o yılın Aralık
       devri küçülür. Devir ileriye aktığı için **incelenmeyen sonraki
