@@ -105,6 +105,14 @@ Fiil ayni zamanda VUK 359/a-2'de kacakcilik sucudur: ceza uc kat ve VSR de
 uretilir. Ibraz etmeme VSR'sinin YAPISI sahte belgeden farklidir (dort
 bolum, tespitler bolumu ve tarhiyat tablosu yok).
 
+Ibraz etmeme VSR'sinin maddi unsuru, sahte belge VSR'si gibi somut DELIL
+zincirine baglanir ("Fiile Iliskin Tespit ve Deliller", bes madde):
+varlik (tasdik/basim kayitlari) -> usulune uygun isteme (yazi, teblig,
+sure) -> defterlere kaydi GEREKEN islemlerin bulundugu (GIB belge dokumu;
+sahte belgede bu yeri defter kayitlari tutuyor, burada defter YOK) ->
+mucbir sebep bulunmadigi (VUK 13) -> netice (indirimlerin reddi ve ziya,
+ibraz etmeme raporuna ATFEN - VSR tarhiyat onermez).
+
 Gizleme fiilinin maddi unsuru, defter ve belgelerin VAR oldugunun ortaya
 konmasina dayanir: defterleri noter tasdik tablosu (`defter_bilgileri`),
 belgeleri anlasmali matbaa basim tablosu (`belge_basim_bilgileri`)

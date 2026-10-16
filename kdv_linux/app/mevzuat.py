@@ -73,9 +73,13 @@ MADDELER = {
         "mecburiyeti bulunan defter, kayıt ve belgeleri yok edenler veya defter "
         "sahifelerini yok ederek yerine başka yapraklar koyanlar veya hiç yaprak "
         "koymayanlar veya belgelerin asıl veya suretlerini tamamen veya kısmen "
-        "sahte olarak düzenleyenler veya bu belgeleri kullananlar hakkında "
-        "hapis cezası hükmolunur. Gerçek bir muamele veya durum olmadığı halde "
-        "bunlar varmış gibi düzenlenen belge, sahte belgedir."),
+        # Hapis suresi 7394 sayili Kanunla (15.04.2022) uc yildan SEKIZ
+        # yila cikarildi; 15.04.2022'den once islenen fiillerde lehe olan
+        # eski sure (uc yildan bes yila) gecerlidir (TCK 7).
+        "sahte olarak düzenleyenler veya bu belgeleri kullananlar, üç yıldan "
+        "sekiz yıla kadar hapis cezası ile cezalandırılır. Gerçek bir muamele "
+        "veya durum olmadığı halde bunlar varmış gibi düzenlenen belge, sahte "
+        "belgedir."),
     "kdv_29": (
         "3065 sayılı KDV Kanunu md. 29 — Vergi İndirimi",
         "Mükellefler, yaptıkları vergiye tabi işlemler üzerinden hesaplanan "

@@ -337,6 +337,10 @@ m = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
                  sonuc, c).duz_metin()
 denetle("20.10.2025 tarih ve 2025-[2013]/72 sayılı" in m,
         "yıl hücresi boş bırakılan satır tek yıla bağlanıyor")
+# Sahte belge VSR'sinde de 359/b hapis suresi 7394 sonrasi olmali.
+denetle("üç yıldan sekiz yıla kadar hapis cezası" in m,
+        "359/b hapis süresi 7394 sonrası (sekiz yıl)")
+denetle("üç yıldan beş yıla" not in m, "eski (b) süresi kalmamış")
 tablo = [s for s in m.strip().split("\n") if "\tKDV\t" in s]
 denetle(len(tablo) == 1 and "\t2020\t" in tablo[0],
         "tabloda yıl künyeden değil incelemeden geliyor")
@@ -492,7 +496,7 @@ denetle("gizleme olarak kabul edilir" in m,
         "ibraz etmemenin gizleme sayıldığı hüküm yazılıyor")
 denetle("[213 sayılı Vergi Usul Kanununun 359 uncu maddesinin (a) bendinin"
         not in m, "eski kırmızı yer tutucu kalkmış")
-denetle("359/a-2 maddesinde yer alan kaçakçılık fiili işlenmiş" in m,
+denetle("359/a-2 maddesinde yer alan kaçakçılık fiilinin işlendiği" in m,
         "maddi unsur fiili 359/a-2'ye bağlıyor")
 
 # Defterlerin VARLIGI gizleme fiilinin on kosulu; tasdik tablosu bunu
@@ -529,8 +533,55 @@ denetle("Anlaşmalı Matbaa" in m_basim and "Belge Adedi" in m_basim,
         "başlıklar alan bildiriminden geliyor")
 denetle(m_basim.find("Basım Bilgileri") < m_basim.find("Defter Tasdik"),
         "örnekteki gibi basım tablosu tasdik tablosundan önce")
-denetle("GİB Intranet sisteminden yapılan sorgulama" not in m_basim,
-        "VSR'de ayrı bir sorgulama cümlesi tekrar edilmiyor")
+denetle("1- Mükellef Kurum" in m_basim
+        and "defter ve belgelerin varlığı aşağıdaki tasdik ve basım "
+            "kayıtlarıyla sabittir" in m_basim,
+        "basım varsa 1. delil belgelerin varlığını da kapsıyor")
+denetle("defterlerin varlığı aşağıdaki tasdik kayıtlarıyla sabittir" in m,
+        "basım yoksa 1. delil yalnızca defterlerle sınırlı")
+
+# ------- maddi unsur: delil zinciri (mufettisin istegi, 2026-10-16:
+# "diger vsr ile kiyasla maddi unsur ve delilleri ibraz etmemeye gore")
+denetle("Fiile İlişkin Tespit ve Deliller" in m, "delil listesi başlığı var")
+for no in ("1-", "2-", "3-", "4-", "5-"):
+    denetle(("\n%s " % no) in m or ("\n%s" % no) in m,
+            "delil maddesi var: %s" % no)
+denetle("253 üncü maddesi" in m and "256 ncı maddesi" in m,
+        "muhafaza ve ibraz ödevi VUK 253/256'ya dayandırılıyor")
+denetle(m.count("2- Müfettişliğimizce düzenlenen") == 1,
+        "isteme yazısı delil listesinde numaralı yazılıyor")
+denetle("13 üncü maddesinde sayılan mücbir sebep" in m,
+        "mücbir sebep bulunmadığı tespiti yazılıyor")
+denetle("yasal defterlere kaydı gereken hesap ve işlemlerin bulunduğu" in m,
+        "kaydı gereken işlemlerin varlığı delil olarak yazılıyor")
+denetle("adet belge" in m and "adına 1 adet belge düzenlendiği" in m,
+        "belge dökümünden sayısal tespit yazılıyor")
+denetle("vergi ziyaına sebebiyet vermiştir" in m,
+        "maddi unsur neticeye (ziyaa) bağlanıyor")
+denetle("suçun maddi unsurunun oluştuğu anlaşılmaktadır" in m,
+        "delil zinciri değerlendirme cümlesiyle kapanıyor")
+# Tutar ONERILMIYOR, ibraz etmeme raporuna atfen aniliyor.
+denetle("re’sen tarh edilmesi gerektiği sonucuna varıldığı" not in m,
+        "VSR kendisi tarhiyat önermiyor")
+
+# Fatura dokumu yoksa sayi UYDURULMAMALI.
+c_dokumsuz = dict(c, faturalar=[])
+m_dokumsuz = V.rapor_uret(W._inceleme_bilgisi(c_dokumsuz), c["kunye"],
+                          W._yillari_coz(c), sonuc, c_dokumsuz,
+                          V.FIIL_IBRAZ_ETMEME).duz_metin()
+denetle("adet belge" not in m_dokumsuz,
+        "döküm yoksa belge sayısı uydurulmuyor")
+denetle("Faturalar sekmesine girildiğinde" in m_dokumsuz,
+        "döküm yoksa yer tutucu ne yapılacağını söylüyor")
+
+# 359 hapis sureleri 7394 sayili Kanunla degisik hali olmali.
+denetle("on sekiz aydan beş yıla kadar hapis" in m,
+        "359/a hapis süresi 7394 sonrası (beş yıl)")
+denetle("on sekiz aydan üç yıla" not in m, "eski (a) süresi kalmamış")
+
+denetle("GİB Intranet sisteminden yapılan sorgulama neticesinde mükellef "
+        "kurumun anlaşmalı matbaalara" not in m_basim,
+        "VSR'de basım tablosu için ayrı sorgulama cümlesi tekrar edilmiyor")
 
 # Isteme yazisi hem girişte hem maddi unsurda aniliyor (ornek de boyle).
 denetle(m.count("Defter ve Belge İsteme yazısı") == 2,

@@ -753,6 +753,47 @@ oturumda buradan devam edilir.
       hâli, sütun başlıklarını ve VSR'de tablo sırasını denetliyor; üç
       mutasyonla (koşulu kaldır, cümleyi koşulsuz yaz, tablo sırasını
       değiştir) kızardığı doğrulandı.
+- [x] **İbraz etmeme VSR'sinde maddi unsur delil zincirine bağlandı.**
+      Müfettişin isteği (2026-10-16): "diğer VSR ile kıyasla maddi unsur ve
+      delilleri ibraz etmemeye göre hazırla". Sahte belge VSR'si maddi
+      unsuru somut delillere bağlıyor (satıcı başına VTR, defter kayıtları,
+      beyana dahil edilme, indirimler içindeki pay); ibraz etmemede 2.2
+      yalnızca hukuki çerçeve + isteme yazısı + tablolardan ibaretti.
+
+      Artık **"Fiile İlişkin Tespit ve Deliller"** başlığı altında beş
+      numaralı madde yazılıyor:
+
+      1. defterlerin (ve basım kaydı varsa belgelerin) **varlığı** —
+         tasdik/basım tabloları; basım kaydı yoksa cümle yalnızca
+         defterlerle sınırlı kalıyor (yoksa belgelerin varlığı tasdik
+         kaydından çıkarılmış olurdu — hatalı olur)
+      2. usulüne uygun **isteme** — yazı, tebliğ, yasal süre
+         (`_ibraz_yazisi_paragrafi`a `onek` parametresi eklendi, madde
+         numarasını alıyor)
+      3. defterlere **kaydı gereken işlemlerin bulunduğu** —
+         `_ibraz_islem_delili`, GİB belge dökümünden adet ve matrah.
+         Sahte belgede bu yeri "yevmiye defteri kayıtlarında kaydedildiği"
+         tespiti tutuyor; ibraz etmemede defter YOK, delil döküm.
+         **Döküm girilmemişse sayı uydurulmuyor**, kırmızı yer tutucu ne
+         yapılacağını söylüyor.
+      4. **mücbir sebep** bulunmadığı (VUK 13) — ibraz etmeme savunmasının
+         tipik dayanağı; raporun bunu kapatması gerekiyor
+      5. **netice**: indirimlerin reddi ve vergi ziyaı. Tutar ibraz etmeme
+         raporuna ATFEN anılıyor, bu rapor tarhiyat önermiyor (örnek de
+         önermiyor).
+
+      Zincir "tespit ve deliller bir arada değerlendirildiğinde ... maddi
+      unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
+      için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
+      taşındı. Beş mutasyonla denetlendi.
+- [x] **359 hapis süreleri 7394 sayılı Kanunla değişik hâle getirildi.**
+      Müfettişin isteği: "sen kanunun son hâlini ekle". Örnek raporlar 2022
+      tarihliydi ve eski süreleri anıyordu. (a) fıkrası on sekiz aydan
+      **beş** yıla, (b) fıkrası üç yıldan **sekiz** yıla; `mevzuat.vuk_359`
+      de süresiz kalmaktan çıkarıldı. 15.04.2022'den ÖNCE işlenen
+      fiillerde lehe olan eski süre geçerlidir (TCK 7) — çok yıllı
+      dosyalarda taslak üzerinde denetlenmeli. **Birincil kaynaktan
+      doğrulanmadı**, bkz. "İbraz etmemede bekleyen".
 - [x] **Vergi ziyaı cezası, tarh edilecek tutarın TAMAMI üzerinden.** Ceza
       tablosundan matrah sütunları ("Bilerek / Bilmeden Kullanılan Belgeler")
       kaldırıldı (müfettişin kararı, 2026-10-15). Tablo artık:
@@ -1027,10 +1068,12 @@ oturumda buradan devam edilir.
 
 ## İbraz etmemede bekleyen
 
-- [ ] **359/a-2 hapis süresi.** Örnek 2022 tarihli ve "on sekiz aydan üç
-      yıla" diyor; 7394 sayılı Kanun süreyi değiştirdi. Metin örnekten
-      birebir alındı, güncel yürürlük doğrulanmadı — inceleme yılına göre
-      taslak üzerinde denetlenmeli.
+- [ ] **359 hapis süreleri birincil kaynaktan doğrulanmadı.** Süreler 7394
+      sayılı Kanunla değişik hâle getirildi (aşağıya bakın) ancak bu,
+      doğrudan mevzuat metni görülerek değil bilgiden yazıldı. Müfettiş bir
+      kez mevzuat.gov.tr üzerinden denetlemeli. Ayrıca 7394, 359'a pişmanlık
+      ve etkin pişmanlık fıkraları da ekledi; raporlar bu fıkraları
+      alıntılamıyor (gerekirse eklenir).
 
 ---
 
