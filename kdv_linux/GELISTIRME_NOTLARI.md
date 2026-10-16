@@ -663,6 +663,64 @@ oturumda buradan devam edilir.
       taşıyor. Ceza, bilerek/bilmeden ayrımına göre üç kat ve bir kat olarak
       paylaştırılmış tutardır; karma durumda maddenin kat ifadesi de buna göre
       yazılıyor.
+- [x] **Defter ve belge ibraz etmeme raporu eklendi.**
+      (`app/ibraz_etmeme_raporu.py`) Mükellef yasal defter ve belgelerini
+      ibraz etmediğinde beyan edilen indirilecek KDV'nin KDVK 29 ve 34
+      gereğince indirilebilirliği denetlenemez; **indirimlerin tamamı
+      reddedilir** ve fark KDV VUK **30/3** uyarınca re'sen tarh edilir. Fiil
+      aynı zamanda VUK **359/a-2**'de kaçakçılık suçudur: ceza **üç kat** ve
+      raporla birlikte **VSR de üretilir**.
+
+      Yapı müfettişin örnek raporundan: 1-GİRİŞ (isteme yazısı + ortaklık
+      tablosu), 2-USUL, 3-HESAP (beyan tablosu), 4-TESPİT VE TENKİT (4.1
+      re'sen takdir nedeni, 4.2.1 ibraz edilmemesi + tasdikli defterler,
+      4.2.2 düzenlenen ve adına düzenlenen belgeler, 4.2.3 yasal
+      düzenlemeler, 4.2.4 olması gereken tablo + tarhiyat), 5-SONUÇ.
+
+      **Matrah kuralı:** beyan ile mükellefin DÜZENLEDİĞİ faturaların toplamı
+      uyuşmadığında VUK 3/B gereği gerçek durum esas alınır — ama yalnızca
+      mükellef **aleyhine** olan yönde. Faturalar beyandan azsa beyan esas
+      alınır, matrah indirilmez. Hesaplanan KDV farkı faturaların kendi
+      KDV'sinden gelir (`hesaplanan_otomatik` kapatılır), orana bölünmez:
+      dökümde sıfır KDV'li satırlar bulunabiliyor.
+
+      **Hesabı rapor değil `hesap.ibraz_etmeme_elestirisi` kuruyor** ve
+      eleştiri alanlarına yazıyor; böylece tutanak, Excel ve sonuç bölümü
+      aynı rakamları görüyor. Dolduran kullanıcı: "İbraz etmeme:
+      indirimlerin tamamını reddet" düğmesi, girilmiş eleştiri varsa
+      onaylatıyor — mevcut "Aşan dönemleri sınırla" düğmesinin kalıbı.
+      Düğme ayrıca yılın başlangıç devrini sıfıra çekiyor; o devir de
+      denetlenemeyen indirimlerden birikmiştir.
+
+      Yeni künye bölümü "Defter ve Belge İbraz Etmeme Raporu": isteme
+      yazısının tarih/sayısı, tebliğ tarihi ve teslim alan, ortaklık
+      tablosu, mükellefin işe başlama/terk geçmişi (serbest metin, giriş
+      paragrafının yerini alır). Satış/alış dökümleri Faturalar
+      sekmesindeki `yon` alanından geliyor — yeni bir giriş yüzeyi yok.
+
+      Mevzuat metinlerine VUK 30/3, 139, 253 ve 256 eklendi.
+
+      Gerileme denetimi: `testler/ibraz_etmeme_testi.py`. Çapası örnek
+      raporun kendi rakamları: yedi dolu ayın beyan tablosu → ödenecek
+      **39.252,03** ve üç kat ceza **117.756,09**, ay ay da tutuyor.
+- [x] **İbraz etmeme VSR'si örneğin yapısına getirildi.** Müfettişin ikinci
+      örneği (ibraz etmeme VSR) geldi; yapı sahte belge VSR'sinden
+      **farklı**: dört bölüm (1-GİRİŞ, 2-SUÇUN UNSURLARI, 3-SUÇUN FAİLİ,
+      4-SONUÇ), "yapılan tespitler" bölümü ve tarhiyat önerisi tablosu
+      **yok** — tarhiyat bilgileri ibraz etmeme raporunda yer alıyor.
+
+      **359/a-2 madde metni artık birebir yazılı** (örnekten alındı); daha
+      önce kasıtlı kırmızı yer tutucuydu. Dikkat: örnek 2022 tarihli ve hapis
+      süresini "on sekiz aydan üç yıla" diye anıyor (5904 sayılı Kanun
+      metni); 7394 sayılı Kanun bu süreyi değiştirdi, müfettiş inceleme
+      yılında yürürlükte olan metni taslak üzerinde denetler.
+
+      2.2'de kurumlarda VUK 10'a (kanuni temsilcilerin ödevi) dayanılıyor —
+      failin temsilci olmasının dayanağı bu. Tasdikli defter tablosu
+      künyedeki "İbraz edilen defterler" alanından geliyor; defterlerin
+      VARLIĞI gizleme fiilinin ön koşulu. `defter_tasdik_makami` künye alanı
+      kaldırıldı (tek satırlık makam adı yetmiyordu) ve `_tespitler`in ölü
+      ibraz dalı silindi.
 - [x] **Vergi ziyaı cezası, tarh edilecek tutarın TAMAMI üzerinden.** Ceza
       tablosundan matrah sütunları ("Bilerek / Bilmeden Kullanılan Belgeler")
       kaldırıldı (müfettişin kararı, 2026-10-15). Tablo artık:
@@ -935,19 +993,17 @@ oturumda buradan devam edilir.
 
 ---
 
-## VSR'de bekleyenler
+## İbraz etmemede bekleyen
 
-- [ ] **VUK 359/a madde metni eksik.** Defter ve belge ibraz etmeme (gizleme)
-      hâlinde VSR üretiliyor ama 3.1'deki madde metni **kasıtlı olarak
-      kırmızı yer tutucu**: bendin birincil kaynaktan doğrulanmış metni
-      elimizde yok, uydurulmadı. Müfettişten birebir metin ya da bir ibraz
-      etmeme VSR örneği gelince yazılacak.
-- [ ] **"Defter ve belge ibraz etmeme raporu" (ebeveyn rapor) yok.** VSR'nin
-      ibraz etmeme dalı hazır (`FIIL_IBRAZ_ETMEME`), ama ekleneceği tarhiyat
-      öneren rapor henüz yazılmadı. O rapor yazılınca VSR aynı yolla —
-      indirme paketine eklenerek — bağlanacak. Tetikleyici de hazır:
-      künyedeki defter ibraz durumu "İbraz edilmedi" ise
-      `gerekli_mi(..., FIIL_IBRAZ_ETMEME)` doğru döner.
+- [ ] **"Belge basım bilgileri" tablosu yok.** Müfettişin iki örneğinde de
+      anlaşmalı matbaa / belge seri-numara aralığı tablosu var (ibraz
+      edilmeyen belgelerin basım bilgileri). Uygulamada bu veri hiç
+      tutulmuyor; eklenmesi yeni bir künye satır tablosu gerektirir.
+      İstenirse eklenir.
+- [ ] **359/a-2 hapis süresi.** Örnek 2022 tarihli ve "on sekiz aydan üç
+      yıla" diyor; 7394 sayılı Kanun süreyi değiştirdi. Metin örnekten
+      birebir alındı, güncel yürürlük doğrulanmadı — inceleme yılına göre
+      taslak üzerinde denetlenmeli.
 
 ---
 

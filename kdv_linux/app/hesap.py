@@ -67,6 +67,59 @@ def bos_elestiri():
     }
 
 
+def ibraz_etmeme_elestirisi(yil_kaydi, satis_toplamlari=None):
+    """Defter ve belge ibraz edilmemis bir yilin elestirisini kurar.
+
+    Iki kural uygulanir; ikisi de mufettisin tarifi (2026-10-16):
+
+    1) INDIRIMIN TAMAMI REDDEDILIR. Defter kayitlari sunulamadigi icin
+       beyan edilen indirilecek KDV'nin KDVK 29 ve 34 geregince
+       indirilebilirligi denetlenemez. `indirim_cikar`, beyan edilen "bu
+       donem indirilecek KDV"ye esitlenir; motor bunu tam ret olarak taniyip
+       yurtici alim sinirini uygulamaz. Devir zinciri de boylece sifirlanir,
+       ayrica yilin baslangic devri sifira cekilir - o devir de denetlenemeyen
+       indirimlerden birikmistir.
+
+    2) MATRAH, MUKELLEFIN DUZENLEDIGI FATURALARA GORE KURULUR. Beyan edilen
+       matrah ile duzenlenen faturalarin toplami uyusmadiginda VUK 3/B
+       geregi gercek durum esas alinir. Ancak yalnizca mukellef ALEYHINE
+       olan yonde: duzenlenen faturalar beyandan AZSA beyan esas alinir,
+       matrah indirilmez. Hesaplanan KDV farki da faturalarin kendi
+       KDV'sinden gelir (`hesaplanan_otomatik` kapatilir), cunku dokumde
+       sifir KDV'li satirlar bulunabiliyor ve orana bolmek yanlis sonuc
+       verir.
+
+    Doner: (elestiri, degisti). `degisti`, bir tutar gerceklesmis mi -
+    kullaniciya "bir sey degismedi" diyebilmek icin.
+    """
+    beyan = yil_kaydi.get("beyan") or {}
+    yil = int(yil_kaydi.get("yil") or 0)
+    ay_sayisi = max(1, min(int(yil_kaydi.get("ay_sayisi") or 12), 12))
+    satis_toplamlari = satis_toplamlari or {}
+
+    elestiri = bos_elestiri()
+    degisti = False
+    for ay in range(ay_sayisi):
+        indirim = _d(beyan, "bu_donem_indirilecek", ay)
+        if indirim > 0.005:
+            elestiri["indirim_cikar"][ay] = _yuvarla(indirim)
+            degisti = True
+
+        satis = satis_toplamlari.get((yil, ay + 1)) or {}
+        matrah_farki = _yuvarla(float(satis.get("matrah") or 0.0)
+                                - _d(beyan, "matrah_toplami", ay))
+        if matrah_farki > 0.005:
+            elestiri["matrah_ilave"][ay] = matrah_farki
+            # Hesaplanan KDV farki faturalarin kendi KDV'sinden; orana
+            # bolunmez, cunku dokumde sifir KDV'li satirlar olabiliyor.
+            kdv_farki = _yuvarla(float(satis.get("kdv") or 0.0)
+                                 - _d(beyan, "hesaplanan_kdv", ay))
+            elestiri["hesaplanan_otomatik"][ay] = False
+            elestiri["hesaplanan_kdv_ilave"][ay] = max(kdv_farki, 0.0)
+            degisti = True
+    return elestiri, degisti
+
+
 def _indirim_sinirlansin(elestiri, ay):
     """O donemde cikarma, yurtici alimlar tutariyla sinirlanacak mi."""
     isaretler = elestiri.get("indirim_sinirla") or []

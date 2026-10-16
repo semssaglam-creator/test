@@ -541,6 +541,9 @@
       <div class="otomatik"><button class="btn ikincil" id="raporOnizle">Önizle</button></div>
       <div class="otomatik"><button class="btn birincil" id="kabulIndir">Düzeltme Kabul Raporu (Word)</button></div>
       <div class="otomatik"><button class="btn ikincil" id="kabulOnizle">Önizle</button></div>
+      <div class="otomatik"><button class="btn birincil" id="ibrazIndir">İbraz Etmeme Raporu (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="ibrazOnizle">Önizle</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="ibrazElestiri">İbraz etmeme: indirimlerin tamamını reddet</button></div>
     </div>
     <div class="yardim" style="margin-top:8px;">
       <strong>Düzeltme kabul raporu</strong>, sahteci mükelleflerin
@@ -2580,6 +2583,55 @@ $("kabulOnizle").addEventListener("click", async () => {
     $("raporBaslik").textContent = "Düzeltme Kabul Raporu — Önizleme";
     $("raporMetin").textContent = y.metin;
     $("raporModal").classList.add("acik");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("ibrazIndir").addEventListener("click", async () => {
+  try {
+    await belgeIndir("/api/ibraz_etmeme_raporu",
+                     belgeDosyaAdi("Ibraz_etmeme_raporu"),
+                     "İbraz etmeme raporu taslağı indirildi. Fiil VUK " +
+                     "359/a-2'de kaçakçılık suçu olduğundan vergi suçları " +
+                     "raporu (VSR) da pakete eklendi. Kopyaları ciktilar " +
+                     "klasörüne bırakıldı.");
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+$("ibrazOnizle").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/ibraz_etmeme_onizleme", { calisma: durum.calisma });
+    $("raporBaslik").textContent = "İbraz Etmeme Raporu — Önizleme";
+    $("raporMetin").textContent = y.metin;
+    $("raporModal").classList.add("acik");
+    eksikleriCiz(y.eksikler || []);
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
+
+// Elestiriyi uygulama DOLDURUR ama kullanicinin onayiyla: elle girilmis bir
+// elestiri sessizce ezilmemeli.
+$("ibrazElestiri").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/ibraz_elestirisi", { calisma: durum.calisma });
+    const doluYil = (durum.calisma.yillar || []).filter((k) =>
+      Object.keys(k.elestiri || {}).some((alan) =>
+        Array.isArray(k.elestiri[alan])
+        && k.elestiri[alan].some((v) => typeof v === "number" && v > 0.005)));
+    if (doluYil.length && !confirm(
+        "Girilmiş eleştiri tutarları var; ibraz etmeme kuralıyla " +
+        "değiştirilecek. Sürdürülsün mü?")) return;
+    (y.yillar || []).forEach((gelen) => {
+      const kayit = yilBul(gelen.yil);
+      if (kayit) kayit.elestiri = gelen.elestiri;
+      // Devir zinciri de sifirlanir: o devir de denetlenemeyen
+      // indirimlerden birikmistir.
+      if (kayit) kayit.devir_baslangic = 0;
+    });
+    durum.degisti = true;
+    ekraniCiz();
+    hesapla();
+    mesaj("İndirilecek KDV'nin tamamı reddedildi; matrahlar düzenlenen " +
+          "faturalara göre yükseltildi. Tutarları İnceleme Tespitleri " +
+          "sekmesinden denetleyin.", "iyi");
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 

@@ -34,13 +34,16 @@ _tl = turkce.tl
 # Fiil turleri. Her biri 359'un farkli bir bendine dayanir ve raporun
 # cumlelerini degistirir.
 FIIL_SAHTE_BELGE = "sahte_belge"      # 359/b - sahte belgeyi bilerek kullanma
-FIIL_IBRAZ_ETMEME = "ibraz_etmeme"    # 359/a - defter ve belgeleri gizleme
+FIIL_IBRAZ_ETMEME = "ibraz_etmeme"    # 359/a-2 - defter, kayit ve belgeleri
+                                      # gizlemek
 
 _FIIL_ADI = {
     FIIL_SAHTE_BELGE: "sahte belge kullanma",
-    FIIL_IBRAZ_ETMEME: "defter ve belgeleri gizleme",
+    # Mufettisin ornek ibraz etmeme raporundan (2026-10-16): fiil 359/a-2'de
+    # "defter, kayit ve belgeleri gizlemek" olarak aniliyor.
+    FIIL_IBRAZ_ETMEME: "defter, kayıt ve belgeleri gizlemek",
 }
-_FIIL_BENDI = {FIIL_SAHTE_BELGE: "b", FIIL_IBRAZ_ETMEME: "a"}
+_FIIL_BENDI = {FIIL_SAHTE_BELGE: "b", FIIL_IBRAZ_ETMEME: "a-2"}
 
 
 def _donem_ifadesi(kunye, donemler, hal="yalin"):
@@ -187,17 +190,9 @@ def _tespitler(b, kunye, donemler, satici_satirlari, fiil, kabul=None):
                "bakımından bu durum, fiilin işlenmiş olması gerçeğini "
                "ortadan kaldırmamaktadır." if kabul is not None else ""),
             girinti=1)
-    else:
-        b.paragraf(
-            "%s yasal defter ve belgelerinin ibrazı, usulüne uygun olarak "
-            "tebliğ edilen yazımızla istenilmiştir. Verilen süre içinde defter "
-            "ve belgeler ibraz edilmemiş; ibraz etmemeye ilişkin olarak mücbir "
-            "sebep hâli de bildirilmemiştir."
-            % _donem_ifadesi(kunye, donemler, "ilgi"), girinti=1)
-        b.paragraf(
-            "Defterlerin varlığı, %s tasdik kayıtlarıyla sabittir."
-            % ik.deger(kunye, "defter_tasdik_makami", "tasdik makamı"),
-            girinti=1)
+    # Ibraz etmeme icin ayri bir dal YOK: o fiil `rapor_uret`te kendi
+    # bolumlerine (bkz. `_ibraz_giris`, `_ibraz_maddi_unsur`) saptigi icin
+    # bu islev yalnizca sahte belge yolunda cagriliyor.
 
     b.paragraf(
         "İşbu rapor, %s 213 sayılı Vergi Usul Kanunu’nun 359 uncu maddesinin "
@@ -229,22 +224,206 @@ def _savcilik(kunye, hal="yalin"):
 
 
 # ---------------------------------------------------------- 3) sucun unsurlari
-def _unsurlar(b, kunye, donemler, oran, fiil, virler):
+# --------------------------------------------- ibraz etmeme VSR'sine ozgu
+# Bu bolumler mufettisin verdigi ibraz etmeme VSR ornegine gore yazildi
+# (2026-10-16). Yapi sahte belge VSR'sinden farklidir: tespitler bolumu ve
+# tarhiyat onerisi tablosu yok, numaralar 1-2-3-4.
+def _ibraz_giris(b, inceleme, kunye, donemler, virler):
     M = ik.mukellef_sozu
-    b.baslik("III- SUÇUN UNSURLARI", duzey=1)
+    b.baslik("1- GİRİŞ", duzey=1)
+
+    gecmis = ik.satirlar(kunye, "mukellef_gecmisi")
+    if gecmis:
+        b.paragraf(
+            "%s %s mükellefi %s (raporun ilerleyen kısımlarında %s olarak "
+            "anılacaktır), %s"
+            % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
+               ik.mukellef_kimligi(inceleme, kunye),
+               ik.mukellef_adi(inceleme, kunye), M(kunye), gecmis[0]),
+            girinti=1)
+        for satir in gecmis[1:]:
+            b.paragraf(satir, girinti=1)
+    else:
+        konular = ik.satirlar(kunye, "faaliyet_konulari")
+        b.paragraf(
+            "%s %s mükellefi %s (raporun ilerleyen kısımlarında %s olarak "
+            "anılacaktır), %s adresinde %s faaliyeti ile iştigal etmektedir.%s"
+            % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
+               ik.mukellef_kimligi(inceleme, kunye),
+               ik.mukellef_adi(inceleme, kunye), M(kunye),
+               ik.adres(kunye.get("faaliyet_adresi") or inceleme.get("adres")),
+               turkce.liste(konular) if konular else "[faaliyet konusu]",
+               " Mükellef Vergi Usul Kanununun 107/A maddesi kapsamında "
+               "e-tebligata tabidir."
+               if ik.secim_mi(kunye, "e_tebligat", "Kapsamda") else ""),
+            girinti=1)
+
+    emirler = ik.is_emirleri(kunye)
+    b.paragraf(
+        "T.C. Hazine ve Maliye Bakanlığı Vergi Denetim Kurulu %s %s ile %s "
+        "%s hesap ve işlemlerinin incelenmesi istenmiştir."
+        % (ik.deger(kunye, "grup_baskanligi", "Denetim Daire Başkanlığının"),
+           ik.gorevlendirme_ifadesi(emirler), M(kunye, ek="in"),
+           _donem_ifadesi(kunye, donemler)), girinti=1)
+
+    _ibraz_yazisi_paragrafi(b, kunye, donemler)
+
+    b.paragraf(
+        "Raporun izleyen bölümlerinde açıklanacağı üzere, %s ilgili dönem "
+        "defter ve belgelerini incelenmek üzere tarafımıza ibraz etmemiş ve "
+        "tarafımızca %s hakkında %s ile ilgili olarak %s düzenlenmiştir."
+        % (M(kunye), M(kunye), _donem_ifadesi(kunye, donemler),
+           _vir_ifadesi(virler)), girinti=1)
+    b.paragraf(
+        "%s hakkında defter ve belge ibraz etmeme fiiline istinaden bu Vergi "
+        "Suçları Raporu düzenlenmiş olup, konuyla ilgili eleştirilen "
+        "hususlara raporun izleyen bölümlerinde yer verilmiştir."
+        % M(kunye, buyuk=True), girinti=1)
+
+
+def _ibraz_yazisi_paragrafi(b, kunye, donemler):
+    """Defter-belge isteme yazisinin teblig edildigi ve surenin gectigi.
+
+    Sucun hem maddi hem manevi unsuru buna dayaniyor: yazi teblig edilmis,
+    sonuclari bildirilmis, sure gecmis ve defterler yine ibraz edilmemis.
+    Tarih girilmemisse uydurulmaz, kirmizi yer tutucu kalir.
+    """
+    eksik = not (str(kunye.get("ibraz_yazi_tarihi") or "").strip()
+                 and str(kunye.get("ibraz_teblig_tarihi") or "").strip())
+    b.paragraf(
+        "Müfettişliğimizce düzenlenen %s tarih ve %s sayılı Defter ve Belge "
+        "İsteme yazısı %s tebliğ edilmiştir. Defter ve belge isteme yazısında "
+        "tayin olunan yasal süre geçmiş olmasına rağmen, %s %s yasal defter "
+        "ve belgeleri rapor tarihi itibarıyla Müfettişliğimize ibraz "
+        "edilmemiştir."
+        % (ik.deger(kunye, "ibraz_yazi_tarihi", "yazı tarihi"),
+           ik.deger(kunye, "ibraz_yazi_sayisi", "yazı sayısı"),
+           ik.deger(kunye, "ibraz_teblig_tarihi", "tebliğ tarihi") + " tarihinde",
+           ik.mukellef_sozu(kunye, ek="in"),
+           _donem_ifadesi(kunye, donemler)),
+        girinti=1, renk=KIRMIZI if eksik else None)
+
+
+def _ibraz_maddi_unsur(b, kunye, donemler, virler):
+    """Gizleme fiilinin maddi unsuru.
+
+    Dayanak zinciri: defterleri bes yil saklama ve istenince ibraz etme
+    odevi -> varligi tasdik kayitlariyla SABIT olan defterlerin ibraz
+    edilmemesi 359'un uygulanmasinda GIZLEME sayilir. Tasdik tablosu bu
+    yuzden rapora giriyor; defterlerin varligini o tablo ortaya koyuyor.
+    """
+    M = ik.mukellef_sozu
+    b.paragraf(
+        "Bilindiği gibi vergi uygulamalarında mükelleflerin tuttukları "
+        "defterleri, ilgili bulundukları yılı takip eden takvim yılından "
+        "başlayarak beş yıl süreyle muhafaza etme ve bu süre içinde talep "
+        "edilmesi hâlinde ilgili makam ve memurlara arz etme zorunlulukları "
+        "bulunmaktadır. Bu çerçevede 213 sayılı Vergi Usul Kanunu’nun 359 "
+        "uncu maddesine göre, varlığı noter tasdik kayıtları veya sair "
+        "suretlerle sabit olduğu hâlde inceleme sırasında vergi incelemesine "
+        "yetkili kimselere defter ve belgelerin ibraz edilmemesi, Kanun’un "
+        "uygulanmasında gizleme olarak kabul edilir.", girinti=1)
+    if ik.kurum_mu(kunye):
+        # Kurumda odev kanuni temsilciye dusuyor; failin o olmasinin
+        # dayanagi VUK 10.
+        b.paragraf(
+            "213 sayılı Vergi Usul Kanunu’nun 10 uncu maddesi kanuni "
+            "temsilcilerin ödevini düzenlemektedir. Buna göre tüzel "
+            "kişilerin mükellef veya vergi sorumlusu olmaları hâlinde "
+            "bunlara düşen ödevler kanuni temsilcileri tarafından yerine "
+            "getirilir.", girinti=1)
+
+    _ibraz_yazisi_paragrafi(b, kunye, donemler)
+    b.paragraf(
+        "Defter ve belge ibraz etmemek suretiyle 213 sayılı Vergi Usul "
+        "Kanunu’nun 359/a-2 maddesinde yer alan kaçakçılık fiili işlenmiş "
+        "olmaktadır.", girinti=1)
+    _defter_tasdik_tablosu(b, kunye, donemler)
+
+
+def _defter_tasdik_tablosu(b, kunye, donemler):
+    """Ibraz edilmeyen defterlerin tasdik bilgileri.
+
+    Kunyedeki "İbraz edilen defterler" alani kullanilir; ibraz etmeme
+    halinde o alana TASDIK kayitlarindan okunan defterler yazilir, cunku
+    raporun dayanagi defterlerin VAR oldugu ama ibraz edilmedigidir.
+    """
+    tutucular = ("yıl", "defterin türü", "tasdik tarihi ve numarası",
+                 "tasdik makamı")
+    satirlar = ik.cizgili_satirlar(kunye, "defter_bilgileri", 4, tutucular)
+    if not satirlar:
+        yillar = sorted({d["yil"] for d in donemler}) or [None]
+        satirlar = [[str(y) if y else "[yıl]"]
+                    + ["[%s]" % ad for ad in tutucular[1:]] for y in yillar]
+    b.paragraf(
+        "GİB Yönetim Bilgi Sistemleri veri bankası üzerinden yapılan "
+        "sorgulamalar sonucunda %s %s ilişkin notere tasdik ettirilmiş "
+        "defter bilgilerinin aşağıdaki gibi olduğu tespit edilmiştir."
+        % (ik.mukellef_sozu(kunye, ek="in"),
+           _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
+    b.paragraf("İbraz Edilmeyen Defter Tasdik Bilgileri", kalin=True,
+               hiza="sol", aralik_once=120, aralik_sonra=40)
+    b.tablo(["Yılı", "Defterin Türü", "Tasdik Tarihi ve Numarası",
+             "Tasdik Makamı"], satirlar,
+            hizalar=["orta", "sol", "orta", "sol"],
+            oranlar=[0.6, 1.4, 1.4, 1.6], buyukluk=TABLO_PUNTOSU)
+
+
+def _ibraz_sonuc(b, inceleme, kunye, donemler):
+    """4- SONUC. Tarhiyat onerisi YOK; o, ibraz etmeme raporunun isi.
+
+    Bu rapor yalnizca suc duyurusunu ister.
+    """
+    b.baslik("4- SONUÇ", duzey=1)
+    b.paragraf(
+        "%s %s mükellefi %s, %s hesap ve işlemlerinin kaçakçılık cezasını "
+        "gerektiren hususlar yönünden incelenmesi neticesinde;"
+        % (ik.vergi_dairesi(inceleme.get("vergi_dairesi"), ek="in"),
+           ik.mukellef_kimligi(inceleme, kunye),
+           ik.mukellef_adi(inceleme, kunye),
+           _donem_ifadesi(kunye, donemler)), girinti=1)
+    b.paragraf(
+        "4.1- Defter ve belge ibraz etmeme fiili nedeniyle kaçakçılık suçu "
+        "işlediği tespit edilen %s hakkında 213 sayılı Vergi Usul Kanunu’nun "
+        "359/a-2 maddesi hükmüne göre yargılanması için aynı Kanun’un 367 nci "
+        "maddesi gereğince Rapor Değerlendirme Komisyonunun mütalaasıyla "
+        "keyfiyetin %s bildirilmesi gerektiği,"
+        % (ik.suc_duyurusu_hedefi(kunye, inceleme),
+           _savcilik(kunye, "yonelme")),
+        kalin=True, girinti=1, aralik_sonra=100)
+    b.paragraf("Sonucuna varılmıştır.", girinti=1, aralik_once=120)
+    b.bos_satir()
+    b.imza_bloklari([(ik.deger(kunye, "eleman_unvan", "unvan"),
+                      ik.ad(kunye, "eleman_ad"))])
+
+
+def _alt_on(on):
+    """Alt baslik oneki: "III" -> "3", "2" -> "2"."""
+    return "3" if on == "III" else on
+
+
+def _unsurlar(b, kunye, donemler, oran, fiil, virler, on=None):
+    M = ik.mukellef_sozu
+    # Bolum numarasi fiile gore degisir: sahte belgede III (once
+    # tespitler bolumu var), ibraz etmemede 2.
+    on = on or "III"
+    b.baslik("%s- SUÇUN UNSURLARI" % on if on == "III"
+             else "%s. SUÇUN UNSURLARI" % on, duzey=1)
 
     # --- 3.1 kanuni unsur
-    b.baslik("3.1. Suçun Kanuni Unsuru", duzey=2)
+    b.baslik("%s.1. Suçun Kanuni Unsuru" % _alt_on(on), duzey=2)
     b.paragraf(
         "Kanunsuz suç ve ceza olmaz. Bir fiilin suç olarak nitelendirilebilmesi "
         "için kanunda açık bir şekilde suç olduğunun belirtilmesi ve yine suç "
         "olarak belirtilen fiil için kanunda bir cezanın öngörülmesi "
         "gerekmektedir. %s fiili 213 sayılı Vergi Usul Kanununun 359 uncu "
-        "maddesinde vergi kaçakçılığı suçu olarak tanımlanmıştır. Bu nedenle "
+        "maddesinin (%s) bendinde vergi kaçakçılığı suçu olarak "
+        "tanımlanmıştır. Bu nedenle "
         "söz konusu incelemede, %s fiili mevcut olduğundan 213 sayılı Vergi "
         "Usul Kanununun 359 uncu maddesinde yer alan düzenleme nedeniyle suçun "
         "kanuni unsuru bulunmaktadır."
-        % (_FIIL_ADI[fiil].capitalize(), _FIIL_ADI[fiil]), girinti=1)
+        % (_FIIL_ADI[fiil].capitalize(), _FIIL_BENDI[fiil],
+           _FIIL_ADI[fiil]), girinti=1)
     b.paragraf(
         "Bilindiği üzere, 213 sayılı Vergi Usul Kanununun “Kaçakçılık Suçları "
         "ve Cezaları” başlıklı 359 uncu maddesinde;", girinti=1)
@@ -261,7 +440,7 @@ def _unsurlar(b, kunye, donemler, oran, fiil, virler):
         "bildirilmesi mecburidir.” hükmü yer almaktadır.", girinti=1)
 
     # --- 3.2 maddi unsur
-    b.baslik("3.2. Suçun Maddi Unsurları", duzey=2)
+    b.baslik("%s.2. Suçun Maddi Unsurları" % _alt_on(on), duzey=2)
     b.paragraf(
         "Bilindiği gibi suçun maddi unsuru, kanunda suç olarak belirtilen "
         "fiilin fail veya failleri tarafından gerçekleştirilmesidir.",
@@ -286,18 +465,10 @@ def _unsurlar(b, kunye, donemler, oran, fiil, virler):
             "sebebiyet vermiş ve suçun maddi unsuru oluşmuştur."
             % _rapor_sozu(virler, buyuk=True), girinti=1)
     else:
-        b.paragraf(
-            "Müfettişliğimizce %s hakkında düzenlenen %s ayrıntılı "
-            "açıklandığı üzere; usulüne uygun olarak tebliğ edilen yazımıza "
-            "rağmen defter ve belgeler incelemeye ibraz edilmemiştir. "
-            "Varlığı tasdik kayıtlarıyla sabit olan defter ve belgelerin "
-            "ibraz edilmemesi gizleme fiilini oluşturmuş, bu durum ilgili "
-            "dönemlerde vergi ziyaına sebebiyet vermiş ve suçun maddi unsuru "
-            "oluşmuştur." % (M(kunye), _vir_de(virler)),
-            girinti=1)
+        _ibraz_maddi_unsur(b, kunye, donemler, virler)
 
     # --- 3.3 manevi unsur
-    b.baslik("3.3. Suçun Manevi Unsurları", duzey=2)
+    b.baslik("%s.3. Suçun Manevi Unsurları" % _alt_on(on), duzey=2)
     b.paragraf(
         "213 sayılı Vergi Usul Kanunu’nun cezaları düzenleyen 331 inci "
         "maddesinde; “Vergi kanunları hükümlerine aykırı hareket edenler, bu "
@@ -376,19 +547,44 @@ def _madde_metni(b, fiil):
             "cezaların uygulanması 344 üncü maddede yazılı vergi ziyaı "
             "cezasının ayrıca uygulanmasına engel teşkil etmez.”", girinti=1)
     else:
-        # 359/a metni henuz dogrulanmadi; uydurulmaz, kirmizi birakilir.
-        # Kullanicidan madde metni geldiginde buraya yazilacak.
+        # 359/a-2 metni, mufettisin verdigi ornek VSR'den BIREBIR alindi
+        # (2026-10-16). Daha once kirmizi yer tutucuydu; uydurulmamisti.
+        #
+        # Dikkat: ornek 2022 tarihli bir rapor ve hapis suresini "on sekiz
+        # aydan uc yila" diye aniyor (5904 sayili Kanunla gelen metin).
+        # 7394 sayili Kanun bu sureyi degistirdi; mufettis, inceleme yilinda
+        # yururlukte olan metni taslak uzerinde denetler.
         b.paragraf(
-            "[213 sayılı Vergi Usul Kanununun 359 uncu maddesinin (a) bendinin "
-            "defter ve belgeleri gizlemeye ilişkin hükmü buraya yazılacaktır.]",
-            girinti=1, renk=KIRMIZI)
+            "“a) Vergi kanunlarına göre tutulan veya düzenlenen ve saklanma "
+            "ve ibraz mecburiyeti bulunan;", girinti=1)
+        b.paragraf(
+            "1) Defter ve kayıtlarda hesap ve muhasebe hileleri yapanlar, "
+            "gerçek olmayan veya kayda konu işlemlerle ilgisi bulunmayan "
+            "kişiler adına hesap açanlar veya defterlere kaydı gereken hesap "
+            "ve işlemleri vergi matrahının azalması sonucunu doğuracak şekilde "
+            "tamamen veya kısmen başka defter, belge veya diğer kayıt "
+            "ortamlarına kaydedenler,", girinti=1)
+        b.paragraf(
+            "2) Defter, kayıt ve belgeleri tahrif edenler veya gizleyenler "
+            "veya muhteviyatı itibariyle yanıltıcı belge düzenleyenler veya bu "
+            "belgeleri kullananlar,", girinti=1)
+        b.paragraf(
+            "hakkında on sekiz aydan üç yıla kadar hapis cezasına hükmolunur. "
+            "Varlığı noter tasdik kayıtları veya sair suretlerle sabit olduğu "
+            "halde, inceleme sırasında vergi incelemesine yetkili kimselere "
+            "defter ve belgelerin ibraz edilmemesi, bu fıkra hükmünün "
+            "uygulanmasında gizleme olarak kabul edilir. Gerçek bir muamele "
+            "veya duruma dayanmakla birlikte bu muamele veya durumu mahiyet "
+            "veya miktar itibariyle gerçeğe aykırı şekilde yansıtan belge ise, "
+            "muhteviyatı itibariyle yanıltıcı belgedir.”", girinti=1)
 
 
 # ------------------------------------------------------------- 4) sucun faili
-def _fail(b, kunye, inceleme, fiil, virler):
+def _fail(b, kunye, inceleme, fiil, virler, on=None):
     M = ik.mukellef_sozu
     kurum = ik.kurum_mu(kunye)
-    b.baslik("IV- SUÇUN FAİLİ", duzey=1)
+    b.baslik("IV- SUÇUN FAİLİ" if not on else "%s. SUÇUN FAİLİ" % on,
+             duzey=1)
     b.paragraf(
         "%s, %s %s fiilini bilerek ve isteyerek işlediği ayrıntılı şekilde "
         "açıklanmıştır." % (_vir_de(virler), M(kunye, ek="in"),
@@ -607,6 +803,18 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma,
     b = Belge()
     b.paragraf("VERGİ SUÇLARI RAPORU", kalin=True, hiza="orta")
     b.bos_satir()
+
+    if fiil == FIIL_IBRAZ_ETMEME:
+        # Ibraz etmeme VSR'sinin yapisi sahte belgeden FARKLIDIR (mufettisin
+        # ornek raporu, 2026-10-16): dort bolum, "yapilan tespitler" bolumu
+        # ve tarhiyat onerisi tablosu YOK. Tarhiyat ve etkin pismanlik
+        # bilgileri ibraz etmeme raporunda yer aliyor; burada tekrarlanmaz.
+        _ibraz_giris(b, inceleme, kunye, donemler, virler)
+        _unsurlar(b, kunye, donemler, oran, fiil, virler, "2")
+        _fail(b, kunye, inceleme, fiil, virler, "3")
+        _ibraz_sonuc(b, inceleme, kunye, donemler)
+        return b
+
     _giris(b, inceleme, kunye, donemler, fiil, virler)
     _tespitler(b, kunye, donemler, satici_satirlari, fiil, kabul)
     _unsurlar(b, kunye, donemler, oran, fiil, virler)

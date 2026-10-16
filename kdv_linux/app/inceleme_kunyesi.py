@@ -67,6 +67,15 @@ VIR_KOLONLARI = [
 # VUK 353/1 ceza sinirlari. Tarih ARALIKLI tutulmasi gerekiyor: 2022'de
 # 7417 sayili Kanunla sinirlar yil ICINDE (01.08.2022'den itibaren) degisti,
 # yil bazli tek bir alan o yili yanlis hesapliyordu.
+# Ibraz etmeme raporunun giris bolumundeki ortaklik tablosu.
+ORTAKLIK_KOLONLARI = [
+    {"kod": "vkn", "etiket": "Vergi No", "tur": "metin"},
+    {"kod": "tckn", "etiket": "T.C. Kimlik No", "tur": "metin"},
+    {"kod": "ad", "etiket": "Adı Soyadı", "tur": "metin"},
+    {"kod": "hisse", "etiket": "Hisse", "tur": "metin"},
+    {"kod": "aciklama", "etiket": "Açıklama", "tur": "metin"},
+]
+
 BELGE_ALMA_KOLONLARI = [
     {"kod": "baslangic", "etiket": "Başlangıç", "tur": "metin"},
     {"kod": "bitis", "etiket": "Bitiş", "tur": "metin"},
@@ -337,6 +346,42 @@ BOLUMLER = [
         ],
     },
     {
+        "kod": "ibraz",
+        "baslik": "Defter ve Belge İbraz Etmeme Raporu",
+        "alanlar": [
+            {"kod": "ibraz_yazi_tarihi", "etiket": "Defter-belge isteme yazısının tarihi",
+             "tur": "tarih",
+             "ipucu": "Rapor, yazının tebliğ edildiğini ve yasal sürenin "
+                      "geçtiğini bu bilgilerle anlatır. Boş bırakılan alanlar "
+                      "belgede kırmızı yer tutucu olarak kalır."},
+            {"kod": "ibraz_yazi_sayisi", "etiket": "İsteme yazısının sayısı",
+             "tur": "metin", "ipucu": "Örn: E-22222222-000[2015]-13028"},
+            {"kod": "ibraz_teblig_tarihi", "etiket": "Tebliğ (teslim) tarihi",
+             "tur": "tarih",
+             "ipucu": "Tebligat alındısının teslim edildiği tarih. Yasal süre "
+                      "(15 gün) bu tarihten işler."},
+            {"kod": "ibraz_teblig_alan", "etiket": "Tebligatı teslim alan",
+             "tur": "metin",
+             "ipucu": "Örn: şirket müdürü Ahmet Yılmaz. Belgede “... teslim "
+                      "edilmiştir” cümlesinde geçer."},
+            {"kod": "ortaklik_bilgileri",
+             "etiket": "Ortaklık ve yöneticilik bilgileri",
+             "tur": "satirlar", "kolonlar": ORTAKLIK_KOLONLARI,
+             "ekle_etiketi": "+ Ortak ekle",
+             "ipucu": "Her ortak için (+) ile satır açın. İbraz etmeme "
+                      "raporunun giriş bölümünde tablo olarak yer alır."},
+            {"kod": "mukellef_gecmisi",
+             "etiket": "Mükellefin işe başlama / terk geçmişi", "tur": "uzun",
+             "ipucu": "Belgeye OLDUĞU GİBİ aktarılır; giriş bölümündeki ilk "
+                      "paragrafın yerini alır. Örn: 11.04.2018 tarihinde ... "
+                      "adresinde ... faaliyeti ile işe başlamış iken "
+                      "21.05.2021 tarihinde ... adresine taşınmış ve ... "
+                      "31.07.2021 tarihi itibarıyla re’sen terk "
+                      "ettirilmiştir. Boş bırakılırsa olağan giriş cümlesi "
+                      "yazılır."},
+        ],
+    },
+    {
         "kod": "vergi_sucu",
         "baslik": "Vergi Suçları Raporu",
         "alanlar": [
@@ -364,13 +409,10 @@ BOLUMLER = [
             {"kod": "fail_dogum_tarihi", "etiket": "Failin doğum tarihi", "tur": "tarih"},
             {"kod": "fail_adresi", "etiket": "Failin adresi", "tur": "uzun",
              "ipucu": "Boş bırakılırsa faaliyet adresi kullanılır."},
-            {"kod": "defter_tasdik_makami",
-             "etiket": "Defter tasdik makamı (ibraz etmeme raporunda)",
-             "tur": "metin",
-             "ipucu": "Defter ve belge ibraz etmeme nedeniyle düzenlenen vergi "
-                      "suçları raporunda, defterlerin varlığının hangi tasdik "
-                      "kayıtlarıyla sabit olduğu yazılır. Örn: Mersin 17. "
-                      "Noterliği tasdik kayıtları."},
+            # "defter_tasdik_makami" alani kaldirildi: ibraz etmeme VSR'si
+            # tasdik bilgilerini artik "İbraz edilen defterler" tablosundan
+            # (defter_bilgileri) yil yil okuyor - ornek rapor da boyle
+            # yaziyor ve tek satirlik makam adi yetmiyordu.
         ],
     },
 ]

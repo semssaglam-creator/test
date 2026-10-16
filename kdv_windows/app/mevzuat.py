@@ -112,6 +112,42 @@ MADDELER.update({
         "nispetinde özel usulsüzlük cezası kesilir. Bu şekilde ceza kesilen "
         "mükellefler hakkında bir takvim yılı içinde kesilecek toplam ceza "
         "ilgili yıl için belirlenen üst sınırı aşamaz."),
+    # Ibraz etmeme raporunun dayanaklari. 30/3, ayri bir bent oldugu icin
+    # 30/4, 30/6 ve 30/7'nin yanina kendi anahtariyla eklendi.
+    "vuk_30_3": (
+        "213 sayılı VUK md. 30/3",
+        "Bu kanuna göre tutulması mecburi olan defterlerin hepsi veya bir "
+        "kısmı tutulmamış veya tasdik ettirilmemiş olursa veya vergi "
+        "incelemesi yapmaya yetkili olanlara herhangi bir sebeple ibraz "
+        "edilmezse."),
+    "vuk_139": (
+        "213 sayılı VUK md. 139 — İncelemenin Yapılacağı Yer",
+        "Vergi incelemeleri, esas itibariyle incelemeye tabi olanın iş "
+        "yerinde yapılır. İncelemenin dairede yapılması halinde incelemeye "
+        "tabi olanın lüzumlu defter ve vesikalarını daireye getirmesi "
+        "kendisinden yazılı olarak istenilir. İstenilen defter veya "
+        "vesikaları belli edilen zamanda mazeretsiz olarak getirmeyenler, "
+        "bunları ibraz etmemiş sayılırlar. Haklı bir mazeret gösterenlere, "
+        "defter ve vesikalarını daireye getirmesi için münasip bir mühlet "
+        "verilir."),
+    "vuk_253": (
+        "213 sayılı VUK md. 253 — Defter ve Belgeleri Muhafaza",
+        "Bu Kanuna göre defter tutmak mecburiyetinde olanlar, tuttukları "
+        "defterlerle üçüncü kısımda yazılı vesikaları, ilgili bulundukları "
+        "yılı takibeden takvim yılından başlıyarak beş yıl süre ile muhafaza "
+        "etmeye mecburdurlar."),
+    "vuk_256": (
+        "213 sayılı VUK md. 256 — Defter ve Belgelerle Diğer Kayıtların "
+        "İbraz Mecburiyeti",
+        "Geçen maddelerde yazılı gerçek ve tüzel kişiler ile mükerrer 257 nci "
+        "madde ile getirilen zorunluluklara tabi olanlar, muhafaza etmek "
+        "zorunda oldukları her türlü defter, belge ve karneler ile vermek "
+        "zorunda bulundukları bilgilere ilişkin mikro fiş, mikro film, "
+        "manyetik teyp, disket ve benzeri ortamlardaki kayıtlarını ve bu "
+        "kayıtlara erişim veya kayıtları okunabilir hale getirmek için "
+        "gerekli tüm bilgi ve şifreleri muhafaza süresi içerisinde yetkili "
+        "makam ve memurların talebi üzerine ibraz ve inceleme için arz etmek "
+        "zorundadırlar."),
     "vuk_229": (
         "213 sayılı VUK md. 229 — Fatura",
         "Fatura, satılan emtia veya yapılan iş karşılığında müşterinin borçlandığı "

@@ -454,20 +454,76 @@ denetle(F.bilerek_yillari(liste, c["saticilar"]) == [2020],
         "elle eklenen bilerek satıcının yılı VSR kapsamına giriyor")
 
 print("\n8) İbraz etmeme halinde")
+# Ibraz etmeme VSR'sinin YAPISI sahte belgeden farklidir (mufettisin ornek
+# raporu, 2026-10-16): dort bolum (1-GIRIS, 2-SUCUN UNSURLARI, 3-SUCUN
+# FAILI, 4-SONUC), "yapilan tespitler" bolumu ve tarhiyat onerisi tablosu
+# YOK. Tarhiyat bilgileri ibraz etmeme raporunda yer aliyor.
 c = ornek(bilerek=True)
 c["kunye"]["defter_ibraz"] = "İbraz edilmedi"
-c["kunye"]["defter_tasdik_makami"] = "Adana 7. Noterliği tasdik kayıtları"
+c["kunye"]["ibraz_yazi_tarihi"] = "17.08.2025"
+c["kunye"]["ibraz_yazi_sayisi"] = "E-2222222-000[A]-30478"
+c["kunye"]["ibraz_teblig_tarihi"] = "22.08.2025"
+c["kunye"]["defter_bilgileri"] = (
+    "2020 | Yevmiye Defteri | 18.12.2019-38254 | Adana 11. Noterliği")
 sonuc, _bulgular = W._hesapla(c)
 belge = V.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], W._yillari_coz(c),
                      sonuc, c, V.FIIL_IBRAZ_ETMEME)
 m = belge.duz_metin()
 denetle(V.gerekli_mi(c, V.FIIL_IBRAZ_ETMEME), "ibraz etmeme VSR'yi gerektiriyor")
-denetle("359 uncu maddesinin a bendinde" in m, "359/a bendine atıf yapılıyor")
-denetle("Adana 7. Noterliği tasdik kayıtları" in m,
-        "defterlerin tasdik makamı yazılıyor")
-# 359/a metni henuz dogrulanmadi; uydurulmamis olmasi KASITLI.
+
+for baslik in ("1- GİRİŞ", "2. SUÇUN UNSURLARI", "2.1. Suçun Kanuni Unsuru",
+               "2.2. Suçun Maddi Unsurları", "2.3. Suçun Manevi Unsurları",
+               "3. SUÇUN FAİLİ", "4- SONUÇ"):
+    denetle(baslik in m, "bölüm var: %s" % baslik)
+denetle("YAPILAN TESPİTLER" not in m,
+        "tespitler bölümü YOK (sahte belge yapısı sızmamış)")
+denetle("Raporun Tarihi" not in m and "Etkin" not in m,
+        "tarhiyat önerisi tablosu YOK")
+denetle("III-" not in m and "IV-" not in m and "V-" not in m,
+        "sahte belge bölüm numaraları sızmamış")
+
+# 359/a-2 bendi ve metni. Metin mufettisin ornek VSR'sinden BIREBIR alindi;
+# daha once kirmizi yer tutucuydu ve uydurulmamisti.
+denetle("359 uncu maddesinin (a-2) bendinde" in m,
+        "kanuni unsur 359/a-2 bendine dayandırılıyor")
+denetle("Defter, kayıt ve belgeleri tahrif edenler veya gizleyenler" in m,
+        "359/a-2 madde metni birebir yazılıyor")
+denetle("gizleme olarak kabul edilir" in m,
+        "ibraz etmemenin gizleme sayıldığı hüküm yazılıyor")
 denetle("[213 sayılı Vergi Usul Kanununun 359 uncu maddesinin (a) bendinin"
-        in m, "359/a madde metni kırmızı yer tutucu olarak bırakılmış")
+        not in m, "eski kırmızı yer tutucu kalkmış")
+denetle("359/a-2 maddesinde yer alan kaçakçılık fiili işlenmiş" in m,
+        "maddi unsur fiili 359/a-2'ye bağlıyor")
+
+# Defterlerin VARLIGI gizleme fiilinin on kosulu; tasdik tablosu bunu
+# ortaya koyuyor ve artik tek satirlik bir makam adindan degil
+# "İbraz edilen defterler" tablosundan geliyor.
+denetle("İbraz Edilmeyen Defter Tasdik Bilgileri" in m,
+        "tasdik tablosu başlığı yazılıyor")
+denetle("Adana 11. Noterliği" in m and "18.12.2019-38254" in m,
+        "tasdik satırı künyedeki defter tablosundan geliyor")
+
+# Isteme yazisi hem girişte hem maddi unsurda aniliyor (ornek de boyle).
+denetle(m.count("Defter ve Belge İsteme yazısı") == 2,
+        "isteme yazısı giriş ve maddi unsurda anılıyor")
+denetle("17.08.2025" in m and "22.08.2025" in m,
+        "yazı ve tebliğ tarihleri yazılıyor")
+
+# Kurumda odev kanuni temsilciye dusuyor; dayanak VUK 10.
+denetle("10 uncu maddesi kanuni temsilcilerin ödevini" in m,
+        "kurumda VUK 10'a dayanılıyor")
+m_gercek = V.rapor_uret(
+    W._inceleme_bilgisi(ornek(kurum=False)),
+    dict(ornek(kurum=False)["kunye"], defter_ibraz="İbraz edilmedi"),
+    W._yillari_coz(c), sonuc, c, V.FIIL_IBRAZ_ETMEME).duz_metin()
+denetle("kanuni temsilcilerin ödevini" not in m_gercek,
+        "gerçek kişide VUK 10 anılmıyor")
+
+denetle("4.1- Defter ve belge ibraz etmeme fiili nedeniyle kaçakçılık suçu "
+        "işlediği tespit edilen" in m,
+        "sonuç bölümü suç duyurusunu istiyor")
+denetle("re’sen tarh" not in m[m.find("4- SONUÇ"):],
+        "sonuç bölümü tarhiyat istemiyor (o, ibraz etmeme raporunun işi)")
 
 print()
 if HATA:

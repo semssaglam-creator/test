@@ -347,6 +347,12 @@ class Istekci(BaseHTTPRequestHandler):
                 self._rapor_gonder(veri)
             elif yol == "/api/sahte_belge_onizleme":
                 self._json_yanit(self._rapor_onizleme(veri))
+            elif yol == "/api/ibraz_etmeme_raporu":
+                self._ibraz_raporu_gonder(veri)
+            elif yol == "/api/ibraz_etmeme_onizleme":
+                self._json_yanit(self._ibraz_raporu_onizleme(veri))
+            elif yol == "/api/ibraz_elestirisi":
+                self._json_yanit(self._ibraz_elestirisi(veri))
             elif yol == "/api/excel":
                 self._excel_gonder(veri)
             elif yol == "/api/fatura_excel":
@@ -762,6 +768,102 @@ class Istekci(BaseHTTPRequestHandler):
         self._belge_gonder(paket.getvalue(),
                            sahte_belge_raporu.paket_adi(inceleme,
                                                         vsr is not None),
+                           "application/zip")
+
+    # ------------------------------------------- ibraz etmeme raporu
+    def _ibraz_elestirisi(self, veri):
+        """Ibraz etmeme kuralini elestiri alanlarina yazar.
+
+        Hesabi rapor DEGIL bu akis kurar; boylece tutanak, Excel ve sonuc
+        bolumu ayni rakamlari gorur. Dolduran kullanici oldugu icin (dugme)
+        elle girilmis bir elestiri sessizce ezilmez - akis yeni elestiriyi
+        dondurur, tarayici onaylatip yerine koyar.
+        """
+        ik_, _tutanak = _belge_modulleri()
+        calisma = veri.get("calisma") or {}
+        if not ik_.secim_mi(ik_.normalize(calisma.get("kunye")),
+                            "defter_ibraz", "İbraz edilmedi"):
+            raise ApiHata("Künyedeki “Defter ve belge ibrazı” alanı “İbraz "
+                          "edilmedi” olmalı.")
+        faturalar = _fatura_modulu()
+        mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+        liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+        satis = faturalar.satis_donem_toplamlari(liste)
+
+        yillar, degisen = [], 0
+        for ham in _yillari_coz(calisma):
+            elestiri, degisti = hesap.ibraz_etmeme_elestirisi(ham, satis)
+            if degisti:
+                degisen += 1
+            yillar.append({"yil": ham["yil"], "elestiri": elestiri})
+        if not degisen:
+            raise ApiHata("Beyan edilen indirilecek KDV bulunamadı; "
+                          "reddedilecek bir tutar yok.")
+        return {"yillar": yillar}
+
+    def _ibraz_raporu_hazirla(self, veri):
+        """Ibraz etmeme raporu taslaklarini uretir (yil yil) + VSR.
+
+        VSR, ibraz etmemede de zorunludur: fiil VUK 359/a-2'de kacakcilik
+        sucu olarak tanimlanmistir ve raporun sonuc bolumu zaten vergi
+        suclari raporu duzenlenmesini istiyor. Bu yuzden rapor istendiginde
+        o da birlikte uretilir.
+        """
+        from . import ibraz_etmeme_raporu
+        from . import vergi_sucu_raporu
+        calisma = veri.get("calisma") or {}
+        sonuc, _bulgular = _hesapla(calisma)
+        if not sonuc["donemler"]:
+            raise ApiHata("Önce beyan bloğunu yapıştırın.")
+        if not ibraz_etmeme_raporu.gerekli_mi(calisma):
+            raise ApiHata("Künyedeki “Defter ve belge ibrazı” alanı “İbraz "
+                          "edilmedi” olmalı.")
+        inceleme = _inceleme_bilgisi(calisma)
+        belgeler = [
+            (y, ibraz_etmeme_raporu.rapor_uret(
+                inceleme, calisma.get("kunye"), sonuc, calisma, y),
+             ibraz_etmeme_raporu.dosya_adi(inceleme, y))
+            for y in (ibraz_etmeme_raporu.rapor_yillari(sonuc) or [])]
+        vsr = vergi_sucu_raporu.rapor_uret(
+            inceleme, calisma.get("kunye"), _yillari_coz(calisma), sonuc,
+            calisma, vergi_sucu_raporu.FIIL_IBRAZ_ETMEME)
+        return belgeler, inceleme, vsr
+
+    def _ibraz_raporu_onizleme(self, veri):
+        ik_, _tutanak = _belge_modulleri()
+        belgeler, _inceleme, vsr = self._ibraz_raporu_hazirla(veri)
+        kunye = ik_.normalize((veri.get("calisma") or {}).get("kunye"))
+        parcalar = []
+        for yil, belge, _ad in belgeler:
+            if yil and len(belgeler) > 1:
+                parcalar.append("=" * 25 + (" %s YILI RAPORU " % yil)
+                                + "=" * 25 + "\n")
+            parcalar.append(belge.duz_metin())
+        parcalar += _vsr_onizleme_parcasi(vsr)
+        return {"metin": "\n".join(parcalar),
+                "eksikler": ik_.eksik_alanlar(kunye)}
+
+    def _ibraz_raporu_gonder(self, veri):
+        from . import ibraz_etmeme_raporu
+        from . import vergi_sucu_raporu
+        belgeler, inceleme, vsr = self._ibraz_raporu_hazirla(veri)
+        dosyalar = [(ad, belge.bayt()) for _yil, belge, ad in belgeler]
+        if vsr is not None:
+            dosyalar.append((vergi_sucu_raporu.dosya_adi(inceleme),
+                             vsr.bayt()))
+        self._ciktilara_yaz(dosyalar)
+        if len(dosyalar) == 1:
+            ad, govde = dosyalar[0]
+            self._belge_gonder(govde, ad,
+                               "application/vnd.openxmlformats-officedocument."
+                               "wordprocessingml.document")
+            return
+        paket = io.BytesIO()
+        with zipfile.ZipFile(paket, "w", zipfile.ZIP_DEFLATED) as z:
+            for ad, govde in dosyalar:
+                z.writestr(ad, govde)
+        self._belge_gonder(paket.getvalue(),
+                           ibraz_etmeme_raporu.paket_adi(inceleme),
                            "application/zip")
 
     def _kabul_raporu_hazirla(self, veri):

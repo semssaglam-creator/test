@@ -82,6 +82,29 @@ Raporun en islevsel maddesi sonuc bolumunun "sonraki yilin Ocak devri vergi
 dairesince duzeltilsin" maddesidir; zincir boylece elle devam ettirilir.
 Yeni bir yil raporu eklerseniz bu maddeyi atlamayin.
 
+## Ibraz etmeme: indirimin TAMAMI reddedilir
+
+Defter ve belgeler ibraz edilmediginde beyan edilen indirilecek KDV'nin
+KDVK 29 ve 34 geregince indirilebilirligi denetlenemez; indirimlerin tamami
+reddedilir ve fark KDV VUK 30/3 uyarinca re'sen tarh edilir. Hesap motoru
+bu hali zaten taniyor (`tam_ret`): `indirim_cikar` beyan edilen "bu donem
+indirilecek KDV"ye esitlendiginde yurtici alim siniri uygulanmaz.
+
+Hesabi RAPOR DEGIL `hesap.ibraz_etmeme_elestirisi` kurar ve elestiri
+alanlarina yazar; boylece tutanak, Excel ve sonuc bolumu ayni rakamlari
+gorur. Yeni bir rapor eklerken ayni yolu izleyin - rapor kendi rakamini
+hesaplarsa belgeler birbirini tutmaz.
+
+**Matrah kurali:** beyan ile mukellefin DUZENLEDIGI faturalarin toplami
+uyusmadiginda VUK 3/B geregi gercek durum esas alinir, ama yalnizca
+mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.
+Hesaplanan KDV farki faturalarin kendi KDV'sinden gelir, orana BOLUNMEZ:
+dokumde sifir KDV'li satirlar bulunabiliyor.
+
+Fiil ayni zamanda VUK 359/a-2'de kacakcilik sucudur: ceza uc kat ve VSR de
+uretilir. Ibraz etmeme VSR'sinin YAPISI sahte belgeden farklidir (dort
+bolum, tespitler bolumu ve tarhiyat tablosu yok).
+
 ## Vergi Suclari Raporu (VSR) — ayri belge, elle istenmez
 
 VUK 359 kapsamindaki fiil tespit edildiginde, tarhiyat oneren rapordan AYRI

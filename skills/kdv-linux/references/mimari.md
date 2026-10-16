@@ -40,6 +40,7 @@ ust aciklamasini okuyun, hepsinde niye oyle yazildigi anlatilir.
 | `sahte_belge_raporu.py` | Tarhiyatli sahte belge kullanma raporu. |
 | `duzeltme_kabul_raporu.py` | Tarhiyatsiz rapor (VTR / VIR ayrimi). |
 | `vergi_sucu_raporu.py` | Vergi Suclari Raporu (VUK 359). Tarhiyat ONERMEZ; yukaridaki iki rapordan biri indirilirken "bilerek kullanma" isaretli yillar icin kendiliginden pakete eklenir. |
+| `ibraz_etmeme_raporu.py` | Defter-belge ibraz etmeme raporu (VUK 30/3). Indirimlerin TAMAMI reddedilir; matrah, mukellefin duzenledigi faturalara gore yukseltilir (yalnizca aleyhine). Ceza uc kat, VSR de birlikte uretilir. |
 | `devir_duzeltme_raporu.py` | Incelenen yillardan SONRAKI yillar icin. Devir kuculmesi o yilda odenecek vergi dogurmussa duzenlenir; tarhiyat ONERIR (1 kat ceza) ve sonraki yilin Ocak devrinin duzeltilmesini ister. |
 | `belge_docx.py` | Word uretimi; `Belge` sinifi, kirmizi yer tutucu. |
 | `excel_export.py` | Excel calisma kitabi cikti. |

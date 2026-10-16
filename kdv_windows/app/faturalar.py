@@ -1172,6 +1172,42 @@ def had_yili_kapsiyor(had, yil):
     return True
 
 
+def satis_donem_toplamlari(faturalar):
+    """Mukellefin KENDI duzenledigi faturalarin donem donem toplami.
+
+    Doner: {(yil, ay): {"adet", "matrah", "kdv", "toplam"}}
+
+    Ibraz etmeme raporunda gerek duyuluyor: defter ve belgeler ibraz
+    edilmediginde beyan edilen matrahin dogrulugu denetlenemez, bu yuzden
+    VUK 3/B geregi gercek durum - yani mukellefin duzenledigi belgeler -
+    esas alinir. Alis faturalari bu hesaba girmez; onlarin yeri indirim
+    tarafidir.
+
+    Donem olarak kayit donemi alinir. Defter ibraz edilmedigi icin yevmiye
+    tarihi zaten bos olur ve `normalize` fatura tarihine duser.
+    """
+    toplam = {}
+    for f in faturalar or []:
+        if f.get("yon") != YON_SATIS or f.get("iptal"):
+            continue
+        yil, ay = f.get("kayit_yil"), f.get("kayit_ay")
+        if not yil or not ay:
+            continue
+        hucre = toplam.setdefault((int(yil), int(ay)),
+                                  {"adet": 0, "matrah": 0.0, "kdv": 0.0,
+                                   "toplam": 0.0})
+        hucre["adet"] += 1
+        matrah = float(f.get("matrah") or 0.0)
+        kdv = float(f.get("kdv") or 0.0)
+        hucre["matrah"] += matrah
+        hucre["kdv"] += kdv
+        hucre["toplam"] += float(f.get("toplam") or 0.0) or (matrah + kdv)
+    for hucre in toplam.values():
+        for alan in ("matrah", "kdv", "toplam"):
+            hucre[alan] = round(hucre[alan], 2)
+    return toplam
+
+
 def toplamlar(faturalar, saticilar=None):
     """Tarhiyata giren alis faturalarinin genel toplami."""
     dahil = [f for f in (faturalar or []) if sayilir(f, saticilar)]

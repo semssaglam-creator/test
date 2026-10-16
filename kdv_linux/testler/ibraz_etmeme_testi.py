@@ -1,0 +1,296 @@
+# -*- coding: utf-8 -*-
+"""Defter ve belge ibraz etmeme raporunun gerileme denetimi.
+
+    python3 testler/ibraz_etmeme_testi.py
+
+Mukellef yasal defter ve belgelerini ibraz etmediginde beyan edilen
+indirilecek KDV'nin KDVK 29 ve 34 geregince indirilebilirligi
+denetlenemez; indirimlerin TAMAMI reddedilir ve fark KDV VUK 30/3 uyarinca
+re'sen tarh edilir. Fiil ayni zamanda VUK 359/a-2'de kacakcilik sucudur:
+ceza UC KAT ve ayrica vergi suclari raporu duzenlenir.
+
+Capa, mufettisin ornek raporunun KENDI rakamlari: 2021'in yedi dolu ayinin
+beyan tablosu buraya aynen alindi; indirimlerin tamami reddedildiginde
+odenecek KDV 39.252,03 ve uc kat ceza 117.756,09 cikmali.
+
+Matrah kurali: beyan ile mukellefin DUZENLEDIGI faturalarin toplami
+uyusmadiginda VUK 3/B geregi gercek durum esas alinir - ama yalnizca
+mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.
+"""
+import io
+import os
+import sys
+import zipfile
+
+KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, KOK)
+
+from app import faturalar as F                                       # noqa: E402
+from app import hesap                                                # noqa: E402
+from app import ibraz_etmeme_raporu as IB                            # noqa: E402
+from app import web_server as W                                      # noqa: E402
+from app.satirlar import VERI_KODLARI                                # noqa: E402
+from app.tutanak import dolu_donemler                                # noqa: E402
+
+HATA = []
+
+
+def denetle(kosul, aciklama):
+    if kosul:
+        print("  [ok] %s" % aciklama)
+    else:
+        print("  [HATA] %s" % aciklama)
+        HATA.append(aciklama)
+
+
+def esit(bulunan, beklenen, aciklama):
+    denetle(abs(float(bulunan or 0.0) - beklenen) < 0.005,
+            "%s (beklenen %s, bulunan %s)" % (aciklama, beklenen, bulunan))
+
+
+# Ornek raporun BEYAN tablosu (2021, yedi dolu ay):
+# matrah, toplam KDV, onceki devir, bu donem indirilecek, indirimler,
+# odenecek, sonraki devir
+ORNEK_BEYAN = [
+    (     0.00,  1125.00,     0.00,  2442.75,  2442.75, 0.0,  1317.75),
+    (     0.00,     0.00,  1317.75,   516.93,  1834.68, 0.0,  1834.68),
+    ( 99970.00,  5970.96,  1834.68, 20785.17, 22619.85, 0.0, 16648.89),
+    (249985.00,  4499.73, 16648.89,  8113.66, 24762.55, 0.0, 20262.82),
+    (131061.00,  2359.10, 20262.82,  1053.46, 21316.28, 0.0, 18957.18),
+    (210132.00,  3782.38, 18957.18,  6994.03, 25951.21, 0.0, 22168.83),
+    (403270.00, 21514.86, 22168.83,  3128.78, 25297.61, 0.0,  3782.75),
+]
+ORNEK_ODENECEK = 39252.03
+ORNEK_CEZA = 117756.09
+
+
+def beyan():
+    b = {k: [0.0] * 12 for k in VERI_KODLARI}
+    for ay, (m, tk, od, bd, it, ode, sd) in enumerate(ORNEK_BEYAN):
+        b["matrah_toplami"][ay] = m
+        b["hesaplanan_kdv"][ay] = tk
+        b["toplam_kdv"][ay] = tk
+        b["onceki_donem_devreden"][ay] = od
+        b["bu_donem_indirilecek"][ay] = bd
+        b["yurtici_alim_kdv"][ay] = bd
+        b["indirimler_toplami"][ay] = it
+        b["odenmesi_gereken_kdv"][ay] = ode
+        b["sonraki_donem_devreden"][ay] = sd
+    return b
+
+
+def yil_kaydi():
+    return {"yil": 2021, "ay_sayisi": 7, "beyan": beyan(),
+            "elestiri": hesap.bos_elestiri(), "devir_baslangic": None}
+
+
+SATIS = [("2021-01-07", "GIB2021000000001", 6250.0, 1125.0),
+         ("2021-03-11", "GIB2021000000010", 74220.0, 13359.60)]
+ALIS = [("2021-03-15", "GIB2021000000059", 81212.50, 14618.25)]
+
+
+def ornek(ibraz="İbraz edilmedi", satis=True, uygula=True):
+    fat = []
+    if satis:
+        for tarih, no, m, k in SATIS:
+            fat.append({"duzenleyen_vkn": "4444444444",
+                        "alici_vkn": "1231231231", "yon": "satis",
+                        "tarih": tarih, "fatura_no": no, "matrah": m,
+                        "kdv": k, "toplam": m + k, "dahil": True})
+    for tarih, no, m, k in ALIS:
+        fat.append({"duzenleyen_vkn": "9999999999",
+                    "alici_vkn": "4444444444", "yon": "alis",
+                    "tarih": tarih, "fatura_no": no, "matrah": m,
+                    "kdv": k, "toplam": m + k, "dahil": True})
+
+    yk = yil_kaydi()
+    c = {
+        "mukellef": {"ad_unvan": "KOMPOZIT AMBALAJ LTD ŞTİ",
+                     "vkn_tckn": "4444444444",
+                     "vergi_dairesi": "SEYHAN VD", "adres": "SEYHAN / ADANA"},
+        "ziya_kati": 3,
+        "kunye": {"mukellef_turu": "Kurum (sermaye şirketi)",
+                  "faaliyet_konulari": "metal dışı atıkların geri kazanılması",
+                  "faaliyet_adresi": "CEMALPAŞA MAH. SEYHAN ADANA",
+                  "defter_ibraz": ibraz,
+                  "grup_baskanligi": "Adana Denetim Daire Başkanlığının",
+                  "is_emirleri": "26.02.2026 | E-2222222-663.05[y]-6817 "
+                                 "| 2021 | Sahte Belge Kullanma",
+                  "ibraz_yazi_tarihi": "11.04.2025",
+                  "ibraz_yazi_sayisi": "E-22222222-000[2015]-13028",
+                  "ibraz_teblig_tarihi": "16.04.2025",
+                  "ibraz_teblig_alan": "şirket müdürü O.Ç.N.'ye",
+                  "ortaklik_bilgileri": "222 | 555 | OÇN | %100 | Müdür",
+                  "defter_bilgileri":
+                      "2021 | Yevmiye Defteri | 31.12.2020-38435 | "
+                      "Adana 15. Noterliği",
+                  "vir_bilgileri": "2021 | 11.08.2026 | 2026-[2013]/20",
+                  "vsr_savcilik": "Adana",
+                  "temsilci_tckn": "11111111110",
+                  "kanuni_temsilci": "O Ç N",
+                  "eleman_ad": "A BAŞMÜFETTİŞ",
+                  "eleman_unvan": "Vergi Başmüfettişi",
+                  "tou_talebi": "Talep edilmedi"},
+        "yillar": [yk],
+        "faturalar": fat,
+        "saticilar": {"9999999999": {
+            "unvan": "PLASTİK METAL LTD ŞTİ", "kullanma": "Bilerek kullanma",
+            "vergi_dairesi": "YENİ BOSNA VD", "vtr_no": "2024-[2014]/36",
+            "vtr_tarihi": "18.10.2024", "not": "sahte belge düzenlediği"}},
+    }
+    if uygula:
+        liste = F.normalize(fat, "4444444444")
+        el, _d = hesap.ibraz_etmeme_elestirisi(
+            yk, F.satis_donem_toplamlari(liste))
+        yk["elestiri"] = el
+        yk["devir_baslangic"] = 0.0
+    return c
+
+
+def istekci():
+    h = W.Istekci.__new__(W.Istekci)
+    h.gonderilen = []
+    h._belge_gonder = lambda g, a, t: h.gonderilen.append((a, t, g))
+    h._ciktilara_yaz = lambda d: None
+    return h
+
+
+# -------------------------------------------- 1) ornegin rakamlari birebir
+print("\n1) Örnek raporun rakamları")
+# Satis faturalari olmadan: yalnizca indirimlerin reddi. Ornegin
+# duzeltilmis tablosu da matrahi degistirmiyor, bu yuzden olcut bu.
+c = ornek(satis=False)
+sonuc, _b = W._hesapla(c)
+donemler = [d for d in dolu_donemler(sonuc) if d["yil"] == 2021]
+esit(sum(d["elestirili"]["toplam_kdv"] for d in donemler), ORNEK_ODENECEK,
+     "toplam hesaplanan KDV örnekle aynı")
+esit(sum(d["elestirili"]["indirimler"] for d in donemler), 0.0,
+     "indirimlerin tamamı reddedildi")
+esit(sum(d["elestirili"]["sonraki_devir"] for d in donemler), 0.0,
+     "devir zinciri sıfırlandı")
+esit(sum(d["tarhiyat"]["resen_tarhi_gereken"] for d in donemler),
+     ORNEK_ODENECEK, "re'sen tarhı gereken KDV örnekle aynı")
+esit(sum(d["tarhiyat"]["vergi_ziyai_cezasi"] for d in donemler), ORNEK_CEZA,
+     "üç kat vergi ziyaı cezası örnekle aynı")
+
+# Ay ay da tutmali; tek bir toplam yanlis dagilimi gizleyebilir.
+BEKLENEN_AY = [1125.00, 0.0, 5970.96, 4499.73, 2359.10, 3782.38, 21514.86]
+for d, beklenen in zip(sorted(donemler, key=lambda x: x["ay"]), BEKLENEN_AY):
+    esit(d["tarhiyat"]["resen_tarhi_gereken"], beklenen,
+         "%s re'sen tarhı gereken" % d["ay_adi"])
+
+# ------------------------------------------------------------ 2) matrah kurali
+print("\n2) Matrah kuralı")
+# Ocak'ta beyan matrahi 0, duzenlenen fatura 6.250 -> matrah yukseltilir.
+c_satis = ornek(satis=True)
+el = c_satis["yillar"][0]["elestiri"]
+esit(el["matrah_ilave"][0], 6250.0,
+     "Ocak matrahı düzenlenen faturaya göre yükseltiliyor")
+esit(el["hesaplanan_kdv_ilave"][0], 0.0,
+     "faturanın KDV'si beyandakiyle aynı olduğundan hesaplanan artmıyor")
+denetle(el["hesaplanan_otomatik"][0] is False,
+        "hesaplanan KDV orana bölünmüyor, faturanın kendi KDV'si alınıyor")
+# Mart'ta beyan matrahi 99.970, fatura 74.220 -> BEYAN esas alinir.
+esit(el["matrah_ilave"][2], 0.0,
+     "düzenlenen fatura beyandan AZSA matrah indirilmiyor")
+# Indirimin tamami her ay reddedilmis olmali.
+for ay, (_m, _tk, _od, bd, _it, _o, _sd) in enumerate(ORNEK_BEYAN):
+    esit(el["indirim_cikar"][ay], bd,
+         "%d. ayın indirimi tamamen reddedildi" % (ay + 1))
+
+# ---------------------------------------------------------- 3) rapor metni
+print("\n3) Rapor metni")
+c = ornek()
+sonuc, _b = W._hesapla(c)
+m = IB.rapor_uret(W._inceleme_bilgisi(c), c["kunye"], sonuc, c, 2021).duz_metin()
+
+for baslik in ("1- GİRİŞ", "2- USUL İNCELEMELERİ", "3- HESAP İNCELEMELERİ",
+               "4- TESPİT VE TENKİT EDİLEN HUSUSLAR",
+               "4.1- Re’sen Takdir Nedeni", "4.2- Re’sen Takdir Verileri",
+               "4.2.1- Yasal Defter ve Belgelerin İncelemeye İbraz "
+               "Edilmemesi",
+               "4.2.2- Mükellef Tarafından Düzenlenen ve Mükellef Adına "
+               "Düzenlenen Belgeler",
+               "4.2.3- Konuya İlişkin Yasal Düzenlemeler",
+               "4.2.4- Olması Gereken Katma Değer Vergisi Beyan Tablosu",
+               "5- SONUÇ"):
+    denetle(baslik in m, "bölüm var: %s" % baslik.split("-")[0].strip())
+
+denetle("30/3. maddesi uyarınca" in m, "re'sen takdir VUK 30/3'e dayanıyor")
+denetle("359/a-2 maddesine göre “defter, kayıt ve belgeleri gizlemek”" in m,
+        "sonuç 359/a-2'den suç duyurusu istiyor")
+denetle("Vergi Suçları Raporu düzenlenmesi" in m,
+        "sonuç VSR düzenlenmesini istiyor")
+denetle("üç kat vergi ziyaı cezası" in m, "üç kat ceza isteniyor")
+denetle("%s" % "117.756,09" in m, "ceza tutarı metinde geçiyor")
+denetle("39.252,03" in m, "tarhiyat tutarı metinde geçiyor")
+
+# Iki belge dokumu de rapora girmeli.
+denetle("Mükellef Tarafından Düzenlenen Belgeler" in m,
+        "düzenlenen belgeler tablosu var")
+denetle("Mükellef Adına Düzenlenen Belgeler" in m,
+        "adına düzenlenen belgeler tablosu var")
+denetle("GIB2021000000001" in m and "GIB2021000000059" in m,
+        "iki dökümün satırları yazılıyor")
+
+denetle("İbraz edilen defterler" not in m and "Adana 15. Noterliği" in m,
+        "tasdikli defter bilgileri künyeden geliyor")
+denetle("OÇN" in m and "Müdür" in m, "ortaklık tablosu yazılıyor")
+denetle("11.04.2025" in m and "16.04.2025" in m,
+        "isteme yazısı ve tebliğ tarihleri yazılıyor")
+denetle("Kurumlar Vergisi ve Kurum Geçici Vergisi yönünden" in m,
+        "gelir/kurumlar yönünden işlem olmadığı yazılıyor")
+# Cift ilgi eki olmamali ("kurumun ... doneminin ... islemlerinin").
+denetle("döneminin" not in m, "üst üste ilgi eki yok")
+
+# Matrah ilavesi varsa gerekcesi yazilmali, yoksa yazilmamali.
+denetle("3 üncü maddesinin (B) fıkrası" in m,
+        "matrah ilavesi VUK 3/B ile gerekçelendiriliyor")
+m_satissiz = IB.rapor_uret(W._inceleme_bilgisi(ornek(satis=False)),
+                           ornek(satis=False)["kunye"],
+                           W._hesapla(ornek(satis=False))[0], ornek(satis=False),
+                           2021).duz_metin()
+denetle("3 üncü maddesinin (B) fıkrası" not in m_satissiz,
+        "matrah ilavesi yoksa VUK 3/B paragrafı yazılmıyor")
+
+# --------------------------------------------------- 4) uc noktaya baglanti
+print("\n4) Rapor indirilirken")
+h = istekci()
+c = ornek()
+belgeler, inceleme, vsr = h._ibraz_raporu_hazirla({"calisma": c})
+denetle([y for y, _b, _a in belgeler] == [2021], "2021 için rapor üretiliyor")
+denetle(vsr is not None, "VSR de üretiliyor (fiil 359/a-2 kapsamında)")
+h._ibraz_raporu_gonder({"calisma": c})
+ad, tur, govde = h.gonderilen[-1]
+denetle(tur == "application/zip", "rapor ve VSR zip içinde iniyor")
+with zipfile.ZipFile(io.BytesIO(govde)) as z:
+    icerik = sorted(z.namelist())
+denetle(any("Ibraz_etmeme_raporu" in n for n in icerik),
+        "pakette ibraz etmeme raporu var")
+denetle(any("Vergi_suclari_raporu" in n for n in icerik),
+        "pakette VSR var")
+
+# Kunye "İbraz edilmedi" degilse rapor uretilmemeli.
+h2 = istekci()
+try:
+    h2._ibraz_raporu_hazirla({"calisma": ornek(ibraz="İbraz edildi")})
+    denetle(False, "ibraz edilmişse rapor üretimi engelleniyor")
+except W.ApiHata as hata:
+    denetle("İbraz edilmedi" in str(hata),
+            "ibraz edilmişse anlaşılır hata veriliyor")
+
+# Elestiriyi dolduran akis
+h3 = istekci()
+yan = h3._ibraz_elestirisi({"calisma": ornek(uygula=False)})
+gelen = yan["yillar"][0]["elestiri"]
+esit(gelen["indirim_cikar"][2], 20785.17,
+     "akış indirimin tamamını reddediyor")
+esit(gelen["matrah_ilave"][0], 6250.0, "akış matrahı da yükseltiyor")
+
+print()
+if HATA:
+    print("BAŞARISIZ: %d denetim" % len(HATA))
+    for x in HATA:
+        print("  -", x)
+    sys.exit(1)
+print("Tüm denetimler geçti.")
