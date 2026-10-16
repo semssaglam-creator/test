@@ -236,6 +236,32 @@ denetle("GIB2021000000001" in m and "GIB2021000000059" in m,
 denetle("İbraz edilen defterler" not in m and "Adana 15. Noterliği" in m,
         "tasdikli defter bilgileri künyeden geliyor")
 denetle("OÇN" in m and "Müdür" in m, "ortaklık tablosu yazılıyor")
+
+# Belge basim bilgileri: VARSA tablo yazilir, yoksa hic yazilmaz (e-belgeye
+# gecmis mukellefte bu kayit bulunmuyor; kirmizi yer tutucu yanlis olurdu).
+denetle("İbraz Edilmeyen Belgelerin Basım Bilgileri" not in m,
+        "basım kaydı girilmemişse tablo yazılmıyor")
+denetle("anlaşmalı matbaalara bastırdığı" not in m,
+        "basım kaydı yoksa sorgulama cümlesi de yazılmıyor")
+
+c_basim = ornek()
+c_basim["kunye"]["belge_basim_bilgileri"] = (
+    "H A | 11.10.2013 | Fatura | A | 539001 | 539500 | 10\n"
+    "A Y | 02.11.2018 | İrsaliyeli Fatura | A | 253651 | 253900 | 5")
+m_basim = IB.rapor_uret(W._inceleme_bilgisi(c_basim), c_basim["kunye"],
+                        W._hesapla(c_basim)[0], c_basim, 2021).duz_metin()
+denetle("İbraz Edilmeyen Belgelerin Basım Bilgileri" in m_basim,
+        "basım kaydı varsa tablo yazılıyor")
+denetle("anlaşmalı matbaalara bastırdığı belgelere ilişkin basım "
+        "bilgilerinin" in m_basim, "tabloya gönderme yapan cümle yazılıyor")
+denetle("539001" in m_basim and "253900" in m_basim,
+        "iki basım satırı da yazılıyor")
+denetle("Anlaşmalı Matbaa" in m_basim and "Belge Adedi" in m_basim,
+        "başlıklar alan bildiriminden geliyor")
+# Tablo, defterlerin varligini ortaya koyan 4.2.1 bolumunde kalmali.
+denetle(m_basim.find("Basım Bilgileri")
+        < m_basim.find("4.2.2- Mükellef Tarafından Düzenlenen"),
+        "basım tablosu 4.2.1 bölümünde yazılıyor")
 denetle("11.04.2025" in m and "16.04.2025" in m,
         "isteme yazısı ve tebliğ tarihleri yazılıyor")
 denetle("Kurumlar Vergisi ve Kurum Geçici Vergisi yönünden" in m,

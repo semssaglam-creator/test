@@ -76,6 +76,23 @@ ORTAKLIK_KOLONLARI = [
     {"kod": "aciklama", "etiket": "Açıklama", "tur": "metin"},
 ]
 
+# Anlasmali matbaaya bastirilmis belgeler. Ibraz etmeme raporunda ve onun
+# vergi suclari raporunda, defter tasdik tablosunun yanina girer: tasdik
+# kayitlari defterlerin, basim kayitlari da BELGELERIN varligini ortaya
+# koyar - gizleme fiilinin maddi unsuru ikisine birlikte dayanir.
+# Her zaman bulunmaz (e-belgeye gecmis mukellefte hic basim kaydi olmaz),
+# bu yuzden kirmizi yer tutucu KONULMAZ; satir girilmediyse tablo hic
+# yazilmaz ve cumle de buna gore kurulur.
+BELGE_BASIM_KOLONLARI = [
+    {"kod": "matbaa", "etiket": "Anlaşmalı Matbaa", "tur": "metin"},
+    {"kod": "teslim", "etiket": "Belge Teslim Tarihi", "tur": "metin"},
+    {"kod": "tur", "etiket": "Belge Türü", "tur": "metin"},
+    {"kod": "seri", "etiket": "Belge Seri No", "tur": "metin"},
+    {"kod": "baslangic", "etiket": "Belge Başlangıç No", "tur": "metin"},
+    {"kod": "bitis", "etiket": "Belge Bitiş No", "tur": "metin"},
+    {"kod": "adet", "etiket": "Belge Adedi", "tur": "metin"},
+]
+
 BELGE_ALMA_KOLONLARI = [
     {"kod": "baslangic", "etiket": "Başlangıç", "tur": "metin"},
     {"kod": "bitis", "etiket": "Bitiş", "tur": "metin"},
@@ -370,6 +387,16 @@ BOLUMLER = [
              "ekle_etiketi": "+ Ortak ekle",
              "ipucu": "Her ortak için (+) ile satır açın. İbraz etmeme "
                       "raporunun giriş bölümünde tablo olarak yer alır."},
+            {"kod": "belge_basim_bilgileri",
+             "etiket": "İbraz edilmeyen belgelerin basım bilgileri",
+             "tur": "satirlar", "kolonlar": BELGE_BASIM_KOLONLARI,
+             "ekle_etiketi": "+ Belge basım kaydı ekle",
+             "ipucu": "GİB sorgusundan okunan anlaşmalı matbaa kayıtları. "
+                      "VARSA doldurun: girilen satırlar ibraz etmeme "
+                      "raporunda ve vergi suçları raporunda defter tasdik "
+                      "tablosunun yanına tablo olarak girer. Boş "
+                      "bırakılırsa (örn. e-belgeye geçmiş mükellef) tablo "
+                      "hiç yazılmaz, belgede yer tutucu da kalmaz."},
             {"kod": "mukellef_gecmisi",
              "etiket": "Mükellefin işe başlama / terk geçmişi", "tur": "uzun",
              "ipucu": "Belgeye OLDUĞU GİBİ aktarılır; giriş bölümündeki ilk "
@@ -628,6 +655,22 @@ def cizgili_satirlar(kunye, kod, alan_sayisi, tutucular=None):
                 parcalar[i] = "[%s]" % ad
         tablo.append(parcalar)
     return tablo
+
+
+def belge_basim_satirlari(kunye):
+    """Anlasmali matbaa kayitlari; girilmediyse BOS liste.
+
+    Yer tutucu konulmaz: bu bilgi her mukellefte bulunmaz (e-belgeye
+    gecmiste hic basim kaydi olmaz). Bos donmesi, belge ureticilerinin
+    tabloyu ve ona gonderme yapan cumleyi hic yazmamasi anlamina gelir.
+    """
+    return cizgili_satirlar(kunye, "belge_basim_bilgileri",
+                            len(BELGE_BASIM_KOLONLARI))
+
+
+def belge_basim_basliklari():
+    """Basim tablosunun sutun basliklari (alan bildiriminden okunur)."""
+    return [k["etiket"] for k in BELGE_BASIM_KOLONLARI]
 
 
 def vir_kayitlari(kunye, yillar=None):

@@ -342,12 +342,17 @@ def _ibraz_maddi_unsur(b, kunye, donemler, virler):
 
 
 def _defter_tasdik_tablosu(b, kunye, donemler):
-    """Ibraz edilmeyen defterlerin tasdik bilgileri.
+    """Ibraz edilmeyen defterlerin tasdik (ve varsa belge basim) bilgileri.
 
     Kunyedeki "İbraz edilen defterler" alani kullanilir; ibraz etmeme
     halinde o alana TASDIK kayitlarindan okunan defterler yazilir, cunku
     raporun dayanagi defterlerin VAR oldugu ama ibraz edilmedigidir.
+    Belgelerin varligini da ayni sekilde basim kayitlari gosterir; ornek
+    rapor ikisini tek cumleyle duyurup iki tablo halinde yaziyor. Basim
+    kaydi girilmediyse cumle de tablo da defterle sinirli kalir.
     """
+    from .ibraz_etmeme_raporu import belge_basim_tablosu
+
     tutucular = ("yıl", "defterin türü", "tasdik tarihi ve numarası",
                  "tasdik makamı")
     satirlar = ik.cizgili_satirlar(kunye, "defter_bilgileri", 4, tutucular)
@@ -355,12 +360,15 @@ def _defter_tasdik_tablosu(b, kunye, donemler):
         yillar = sorted({d["yil"] for d in donemler}) or [None]
         satirlar = [[str(y) if y else "[yıl]"]
                     + ["[%s]" % ad for ad in tutucular[1:]] for y in yillar]
+    basim_var = bool(ik.belge_basim_satirlari(kunye))
     b.paragraf(
         "GİB Yönetim Bilgi Sistemleri veri bankası üzerinden yapılan "
         "sorgulamalar sonucunda %s %s ilişkin notere tasdik ettirilmiş "
-        "defter bilgilerinin aşağıdaki gibi olduğu tespit edilmiştir."
+        "defter bilgileri%s aşağıdaki gibi olduğu tespit edilmiştir."
         % (ik.mukellef_sozu(kunye, ek="in"),
-           _donem_ifadesi(kunye, donemler, "yonelme")), girinti=1)
+           _donem_ifadesi(kunye, donemler, "yonelme"),
+           " ve belge basım bilgilerinin" if basim_var else "nin"), girinti=1)
+    belge_basim_tablosu(b, kunye, cumle=False)
     b.paragraf("İbraz Edilmeyen Defter Tasdik Bilgileri", kalin=True,
                hiza="sol", aralik_once=120, aralik_sonra=40)
     b.tablo(["Yılı", "Defterin Türü", "Tasdik Tarihi ve Numarası",

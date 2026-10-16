@@ -248,6 +248,36 @@ def _ibraz_edilmemesi(b, kunye, yil, donemler):
              "Tasdik Makamı"], satirlar,
             hizalar=["orta", "sol", "orta", "sol"],
             oranlar=[0.6, 1.4, 1.4, 1.6], buyukluk=TABLO_PUNTOSU)
+    belge_basim_tablosu(b, kunye)
+
+
+def belge_basim_tablosu(b, kunye, cumle=True):
+    """Anlasmali matbaaya bastirilan belgelerin dokumu.
+
+    YALNIZCA kunyeye satir girilmisse yazilir. Bos birakildiginda ne tablo
+    ne de ona gonderme yapan cumle kurulur; mukellef e-belgeye gecmisse bu
+    kayit hic bulunmaz, kirmizi yer tutucu birakmak yanlis olurdu.
+
+    Ibraz etmeme raporu ile onun vergi suclari raporu ayni tabloyu yazdigi
+    icin ortak: VSR bu ismi dogrudan cagirir. VSR'de tabloya gonderme yapan
+    cumle defter tasdik cumlesiyle birlesik kuruldugundan oradan
+    `cumle=False` gelir.
+    """
+    satirlar = ik.belge_basim_satirlari(kunye)
+    if not satirlar:
+        return
+    if cumle:
+        b.paragraf(
+            "Müfettişliğimizce GİB Intranet sisteminden yapılan sorgulama "
+            "neticesinde %s anlaşmalı matbaalara bastırdığı belgelere "
+            "ilişkin basım bilgilerinin aşağıdaki gibi olduğu tespit "
+            "edilmiştir." % ik.mukellef_sozu(kunye, ek="in"), girinti=1)
+    b.paragraf("İbraz Edilmeyen Belgelerin Basım Bilgileri", kalin=True,
+               hiza="sol", aralik_once=120, aralik_sonra=40)
+    b.tablo(ik.belge_basim_basliklari(), satirlar,
+            hizalar=["sol", "orta", "sol", "orta", "orta", "orta", "orta"],
+            oranlar=[1.6, 1.0, 1.2, 0.7, 1.0, 1.0, 0.7],
+            buyukluk=TABLO_PUNTOSU)
 
 
 def _belge_dokumleri(b, kunye, yil, liste):

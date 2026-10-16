@@ -721,6 +721,38 @@ oturumda buradan devam edilir.
       VARLIĞI gizleme fiilinin ön koşulu. `defter_tasdik_makami` künye alanı
       kaldırıldı (tek satırlık makam adı yetmiyordu) ve `_tespitler`in ölü
       ibraz dalı silindi.
+- [x] **Belge basım bilgileri tablosu eklendi — VARSA.** Müfettişin iki
+      örneğinde de defter tasdik tablosunun yanında anlaşmalı matbaa /
+      belge seri-numara aralığı tablosu var: tasdik kayıtları defterlerin,
+      basım kayıtları da BELGELERİN varlığını ortaya koyuyor; gizleme
+      fiilinin maddi unsuru ikisine birlikte dayanıyor.
+
+      Yeni künye alanı `belge_basim_bilgileri` (İbraz Etmeme bölümünde,
+      `ik.BELGE_BASIM_KOLONLARI`: anlaşmalı matbaa · belge teslim tarihi ·
+      belge türü · seri no · başlangıç no · bitiş no · adet). İki örnek
+      farklı sütun takımı kullanıyordu (birinde matbaa adı, diğerinde
+      sisteme giriş tarihi); matbaa adlı takım alındı, "belge adedi"
+      eklendi.
+
+      **Yer tutucu KONULMUYOR**: bu bilgi her mükellefte yok (e-belgeye
+      geçmişte hiç basım kaydı olmaz). Satır girilmediyse ne tablo ne de
+      ona gönderme yapan cümle yazılıyor —
+      `ik.belge_basim_satirlari` boş dönünce
+      `ibraz_etmeme_raporu.belge_basim_tablosu` hemen çıkıyor
+      (`_ortaklik_tablosu`un deseni). Müfettişin isteği buydu: "ama sorsun
+      varsa eklesin".
+
+      İki yere giriyor: ibraz etmeme raporunun 4.2.1'inde tasdik
+      tablosundan sonra (kendi sorgulama cümlesiyle) ve ibraz VSR'sinin
+      2.2'sinde tasdik tablosundan ÖNCE — örnek orada iki tabloyu tek
+      cümleyle duyuruyor, o yüzden tablo oraya `cumle=False` ile çağrılıyor
+      ve cümle "defter bilgileri **ve belge basım bilgilerinin**" diye
+      kuruluyor (basım kaydı yoksa yine "defter bilgilerinin").
+
+      Denetim: `ibraz_etmeme_testi.py` ve `vsr_testi.py` hem dolu hem boş
+      hâli, sütun başlıklarını ve VSR'de tablo sırasını denetliyor; üç
+      mutasyonla (koşulu kaldır, cümleyi koşulsuz yaz, tablo sırasını
+      değiştir) kızardığı doğrulandı.
 - [x] **Vergi ziyaı cezası, tarh edilecek tutarın TAMAMI üzerinden.** Ceza
       tablosundan matrah sütunları ("Bilerek / Bilmeden Kullanılan Belgeler")
       kaldırıldı (müfettişin kararı, 2026-10-15). Tablo artık:
@@ -995,11 +1027,6 @@ oturumda buradan devam edilir.
 
 ## İbraz etmemede bekleyen
 
-- [ ] **"Belge basım bilgileri" tablosu yok.** Müfettişin iki örneğinde de
-      anlaşmalı matbaa / belge seri-numara aralığı tablosu var (ibraz
-      edilmeyen belgelerin basım bilgileri). Uygulamada bu veri hiç
-      tutulmuyor; eklenmesi yeni bir künye satır tablosu gerektirir.
-      İstenirse eklenir.
 - [ ] **359/a-2 hapis süresi.** Örnek 2022 tarihli ve "on sekiz aydan üç
       yıla" diyor; 7394 sayılı Kanun süreyi değiştirdi. Metin örnekten
       birebir alındı, güncel yürürlük doğrulanmadı — inceleme yılına göre

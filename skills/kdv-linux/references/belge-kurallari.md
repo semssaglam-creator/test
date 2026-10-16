@@ -105,6 +105,16 @@ Fiil ayni zamanda VUK 359/a-2'de kacakcilik sucudur: ceza uc kat ve VSR de
 uretilir. Ibraz etmeme VSR'sinin YAPISI sahte belgeden farklidir (dort
 bolum, tespitler bolumu ve tarhiyat tablosu yok).
 
+Gizleme fiilinin maddi unsuru, defter ve belgelerin VAR oldugunun ortaya
+konmasina dayanir: defterleri noter tasdik tablosu (`defter_bilgileri`),
+belgeleri anlasmali matbaa basim tablosu (`belge_basim_bilgileri`)
+gosterir. Basim tablosu **yalnizca satir girilmisse** yazilir
+(`ibraz_etmeme_raporu.belge_basim_tablosu`, hem rapor hem VSR ayni yeri
+cagirir) — e-belgeye gecmis mukellefte bu kayit hic bulunmadigi icin
+kirmizi yer tutucu konmaz. Ayni olcut kunyeye bagli her istege dair
+kuraldir: **her mukellefte bulunmayan bir veride yer tutucu birakmayin,
+veri yokken o cumleyi hic kurmayin.**
+
 ## Vergi Suclari Raporu (VSR) — ayri belge, elle istenmez
 
 VUK 359 kapsamindaki fiil tespit edildiginde, tarhiyat oneren rapordan AYRI

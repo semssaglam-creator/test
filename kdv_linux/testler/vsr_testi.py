@@ -503,6 +503,35 @@ denetle("İbraz Edilmeyen Defter Tasdik Bilgileri" in m,
 denetle("Adana 11. Noterliği" in m and "18.12.2019-38254" in m,
         "tasdik satırı künyedeki defter tablosundan geliyor")
 
+# Belge basim bilgileri VARSA yazilir. Girilmemisken ne tablo ne de ona
+# gonderme yapan cumle bulunmali - her mukellefte bu kayit yok.
+denetle("İbraz Edilmeyen Belgelerin Basım Bilgileri" not in m,
+        "basım kaydı girilmemişse tablo yazılmıyor")
+denetle("belge basım bilgilerinin" not in m,
+        "basım kaydı yoksa cümle de defterle sınırlı kalıyor")
+denetle("defter bilgilerinin aşağıdaki gibi" in m,
+        "basım kaydı yokken defter cümlesi bozulmuyor")
+
+c_basim = dict(c)
+c_basim["kunye"] = dict(c["kunye"], belge_basim_bilgileri=(
+    "H A | 11.10.2013 | Fatura | A | 539001 | 539500 | 10\n"
+    "A Y | 02.11.2018 | İrsaliyeli Fatura | A | 253651 | 253900 | 5"))
+m_basim = V.rapor_uret(W._inceleme_bilgisi(c_basim), c_basim["kunye"],
+                       W._yillari_coz(c_basim), sonuc, c_basim,
+                       V.FIIL_IBRAZ_ETMEME).duz_metin()
+denetle("İbraz Edilmeyen Belgelerin Basım Bilgileri" in m_basim,
+        "basım kaydı varsa tablo yazılıyor")
+denetle("defter bilgileri ve belge basım bilgilerinin aşağıdaki gibi"
+        in m_basim, "cümle iki tabloyu birlikte duyuruyor")
+denetle("539001" in m_basim and "253900" in m_basim,
+        "iki basım satırı da yazılıyor")
+denetle("Anlaşmalı Matbaa" in m_basim and "Belge Adedi" in m_basim,
+        "başlıklar alan bildiriminden geliyor")
+denetle(m_basim.find("Basım Bilgileri") < m_basim.find("Defter Tasdik"),
+        "örnekteki gibi basım tablosu tasdik tablosundan önce")
+denetle("GİB Intranet sisteminden yapılan sorgulama" not in m_basim,
+        "VSR'de ayrı bir sorgulama cümlesi tekrar edilmiyor")
+
 # Isteme yazisi hem girişte hem maddi unsurda aniliyor (ornek de boyle).
 denetle(m.count("Defter ve Belge İsteme yazısı") == 2,
         "isteme yazısı giriş ve maddi unsurda anılıyor")
