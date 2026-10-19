@@ -101,6 +101,19 @@ mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.
 Hesaplanan KDV farki faturalarin kendi KDV'sinden gelir, orana BOLUNMEZ:
 dokumde sifir KDV'li satirlar bulunabiliyor.
 
+Bu kural raporda yalnizca madde atfiyla gecistirilmez: 4.2.4 tespiti,
+olcutu (defter ibraz edilmedigi icin beyan denetlenemez; mukellefin kendi
+duzenledigi belge en guvenilir dayanak), yontemi (donem donem, yalnizca
+aleyhe; beyandan asagi inilmez cunku dokum teslimlerin tamamini
+kapsamayabilir) ve donem donem karsilastirma tablosunu yazar. Tarhiyatin
+en tartismali kalemi budur; gerekce yazilmazsa itiraz edilebilir kalir.
+
+**Alis ve satis AYRI yerlere gider:** alinan faturalar indirime, duzenlenen
+faturalar matraha. Arayuzde liste yon kulakciklariyla ayrilir ve "indirim
+reddine aktar" yalnizca ALIS kulaginda cikar; satis kulaginda matrah
+karsilastirmasi gorunur, orada aktarim dugmesi YOKTUR (matrah ilavesini
+ibraz etmeme kurali yazar, ikinci bir yol rakamlari ayristirirdi).
+
 Fiil ayni zamanda VUK 359/a-2'de kacakcilik sucudur: ceza uc kat ve VSR de
 uretilir. Ibraz etmeme VSR'sinin YAPISI sahte belgeden farklidir (dort
 bolum, tespitler bolumu ve tarhiyat tablosu yok).

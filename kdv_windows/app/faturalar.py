@@ -696,6 +696,44 @@ def uygulama_farki(faturalar, yillar, saticilar=None):
     return farklar
 
 
+def satis_beyan_farki(faturalar, yillar):
+    """Duzenlenen faturalarin toplami ile BEYAN edilen matrahi karsilastirir.
+
+    Satis faturalari indirime degil MATRAHA aittir; bu yuzden olcutu de
+    farklidir: beyan edilen matrahla karsilastirilir ve yalnizca mukellef
+    ALEYHINE olan yonde (fatura > beyan) ilave dogurur. Tersi halde beyan
+    esas alinir, matrah indirilmez.
+
+    Doner: [{"yil", "ay", "ay_adi", "fatura", "beyan", "fark", "adet",
+             "yil_var"}] - yalnizca satis faturasi bulunan donemler.
+    `fark` eksi cikabilir; arayuz bunu "ilave gerekmiyor" diye gosterir.
+    """
+    donemler = satis_donem_toplamlari(faturalar)
+    beyanlar = {}
+    for yil_kaydi in yillar or []:
+        try:
+            yil = int(yil_kaydi.get("yil"))
+        except (TypeError, ValueError):
+            continue
+        dizi = list((yil_kaydi.get("beyan") or {}).get("matrah_toplami") or [])
+        beyanlar[yil] = [float(d or 0.0) for d in (dizi + [0.0] * 12)[:12]]
+
+    sonuc = []
+    for (yil, ay) in sorted(donemler):
+        hucre = donemler[(yil, ay)]
+        beyan_dizi = beyanlar.get(yil)
+        beyan = beyan_dizi[ay - 1] if beyan_dizi else 0.0
+        sonuc.append({
+            "yil": yil, "ay": ay, "ay_adi": AYLAR[ay - 1],
+            "adet": hucre["adet"],
+            "fatura": round(hucre["matrah"], 2),
+            "beyan": round(beyan, 2),
+            "fark": round(hucre["matrah"] - beyan, 2),
+            "yil_var": beyan_dizi is not None,
+        })
+    return sonuc
+
+
 def bulgular(faturalar, yillar=None, saticilar=None):
     """Fatura listesindeki dikkat gerektiren noktalari bildirir.
 

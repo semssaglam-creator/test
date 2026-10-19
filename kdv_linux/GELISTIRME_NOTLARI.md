@@ -786,6 +786,50 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Alış ve satış fatura listeleri ayrıldı.** Müfettiş bildirdi
+      (2026-10-19): "uygulamaya satış faturalarını ekledim ancak listenin
+      altında indirim reddine aktar butonu ve tablosu çıktı. mükellefin
+      düzenledikleri matraha eklenir aldıkları indirime onun için
+      ayrıştırılması gerek".
+
+      Faturalar sekmesine **yön kulakçığı** geldi: "Alış Faturaları —
+      indirim" / "Satış Faturaları — matrah" (yönü belirsiz satır varsa
+      üçüncü kulak). Liste, yıl kulakçıkları, süzgeçler ve toplam satırı
+      artık seçili yöne ait. Toplam satırında ölçüt de yöne göre değişiyor:
+      alışta "dahil" işaretli satırlar (indirim reddine girecekler),
+      satışta iptal edilmemiş bütün satırlar — "dahil" alış tarafının
+      kavramı, satış satırlarında hep boş olduğundan toplamı sıfır
+      gösterirdi.
+
+      **"İndirim Reddine Aktar" kartı yalnızca alış kulağında.** Satış
+      kulağında onun yerine "Satış Faturaları — Matrah" kartı var: dönem
+      dönem düzenlenen fatura matrahı / beyan edilen matrah / matraha ilave
+      karşılaştırması (`faturalar.satis_beyan_farki`, `/api/fatura_ozet`
+      içinde). Orada **aktarım düğmesi yok**, bilinçli: matrah ilavesini
+      ibraz etmeme kuralı yazıyor, ikinci bir yol rakamları ayrıştırırdı —
+      kart bunun yerine o düğmeye yönlendiriyor.
+
+      Tarayıcıda denendi (Playwright): alışta aktar kartı açık / satış
+      kartı kapalı, satışta tersi; konsol hatası yok.
+- [x] **İbraz raporunda matrah ilavesinin değerlendirmesi yazıldı.**
+      Müfettişin isteği: "değerlendirme kısmına da bir paragraf açıklama
+      ekle beyan edilmeyen faturaların matraha eklenmesine ilişkin".
+      Tarhiyatın en tartışmalı kalemi tek cümleyle geçiyordu.
+
+      4.2.4'te artık dört paragraf + tablo: (1) tespit — düzenlenen
+      belgelerin toplamı beyanla uyuşmuyor, (2) ölçüt — defter ibraz
+      edilmediğinden beyanın doğruluğu denetlenemez, VUK 3/B gereği gerçek
+      mahiyet esas ve mükellefin kendi düzenlediği belge en güvenilir
+      dayanak, (3) yöntem — karşılaştırma dönem dönem, yalnızca aleyhe
+      yönde ilave; belgeler beyandan azsa beyan esas (döküm teslimlerin
+      tamamını kapsamayabilir), hesaplanan KDV belgelerin kendi KDV'sinden
+      alınır, orana bölünmez, (4) tablo — dönem / belge adedi / fatura
+      matrahı / beyan / ilave, TOPLAM satırlı. İlave yapılmayan dönemler
+      tabloya girmiyor.
+
+      4.2.2'ye de iki dökümün işlevini ayıran bir paragraf eklendi:
+      düzenlenen belgeler matrahın, adına düzenlenenler indirimin
+      dayanağı. Üç mutasyonla denetlendi.
 - [x] **İbraz etmemede matrah ilavesi hiç yapılmıyordu: yön tayini.**
       Müfettiş sahada bildirdi (2026-10-19): "mükellefin düzenlediği ancak
       beyan etmediği faturaları matraha ekleme işlemini yapmamış".

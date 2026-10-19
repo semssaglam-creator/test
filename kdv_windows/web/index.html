@@ -488,6 +488,13 @@
       değiştirilebilir. <strong>Dahil</strong> işareti kaldırılan satır
       toplamlara ve tarhiyata girmez.
     </div>
+    <div class="yardim" style="margin-bottom:10px;">
+      <strong>Alış</strong> faturaları mükellefin <strong>indirimlerine</strong>,
+      <strong>satış</strong> faturaları ise <strong>matrahına</strong> aittir;
+      ikisi ayrı listelenir ve ayrı yere aktarılır. Yön bir satırda yanlışsa
+      satırın Yön sütunundan değiştirin.
+    </div>
+    <div class="yil-sekmeler" id="fatYonSekme"></div>
     <div class="yil-sekmeler" id="fatYilSekme"></div>
     <div id="fatToplam"></div>
     <div class="satir" style="margin-bottom:10px;">
@@ -501,17 +508,32 @@
   </div>
 
   <div class="kart" id="fatAktarKart" style="display:none;">
-    <h2>Tespitlere Aktar</h2>
+    <h2>Tespitlere Aktar — Alış Faturaları</h2>
     <div class="yardim" style="margin-bottom:10px;">
-      Dahil edilen faturaların KDV'si dönem dönem toplanıp
-      <strong>İndirilecek KDV'den çıkarılacak</strong> satırına yazılır. Böylece
-      rapordaki fatura tablosu ile tarhiyat özeti aynı veriden gelir. Elle
-      girilmiş bir tutar varsa aşağıda gösterilir; aktarım onu değiştirir.
+      Dahil edilen <strong>alış</strong> faturalarının KDV'si dönem dönem
+      toplanıp <strong>İndirilecek KDV'den çıkarılacak</strong> satırına
+      yazılır. Böylece rapordaki fatura tablosu ile tarhiyat özeti aynı
+      veriden gelir. Elle girilmiş bir tutar varsa aşağıda gösterilir; aktarım
+      onu değiştirir. Satış faturaları bu aktarıma hiç girmez — onların yeri
+      matrahtır.
     </div>
     <div id="fatFark"></div>
     <div class="satir">
       <div class="otomatik"><button class="btn birincil" id="fatAktar">İndirim Reddine Aktar</button></div>
     </div>
+  </div>
+
+  <!-- Satis faturalari INDIRIME degil MATRAHA aittir; bu yuzden ayri kart. -->
+  <div class="kart" id="fatSatisKart" style="display:none;">
+    <h2>Satış Faturaları — Matrah</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Mükellefin <strong>düzenlediği</strong> faturalar indirim reddine
+      aktarılmaz; beyan ettiği matrahla karşılaştırılır. Beyan edilenden
+      fazlaysa aradaki tutar, VUK 3/B gereği (gerçek mahiyet esas) matraha
+      ilave edilir; azsa beyan esas alınır ve matrah indirilmez.
+    </div>
+    <div id="fatSatisOzet"></div>
+    <div class="yardim" id="fatSatisYonerge" style="margin-top:10px;"></div>
   </div>
 
   <div class="kart" id="fatBulguKart" style="display:none;">
@@ -715,6 +737,10 @@ const durum = {
   fatSatici: null,      // detay panelinde acik olan satici VKN'si
   fatSuzgec: "",        // fatura listesinde suzulen satici VKN'si ("" = tumu)
   fatYil: "tumu",       // fatura listesinde secili kayit yili ("tumu" = hepsi)
+  // Alis faturalari INDIRIME, satis faturalari MATRAHA aittir; liste de
+  // aktarim da bu yuzden ayrilir. Varsayilan alis: olagan inceleme alis
+  // tarafindan yurur.
+  fatYon: "alis",       // fatura listesinde secili yon ("alis" / "satis")
   fatGorunen: [],       // listede o an gorunen faturalar (Excel aktarimi)
   fatSuzgecler: { tarih: "", donem: "", oran: "" },   // sutun suzgecleri
 };
@@ -2709,6 +2735,7 @@ $("hYeni").addEventListener("click", () => {
   durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
   durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
   durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatYon = "alis";
   durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
   $("cAd").value = ""; $("kunyeKarti").style.display = "none";
   $("fatDurum").innerHTML = "";
@@ -2751,6 +2778,7 @@ async function calismaAc(id) {
     durum.degisti = false;
     durum.bnOzet = null; durum.bnDonem = null; durum.bnSecimler = {};
     durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+    durum.fatYon = "alis";
   durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
@@ -3425,9 +3453,16 @@ async function faturalariTazele() {
 
 function faturaEkraniniCiz() {
   const varMi = !!(durum.fatOzet && durum.calisma.faturalar.length);
-  ["fatListeKart", "fatAktarKart", "fatBulguKart"].forEach((id) => {
+  ["fatListeKart", "fatBulguKart"].forEach((id) => {
     $(id).style.display = varMi ? "" : "none";
   });
+  // Aktarim kartlari YONE bagli: indirim reddi yalnizca alis listesinde,
+  // matrah karsilastirmasi yalnizca satis listesinde cikar. Ikisi birlikte
+  // gorununce satis faturalarinin da indirime aktarilacagi sanilmisti.
+  $("fatAktarKart").style.display =
+    varMi && durum.fatYon === "alis" ? "" : "none";
+  $("fatSatisKart").style.display =
+    varMi && durum.fatYon === "satis" ? "" : "none";
   // Satici dokumu HER ZAMAN acik durur: "Satici ekle" dugmesi orada ve fatura
   // listesi hic olmayan dosyalarda da satici eklenebilmelidir.
   $("fatOzetKart").style.display = "";
@@ -3436,7 +3471,53 @@ function faturaEkraniniCiz() {
   if (!varMi) return;
   faturaListesiniCiz();
   faturaAktarimiCiz();
+  faturaSatisOzetiniCiz();
   faturaBulgulariniCiz();
+}
+
+/**
+ * Satış faturalarının matrahla karşılaştırması.
+ *
+ * Ölçüt alış tarafından FARKLIDIR: beyan edilen matrahla karşılaştırılır ve
+ * yalnızca mükellef aleyhine olan yönde (fatura > beyan) ilave doğurur.
+ * Burada aktarım düğmesi YOKTUR: matrah ilavesini ibraz etmeme kuralı
+ * yazıyor, iki ayrı yol olması rakamları ayrıştırırdı.
+ */
+function faturaSatisOzetiniCiz() {
+  const satirlar = (durum.fatOzet && durum.fatOzet.satis_beyan_farki) || [];
+  const kap = $("fatSatisOzet");
+  const yonerge = $("fatSatisYonerge");
+  if (!satirlar.length) {
+    kap.innerHTML = '<div class="yardim">Kayıt dönemi çözülmüş satış ' +
+      'faturası yok. Satırların kayıt dönemini Faturalar listesinden ' +
+      'girin; dönemi olmayan fatura matrah karşılaştırmasına giremez.</div>';
+    yonerge.innerHTML = "";
+    return;
+  }
+  const eksikYil = satirlar.some((s) => !s.yil_var);
+  const ilaveli = satirlar.filter((s) => s.fark > 0.005);
+  kap.innerHTML =
+    '<table class="tablo"><tr><th>Dönem</th><th>Belge</th>' +
+    '<th>Düzenlenen Fatura Matrahı</th><th>Beyan Edilen Matrah</th>' +
+    '<th>Matrah İlavesi</th></tr>' +
+    satirlar.map((s) =>
+      `<tr><td>${s.yil}/${s.ay_adi}</td><td class="sag">${s.adet}</td>` +
+      `<td class="sag">${tl(s.fatura)}</td>` +
+      `<td class="sag">${tl(s.beyan)}</td>` +
+      `<td class="sag${s.fark > 0.005 ? " fark-var" : ""}">` +
+      `${s.fark > 0.005 ? tl(s.fark) : "—"}</td></tr>`).join("") +
+    "</table>" +
+    (eksikYil ? '<div class="uyari-satir" style="margin-top:8px;">Bazı ' +
+      'satış faturalarının kayıt dönemi, beyan verisi yüklenmemiş bir yıla ' +
+      'ait. O dönemlerde beyan 0 görünür; önce beyannameyi yükleyin.</div>'
+      : "");
+  yonerge.innerHTML = ilaveli.length
+    ? `${ilaveli.length} dönemde düzenlenen faturalar beyanı aşıyor. Bu ` +
+      "ilaveyi <strong>İnceleme Tespitleri</strong> sekmesinde “İbraz " +
+      "etmeme: indirimlerin tamamını reddet” düğmesi yazar; matrah " +
+      "ilavesini ayrıca elle girmeniz gerekmez."
+    : "Hiçbir dönemde düzenlenen faturalar beyan edilen matrahı aşmıyor; " +
+      "matrah ilavesi gerekmiyor (beyan esas alınır).";
 }
 
 function faturaSaticiTablosunuCiz() {
@@ -3767,11 +3848,65 @@ function faturaSutunSuzgecleri(suz) {
   return tr;
 }
 
+/**
+ * Yön kulakçıkları: alış (indirim) / satış (matrah).
+ *
+ * Mükellefin ALDIĞI faturalar indirime, DÜZENLEDİĞİ faturalar matraha
+ * aittir. İkisi tek listede görününce satış faturaları da indirim reddine
+ * aktarılacak sanılıyordu; bu yüzden liste yöne göre ayrıldı.
+ * Belirsiz yönlü satır varsa onun da kulağı açılır — yoksa listeden
+ * sessizce kaybolurdu.
+ */
+function faturaYonKulaklariniCiz() {
+  const kap = $("fatYonSekme");
+  const sayac = (yon) => durum.calisma.faturalar.filter(
+    (f) => (f.yon || "alis") === yon).length;
+  const adlar = { alis: "Alış Faturaları — indirim",
+                  satis: "Satış Faturaları — matrah",
+                  belirsiz: "Yönü Belirsiz" };
+  const basliklar = {
+    alis: "Mükellefin aldığı faturalar; indirilecek KDV'den çıkarılır",
+    satis: "Mükellefin düzenlediği faturalar; matrahla karşılaştırılır",
+    belirsiz: "Yönü çözülemeyen satırlar; Yön sütunundan düzeltin",
+  };
+  const yonler = ["alis", "satis", "belirsiz"].filter(
+    (y) => sayac(y) > 0 || y === durum.fatYon);
+  // Secili yon listeden dusmusse ilk dolu yone gecilir.
+  if (!yonler.includes(durum.fatYon) || !sayac(durum.fatYon)) {
+    durum.fatYon = yonler.find((y) => sayac(y)) || "alis";
+  }
+  kap.innerHTML = "";
+  yonler.forEach((yon) => {
+    const k = document.createElement("div");
+    k.className = "yil-kulak" + (durum.fatYon === yon ? " aktif" : "");
+    const b = document.createElement("button");
+    b.className = "ad";
+    b.textContent = `${adlar[yon]} (${sayac(yon)})`;
+    b.title = basliklar[yon];
+    b.addEventListener("click", () => {
+      durum.fatYon = yon;
+      durum.fatYil = "tumu";
+      durum.fatSuzgec = "";
+      durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
+      faturaEkraniniCiz();
+    });
+    k.appendChild(b);
+    kap.appendChild(k);
+  });
+}
+
+/** O an secili yondeki faturalar. */
+function faturaYonundekiler() {
+  return durum.calisma.faturalar.filter(
+    (f) => (f.yon || "alis") === durum.fatYon);
+}
+
 /** Fatura listesinin kayit yili kulakciklari. */
 function faturaYilKulaklariniCiz() {
   const kap = $("fatYilSekme");
+  const yondekiler = faturaYonundekiler();
   const sayaclar = new Map();
-  durum.calisma.faturalar.forEach((f) => {
+  yondekiler.forEach((f) => {
     const y = String(f.kayit_yil || "");
     sayaclar.set(y, (sayaclar.get(y) || 0) + 1);
   });
@@ -3793,7 +3928,7 @@ function faturaYilKulaklariniCiz() {
     k.appendChild(b);
     kap.appendChild(k);
   };
-  kulak("tumu", `Tümü (${durum.calisma.faturalar.length})`,
+  kulak("tumu", `Tümü (${yondekiler.length})`,
         "Bütün kayıt yıllarını tek listede göster");
   Array.from(sayaclar.keys()).sort().forEach((y) => {
     kulak(y, `${y || "yılsız"} (${sayaclar.get(y)})`,
@@ -3803,17 +3938,31 @@ function faturaYilKulaklariniCiz() {
 }
 
 function faturaListesiniCiz() {
-  const t = durum.fatOzet.toplamlar;
-  $("fatToplam").innerHTML =
-    `<div class="yardim" style="margin-bottom:8px;">Toplam ${t.toplam_satir} satır; ` +
-    `<strong>${t.adet}</strong> tanesi tarhiyata dahil. ` +
-    `Matrah <strong>${tl(t.matrah)}</strong> TL, ` +
-    `KDV <strong>${tl(t.kdv)}</strong> TL.</div>`;
-
+  faturaYonKulaklariniCiz();
   faturaYilKulaklariniCiz();
+  const yondekiler = faturaYonundekiler();
+  // Toplam satiri SECILI YONE ait olmali: alis toplamiyla satis toplamini
+  // tek rakamda birlestirmek yanlis okunur. "Dahil" isareti yalnizca ALIS
+  // tarafinin kavramidir (indirim reddine girecek satirlar); satista butun
+  // iptal edilmemis satirlar toplanir, cunku matrahin olcutu odur.
+  const alis = durum.fatYon === "alis";
+  const sayilan = alis ? yondekiler.filter((f) => f.dahil)
+                       : yondekiler.filter((f) => !f.iptal);
+  const topla = (alan) => sayilan.reduce(
+    (t, f) => t + Number(f[alan] || 0), 0);
+  const adi = durum.fatYon === "satis" ? "Satış"
+            : durum.fatYon === "belirsiz" ? "Yönü belirsiz" : "Alış";
+  $("fatToplam").innerHTML =
+    `<div class="yardim" style="margin-bottom:8px;">` +
+    `${adi} listesinde ${yondekiler.length} satır; ` +
+    `<strong>${sayilan.length}</strong> tanesi ` +
+    `${alis ? "indirim reddine dahil" : "hesaba giriyor"}. ` +
+    `Matrah <strong>${tl(topla("matrah"))}</strong> TL, ` +
+    `KDV <strong>${tl(topla("kdv"))}</strong> TL.</div>`;
+
   const yildakiler = durum.fatYil === "tumu"
-    ? durum.calisma.faturalar
-    : durum.calisma.faturalar.filter((f) => String(f.kayit_yil || "") === String(durum.fatYil));
+    ? yondekiler
+    : yondekiler.filter((f) => String(f.kayit_yil || "") === String(durum.fatYil));
   // Sütun süzgeçleri; "haric" verilen süzgeç uygulanmaz. Bir süzgecin seçenek
   // listesi, diğer süzgeçlerden geçen satırlardan kurulur; böylece seçim
   // yapıldıkça diğer listeler daralır ama boş kalmaz.
@@ -4176,6 +4325,7 @@ $("fatTemizle").addEventListener("click", async () => {
   if (!confirm("Yüklenen fatura listesi silinsin mi? Satıcı bilgileri korunur.")) return;
   durum.calisma.faturalar = [];
   durum.fatOzet = null; durum.fatSatici = null; durum.fatSuzgec = ""; durum.fatYil = "tumu";
+  durum.fatYon = "alis";
   durum.fatSuzgecler = { tarih: "", donem: "", oran: "" };
   $("fatDurum").innerHTML = "";
   isaretle(false);

@@ -616,6 +616,8 @@ class Istekci(BaseHTTPRequestHandler):
                 str(y): d
                 for y, d in faturalar.indirim_dizileri(liste, saticilar).items()},
             "uygulama_farki": faturalar.uygulama_farki(liste, yillar, saticilar),
+            # Satis faturalari INDIRIME degil MATRAHA ait; olcutu de ayri.
+            "satis_beyan_farki": faturalar.satis_beyan_farki(liste, yillar),
             "bulgular": faturalar.bulgular(liste, yillar, saticilar),
             # Sahte belgelerin toplam indirimler icindeki payi; "bilerek
             # kullanma" degerlendirmesinin dayanagidir, ekranda da gorunsun.

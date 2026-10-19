@@ -201,7 +201,7 @@ def _tenkit(b, kunye, inceleme, yil, donemler, liste, saticilar):
     _ibraz_edilmemesi(b, kunye, yil, donemler)
     _belge_dokumleri(b, kunye, yil, liste)
     _yasal_duzenlemeler(b, kunye, yil, donemler)
-    _olmasi_gereken(b, kunye, inceleme, yil, donemler)
+    _olmasi_gereken(b, kunye, inceleme, yil, donemler, liste)
 
 
 def _resen_takdir_nedeni(b, kunye, yil, donemler):
@@ -302,6 +302,17 @@ def _belge_dokumleri(b, kunye, yil, liste):
         "sorgulama neticesinde %s yılında düzenlediği ve adına düzenlenen "
         "belgelerin aşağıdaki gibi olduğu tespit edilmiştir."
         % (ik.mukellef_sozu(kunye), yil), girinti=1)
+    # Iki dokumun rapordaki islevi AYRIDIR ve bu, okuyana soylenmeli:
+    # duzenlenen belgeler matrahin, adina duzenlenenler indirim tarafinin
+    # dayanagidir. Mufettisin istegi (2026-10-19).
+    b.paragraf(
+        "Söz konusu belgeler raporumuzda iki ayrı yönden değerlendirilmiştir: "
+        "%s düzenlediği belgeler katma değer vergisi matrahının, %s adına "
+        "düzenlenen belgeler ise indirim konusu yapılan katma değer "
+        "vergisinin dayanağıdır. Bu nedenle iki döküm ayrı tablolar hâlinde "
+        "gösterilmiştir."
+        % (ik.mukellef_sozu(kunye, ek="in"), ik.mukellef_sozu(kunye)),
+        girinti=1)
 
     _belge_tablosu(b, "Mükellef Tarafından Düzenlenen Belgeler", satislar,
                    "düzenlediği")
@@ -378,12 +389,12 @@ def _yasal_duzenlemeler(b, kunye, yil, donemler):
            _donem_araligi(yil, donemler)), girinti=1)
 
 
-def _olmasi_gereken(b, kunye, inceleme, yil, donemler):
+def _olmasi_gereken(b, kunye, inceleme, yil, donemler, liste=None):
     M = ik.mukellef_sozu
     b.baslik("4.2.4- Olması Gereken Katma Değer Vergisi Beyan Tablosu",
              duzey=2)
 
-    _matrah_paragrafi(b, kunye, yil, donemler)
+    _matrah_paragrafi(b, kunye, yil, donemler, liste)
     b.paragraf(
         "Raporumuzun 1. bölümünde açıklandığı üzere Müfettişliğimizce %s %s "
         "ilişkin yasal defter ve belgelerinin incelemeye ibraz edilmesi "
@@ -431,31 +442,104 @@ def _olmasi_gereken(b, kunye, inceleme, yil, donemler):
            ik.gecici_vergi_adi(kunye).title(), M(kunye)), girinti=1)
 
 
-def _matrah_paragrafi(b, kunye, yil, donemler):
-    """Matrahin duzenlenen faturalara gore kuruldugu hal.
+def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
+    """Beyan edilmeyen belgelerin matraha ilavesinin DEGERLENDIRMESI.
 
-    Yalnizca gercekten ilave yapildiysa yazilir: beyan edilen matrah
-    duzenlenen faturalarin toplamindan BUYUKSE beyan esas alinir ve
-    anlatilacak bir sey yoktur.
+    Mufettisin istegi (2026-10-19): bu bolumde bir paragraf aciklama
+    bulunmali - tek cumle, tarhiyatin en tartismali kalemini tasiyamiyordu.
+    Anlatilan zincir:
+
+      tespit  : duzenlenen belgeler GIB kayitlarindan donem donem bulundu
+      olcut   : defter ibraz edilmedigi icin beyanin dogrulugu
+                denetlenemez; VUK 3/B geregi gercek mahiyet esastir ve
+                mukellefin KENDI duzenledigi belge matrahin en guvenilir
+                dayanagidir
+      yontem  : karsilastirma donem donem yapilir ve yalnizca mukellef
+                ALEYHINE olan yonde ilave dogurur; belgeler beyandan azsa
+                beyan esas alinir
+      hesap   : hesaplanan KDV faturalarin KENDI KDV'sinden alinir, orana
+                bolunmez (dokumde sifir KDV'li satir bulunabiliyor)
+      tablo   : donem donem belge adedi / fatura matrahi / beyan / ilave
+
+    Yalnizca gercekten ilave yapildiysa yazilir: ilave yoksa anlatilacak
+    bir sey de yoktur.
     """
-    ilave = sum(float(d["elestirili"].get("matrah") or 0.0)
-                - float(d["beyan"].get("matrah") or 0.0) for d in donemler)
-    if ilave <= 0.005:
+    satirlar = []
+    ilave_toplam = beyan_toplam = fatura_toplam = 0.0
+    for d in donemler:
+        beyan = float(d["beyan"].get("matrah") or 0.0)
+        olmasi = float(d["elestirili"].get("matrah") or 0.0)
+        ilave = round(olmasi - beyan, 2)
+        beyan_toplam += beyan
+        if ilave <= 0.005:
+            # Belgeler beyandan az: beyan esas alinir, satir da yazilmaz.
+            fatura_toplam += beyan
+            continue
+        fatura_toplam += olmasi
+        ilave_toplam += ilave
+        adet = _satis_adedi(liste, d["yil"], d["ay"])
+        satirlar.append([_donem_adi(d), str(adet) if adet else "—",
+                         _tl(olmasi), _tl(beyan), _tl(ilave)])
+    if ilave_toplam <= 0.005:
         return
-    beyan_toplam = sum(float(d["beyan"].get("matrah") or 0.0)
-                       for d in donemler)
+
+    M = ik.mukellef_sozu
     b.paragraf(
         "Müfettişliğimizce GİB kayıtlarından yapılan sorgulamada, %s %s "
-        "beyan ettiği %s TL katma değer vergisi matrahı ile düzenlediği "
-        "belgelerin toplamı uyuşmamaktadır. 213 sayılı Vergi Usul "
-        "Kanunu’nun 3 üncü maddesinin (B) fıkrası uyarınca vergilendirmede "
-        "vergiyi doğuran olayın gerçek mahiyeti esas olduğundan, katma değer "
-        "vergisi matrahları %s düzenlediği belgelere göre %s TL ilavesiyle "
-        "yeniden düzenlenmiştir."
-        % (ik.mukellef_sozu(kunye, ek="in"),
+        "düzenlediği belgelerin toplamı ile beyan ettiği %s TL katma değer "
+        "vergisi matrahının uyuşmadığı, düzenlenen belgelerin bir kısmının "
+        "beyan dışı bırakıldığı tespit edilmiştir."
+        % (M(kunye, ek="in"),
            "%s %s" % (yil, ik.donem_adi(kunye, False, "bulunma")),
-           _tl(beyan_toplam), ik.mukellef_sozu(kunye, ek="in"), _tl(ilave)),
+           _tl(beyan_toplam)), girinti=1)
+    b.paragraf(
+        "Yasal defter ve belgeler ibraz edilmediğinden beyan edilen "
+        "matrahın doğruluğu kayıtlar üzerinden denetlenememiştir. 213 sayılı "
+        "Vergi Usul Kanunu’nun 3 üncü maddesinin (B) fıkrasında "
+        "vergilendirmede vergiyi doğuran olay ve bu olaya ilişkin "
+        "muamelelerin gerçek mahiyetinin esas olduğu hükme bağlanmıştır. "
+        "%s kendi düzenlediği ve karşı taraf nezdinde de kayıtlı olan "
+        "belgeler, gerçek mahiyetin ortaya konmasında en güvenilir "
+        "dayanaktır; bu nedenle katma değer vergisi matrahı, beyan yerine "
+        "bu belgelere göre kurulmuştur." % M(kunye, buyuk=True, ek="in"),
         girinti=1)
+    b.paragraf(
+        "Karşılaştırma dönem dönem yapılmış ve yalnızca %s aleyhine olan "
+        "yönde ilave yapılmıştır: düzenlenen belgelerin toplamı beyan "
+        "edilen matrahtan fazla olan dönemlerde aradaki tutar matraha ilave "
+        "edilmiş, az olan dönemlerde ise beyan esas alınarak matrah "
+        "indirilmemiştir. Bu dönemlerde belge dökümünün beyandan az "
+        "kalması, mükellefin daha az teslimde bulunduğunu değil, dökümün "
+        "teslimlerin tamamını kapsamadığını gösterebileceğinden beyandan "
+        "aşağı inilmemiştir. İlave edilen matrahlara ilişkin hesaplanan "
+        "katma değer vergisi de belgelerin kendi üzerinde gösterilen katma "
+        "değer vergisi tutarlarından alınmış, matraha oran uygulanmak "
+        "suretiyle bulunmamıştır." % M(kunye, ek="in"), girinti=1)
+    b.paragraf("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi",
+               kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
+    satirlar.append(["TOPLAM", "", _tl(fatura_toplam), _tl(beyan_toplam),
+                     _tl(ilave_toplam)])
+    b.tablo(["Dönemi", "Belge Adedi", "Düzenlenen Belgelerin Matrahı",
+             "Beyan Edilen Matrah", "Matraha İlave"], satirlar,
+            hizalar=["orta", "orta", "sag", "sag", "sag"],
+            oranlar=[0.9, 0.7, 1.3, 1.2, 1.1],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+    b.paragraf(
+        "Buna göre %s katma değer vergisi matrahlarına toplam %s TL ilave "
+        "edilmiş ve beyanlar aşağıdaki bölümde dönemler itibarıyla yeniden "
+        "düzenlenmiştir."
+        # "doneminin ... matrahlarina" degil "donemi ... matrahlarina":
+        # resmi dilde yalin ad tercih ediliyor ve ust uste ilgi ekinden de
+        # kaciniliyor (bkz. testler/ibraz_etmeme_testi.py).
+        % ("%s %s" % (yil, ik.donem_adi(kunye, False)),
+           _tl(ilave_toplam)), girinti=1)
+
+
+def _satis_adedi(liste, yil, ay):
+    """O donemde mukellefin duzenledigi belge adedi."""
+    return sum(1 for f in (liste or [])
+               if f.get("yon") == F.YON_SATIS and not f.get("iptal")
+               and f.get("kayit_yil") == yil and f.get("kayit_ay") == ay)
 
 
 # ------------------------------------------------------------------ 5) sonuc

@@ -312,9 +312,42 @@ denetle("Kurumlar Vergisi ve Kurum Geçici Vergisi yönünden" in m,
 # Cift ilgi eki olmamali ("kurumun ... doneminin ... islemlerinin").
 denetle("döneminin" not in m, "üst üste ilgi eki yok")
 
+# Iki dokumun rapordaki islevi AYRI ve bu okuyana soyleniyor.
+denetle("katma değer vergisi matrahının" in m
+        and "indirim konusu yapılan katma değer vergisinin dayanağıdır" in m,
+        "düzenlenen belgeler matraha, adına düzenlenenler indirime bağlanıyor")
+
 # Matrah ilavesi varsa gerekcesi yazilmali, yoksa yazilmamali.
 denetle("3 üncü maddesinin (B) fıkrası" in m,
         "matrah ilavesi VUK 3/B ile gerekçelendiriliyor")
+
+# Degerlendirme paragrafi: yalnizca madde atfi degil, GEREKCE ve yontem de
+# yazilmali (mufettisin istegi, 2026-10-19).
+denetle("beyan edilen matrahın doğruluğu kayıtlar üzerinden "
+        "denetlenememiştir" in m, "ölçütün neden beyan olmadığı yazılıyor")
+denetle("gerçek mahiyetin ortaya konmasında en güvenilir dayanaktır" in m,
+        "kendi düzenlediği belgenin delil değeri açıklanıyor")
+denetle("yalnızca mükellef kurumun aleyhine olan yönde ilave" in m,
+        "yalnızca aleyhe yönde ilave yapıldığı yazılıyor")
+denetle("beyan esas alınarak matrah indirilmemiştir" in m,
+        "belgeler beyandan azsa beyanın esas alındığı yazılıyor")
+denetle("matraha oran uygulanmak suretiyle bulunmamıştır" in m,
+        "hesaplanan KDV'nin kaynağı açıklanıyor")
+denetle("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi" in m,
+        "dönem dönem karşılaştırma tablosu yazılıyor")
+denetle("Düzenlenen Belgelerin Matrahı" in m and "Matraha İlave" in m,
+        "tablonun sütunları karşılaştırmayı gösteriyor")
+denetle("2021/Ocak" in m and "6.250,00" in m,
+        "tabloda ilave yapılan dönem ve tutarı var")
+# Ilave yapilmayan donemler TABLOYA girmemeli: "—" dolu satir yaniltir.
+# Olcut tablonun KENDISI olmali; "2021/Mart" raporun baska tablolarinda
+# (beyan dokumu, tarhiyat) zaten geciyor.
+_bas = m.find("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi")
+_ilave_tablosu = m[_bas:m.find("Buna göre", _bas)]
+denetle("2021/Ocak" in _ilave_tablosu,
+        "ilave yapılan dönem tabloda")
+denetle("2021/Mart" not in _ilave_tablosu,
+        "ilave yapılmayan dönem tabloya girmiyor")
 m_satissiz = IB.rapor_uret(W._inceleme_bilgisi(ornek(satis=False)),
                            ornek(satis=False)["kunye"],
                            W._hesapla(ornek(satis=False))[0], ornek(satis=False),
