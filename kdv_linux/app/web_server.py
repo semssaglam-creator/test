@@ -197,6 +197,12 @@ def _inceleme_bilgisi(calisma):
     }
 
 
+def _dolu_donem_sayisi(elestiri, alan):
+    """Elestiri dizisinde tutar girilmis donem sayisi."""
+    return sum(1 for v in (elestiri.get(alan) or [])
+               if isinstance(v, (int, float)) and v > 0.005)
+
+
 def _vsr_onizleme_parcasi(vsr):
     """Vergi suclari raporunu onizleme metninin sonuna ayracla ekler.
 
@@ -791,15 +797,30 @@ class Istekci(BaseHTTPRequestHandler):
         satis = faturalar.satis_donem_toplamlari(liste)
 
         yillar, degisen = [], 0
+        indirim_donem = matrah_donem = 0
         for ham in _yillari_coz(calisma):
             elestiri, degisti = hesap.ibraz_etmeme_elestirisi(ham, satis)
             if degisti:
                 degisen += 1
+            indirim_donem += _dolu_donem_sayisi(elestiri, "indirim_cikar")
+            matrah_donem += _dolu_donem_sayisi(elestiri, "matrah_ilave")
             yillar.append({"yil": ham["yil"], "elestiri": elestiri})
         if not degisen:
             raise ApiHata("Beyan edilen indirilecek KDV bulunamadı; "
                           "reddedilecek bir tutar yok.")
-        return {"yillar": yillar}
+        # Ozet, arayuzun DOGRU seyi soylemesi icin. Daha once ileti her
+        # durumda "matrahlar yukseltildi" diyordu; duzenlenen fatura
+        # girilmemisse bu dogru degildi ve mufettis matrah ilavesinin
+        # yapildigini saniyordu (sahada boyle cikti, 2026-10-19).
+        donemsiz = sum(1 for f in liste
+                       if f.get("yon") == faturalar.YON_SATIS
+                       and not f.get("iptal")
+                       and not (f.get("kayit_yil") and f.get("kayit_ay")))
+        return {"yillar": yillar,
+                "ozet": {"indirim_donem": indirim_donem,
+                         "matrah_donem": matrah_donem,
+                         "satis_adet": sum(h["adet"] for h in satis.values()),
+                         "donemsiz_satis": donemsiz}}
 
     def _ibraz_raporu_hazirla(self, veri):
         """Ibraz etmeme raporu taslaklarini uretir (yil yil) + VSR.
@@ -818,6 +839,17 @@ class Istekci(BaseHTTPRequestHandler):
         if not ibraz_etmeme_raporu.gerekli_mi(calisma):
             raise ApiHata("Künyedeki “Defter ve belge ibrazı” alanı “İbraz "
                           "edilmedi” olmalı.")
+        # Kural ELLE uygulanir (dugme); uygulanmadan rapor indirilirse belge
+        # "indirimlerin tamami reddedilmistir" der ama tablolar bos cikar ve
+        # bu celiski vergi dairesine gider. Elle girilmis elestiri varsa
+        # engel yok - olcut elestirinin BOS olmasidir.
+        if not any(_dolu_donem_sayisi(ham.get("elestiri") or {}, alan)
+                   for ham in _yillari_coz(calisma)
+                   for alan in ("indirim_cikar", "matrah_ilave")):
+            raise ApiHata("İbraz etmeme kuralı henüz uygulanmamış: hiçbir "
+                          "dönemde reddedilen indirim ya da matrah ilavesi "
+                          "yok. Önce “İbraz etmeme: indirimlerin tamamını "
+                          "reddet” düğmesine basın.")
         inceleme = _inceleme_bilgisi(calisma)
         belgeler = [
             (y, ibraz_etmeme_raporu.rapor_uret(

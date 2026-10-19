@@ -118,3 +118,23 @@ Gercek metin ogrenilince denetim atmaya basladi.
 
 Gecen bir test, gecmesi gerektigi icin mi geciyor — bunu ancak bozarak
 anlarsiniz.
+
+## 11. Fatura yonu: tek tarafli dokum ve TAHMIN edilen VKN
+
+`faturalar.normalize` yonu VKN karsilastirmasiyla bulur. Iki tuzak var ve
+ikisi de sessiz yanlis sayi uretir:
+
+**Tek tarafli dokum.** Dokumde yalnizca duzenleyen sutunu varsa (mukellefin
+KENDI duzenledigi belgelerin dokumu cogu zaman boyle) eskiden VKN'ye hic
+bakilmadan ALIS yaziliyordu. Boylece `satis_donem_toplamlari` bos donuyor ve
+ibraz etmemede matrah ilavesi hic yapilmiyordu — kullaniciya "matrahlar
+yukseltildi" denerek.
+
+**Tahmin edilen VKN.** `_ortak_vkn`, butun satirlarda tekrar eden VKN'yi
+mukellef sayar. Tek tarafli dokumde buna GUVENILMEZ: tek saticili bir alis
+listesinin saticisi her satirda tekrar eder, "mukellef" sanilir ve butun
+liste SATISA doner — indirimler bir anda yok olur. Tek tarafli dokumde
+yalnizca calismaya ACIKCA girilmis VKN kullanilir.
+
+Yon mantigina dokunuyorsaniz `ibraz_etmeme_testi.py` 0. bolumundeki sekiz
+durumu calistirin; ikisi tam bu iki tuzagi tutuyor.

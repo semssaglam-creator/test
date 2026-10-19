@@ -786,6 +786,41 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **İbraz etmemede matrah ilavesi hiç yapılmıyordu: yön tayini.**
+      Müfettiş sahada bildirdi (2026-10-19): "mükellefin düzenlediği ancak
+      beyan etmediği faturaları matraha ekleme işlemini yapmamış".
+
+      Sebep `faturalar.normalize`de: dökümde hem alıcı hem düzenleyen sütunu
+      yoksa (`_taraf_sutunu_var` yanlış) VKN'ye **hiç bakılmadan** ALIŞ
+      yazılıyordu. Mükellefin kendi düzenlediği belgelerin dökümü ise çoğu
+      zaman tek taraflıdır (yalnızca düzenleyen sütunu) — bu döküm alış
+      sayılınca `satis_donem_toplamlari` boş dönüyor ve matrah ilavesi
+      sessizce hiç yapılmıyordu.
+
+      Artık tek taraflı dökümde de VKN karşılaştırması yapılıyor, ama
+      **yalnızca açıkça girilmiş VKN ile**. Bu ayrım kritik: ilk denemem
+      tahmin edilen VKN'yi (`_ortak_vkn`) de kullanıyordu ve tek satıcılı
+      bir ALIŞ listesinde satıcıyı "mükellef" sanıp bütün listeyi satışa
+      çeviriyordu — indirimler bir anda yok olurdu. Kendi testim yakaladı;
+      sekiz yön durumu artık `ibraz_etmeme_testi.py` 0. bölümünde ve iki
+      mutasyonla (eski davranışa dön / tahmine güven) denetlendi.
+
+      Not: VKN Çalışma Bilgilerine girilmemişse tek taraflı satış dökümü
+      hâlâ alış sayılır. Bilinçli: tahmine güvenmek yukarıdaki felaketi
+      doğuruyor. Arayüz iletisi artık bunu söylüyor.
+- [x] **"Matrahlar yükseltildi" iletisi yalan söylüyordu.** İbraz etmeme
+      düğmesinin iletisi her durumda "matrahlar düzenlenen faturalara göre
+      yükseltildi" diyordu — düzenlenen fatura hiç girilmemişken de. Uç
+      artık bir `ozet` döndürüyor (`indirim_donem`, `matrah_donem`,
+      `satis_adet`, `donemsiz_satis`) ve arayüz dört ayrı ileti veriyor:
+      yükseltildi / satış faturası yok (uyarı) / kayıt dönemi çözülemedi
+      (uyarı) / ilave gerekmedi (beyan esas).
+- [x] **Kural uygulanmadan ibraz raporu inmiyor.** Kural elle uygulanıyor
+      (düğme); uygulanmadan rapor indirilirse belge "indirimlerin tamamı
+      reddedilmiştir" der ama tablolar boş çıkar ve bu çelişki vergi
+      dairesine gider. `_ibraz_raporu_hazirla` artık hiçbir dönemde
+      reddedilen indirim **ve** matrah ilavesi yoksa anlaşılır bir hatayla
+      duruyor. Elle girilmiş eleştiri varsa engel yok.
 - [x] **359 hapis süreleri 7394 sayılı Kanunla değişik hâle getirildi.**
       Müfettişin isteği: "sen kanunun son hâlini ekle". Örnek raporlar 2022
       tarihliydi ve eski süreleri anıyordu. (a) fıkrası on sekiz aydan

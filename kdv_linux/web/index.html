@@ -2629,9 +2629,30 @@ $("ibrazElestiri").addEventListener("click", async () => {
     durum.degisti = true;
     ekraniCiz();
     hesapla();
-    mesaj("İndirilecek KDV'nin tamamı reddedildi; matrahlar düzenlenen " +
-          "faturalara göre yükseltildi. Tutarları İnceleme Tespitleri " +
-          "sekmesinden denetleyin.", "iyi");
+    // Ileti NE OLDUGUNU soylemeli: daha once her durumda "matrahlar
+    // yukseltildi" diyordu ve duzenlenen fatura girilmemisken de boyle
+    // yaziyordu. Mufettis matrah ilavesinin yapildigini saniyordu.
+    const o = y.ozet || {};
+    const bas = "İndirilecek KDV'nin tamamı reddedildi (" +
+                (o.indirim_donem || 0) + " dönem). ";
+    if (o.matrah_donem) {
+      mesaj(bas + o.matrah_donem + " dönemde matrah, düzenlenen faturalara " +
+            "göre yükseltildi. Tutarları İnceleme Tespitleri sekmesinden " +
+            "denetleyin.", "iyi");
+    } else if (!o.satis_adet) {
+      mesaj(bas + "MATRAH İLAVESİ YAPILMADI: mükellefin düzenlediği " +
+            "(yönü “Satış” olan) fatura bulunamadı. Düzenlenen belge " +
+            "dökümünü Faturalar sekmesine yükleyin; yüklüyse satırların " +
+            "Yön sütununu “Satış” yapın.", "hata");
+    } else if (o.donemsiz_satis) {
+      mesaj(bas + "MATRAH İLAVESİ YAPILMADI: düzenlenen " + o.satis_adet +
+            " faturanın " + o.donemsiz_satis + " tanesinde kayıt dönemi " +
+            "çözülemedi (tarih okunamamış). Faturalar sekmesinden dönemi " +
+            "girin.", "hata");
+    } else {
+      mesaj(bas + "Matrah ilavesi gerekmedi: düzenlenen faturaların toplamı " +
+            "beyan edilen matrahı aşmıyor (beyan esas alınır).", "iyi");
+    }
   } catch (hata) { mesaj(hata.message, "hata"); }
 });
 

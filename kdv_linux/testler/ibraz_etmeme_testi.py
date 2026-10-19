@@ -155,6 +155,49 @@ def istekci():
     return h
 
 
+# ------------------------------------------------- 0) yon tayini (matrahin
+# dayanagi). Mukellefin KENDI duzenledigi belgelerin dokumu cogu zaman TEK
+# TARAFLIDIR (yalnizca duzenleyen sutunu). Bu dokum alis sayilirsa matrah
+# ilavesi sessizce hic yapilmaz - sahada boyle cikti (2026-10-19).
+print("\n0) Fatura yönünün tayini")
+M_VKN = "4444444444"
+YON_DURUMLARI = [
+    ("tek taraflı satış dökümü, VKN girili",
+     [{"duzenleyen_vkn": M_VKN, "tarih": "2021-01-15"}], M_VKN, ["satis"]),
+    # VKN girilmemisse tahmine guvenilmez: tek saticili bir ALIS listesinin
+    # saticisi "mukellef" sanilip butun liste satisa donerdi.
+    ("tek taraflı satış dökümü, VKN boş",
+     [{"duzenleyen_vkn": M_VKN, "tarih": "2021-01-15"}], None, ["alis"]),
+    ("tek satırlı alış dökümü, VKN boş",
+     [{"duzenleyen_vkn": "9999999999", "tarih": "2021-01-15"}], None,
+     ["alis"]),
+    ("tek satıcılı alış listesi, VKN boş",
+     [{"duzenleyen_vkn": "9999999999", "tarih": "2021-01-15"},
+      {"duzenleyen_vkn": "9999999999", "tarih": "2021-02-15"}], None,
+     ["alis", "alis"]),
+    ("tek taraflı alış dökümü, VKN girili",
+     [{"duzenleyen_vkn": "9999999999", "tarih": "2021-01-15"}], M_VKN,
+     ["alis"]),
+    ("alıcı sütunlu alış dökümü",
+     [{"alici_vkn": M_VKN, "tarih": "2021-01-15"}], M_VKN, ["alis"]),
+    ("çift taraflı döküm",
+     [{"duzenleyen_vkn": "9999999999", "alici_vkn": M_VKN,
+       "tarih": "2021-01-15"},
+      {"duzenleyen_vkn": M_VKN, "alici_vkn": "1111111111",
+       "tarih": "2021-02-15"}], M_VKN, ["alis", "satis"]),
+]
+for ad, ham, vkn, beklenen in YON_DURUMLARI:
+    bulunan = [f["yon"] for f in F.normalize(ham, vkn)]
+    denetle(bulunan == beklenen, "%s → %s" % (ad, beklenen))
+
+# Tek tarafli satis dokumu matrah ilavesini gercekten besliyor mu.
+tek_tarafli = F.normalize(
+    [{"duzenleyen_vkn": M_VKN, "tarih": "2021-01-15",
+      "matrah": 6250.0, "kdv": 1125.0}], M_VKN)
+esit((F.satis_donem_toplamlari(tek_tarafli).get((2021, 1)) or {}).get("matrah"),
+     6250.0, "tek taraflı satış dökümü dönem toplamına giriyor")
+
+
 # -------------------------------------------- 1) ornegin rakamlari birebir
 print("\n1) Örnek raporun rakamları")
 # Satis faturalari olmadan: yalnizca indirimlerin reddi. Ornegin
@@ -305,6 +348,19 @@ except W.ApiHata as hata:
     denetle("İbraz edilmedi" in str(hata),
             "ibraz edilmişse anlaşılır hata veriliyor")
 
+# Kural UYGULANMADAN rapor inmemeli: belge "indirimlerin tamami
+# reddedilmistir" der ama tablolar bos cikar ve celiski vergi dairesine
+# gider. Elle girilmis elestiri varsa engel yok.
+h5 = istekci()
+try:
+    h5._ibraz_raporu_hazirla({"calisma": ornek(uygula=False)})
+    denetle(False, "kural uygulanmadan rapor üretimi engelleniyor")
+except W.ApiHata as hata:
+    denetle("henüz uygulanmamış" in str(hata),
+            "kural uygulanmadan rapor üretimi engelleniyor")
+    denetle("düğmesine basın" in str(hata),
+            "hata ne yapılacağını söylüyor")
+
 # Elestiriyi dolduran akis
 h3 = istekci()
 yan = h3._ibraz_elestirisi({"calisma": ornek(uygula=False)})
@@ -312,6 +368,24 @@ gelen = yan["yillar"][0]["elestiri"]
 esit(gelen["indirim_cikar"][2], 20785.17,
      "akış indirimin tamamını reddediyor")
 esit(gelen["matrah_ilave"][0], 6250.0, "akış matrahı da yükseltiyor")
+
+# Arayuz iletisinin DOGRU seyi soyleyebilmesi icin ozet. Daha once ileti her
+# durumda "matrahlar yukseltildi" diyordu; duzenlenen fatura girilmemisken
+# de boyle yaziyordu ve mufettis ilavenin yapildigini saniyordu.
+ozet = yan["ozet"]
+esit(ozet["matrah_donem"], 1, "özet, matrah yükseltilen dönem sayısını veriyor")
+denetle(ozet["indirim_donem"] == 7, "özet, indirimi reddedilen dönemleri sayıyor")
+denetle(ozet["satis_adet"] >= 1, "özet, düzenlenen fatura adedini veriyor")
+esit(ozet["donemsiz_satis"], 0, "dönemi çözülemeyen satış faturası yok")
+
+# Duzenlenen fatura HIC yoksa ozet bunu soylemeli (arayuz uyari gosterir).
+h4 = istekci()
+c_satissiz = ornek(satis=False, uygula=False)
+ozet_bos = h4._ibraz_elestirisi({"calisma": c_satissiz})["ozet"]
+esit(ozet_bos["matrah_donem"], 0, "satış yoksa matrah ilavesi yapılmıyor")
+esit(ozet_bos["satis_adet"], 0, "satış yoksa özet bunu bildiriyor")
+denetle(ozet_bos["indirim_donem"] > 0,
+        "satış yokken de indirimlerin reddi sürüyor")
 
 print()
 if HATA:

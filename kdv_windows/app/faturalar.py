@@ -274,7 +274,10 @@ def normalize(ham_faturalar, mukellef_vkn=None):
     butun satirlar "belirsiz" kalip tarhiyat disinda kaliyordu.
     """
     ham_faturalar = list(ham_faturalar or [])
-    mukellef_vkn = _vkn(mukellef_vkn) or _ortak_vkn(ham_faturalar)
+    # Acikca girilmis VKN ile TAHMIN edilen VKN ayri tutulur: tek tarafli
+    # dokumde tahmine guvenilemez (asagida anlatiliyor).
+    acik_vkn = _vkn(mukellef_vkn)
+    mukellef_vkn = acik_vkn or _ortak_vkn(ham_faturalar)
     taraf_var = _taraf_sutunu_var(ham_faturalar)
     sonuc = []
     for ham in ham_faturalar:
@@ -282,8 +285,27 @@ def normalize(ham_faturalar, mukellef_vkn=None):
         f.setdefault("iptal", False)
 
         if not f.get("yon"):
-            f["yon"] = (yonu_belirle(f, mukellef_vkn) if taraf_var
-                        else YON_ALIS)
+            # Once VKN karsilastirmasi denenir; tek tarafli dokumde de
+            # calisir. Eskiden taraf sutunu yoksa VKN'ye hic bakilmadan
+            # ALIS yaziliyordu ve mukellefin KENDI duzenledigi belgelerin
+            # dokumu (tek sutun: duzenleyen = mukellef) sessizce alis
+            # sayiliyordu; ibraz etmemede matrah ilavesi bu yuzden hic
+            # yapilmiyordu (sahada boyle cikti, 2026-10-19).
+            #
+            # Belirsiz kalirsa eski davranis surer: taraf sutunu olmayan
+            # dokumlerde mukellef ALICI kabul edilir (tek tarafli alis
+            # listelerinin olagan hali), varsa belirsiz birakilir.
+            if taraf_var:
+                yon = yonu_belirle(f, mukellef_vkn)
+            else:
+                # Tek tarafli dokumde yalnizca ACIKCA girilmis VKN'ye
+                # guvenilir. `_ortak_vkn` burada tek saticili bir alis
+                # listesinin saticisini "mukellef" sanar ve butun liste
+                # satisa donerdi - indirimler bir anda yok olurdu.
+                yon = yonu_belirle(f, acik_vkn) if acik_vkn else YON_BELIRSIZ
+                if yon == YON_BELIRSIZ:
+                    yon = YON_ALIS
+            f["yon"] = yon
 
         if not f.get("kayit_yil") or not f.get("kayit_ay"):
             # Once yevmiye tarihi: KDV indirimi kayit doneminde yapilir
