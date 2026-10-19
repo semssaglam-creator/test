@@ -204,7 +204,13 @@ def _hesapla(calisma):
     # Baslangic devri artik yil bazinda tutulur; _yillari_coz eski kayitlardaki
     # calisma duzeyindeki degeri ilk yila tasidi.
     kat = _ziya_kati(calisma)
-    sonuc = hesap.seri_hesapla(yillar, ziya_kati=kat)
+    # Uc kat uygulanan dosyalarda tarh KAYNAGA gore ikiye ayrilir: matrah
+    # farkindan (beyan disi birakilan belgelerden) dogan tutar BIR kat,
+    # indirimlerin reddinden dogan tutar uc kat tasir (mufettisin karari,
+    # 2026-10-19). Tek kaynak olmasi icin ayrim motorda yapiliyor; rapor
+    # tablolari da oradan okur.
+    sonuc = hesap.seri_hesapla(yillar, ziya_kati=kat,
+                               matrah_kati=1 if kat == 3 else None)
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
     sonuc["dikkat"] = _dikkat_dokumu(calisma, yillar)
     # Uygulanan kat ve tespitlerin gerektirdigi kat ekranda gorunsun:

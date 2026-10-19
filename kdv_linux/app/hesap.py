@@ -271,7 +271,8 @@ OZET_ALANLARI = ["matrah", "toplam_kdv", "onceki_devir", "bu_donem_indirim_topla
 AYRISTIRMA_ALANLARI = OZET_ALANLARI + ["tecil_edilecek", "ihracat_iade"]
 
 
-def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
+def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1,
+                 matrah_kati=None):
     """Cok yilli seriyi kronolojik sirada hesaplar.
 
     yillar: [{"yil": 2022, "ay_sayisi": 12, "beyan": {...}, "elestiri": {...}}, ...]
@@ -279,6 +280,9 @@ def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
         (None ise ilk donemde beyandaki devir esas alinir).
     ziya_kati: vergi ziyai cezasinin kati (VUK 344: bir kat; 359 kapsaminda
         uc kat). Tarhiyat ozetindeki ceza sutunu bununla hesaplanir.
+    matrah_kati: verilirse tarh KAYNAGA gore ikiye ayrilir ve matrah
+        farkindan dogan paya bu kat uygulanir (olagan hali bir kat).
+        Indirimlerin reddinden dogan paya `ziya_kati` uygulanir.
 
     Doner: {"donemler": [...], "yil_toplamlari": [...], "genel_toplam": {...}}
     Her donem kaydi beyan / elestirili / fark uclusunu birlikte tasir.
@@ -330,7 +334,7 @@ def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
                 "fark_devir": fark_devir,
                 "elestiri_var": _elestiri_var(elestiri, ay),
                 "tarhiyat": _tarhiyat_satiri(beyan_ozet, elestirili,
-                                            ziya_kati),
+                                            ziya_kati, matrah_kati),
             })
             devreden = elestirili["sonraki_devir"]
 
@@ -343,7 +347,7 @@ def seri_hesapla(yillar, devreden_baslangic=None, ziya_kati=1):
     }
 
 
-def _tarhiyat_satiri(beyan_ozet, elestirili, ziya_kati=1):
+def _tarhiyat_satiri(beyan_ozet, elestirili, ziya_kati=1, matrah_kati=None):
     """Bir donemin tarhiyat ozeti satirini uretir.
 
     Sutunlar, elde kullanilan tarhiyat tablosunun karsiligidir:
@@ -360,13 +364,40 @@ def _tarhiyat_satiri(beyan_ozet, elestirili, ziya_kati=1):
     resen = max(odenecek_fark, 0.0)
     aranmasi = max(iade_fark, 0.0)
     haksiz = max(ihracat_fark, 0.0)
+
+    # Ceza kati KAYNAGA gore degisebilir (mufettisin karari, 2026-10-19):
+    # matrah farkindan (beyan disi birakilan belgelerden) dogan tutara bir
+    # kat, indirimlerin reddinden dogan tutara uc kat. `matrah_kati`
+    # verildiginde tarh ikiye ayrilir ve ceza iki parcanin toplamidir;
+    # verilmezse eski davranis surer (tek kat, tarhin tamamina).
+    #
+    # Matrah payinin olcutu toplam KDV'deki ARTISTIR: matrah ilavesi
+    # hesaplanan KDV'yi yukseltir, indirim reddi ise indirimleri dusurur.
+    # Pay once matraha verilir: iki kaynak birlikte varken tarh ikisinin
+    # toplamindan az kalabilir (devir sogurur) ve bu halde dusuk kati
+    # uygulamak mukellef lehinedir.
+    kat = float(ziya_kati or 1)
+    matrah_payi = 0.0
+    if matrah_kati is not None:
+        matrah_payi = min(resen, max(elestirili["toplam_kdv"]
+                                     - beyan_ozet["toplam_kdv"], 0.0))
+    indirim_payi = resen - matrah_payi
+    ceza_matrah = matrah_payi * float(matrah_kati if matrah_kati is not None
+                                      else kat)
+    ceza_indirim = indirim_payi * kat
     return {
         "odenecek_olmasi_gereken": _yuvarla(elestirili["odenecek"]),
         "odenecek_beyan": _yuvarla(beyan_ozet["odenecek"]),
         "resen_tarhi_gereken": _yuvarla(resen),
         # Ceza, re'sen tarhi gereken vergi uzerinden hesaplanir; kat secimi
-        # (bir kat / uc kat) kullaniciya aittir.
-        "vergi_ziyai_cezasi": _yuvarla(resen * float(ziya_kati or 1)),
+        # (bir kat / uc kat) kullaniciya aittir. Iki kaynak varsa toplam,
+        # iki parcanin toplamidir - raporun ceza tablosu ayrimi da bu
+        # alanlardan okur, ikinci bir hesap yapmaz.
+        "vergi_ziyai_cezasi": _yuvarla(ceza_matrah + ceza_indirim),
+        "ceza_matrah_payi": _yuvarla(matrah_payi),
+        "ceza_indirim_payi": _yuvarla(indirim_payi),
+        "ceza_matrah": _yuvarla(ceza_matrah),
+        "ceza_indirim": _yuvarla(ceza_indirim),
         "iade_olmasi_gereken": _yuvarla(elestirili["iade"]),
         "iade_beyan": _yuvarla(beyan_ozet["iade"]),
         "aranmasi_gereken": _yuvarla(aranmasi),

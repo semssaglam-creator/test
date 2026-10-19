@@ -377,6 +377,66 @@ denetle("8 inci maddesinin ikinci fıkrası" not in m_satissiz,
 denetle("md. 8/2 — Belgede Gösterilen Verginin Ödenmesi" not in m_satissiz,
         "matrah ilavesi yoksa KDVK maddeleri de listelenmiyor")
 
+
+# ------------------------------------------- 3b) ceza kati KAYNAGA gore
+# Mufettisin karari (2026-10-19): matrah farkindan (beyan disi birakilan
+# belgelerden) dogan tutara BIR kat, defter-belge ibraz etmemekten yani
+# indirimlerin reddinden dogan tutara UC kat.
+print("\n3b) Ceza katı kaynağına göre ayrılıyor")
+c_ayrim = ornek()
+e_a = c_ayrim["yillar"][0]["elestiri"]
+e_a["matrah_ilave"][1] = 100000.0          # Şubat: beyan dışı belge
+e_a["hesaplanan_kdv_ilave"][1] = 18000.0
+e_a["hesaplanan_otomatik"][1] = False
+sonuc_a, _b = W._hesapla(c_ayrim)
+subat = next(d for d in sonuc_a["donemler"] if d["ay"] == 2)
+ocak = next(d for d in sonuc_a["donemler"] if d["ay"] == 1)
+esit(subat["tarhiyat"]["ceza_matrah_payi"], 18000.0,
+     "Şubat tarhı matrah farkından sayılıyor")
+esit(subat["tarhiyat"]["vergi_ziyai_cezasi"], 18000.0,
+     "matrah farkına BİR kat (18.000 x 1)")
+esit(ocak["tarhiyat"]["ceza_indirim_payi"], 1125.0,
+     "Ocak tarhı indirim reddinden sayılıyor")
+esit(ocak["tarhiyat"]["vergi_ziyai_cezasi"], 3375.0,
+     "indirim reddine ÜÇ kat (1.125 x 3)")
+# Paylarin toplami tarhin tamamini kapsamali; bir tutar cezasiz kalmamali.
+for d in sonuc_a["donemler"]:
+    t = d["tarhiyat"]
+    esit(round(t["ceza_matrah_payi"] + t["ceza_indirim_payi"], 2),
+         t["resen_tarhi_gereken"],
+         "%s payları tarhın tamamını kapsıyor" % d["ay_adi"])
+
+m_a = IB.rapor_uret(W._inceleme_bilgisi(c_ayrim), c_ayrim["kunye"],
+                    sonuc_a, c_ayrim, 2021).duz_metin()
+for baslik in ("Beyan Dışı Bırakılan\nBelgelerden",
+               "İbraz Etmemeden\n(İndirim Reddi)",
+               "Vergi Ziyaı\nCezası (1 kat)",
+               "Vergi Ziyaı\nCezası (3 kat)",
+               "Vergi Ziyaı Cezası\nToplamı"):
+    denetle(baslik in m_a, "sütun var: %s" % baslik.replace("\n", " "))
+denetle("vergi ziyaı cezasının katı bu iki tespitte AYNI DEĞİLDİR" in m_a,
+        "iki katın gerekçesi yazılıyor")
+denetle("birinci fıkrası gereğince BİR KAT" in m_a,
+        "matrah farkı 344/1'e bağlanıyor")
+denetle("ikinci fıkrası gereğince ÜÇ KAT" in m_a,
+        "indirim reddi 344/2'ye bağlanıyor")
+# Toplam satiri: 18.000 x 1 + 39.252,03 x 3 = 135.756,09
+denetle("135.756,09" in m_a, "ceza toplamı iki katın toplamı")
+denetle("18.000,00\t39.252,03" in m_a,
+        "kaynak payları dönem toplamında ayrı duruyor")
+# Sonuc maddesi de iki kati istemeli, tek cumleyle "uc kat" dememeli.
+sonuc_blok = m_a[m_a.find("5.1-"):]
+denetle("bir kat, defter ve belgelerin ibraz edilmemesi" in sonuc_blok,
+        "sonuç maddesi iki katı ayrı ayrı istiyor")
+
+# Matrah payi YOKSA tablo daralmali ve tek cumle yazilmali.
+denetle("Beyan Dışı Bırakılan" not in m,
+        "matrah payı yoksa kaynak sütunları yazılmıyor")
+denetle("tamamı defter ve belgelerin ibraz edilmemesi nedeniyle "
+        "indirimlerin reddinden kaynaklandığından" in m,
+        "matrah payı yoksa tek cümle yazılıyor")
+denetle("117.756,09" in m, "tek katta ceza üç kat olarak yazılıyor")
+
 # --------------------------------------------------- 4) uc noktaya baglanti
 print("\n4) Rapor indirilirken")
 h = istekci()

@@ -786,6 +786,40 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Ceza katı artık KAYNAĞA göre: matrah farkı 1 kat, indirim reddi
+      3 kat.** Müfettişin kararı (2026-10-19): "matrah farkından
+      kaynaklanan tutarlara uygulanacak vergi ziyaı cezası 1 kat, ancak
+      defter belge ibraz etmemekten yani indirimlerin reddinden doğan
+      vergi ziyaı cezası 3 kat olacak".
+
+      Dayanağı: matrah ilavesi VUK 359'da yazılı bir fiile dayanmaz, 344/1
+      → bir kat. İbraz etmeme ise 359/a-2'de kaçakçılık suçudur, 344/2 →
+      üç kat.
+
+      Ayrım **motorda** yapılıyor (`hesap._tarhiyat_satiri`, yeni
+      `matrah_kati` parametresi), rapor yalnızca yazıyor. Böylece ekran,
+      Excel ve rapor aynı rakamı görüyor — iki yerde hesaplanan ceza
+      birbirini tutmazdı. Ölçüt toplam KDV'deki artış: matrah ilavesi
+      hesaplanan KDV'yi yükseltir, indirim reddi indirimleri düşürür.
+      Pay önce matraha verilir; iki kaynak birlikteyken devir tarhın bir
+      kısmını soğurduğunda düşük katı uygulamak mükellef lehinedir.
+
+      Yeni alanlar: `ceza_matrah_payi`, `ceza_indirim_payi`,
+      `ceza_matrah`, `ceza_indirim`; `vergi_ziyai_cezasi` artık ikisinin
+      toplamı. `web_server._hesapla` üç kat uygulanan dosyalarda
+      `matrah_kati=1` geçiyor.
+
+      İbraz etmeme raporunda ceza, tarhiyat tablosundan ayrılıp **kendi
+      bölümüne** taşındı (sahte belge raporunun deseni). Tablo:
+      Dönemi | Re'sen Tarhı Gereken KDV | Beyan Dışı Bırakılan
+      Belgelerden | İbraz Etmemeden (İndirim Reddi) | VZC (1 kat) |
+      VZC (3 kat) | VZC Toplamı. Matrah payı hiç yoksa tablo üç sütuna
+      daralıyor ve tek cümle yazılıyor — boş sütun rakamları alt satıra
+      düşürüyordu. Sonuç bölümündeki 5.1 maddesi de iki katı ayrı ayrı
+      istiyor; tek cümleyle "üç kat" demek tabloyla çelişirdi.
+
+      Üç mutasyonla denetlendi (ayrımı kaldır, payları çakıştır, tabloyu
+      daralt).
 - [x] **Ceza katı artık tespitlerden türetiliyor (iki kaynak sorunu).**
       Müfettiş "hâlen 1 kat geliyor" dedi (2026-10-19). Önceki düzeltme
       ceza TABLOSUNU düzeltmişti ama tarhiyat tablosundaki "Vergi Ziyaı

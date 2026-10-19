@@ -238,7 +238,28 @@ Uc hal ayri cumle gerektirir ve ucu de yazilidir:
 - **ziya yok** (yalnizca devir eridi) -> tamamlanacak ceza yok
 - **ziya var** -> tutarlar yazilir
 
-## Ceza katinin kaynagi TEKTIR: tespitler
+## Ceza kati KAYNAGA gore degisir
+
+Tek bir dosyada iki kat birlikte bulunabilir (mufettisin karari,
+2026-10-19):
+
+- matrah farkindan (beyan disi birakilan belgelerden) dogan tutar -> 359'da
+  yazili bir fiile dayanmaz, 344/1 geregi BIR kat
+- indirimlerin reddinden (defter-belge ibraz etmemekten) dogan tutar ->
+  359/a-2 kacakcilik sucu, 344/2 geregi UC kat
+
+Ayrim MOTORDA yapilir (`hesap._tarhiyat_satiri`, `matrah_kati`); rapor
+yalnizca yazar. Ikinci bir yerde hesaplamayin: ekran, Excel ve rapor ayni
+alanlardan okuyor (`ceza_matrah_payi`, `ceza_indirim_payi`, `ceza_matrah`,
+`ceza_indirim`, toplam `vergi_ziyai_cezasi`). Olcut toplam KDV'deki
+ARTISTIR; pay once matraha verilir, cunku devir tarhin bir kismini
+sogurdugunda dusuk kati uygulamak mukellef lehinedir.
+
+Ibraz etmeme raporunda ceza kendi bolumundedir ve tablo kaynak paylarini
+ayri sutunlarda gosterir. Matrah payi hic yoksa tablo daralir ve tek
+cumle yazilir.
+
+## Ceza katinin kaynagi: tespitler
 
 Kat iki yerde belirleniyordu ve biri sessizce yaniliyordu: ceza tablosu
 satici siniflandirmasindan, tarhiyat tablosu ise Tarhiyat Ozeti

@@ -359,6 +359,102 @@ def _gun(iso):
     return iso or ""
 
 
+def _ceza_ayrimi_var(tarhiyatli):
+    """Tarhiyatin bir kismi matrah farkindan mi geliyor.
+
+    Geliyorsa ceza iki katli olur ve tablo kaynak sutunlarini tasir;
+    gelmiyorsa tek kat yeter ve bos sutun yazmanin anlami yok.
+    """
+    return any(float((d.get("tarhiyat") or {}).get("ceza_matrah_payi")
+                     or 0.0) > 0.005 for d in tarhiyatli)
+
+
+def _ceza_bolumu(b, kunye, tarhiyatli):
+    """Vergi ziyai cezasi: KAYNAGA gore iki kat.
+
+    Mufettisin karari (2026-10-19): matrah farkindan - yani beyan disi
+    birakilan belgelerden - dogan tutar VUK 359 kapsaminda bir fiile
+    dayanmadigi icin BIR kat; defter ve belge ibraz etmemekten, yani
+    indirimlerin reddinden dogan tutar 359/a-2 kapsaminda oldugundan UC
+    kat tasir.
+
+    Paylar motorda hesaplanmistir (`hesap._tarhiyat_satiri`); burada
+    yalnizca yazilir, ikinci bir hesap yapilmaz - iki yerde hesaplanan
+    rakam birbirini tutmaz.
+    """
+    if not tarhiyatli:
+        return
+    ayrim = _ceza_ayrimi_var(tarhiyatli)
+    if not ayrim:
+        # Tarhiyatin tamami indirimlerin reddinden: tek kat, tek cumle.
+        b.paragraf(
+            "Re’sen tarh edilecek katma değer vergisi tutarlarının tamamı "
+            "defter ve belgelerin ibraz edilmemesi nedeniyle indirimlerin "
+            "reddinden kaynaklandığından, bu tutarlar üzerinden 213 sayılı "
+            "Vergi Usul Kanunu’nun 344 üncü maddesinin ikinci fıkrası "
+            "gereğince üç kat vergi ziyaı cezası kesilmesi gerekmektedir.",
+            girinti=1)
+    else:
+        b.paragraf(
+            "Re’sen tarh edilecek katma değer vergisi, iki ayrı tespitten "
+            "kaynaklanmaktadır ve vergi ziyaı cezasının katı bu iki "
+            "tespitte AYNI DEĞİLDİR:", girinti=1)
+        b.paragraf(
+            "1- Beyan dışı bırakılan belgelerden (matrah farkından) doğan "
+            "tutar: bu tespit 213 sayılı Vergi Usul Kanunu’nun 359 uncu "
+            "maddesinde yazılı fiillere dayanmadığından, aynı Kanun’un 344 "
+            "üncü maddesinin birinci fıkrası gereğince BİR KAT vergi ziyaı "
+            "cezası kesilmesi gerekmektedir.", girinti=1)
+        b.paragraf(
+            "2- Defter ve belgelerin ibraz edilmemesi nedeniyle "
+            "indirimlerin reddinden doğan tutar: bu fiil mezkûr Kanun’un "
+            "359 uncu maddesinin (a) fıkrasında kaçakçılık suçu olarak "
+            "sayıldığından, 344 üncü maddenin ikinci fıkrası gereğince ÜÇ "
+            "KAT vergi ziyaı cezası kesilmesi gerekmektedir.", girinti=1)
+        b.paragraf(
+            "Dönem dönem hangi tutarın hangi tespitten doğduğu ve buna göre "
+            "kesilmesi gereken vergi ziyaı cezası aşağıdaki tabloda "
+            "gösterilmiştir.", girinti=1)
+    _ceza_tablosu(b, tarhiyatli)
+
+
+def _ceza_tablosu(b, tarhiyatli):
+    """Donem donem kaynak paylari ve her birine dusen ceza.
+
+    Matrah farkindan dogan pay hic yoksa kaynak sutunlari yazilmaz: bos
+    sutunlar tabloyu gereksiz genisletiyor ve rakamlari alt satira
+    dusuruyor.
+    """
+    ayrim = _ceza_ayrimi_var(tarhiyatli)
+    if ayrim:
+        basliklar = ["Dönemi", "Re’sen Tarhı\nGereken KDV",
+                     "Beyan Dışı Bırakılan\nBelgelerden",
+                     "İbraz Etmemeden\n(İndirim Reddi)",
+                     "Vergi Ziyaı\nCezası (1 kat)",
+                     "Vergi Ziyaı\nCezası (3 kat)",
+                     "Vergi Ziyaı Cezası\nToplamı"]
+        kodlar = ["resen_tarhi_gereken", "ceza_matrah_payi",
+                  "ceza_indirim_payi", "ceza_matrah", "ceza_indirim",
+                  "vergi_ziyai_cezasi"]
+        oranlar = [0.9, 1.0, 1.1, 1.0, 1.0, 1.0, 1.1]
+    else:
+        basliklar = ["Dönemi", "Re’sen Tarhı\nGereken KDV",
+                     "Vergi Ziyaı Cezası\n(3 kat)"]
+        kodlar = ["resen_tarhi_gereken", "vergi_ziyai_cezasi"]
+        oranlar = [1.0, 1.4, 1.4]
+
+    satirlar = [[_donem_adi(d)]
+                + [_tl(float((d.get("tarhiyat") or {}).get(k) or 0.0))
+                   for k in kodlar] for d in tarhiyatli]
+    toplam = ["Toplam:"] + [
+        _tl(sum(float((d.get("tarhiyat") or {}).get(k) or 0.0)
+                for d in tarhiyatli)) for k in kodlar]
+    satirlar.append(toplam)
+    b.tablo(basliklar, satirlar,
+            hizalar=["orta"] + ["sag"] * len(kodlar), oranlar=oranlar,
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+
 def _matrah_ilavesi_var(donemler):
     """Herhangi bir donemde matrah ilavesi yapilmis mi."""
     return any(float(d["elestirili"].get("matrah") or 0.0)
@@ -434,15 +530,13 @@ def _olmasi_gereken(b, kunye, inceleme, yil, donemler, liste=None):
         "vergisi tutarları mahsup edildiğinde, aşağıdaki tabloda yer alan "
         "fark katma değer vergisi tutarlarının re’sen tarh edilmesi "
         "gerekmektedir." % M(kunye, ek="in"), girinti=1)
-    _tarhiyat_tablosu(b, tarhiyatli, {})
+    _tarhiyat_tablosu(b, tarhiyatli)
     b.paragraf(
         "Yukarıdaki tabloda hesaplanmış olan fark katma değer vergisi "
         "tutarlarının ilgili dönemlere ait fark katma değer vergisi olarak "
         "213 sayılı Vergi Usul Kanunu’nun %s. maddesi gereğince re’sen tarh "
-        "edilmesi, re’sen tarh edilecek katma değer vergisi tutarları "
-        "üzerinden aynı Kanun’un 344 üncü maddesinin ikinci fıkrası gereğince "
-        "üç kat vergi ziyaı cezası kesilmesi gerekmektedir."
-        % RESEN_MADDE, girinti=1)
+        "edilmesi gerekmektedir." % RESEN_MADDE, girinti=1)
+    _ceza_bolumu(b, kunye, tarhiyatli)
     b.paragraf(
         "Raporumuzun önceki bölümlerinde açıklandığı üzere %s %s ilişkin "
         "yasal defter ve belgeleri incelemeye ibraz edilmemiştir. Bu nedenle "
@@ -610,9 +704,20 @@ def _sonuc(b, inceleme, kunye, yil, donemler):
         "dönemlere ait fark katma değer vergisi olarak %s adına 213 sayılı "
         "Vergi Usul Kanunu’nun %s. maddesi gereğince re’sen tarh edilmesi, "
         "re’sen tarh edilecek fark katma değer vergisi tutarları üzerinden "
-        "aynı Kanun’un 344 üncü maddesinin ikinci fıkrası gereğince üç kat "
-        "vergi ziyaı cezası kesilmesi,"
-        % (M(kunye), RESEN_MADDE),
+        "%s"
+        % (M(kunye), RESEN_MADDE,
+           # Ceza kati KAYNAGA gore degisiyorsa sonuc maddesi de ikisini
+           # ayri ayri istemeli; tek cumleyle "uc kat" demek tabloyla
+           # celisirdi (mufettisin karari, 2026-10-19).
+           "aşağıdaki tabloda gösterildiği üzere, beyan dışı bırakılan "
+           "belgelerden doğan tutar üzerinden aynı Kanun’un 344 üncü "
+           "maddesinin birinci fıkrası gereğince bir kat, defter ve "
+           "belgelerin ibraz edilmemesi nedeniyle indirimlerin reddinden "
+           "doğan tutar üzerinden ise aynı maddenin ikinci fıkrası "
+           "gereğince üç kat vergi ziyaı cezası kesilmesi,"
+           if _ceza_ayrimi_var(tarhiyatli) else
+           "aynı Kanun’un 344 üncü maddesinin ikinci fıkrası gereğince üç "
+           "kat vergi ziyaı cezası kesilmesi,"),
         # Ibraz etmeme ayni zamanda kacakcilik sucudur; VSR bu maddeyle
         # istenir ve uygulama raporla birlikte uretir.
         "5.2- 213 sayılı Vergi Usul Kanunu’nun %s maddesine göre “defter, "
@@ -630,7 +735,7 @@ def _sonuc(b, inceleme, kunye, yil, donemler):
     for sira, metin in enumerate(maddeler):
         b.paragraf(metin, kalin=True, girinti=1, aralik_sonra=100)
         if tarhiyatli and sira == 0:
-            _tarhiyat_tablosu(b, tarhiyatli, {})
+            _ceza_tablosu(b, tarhiyatli)
 
     b.paragraf("Gerektiği kanaat ve sonucuna varılmıştır.", girinti=1,
                aralik_once=120)
