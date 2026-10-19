@@ -899,16 +899,34 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
         # Hesap motoru farki zaten bilesenlerine ayiriyor; `fark_devir`
         # tam olarak onunden gelen devrin etkisidir.
         kalan = max(tarh - sahte_pay, 0.0)
-        devir_pay = 0.0
+        karma_pay = 0.0
         if genel_karma is not None:
-            devir_etkisi = max(float((d.get("fark_devir") or {})
-                                     .get("odenecek") or 0.0), 0.0)
-            devir_pay = min(kalan, devir_etkisi)
-            # Devir, ONCEKI donemlerin reddinden geldigi icin kati tek bir
-            # donemin karmasina gore belirlenemez; dosya geneli kullanilir.
+            fark_devir = d.get("fark_devir") or {}
+            fark_tespit = d.get("fark_tespit") or {}
+            devir_etkisi = max(float(fark_devir.get("odenecek") or 0.0), 0.0)
+            # TESPITTEN dogan kisim da ayni fiile baglidir. Fatura dokumu
+            # her donemi kapsamiyor olabilir: mufettis indirim reddini
+            # beyandan okuyup elle girdiginde o donemde fatura SATIRI
+            # bulunmaz, `red_toplam` sifir cikar ve tutar eskiden
+            # "dayanaksiz" sayilip BIR KAT yaziliyordu - rapor metni uc kat
+            # derken tablo bir kat gosteriyordu (sahada boyle cikti,
+            # 2026-10-19).
+            #
+            # Matrah ilavesinden dogan kisim bunun DISINDA tutulur: o, 359
+            # kapsaminda bir fiil degildir ve bir kat tasir. Motor ikisini
+            # zaten ayirmis durumda: `toplam_kdv` matrah/hesaplanan KDV
+            # ilavesinden, kalan ise indirim reddinden gelir.
+            tespit_etkisi = max(float(fark_tespit.get("odenecek") or 0.0), 0.0)
+            matrah_etkisi = max(float(fark_tespit.get("toplam_kdv") or 0.0),
+                                0.0)
+            tespit_359 = max(tespit_etkisi - matrah_etkisi - sahte_pay, 0.0)
+            karma_pay = min(kalan, devir_etkisi + tespit_359)
+            # Devir ONCEKI donemlerin reddinden, elle girilen tespit ise
+            # dokumu olmayan faturalardan gelir; ikisinin de kati tek bir
+            # donemin karmasina gore belirlenemez, dosya geneli kullanilir.
             for kategori, oran in genel_karma.items():
-                paylar[kategori] += devir_pay * oran
-        paylar["dayanaksiz"] = round(kalan - devir_pay, 2)
+                paylar[kategori] += karma_pay * oran
+        paylar["dayanaksiz"] = round(kalan - karma_pay, 2)
 
         paylar = {k: round(v, 2) for k, v in paylar.items()}
         ceza = {k: round(paylar[k] * CEZA_KATI[k], 2)

@@ -98,6 +98,26 @@ def ornek(kullanma="Bilerek kullanma", subat_cikar=0.0):
     }
 
 
+def karma_ornek():
+    """Iki ceza katinin BIRLIKTE bulundugu dosya.
+
+    Ocak: sahte belge reddi 6.000 -> uc kat.
+    Subat: MATRAH ILAVESI 4.000  -> bir kat (359 fiili degil).
+
+    Tablo sutunlarini ve uzlasma ayrimini denetleyen bolumler bu dosyayi
+    kullanir. Eskiden ayni isi "fatura satiri olmayan indirim reddi"
+    goruyordu; mufettisin duzeltmesiyle (2026-10-19) o da uc kat oldugu
+    icin artik iki katli bir dosya kurmanin yolu matrah ilavesidir.
+    """
+    c = ornek()
+    e = c["yillar"][0]["elestiri"]
+    e["matrah_ilave"][1] = 20000.0
+    e["hesaplanan_kdv_ilave"][1] = 4000.0
+    e["hesaplanan_otomatik"] = [True] * 12
+    e["hesaplanan_otomatik"][1] = False
+    return c
+
+
 def devir_ornegi(kullanma="Bilerek kullanma"):
     """Red bir ayi sogurur, vergi SONRAKI aylara tasinir.
 
@@ -166,26 +186,44 @@ esit(ocak["tarh"], 6000.0, "Ocak re'sen tarh edilecek KDV")
 esit(ocak["ceza_bilerek"], 18000.0, "Ocak cezası 3 kat (6.000 x 3)")
 esit(ocak["ceza_toplam"], 18000.0, "Ocak ceza toplamı")
 
-# Ayirt edici hal: Subat'ta fatura yok, tarhiyat baska bir tespitten.
+# Ayirt edici hal: Subat'ta INDIRIM REDDI var ama FATURA SATIRI yok.
+# Mufettisin duzeltmesi (2026-10-19): bu tutar da uc kat tasir. Fatura
+# dokumu her donemi kapsamiyor olabilir - indirim reddi beyandan okunup
+# elle girildiginde o donemde satir bulunmaz. Eski kodda bu tutar
+# "dayanaksiz" sayilip bir kat yaziliyordu; rapor metni uc kat derken
+# tablo bir kat gosteriyordu.
 subat = satir(dag, 2)
 esit(subat["tarh"], 4000.0, "Şubat re'sen tarh edilecek KDV")
-esit(subat["red_toplam"], 0.0, "Şubat'ta reddedilen sahte belge KDV'si yok")
-esit(subat["ceza_toplam"], 4000.0,
-     "Şubat cezası 1 kat — ESKİ KODDA SIFIRDI")
-esit(subat["ceza_bilerek"], 0.0,
-     "Şubat'a üç kat yazılmıyor (359 dayanağı yok)")
-# 359 dayanagi olmayan tutar AYRI kalemde tutulur, "belirsiz"e
-# karistirilmaz: "belirsiz" kullanma durumu SECILMEMIS saticilari isaret
-# eder ve rapor bunun icin kullaniciya uyari yazar. Karistirilirsa butun
-# saticilar siniflandirilmis olsa bile uyari yersiz cikar.
-esit(subat["pay_dayanaksiz"], 4000.0,
-     "359 dayanağı olmayan tutar ayrı kalemde (“dayanaksız”)")
+esit(subat["red_toplam"], 0.0, "Şubat'ta fatura satırı yok")
+esit(subat["ceza_bilerek"], 12000.0,
+     "fatura satırı olmayan indirim reddine de üç kat (4.000 x 3)")
+esit(subat["ceza_toplam"], 12000.0, "Şubat ceza toplamı")
+esit(subat["pay_dayanaksiz"], 0.0,
+     "indirim reddi “dayanaksız” sayılmıyor")
 esit(subat["pay_belirsiz"], 0.0,
      "“belirsiz” kirletilmiyor — orası sınıflandırılmamış satıcılar için")
 
 esit(dag["toplam"]["tarh"], 10000.0, "toplam tarh")
-esit(dag["toplam"]["ceza_toplam"], 22000.0,
-     "toplam ceza = 6.000x3 + 4.000x1")
+esit(dag["toplam"]["ceza_toplam"], 30000.0,
+     "toplam ceza = 10.000 x 3")
+
+# --- 1a) MATRAH ILAVESI hala bir kat: o, 359 kapsaminda bir fiil degil.
+# Ayrim motorun kendi bilesenlerinden geliyor: `fark_tespit.toplam_kdv`
+# matrah/hesaplanan KDV ilavesinden, kalani indirim reddinden gelir.
+print("\n1a) Matrah ilavesi 359 fiili değil: bir kat")
+c_matrah = ornek()
+e_m = c_matrah["yillar"][0]["elestiri"]
+e_m["matrah_ilave"][1] = 20000.0
+e_m["hesaplanan_kdv_ilave"][1] = 4000.0
+e_m["hesaplanan_otomatik"] = [True] * 12
+e_m["hesaplanan_otomatik"][1] = False
+dag_m, _s = dagilim(c_matrah)
+subat_m = satir(dag_m, 2)
+esit(subat_m["tarh"], 4000.0, "matrah ilavesinden doğan tarh")
+esit(subat_m["pay_dayanaksiz"], 4000.0,
+     "matrah ilavesi “dayanaksız” kalıyor")
+esit(subat_m["ceza_bilerek"], 0.0, "matrah ilavesine üç kat yazılmıyor")
+esit(subat_m["ceza_toplam"], 4000.0, "matrah ilavesine bir kat")
 
 # Cezanin matrahi, tarhin tamamini kapsamali.
 esit(sum(s["pay_bilerek"] + s["pay_bilmeden"] + s["pay_belirsiz"]
@@ -243,7 +281,7 @@ esit(dag2["toplam"]["ceza_toplam"], 10000.0, "bilmeden toplam ceza")
 
 # ------------------------------------------------------- 3) tablo sutunlari
 print("\n3) Ceza tablosundan matrah sütunları kaldırıldı")
-m = rapor(ornek(subat_cikar=4000.0))
+m = rapor(karma_ornek())
 denetle("Bilerek Kullanılan" not in m,
         "“Bilerek Kullanılan Belgeler” sütunu yok")
 denetle("Bilmeden Kullanılan" not in m,
@@ -288,10 +326,11 @@ print("\n5) Uzlaşma kapsamı ayrımı")
 # `pay_*` alanlari ceza tablosundan cikarildi ama veriden KALDIRILMADI:
 # uzlasma bolumu onlardan besleniyor. 359 dayanagi olmayan tutar kapsam
 # ICINDE olmali - matrah ilavesi 359 fiili degildir.
-esit(dag["toplam"]["pay_bilerek"], 6000.0,
+dag_k, _sk = dagilim(karma_ornek())
+esit(dag_k["toplam"]["pay_bilerek"], 6000.0,
      "kapsam dışı tutar (bilerek) 6.000")
-esit(dag["toplam"]["pay_bilmeden"] + dag["toplam"]["pay_belirsiz"]
-     + dag["toplam"]["pay_dayanaksiz"], 4000.0,
+esit(dag_k["toplam"]["pay_bilmeden"] + dag_k["toplam"]["pay_belirsiz"]
+     + dag_k["toplam"]["pay_dayanaksiz"], 4000.0,
      "kapsam içi tutar 4.000 (359 dayanağı olmayan tutar dahil)")
 denetle("Uzlaşma Kapsamı Dışında" in m,
         "karma dosyada uzlaşma dağılım tablosu yazılıyor")

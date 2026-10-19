@@ -786,6 +786,35 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Ceza tablosu metinle çelişiyordu: fatura satırı olmayan dönemler
+      bir kat yazılıyordu.** Müfettiş bildirdi (2026-10-19): "vergi ziyaına
+      ilişkin açıklamaya 3 kat kesilmesi gerek demişsin ancak tabloda 1 kat
+      kesmişsin, tabloda da 3 kat olmalı".
+
+      Sebep `faturalar.ceza_dagilimi`de: ceza katı **fatura satırlarından**
+      belirleniyordu. Fatura dökümü her dönemi kapsamıyor olabilir —
+      müfettiş indirim reddini beyandan okuyup elle girdiğinde o dönemde
+      satır bulunmaz, `red_toplam` sıfır çıkar ve tutar "dayanaksız"
+      sayılıp **bir kat** yazılırdı. Rapor metni "üç kat uygulanması
+      gerekmektedir" derken tablo bir kat gösteriyordu.
+
+      Artık **tespitten doğan kısım da** dosya geneli kategori karmasıyla
+      dağıtılıyor (devir payında zaten böyleydi). Ölçüt motorun kendi
+      ayrıştırması: `fark_tespit["odenecek"]`.
+
+      **Matrah ilavesi bunun dışında**, bir kat kalıyor: o 359 kapsamında
+      bir fiil değil. Ayrım yine motordan geliyor —
+      `fark_tespit["toplam_kdv"]` matrah/hesaplanan KDV ilavesinden,
+      kalanı indirim reddinden gelir. İki mutasyonla denetlendi (tespit
+      payını geri çıkar → eski hata; matrah ilavesini de üç kat yap →
+      yakalanıyor).
+
+      `ceza_testi.py` bu kararı kodluyordu ve değişti: "fatura satırı
+      olmayan indirim reddi bir kattır" denetimi, yerini "üç kattır"a
+      bıraktı. İki katın birlikte bulunduğu dosyayı kuran yeni bir
+      `karma_ornek()` eklendi (Ocak sahte belge üç kat + Şubat matrah
+      ilavesi bir kat); tablo sütunları ve uzlaşma ayrımı bölümleri artık
+      onu kullanıyor.
 - [x] **Matrah ilavesinin dayanağı VUK'tan KDV Kanununa taşındı.**
       Müfettişin kararı (2026-10-19): "beyan edilmeyen faturaların matraha
       eklenmesine ilişkin paragrafa Vergi Usul Kanunu delili sunma, ona

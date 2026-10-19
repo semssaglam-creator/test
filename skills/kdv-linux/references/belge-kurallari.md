@@ -199,7 +199,16 @@ Tutar kaynagina gore uce ayrilir, cunku ceza kati KAYNAGA baglidir:
    reddi bir ay sogurup vergiyi sonraki aya tasidiginda o ayda reddedilen
    belge bulunmasa bile fark AYNI fiilden dogar ve ayni kati tasir. Olcut
    hesap motorunun kendi ayristirmasidir: `fark_devir["odenecek"]`.
-3. Kalan (beyan hatasi, matrah ilavesi) -> 359 fiili degil, bir kat.
+2b. **Tespitten gelen kisim** (`fark_tespit["odenecek"]`) -> yine dosya
+   genelindeki karma. Ceza kati FATURA SATIRINA baglanamaz: fatura dokumu
+   her donemi kapsamiyor olabilir, mufettis indirim reddini beyandan
+   okuyup elle girdiginde o donemde satir bulunmaz. Bu tutar eskiden
+   "dayanaksiz" sayilip bir kat yaziliyordu ve rapor metni uc kat derken
+   tablo bir kat gosteriyordu (mufettisin duzeltmesi, 2026-10-19).
+3. Kalan -> 359 fiili degil, bir kat. Buraya artik yalnizca beyan hatasi
+   ve MATRAH ILAVESI dusuyor; ikincisinin olcutu
+   `fark_tespit["toplam_kdv"]`dir (matrah/hesaplanan KDV ilavesi), kalani
+   indirim reddi sayilir.
    `pay_dayanaksiz` / `ceza_dayanaksiz` diye AYRI kalemde tutulur,
    `pay_belirsiz`e karistirilmaz: "belirsiz" kullanma durumu SECILMEMIS
    saticilari isaret eder ve rapor bunun icin uyari yazar; karistirilirsa
