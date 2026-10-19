@@ -138,3 +138,28 @@ yalnizca calismaya ACIKCA girilmis VKN kullanilir.
 
 Yon mantigina dokunuyorsaniz `ibraz_etmeme_testi.py` 0. bolumundeki sekiz
 durumu calistirin; ikisi tam bu iki tuzagi tutuyor.
+
+## 12. Paketi uretmek, kullaniciya ULASTIRMAK demek degildir
+
+`surumler/` klasoru indirme baglantilarini tasir ve eskiden paketleyiciden
+oraya kopyalama ELLE yapiliyordu. Bir oturumda bu adim atlandi: paketleyici
+uc kez calistirildi, her seferinde kullaniciya `surumler/` icindeki
+HAFTALAR ONCEKI dosya gonderildi ve butun degisiklikler "yapilmamis"
+gorundu. Kullanici "yine ayni uygulama geliyor" dedi; sorun koddaki
+degisiklikte degil, teslimdeydi.
+
+Artik paketleyiciler `surumler/`e kendileri kopyaliyor. Kullaniciya dosya
+gonderirken yine de uretim zamanina bakin: `ls -la surumler/`.
+
+Ayni ailenin ikinci tuzagi: her paket `surum.txt` tasir (tarih + git kisa
+kimligi) ve uygulama bunu sag ustte gosterir. "Guncelledim ama ayni
+uygulama geliyor" sorusunu ancak bu cevapliyor, cunku uygulamanin onceki
+bir kopyasi 8766'yi tutuyorsa yeni kopya 8767'ye kayar ve tarayicidaki
+eski adres ESKI surumu gostermeye devam eder. `main.py` bu kaymayi artik
+yuksek sesle yaziyor, rozet de portu gosteriyor.
+
+Ucuncusu: `guncelle.bat`in kopyalama sonrasi denetimi yillardir kaynakta
+duran bir metni ariyordu; o metin ESKI surumde de bulundugundu icin
+kopyalama hic olmasa bile "GUNCELLEME TAMAM" diyordu. Olcut artik surum
+damgasinin BIREBIR esitligi. (Bkz. 10: gecen bir denetim, gecmesi
+gerektigi icin mi geciyor?)

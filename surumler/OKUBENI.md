@@ -4,13 +4,18 @@ Bu klasör, indirilebilir **hazır paketleri** tutar. Kaynak koddan üretilirler
 (`kdv_linux/paketle.sh`, `kdv_windows/paketle.sh`); burada durmalarının tek
 sebebi, kalıcı bir indirme bağlantısı vermektir.
 
-**Bu paketlerdeki son değişiklik (2026-10-09):** Vergi Suçları Raporu (VSR)
-eklendi. Sahte belge raporu ya da düzeltme kabul raporu indirilirken,
-"Bilerek kullanma" işaretliyse VSR de kendiliğinden üretilip pakete konuyor.
-VSR bütün inceleme dönemi için tek düzenlenir; yıllar sonuç tablosunda yıl
-yıl satırlanır. Künyede yeni bir "Vergi Suçları Raporu" bölümü var
-(savcılık, failin kimlik bilgileri ve her yılın tarhiyat raporunun
-tarih/sayısı).
+**Her paket bir sürüm damgası taşır** (`surum.txt`: tarih + git kısa
+kimliği). Uygulama bu damgayı sağ üstte gösterir; indirdiğiniz paketin
+gerçekten çalıştığını oradan doğrularsınız. Damganın yanındaki port
+numarası 8766 değilse, uygulamanın önceki bir kopyası hâlâ çalışıyor
+demektir ve tarayıcıdaki eski adres ESKİ sürümü gösterir.
+
+**Bu paketlerdeki son değişiklikler (2026-10-19):** ibraz etmeme raporu ve
+vergi suçları raporu (defter-belge gizleme, VUK 359/a-2); devir düzeltme
+raporu; VUK 353/1 belge alma özel usulsüzlüğü; belge basım bilgileri
+tablosu; alış ve satış fatura listelerinin ayrılması; ibraz etmemede
+matrah ilavesi ve değerlendirmesi; VUK 359 hapis sürelerinin 7394 sayılı
+Kanunla değişik hâli.
 
 ## Linux
 
@@ -42,10 +47,13 @@ Yedek alamazsa hiçbir dosyaya dokunmaz.
 
 ## Güncelleme
 
-Paketleri yenilerken önce üretin, sonra buraya kopyalayın:
+Paketleyiciyi çalıştırmak yeter; paketler buraya **kendiliğinden**
+kopyalanır:
 
-    cd kdv_linux && ./paketle.sh
-    cp KDV_Inceleme_Calismasi_Linux.tar.gz ../surumler/
-
+    cd kdv_linux  && ./paketle.sh
     cd kdv_windows && ./guncelleme_paketle.sh
-    cp KDV_Guncelleme_Windows.zip ../surumler/
+
+Eskiden kopyalama elle yapılıyordu ve atlandığında bu klasörde haftalar
+öncesinin paketi kalıyor, indiren kullanıcıya eski uygulama gidiyordu.
+Paketleyici artık kendisi kopyalıyor; yine de indirdiğiniz paketin
+sürüm damgasına bakın.

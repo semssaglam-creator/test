@@ -163,6 +163,18 @@ def main():
     # kullanici "sayfaya ulasilamadi" gorur.
     adres = f"http://localhost:{port}/"
     print("KDV Inceleme Calismasi calisiyor:", adres)
+    if port != PORT:
+        # Sessiz kalmamali: kullanicinin tarayicisindaki eski adres
+        # (localhost:8766) halen ESKI kopyayi gosterir ve guncelleme
+        # yapilmamis gibi gorunur. Sahada boyle cikti (2026-10-19).
+        print()
+        print(f"DIKKAT: {PORT} portu dolu oldugu icin bu kopya {port}")
+        print("portunda acildi - uygulamanin onceki bir kopyasi halen")
+        print("calisiyor. Tarayicida eski adresi (localhost:%d) acarsaniz"
+              % PORT)
+        print("ESKI surumu gorursunuz. Onceki pencereleri kapatip")
+        print("uygulamayi yeniden baslatmak en temizi.")
+        print()
     print("Kapatmak icin bu pencerede Ctrl+C tusuna basin.")
 
     def _ac():

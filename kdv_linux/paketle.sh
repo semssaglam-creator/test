@@ -32,6 +32,7 @@ GEREKLI_DOSYALAR=(
   "lib_ek/typing_extensions.py"
   "calistir.sh" "kur.sh" "kaldir.sh"
   "KDV Uygulamasini Baslat.desktop"
+  "surum.txt"
   "KURULUM.txt" "KULLANIM.md"
   "OKUBENI - ONCE BUNU OKUYUN.txt"
 )
@@ -39,6 +40,18 @@ GEREKLI_DOSYALAR=(
 # Calistirilabilir olmasi ZORUNLU olanlar. Bu isaret kaybolursa masaustu
 # kisayolu betigi calistiramaz, ekranda hicbir sey olmaz.
 CALISTIRILABILIR=("calistir.sh" "kur.sh" "kaldir.sh")
+
+
+# ------------------------------------------------------- surum damgasi
+# Pakete tarih + git kisa kimligi yazilir; uygulama bunu baslikta
+# gosterir. "Guncelledim ama ayni uygulama geliyor" sorusunu ancak bu
+# cevapliyor (sahada boyle cikti, 2026-10-19). Damga ayni zamanda
+# guncelleyicinin dogrulama olcutudur.
+surum_damgasi() {
+  local kisa
+  kisa="$(git -C "$KOK" rev-parse --short HEAD 2>/dev/null || echo "-")"
+  printf '%s · %s' "$(date +%Y-%m-%d\ %H:%M)" "$kisa"
+}
 
 kirmizi() { printf '\033[31m%s\033[0m\n' "$*"; }
 yesil()   { printf '\033[32m%s\033[0m\n' "$*"; }
@@ -60,7 +73,8 @@ DISARIDA=(
 haric=()
 for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done
 tar -cf - "${haric[@]}" . | (cd "$PAKET" && tar -xf -)
-echo "  Kaynak kopyalandi."
+surum_damgasi > "$PAKET/surum.txt"
+echo "  Kaynak kopyalandi. Surum: $(cat "$PAKET/surum.txt")"
 
 # Calistirma izinleri kaynakta bozulmus olabilir (kopyala-yapistir, zip'ten
 # acma); pakette her halukarda dogru olsun.
@@ -135,6 +149,21 @@ yesil "  Tum denetimler gecti."
 baslik "Arsiv"
 tar -czf "$ARSIV" "$PAKET"
 yesil "  $ARSIV  ($(du -h "$ARSIV" | cut -f1))"
+
+# Paketi surumler/ klasorune de koy. Bu adim eskiden ELLE yapiliyordu
+# (OKUBENI.md'de "sonra buraya kopyalayin" diye yaziyordu) ve atlandi:
+# paketleyici yeni paketi uretirken surumler/ icinde HAFTALAR ONCEKI dosya
+# duruyordu, indiren kullaniciya eski uygulama gidiyordu ve degisiklikler
+# "yapilmamis" gorunuyordu (sahada boyle cikti, 2026-10-19). Elle adim
+# atlanabilir; betigin kendisi atlamaz.
+SURUMLER="$KOK/../surumler"
+if [[ -d "$SURUMLER" ]]; then
+  cp "$ARSIV" "$SURUMLER/$ARSIV"
+  yesil "  surumler/$ARSIV yenilendi."
+else
+  kirmizi "  UYARI: $SURUMLER yok; paket oraya kopyalanmadi."
+fi
+
 
 echo
 echo "Kullanicinin yapacagi:"

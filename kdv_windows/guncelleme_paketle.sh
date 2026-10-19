@@ -33,11 +33,24 @@ GEREKLI_DOSYALAR=(
   "guncelle.bat" "OKUBENI - ONCE BUNU OKUYUN.txt"
   "yeni/main.py" "yeni/app/web_server.py" "yeni/app/pdf_beyanname.py"
   "yeni/app/beyannameler.py" "yeni/app/tani.py" "yeni/web/index.html"
+  "yeni/surum.txt"
 )
 
-# guncelle.bat kopyalama sonrasi bu isareti arar; isaret kaynakta yoksa
-# betik her zaman "yeni surum taninmadi" der. Ikisi birlikte degismeli.
-ISARET="YENI_BICIM_SIFIRLAR"
+# guncelle.bat kopyalama sonrasi SURUM DAMGASINI karsilastirir: kurulan
+# surum.txt ile paketteki birebir ayni olmali. Eskiden kaynakta yillardir
+# duran bir metin araniyordu; o metin ESKI surumde de bulundugu icin
+# kopyalama hic yapilmamis olsa bile denetim geciyordu.
+
+
+# ------------------------------------------------------- surum damgasi
+# Pakete tarih + git kisa kimligi yazilir; uygulama bunu baslikta
+# gosterir ve guncelleyici bununla dogrular. "Guncelledim ama ayni
+# uygulama geliyor" sorusunu ancak bu cevapliyor (2026-10-19).
+surum_damgasi() {
+  local kisa
+  kisa="$(git -C "$KOK" rev-parse --short HEAD 2>/dev/null || echo "-")"
+  printf '%s · %s' "$(date +%Y-%m-%d\ %H:%M)" "$kisa"
+}
 
 kirmizi() { printf '\033[31m%s\033[0m\n' "$*"; }
 yesil()   { printf '\033[32m%s\033[0m\n' "$*"; }
@@ -57,6 +70,8 @@ DISARIDA=(
 haric=()
 for desen in "${DISARIDA[@]}"; do haric+=(--exclude="$desen"); done
 tar -cf - "${haric[@]}" "${TASINAN[@]}" | (cd "$PAKET/yeni" && tar -xf -)
+surum_damgasi > "$PAKET/yeni/surum.txt"
+echo "  Surum: $(cat "$PAKET/yeni/surum.txt")"
 cp "$SABLON/guncelle.bat" "$SABLON/OKUBENI - ONCE BUNU OKUYUN.txt" "$PAKET/"
 echo "  Program dosyalari kopyalandi: ${TASINAN[*]}"
 
@@ -123,10 +138,15 @@ fi
 # guncelle.bat'in kopyalama sonrasi aradigi isaret gercekten pakette mi.
 # Bu denetim olmazsa betik her calistirmada "yeni surum taninmadi" der ve
 # kullanici basarili bir guncellemeyi basarisiz sanip geri alir.
-grep -rq "$ISARET" "$PAKET/yeni/app" 2>/dev/null \
-  || denetim_basarisiz "guncelle.bat'in aradigi isaret ($ISARET) pakette yok"
-grep -q "$ISARET" "$PAKET/guncelle.bat" 2>/dev/null \
-  || denetim_basarisiz "guncelle.bat isareti ($ISARET) aramiyor"
+# Surum damgasi: pakette olmali ve guncelle.bat onu KARSILASTIRMALI.
+[[ -s "$PAKET/yeni/surum.txt" ]] \
+  || denetim_basarisiz "yeni/surum.txt yok ya da bos"
+grep -q 'fc /b "%~dp0yeni\\surum.txt"' "$PAKET/guncelle.bat" 2>/dev/null \
+  || denetim_basarisiz "guncelle.bat surum damgasini karsilastirmiyor"
+# Eski, her zaman gecen olcut geri gelmesin. Olcut KULLANIMDIR: betikteki
+# aciklama satiri o isaretin adini anabilir, denetim ona takilmamali.
+grep -q 'findstr .*YENI_BICIM_SIFIRLAR' "$PAKET/guncelle.bat" 2>/dev/null \
+  && denetim_basarisiz "guncelle.bat eski (her zaman gecen) olcute donmus"
 
 # Guncellemenin en tehlikeli hatasi, yedek almadan uzerine yazmaktir.
 grep -q 'yedekOlmadi' "$PAKET/guncelle.bat" \
@@ -164,6 +184,21 @@ baslik "Arsiv"
 zip -qr "$ARSIV" "$PAKET"
 rm -rf "$PAKET"
 yesil "  $ARSIV  ($(du -h "$ARSIV" | cut -f1))"
+
+# Paketi surumler/ klasorune de koy. Bu adim eskiden ELLE yapiliyordu
+# (OKUBENI.md'de "sonra buraya kopyalayin" diye yaziyordu) ve atlandi:
+# paketleyici yeni paketi uretirken surumler/ icinde HAFTALAR ONCEKI dosya
+# duruyordu, indiren kullaniciya eski uygulama gidiyordu ve degisiklikler
+# "yapilmamis" gorunuyordu (sahada boyle cikti, 2026-10-19). Elle adim
+# atlanabilir; betigin kendisi atlamaz.
+SURUMLER="$KOK/../surumler"
+if [[ -d "$SURUMLER" ]]; then
+  cp "$ARSIV" "$SURUMLER/$ARSIV"
+  yesil "  surumler/$ARSIV yenilendi."
+else
+  kirmizi "  UYARI: $SURUMLER yok; paket oraya kopyalanmadi."
+fi
+
 
 echo
 echo "Kullanicinin yapacagi:"

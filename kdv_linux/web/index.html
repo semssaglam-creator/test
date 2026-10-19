@@ -18,6 +18,7 @@
   .kayit-rozeti { font-size: 12px; padding: 2px 9px; border-radius: 10px; background: #47698f; }
   .kayit-rozeti.degisti { background: #b8860b; color: #fff; }
   .kayit-rozeti.kayitli { background: #2c7a3f; }
+  .surum-rozeti { font-size: 11px; opacity: .75; letter-spacing: .2px; }
   nav { display: flex; gap: 4px; background: #2b4a73; padding: 0 12px; flex-wrap: wrap; }
   nav button { background: none; border: none; color: #cfd9e6; padding: 11px 16px; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; }
   nav button.aktif { color: #fff; border-bottom-color: #ffb347; font-weight: 600; }
@@ -151,6 +152,9 @@
   <div class="durum-bilgi">
     <span id="calismaAdi">Yeni çalışma</span>
     <span class="kayit-rozeti" id="kayitRozeti">boş</span>
+    <!-- Surum damgasi: "guncelledim ama ayni uygulama geliyor" sorusunu
+         ancak bu cevapliyor. Bkz. web_server.surum_damgasi. -->
+    <span class="surum-rozeti" id="surumRozeti" title="Çalışan kopyanın sürümü"></span>
     <span class="kaydet-grup">
       <button class="birincil" id="hKaydet">Kaydet</button>
       <button id="hFarkliKaydet">Farklı Kaydet</button>
@@ -4673,10 +4677,37 @@ function ekraniCiz() {
   kayitlariCiz();
 }
 
+/**
+ * Çalışan kopyanın sürümünü başlıkta gösterir.
+ *
+ * "Güncelledim ama yine aynı uygulama geliyor" sorusunu ancak bu
+ * cevaplıyor: uygulamanın önceki örneği 8766'yı tutuyorsa yeni kopya
+ * 8767'ye kayar ve tarayıcıdaki eski adres ESKİ kopyayı gösterir. Port da
+ * yazılır; 8766 dışındaysa ayrıca uyarı rengine döner.
+ */
+function surumRozetiniCiz() {
+  const el = $("surumRozeti");
+  if (!el) return;
+  const t = durum.tanimlar || {};
+  const port = Number(t.port || 0);
+  el.textContent = `sürüm: ${t.surum || "?"}` + (port ? ` · :${port}` : "");
+  if (port && port !== 8766) {
+    el.style.opacity = "1";
+    el.style.color = "#ffd480";
+    el.title = `Bu kopya ${port} portunda çalışıyor. 8766 portunu `
+      + "uygulamanın başka bir kopyası tuttuğu için buraya kaydı; "
+      + "tarayıcıda localhost:8766 adresini açarsanız ESKİ kopyayı "
+      + "görürsünüz. Önceki pencereleri kapatıp yeniden açın.";
+  } else {
+    el.title = "Çalışan kopyanın sürümü";
+  }
+}
+
 // ------------------------------------------------------------------ baslat
 (async function baslat() {
   try {
     durum.tanimlar = await api("/api/tanimlar");
+    surumRozetiniCiz();
     durum.calisma = bosCalisma();
     const k = await api("/api/calismalar");
     durum.kayitlar = k.calismalar;

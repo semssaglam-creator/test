@@ -786,6 +786,36 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Sürüm damgası, port uyarısı ve paketin gerçekten teslim edilmesi.**
+      Müfettiş "deniyorum yine aynı uygulama geliyor" dedi (2026-10-19).
+      Sebep koddaki bir değişiklik değil, **teslimdi**: `surumler/`
+      klasörüne kopyalama OKUBENI.md'de elle bir adım olarak yazılıydı ve
+      üç tur boyunca atlandı — paketleyici her seferinde yeni paket üretti,
+      kullanıcıya ise `surumler/` içindeki 16 Ekim tarihli dosya gitti.
+
+      Üç düzeltme:
+
+      1. **Paketleyiciler `surumler/`e kendileri kopyalıyor.** Elle adım
+         atlanabilir; betik atlamaz. OKUBENI.md'deki `cp` yönergesi kalktı.
+      2. **Sürüm damgası.** Paketleyiciler `surum.txt` yazıyor (tarih + git
+         kısa kimliği); `web_server.surum_damgasi` okuyor, `/api/tanimlar`
+         taşıyor, arayüz sağ üstte gösteriyor. Geliştirme ağacında
+         "geliştirme sürümü" yazar. Hangi kopyaya bakıldığını başka hiçbir
+         şey söylemiyordu.
+      3. **Port kayması artık sessiz değil.** Uygulamanın önceki kopyası
+         8766'yı tutuyorsa yeni kopya 8767'ye kayıyordu ve kullanıcının
+         tarayıcısındaki eski adres ESKİ sürümü göstermeye devam ediyordu.
+         `main.py` bunu yüksek sesle yazıyor; rozet de portu gösteriyor ve
+         8766 değilse uyarı rengine dönüyor.
+
+      Ayrıca **`guncelle.bat`in denetimi sahteydi**: kopyalama sonrası
+      yıllardır kaynakta duran `YENI_BICIM_SIFIRLAR` metnini arıyordu. O
+      metin ESKİ sürümde de bulunduğundan, dosyalar hiç yenilenmese bile
+      "GÜNCELLEME TAMAM" diyordu. Ölçüt artık sürüm damgasının birebir
+      eşitliği (`fc /b`), ve `guncelleme_paketle.sh` hem damganın pakette
+      olmasını hem betiğin onu karşılaştırmasını denetliyor — eski ölçüte
+      dönülürse paket üretilmiyor. (Bu denetimi damgayı pakete koymayı
+      bırakarak sınadım: paket üretilmedi.)
 - [x] **Alış ve satış fatura listeleri ayrıldı.** Müfettiş bildirdi
       (2026-10-19): "uygulamaya satış faturalarını ekledim ancak listenin
       altında indirim reddine aktar butonu ve tablosu çıktı. mükellefin

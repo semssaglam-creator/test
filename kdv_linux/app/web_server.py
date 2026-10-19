@@ -37,6 +37,24 @@ from .satirlar import (AYLAR, AYRISTIRMA_BLOKLARI, BEYAN_SATIRLARI,
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
 CIKTI_DIR = os.path.join(BASE_DIR, "ciktilar")
+SURUM_DOSYASI = os.path.join(BASE_DIR, "surum.txt")
+
+
+def surum_damgasi():
+    """Paketin surum damgasi; gelistirme agacinda "geliştirme sürümü".
+
+    Damgayi paketleyiciler yaziyor (tarih + git kisa kimligi). Ekranda
+    gorunmesi SART: kullanici guncelledikten sonra tarayicisinda eski
+    kopyaya bakiyorsa (uygulamanin onceki ornegi 8766'yi tuttugu icin yeni
+    kopya 8767'ye kaymissa) bunu baska hicbir sey soylemiyor. Sahada
+    "guncelledim ama ayni uygulama geliyor" diye ciktı (2026-10-19).
+    """
+    try:
+        with open(SURUM_DOSYASI, encoding="utf-8") as f:
+            damga = f.read().strip()
+        return damga or "sürüm damgası boş"
+    except OSError:
+        return "geliştirme sürümü"
 
 
 class ApiHata(Exception):
@@ -279,6 +297,11 @@ class Istekci(BaseHTTPRequestHandler):
                     "satici_alanlari": _fatura_modulu().SATICI_ALANLARI,
                     "fatura_yonleri": [{"kod": k, "etiket": e} for k, e in
                                        _fatura_modulu().YON_ETIKETLERI.items()],
+                    # Surum damgasi ve port, ekranda gorunsun: kullanici
+                    # "guncelledim ama ayni uygulama geliyor" dediginde
+                    # hangi kopyaya baktigini ancak bu soyleyebiliyor.
+                    "surum": surum_damgasi(),
+                    "port": self.server.server_address[1],
                 })
             elif yol == "/api/calismalar":
                 self._json_yanit({"calismalar": db.calismalari_listele()})

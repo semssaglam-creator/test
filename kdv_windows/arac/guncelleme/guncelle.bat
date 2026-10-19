@@ -128,19 +128,29 @@ copy /y "%~dp0yeni\main.py" "%HEDEF%\main.py" >nul 2>&1 || set "HATA=1"
 if "%HATA%"=="1" goto kopyaOlmadi
 
 rem --- 4) Gercekten yenilendi mi
-rem Yalnizca yeni surumde bulunan bir isaret aranir. Kopyalama "basarili"
-rem donup dosyanin eski kalmasi (kilitli dosya, yarim kopya) boylece
-rem sessizce gecmez.
+rem Olcut, paketin SURUM DAMGASIDIR: kurulan dosya ile paketteki dosya
+rem birebir ayni olmali. Eskiden yillardir kaynakta duran bir metin
+rem ("YENI_BICIM_SIFIRLAR") araniyordu; o metin ESKI surumde de bulundugu
+rem icin kopyalama hic yapilmamis olsa bile denetim geciyor ve betik
+rem "GUNCELLEME TAMAM" diyordu. Kullanici da guncelledigini saniyordu.
 echo   [3/3] Denetleniyor...
-findstr /m /c:"YENI_BICIM_SIFIRLAR" "%HEDEF%\app\pdf_beyanname.py" >nul 2>&1
+if not exist "%HEDEF%\surum.txt" goto denetimOlmadi
+fc /b "%~dp0yeni\surum.txt" "%HEDEF%\surum.txt" >nul 2>&1
 if errorlevel 1 goto denetimOlmadi
 
->>"%KAYIT%" echo [2] Kopyalandi ve denetlendi. Guncelleme TAMAM. 2>nul
+set "YENISURUM="
+for /f "usebackq delims=" %%s in ("%HEDEF%\surum.txt") do set "YENISURUM=%%s"
+>>"%KAYIT%" echo [2] Kopyalandi ve denetlendi. Surum: %YENISURUM% 2>nul
 echo.
 echo   GUNCELLEME TAMAM.
+echo   Kurulan surum: %YENISURUM%
 echo.
 echo   Uygulamayi her zamanki gibi acabilirsiniz:
 echo     %HEDEF%\calistir.bat
+echo.
+echo   Uygulama acildiginda sag ustte ayni surum damgasi yazmalidir.
+echo   Baska bir damga goruyorsaniz ESKI bir kopyaya bakiyorsunuzdur:
+echo   butun uygulama pencerelerini kapatip yeniden acin.
 echo.
 pause
 endlocal
@@ -174,9 +184,9 @@ pause
 exit /b 1
 
 :denetimOlmadi
->>"%KAYIT%" echo HATA: kopya sonrasi denetim tutmadi. Yedek: %YEDEK% 2>nul
+>>"%KAYIT%" echo HATA: surum damgasi tutmadi. Yedek: %YEDEK% 2>nul
 echo.
-echo   HATA: Dosyalar kopyalandi ama yeni surum taninmadi.
+echo   HATA: Dosyalar kopyalandi ama surum damgasi tutmadi.
 echo.
 echo   Uygulama acik olabilir ve dosyalari kilitliyor olabilir.
 echo   Kapatip yeniden deneyin. Eski surum su klasorde duruyor:
