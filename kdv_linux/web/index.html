@@ -539,7 +539,10 @@
       ilave edilir; azsa beyan esas alınır ve matrah indirilmez.
     </div>
     <div id="fatSatisOzet"></div>
-    <div class="yardim" id="fatSatisYonerge" style="margin-top:10px;"></div>
+    <div class="satir" style="margin-top:10px;">
+      <div class="otomatik"><button class="btn birincil" id="fatMatrahAktar">Matraha Aktar</button></div>
+      <div class="genis"><div class="yardim" id="fatSatisYonerge"></div></div>
+    </div>
   </div>
 
   <div class="kart" id="fatBulguKart" style="display:none;">
@@ -3541,28 +3544,52 @@ function faturaSatisOzetiniCiz() {
   }
   const eksikYil = satirlar.some((s) => !s.yil_var);
   const ilaveli = satirlar.filter((s) => s.fark > 0.005);
+  // Dokumun GEREKTIRDIGI ilave ile tespitlerde GIRILI olan karsilastirilir.
+  // Bir satirin iptal/itiraz tiki degistiginde döküm degisiyor ama bir kez
+  // yazilmis ilave oldugu yerde kaliyordu; fark burada gorunsun.
+  const girili = (yil, ay) => {
+    const k = (durum.calisma.yillar || []).find(
+      (x) => Number(x.yil) === Number(yil));
+    const dizi = k && k.elestiri ? k.elestiri.matrah_ilave : null;
+    return Array.isArray(dizi) ? Number(dizi[ay - 1] || 0) : 0;
+  };
+  const sapan = satirlar.filter(
+    (s) => Math.abs(Math.max(s.fark, 0) - girili(s.yil, s.ay)) > 0.005);
   kap.innerHTML =
     '<table class="tablo"><tr><th>Dönem</th><th>Belge</th>' +
     '<th>Düzenlenen Fatura Matrahı</th><th>Beyan Edilen Matrah</th>' +
-    '<th>Matrah İlavesi</th></tr>' +
-    satirlar.map((s) =>
-      `<tr><td>${s.yil}/${s.ay_adi}</td><td class="sag">${s.adet}</td>` +
+    '<th>Gereken Matrah İlavesi</th><th>Tespitlerde Girili</th></tr>' +
+    satirlar.map((s) => {
+      const g = girili(s.yil, s.ay);
+      const gereken = Math.max(s.fark, 0);
+      const uyum = Math.abs(gereken - g) <= 0.005;
+      return `<tr><td>${s.yil}/${s.ay_adi}</td><td class="sag">${s.adet}</td>` +
       `<td class="sag">${tl(s.fatura)}</td>` +
       `<td class="sag">${tl(s.beyan)}</td>` +
-      `<td class="sag${s.fark > 0.005 ? " fark-var" : ""}">` +
-      `${s.fark > 0.005 ? tl(s.fark) : "—"}</td></tr>`).join("") +
+      `<td class="sag${gereken > 0.005 ? " fark-var" : ""}">` +
+      `${gereken > 0.005 ? tl(gereken) : "—"}</td>` +
+      `<td class="sag${uyum ? "" : " fark-var"}">${tl(g)}</td></tr>`;
+    }).join("") +
     "</table>" +
     (eksikYil ? '<div class="uyari-satir" style="margin-top:8px;">Bazı ' +
       'satış faturalarının kayıt dönemi, beyan verisi yüklenmemiş bir yıla ' +
       'ait. O dönemlerde beyan 0 görünür; önce beyannameyi yükleyin.</div>'
       : "");
-  yonerge.innerHTML = ilaveli.length
-    ? `${ilaveli.length} dönemde düzenlenen faturalar beyanı aşıyor. Bu ` +
-      "ilaveyi <strong>İnceleme Tespitleri</strong> sekmesinde “İbraz " +
-      "etmeme: indirimlerin tamamını reddet” düğmesi yazar; matrah " +
-      "ilavesini ayrıca elle girmeniz gerekmez."
-    : "Hiçbir dönemde düzenlenen faturalar beyan edilen matrahı aşmıyor; " +
-      "matrah ilavesi gerekmiyor (beyan esas alınır).";
+  if (sapan.length) {
+    yonerge.innerHTML = `<strong>${sapan.length} dönemde</strong> döküm ile ` +
+      "tespitlerde girili matrah ilavesi tutmuyor (kırmızı hücreler). Bir " +
+      "satırın iptal/itiraz işaretini değiştirdiyseniz <strong>Matraha " +
+      "Aktar</strong> düğmesine basın; ilave dökümdeki güncel hâline göre " +
+      "yeniden yazılır. İndirim tarafına dokunulmaz.";
+    yonerge.style.color = "#a33";
+  } else {
+    yonerge.style.color = "";
+    yonerge.innerHTML = ilaveli.length
+      ? `${ilaveli.length} dönemde düzenlenen faturalar beyanı aşıyor ve ` +
+        "ilave tespitlere girilmiş durumda."
+      : "Hiçbir dönemde düzenlenen faturalar beyan edilen matrahı aşmıyor; " +
+        "matrah ilavesi gerekmiyor (beyan esas alınır).";
+  }
 }
 
 function faturaSaticiTablosunuCiz() {
@@ -4363,6 +4390,38 @@ async function faturalariIndirimeAktar(sessiz) {
   return true;
 }
 $("fatAktar").addEventListener("click", () => faturalariIndirimeAktar());
+
+/**
+ * Matrah ilavesini düzenlenen faturaların GÜNCEL hâline göre yazar.
+ *
+ * İndirim tarafına dokunmaz. Gerekçesi: fatura listesinde iptal/itiraz
+ * işareti değiştiğinde satış dökümü değişiyor ama bir kez yazılmış matrah
+ * ilavesi olduğu yerde kalıyordu — "tik yoksa hesaba dahil edilmeli".
+ */
+$("fatMatrahAktar").addEventListener("click", async () => {
+  try {
+    const y = await api("/api/matrah_ilavesi", { calisma: durum.calisma });
+    (y.yillar || []).forEach((gelen) => {
+      const kayit = yilBul(gelen.yil);
+      if (kayit) kayit.elestiri = gelen.elestiri;
+    });
+    durum.degisti = true;
+    isaretle(false);
+    await hesapla();
+    await faturalariTazele();
+    const o = y.ozet || {};
+    if (!o.satis_adet) {
+      mesaj("Yönü “Satış” olan fatura bulunamadı; matrah ilavesi " +
+            "yazılmadı.", "hata");
+    } else if (o.matrah_donem) {
+      mesaj(`${o.matrah_donem} dönemin matrah ilavesi düzenlenen ` +
+            "faturalara göre yazıldı.", "iyi");
+    } else {
+      mesaj("Düzenlenen faturalar beyan edilen matrahı aşmıyor; matrah " +
+            "ilavesi gerekmedi (beyan esas alınır).", "iyi");
+    }
+  } catch (hata) { mesaj(hata.message, "hata"); }
+});
 
 $("fatSaticiEkle").addEventListener("click", saticiElleEkle);
 

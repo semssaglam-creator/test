@@ -786,6 +786,37 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **İptal/itiraz tiki kaldırılınca matrah ilavesi güncellenmiyordu.**
+      Müfettiş bildirdi (2026-10-19): "düzenlediği belgelerin 2 adedinde
+      iptal itiraz kaydı var ancak onaylanmamış olduğu için matraha dahil
+      etmem gerek. Tikleri kaldırıyorum ancak yine de matraha dahil
+      etmiyor. Kısacası tik yoksa hesaba dahil edilmeli."
+
+      Tik DOĞRU çalışıyordu: `satis_donem_toplamlari` tiki kalkan faturayı
+      hemen görüyor. Sorun matrah ilavesinin **tek seferlik** yazılmasıydı
+      — "İbraz etmeme: indirimlerin tamamını reddet" düğmesi onu bir kez
+      eleştiriye yazıyor, sonraki fatura değişiklikleri o rakama
+      yansımıyordu. Ekran dökümle tutmayan bir ilave gösteriyordu.
+
+      - `hesap.matrah_ilavesi_yaz` ayrı bir işleve çıkarıldı; hem ibraz
+        etmeme kuralı hem yeni akış onu çağırıyor (tek hesap). Döküm artık
+        ilave gerektirmiyorsa **önce yazılmış tutarı da kaldırıyor** —
+        yoksa tik geri konulduğunda asılı kalırdı.
+      - Yeni uç `/api/matrah_ilavesi` ve satış kartında **"Matraha Aktar"**
+        düğmesi: yalnızca matrah/hesaplanan KDV ilavesini günceller,
+        indirim reddine dokunmaz.
+      - Satış kartındaki tablo artık "Gereken Matrah İlavesi" ile
+        "Tespitlerde Girili" sütunlarını yan yana gösteriyor; tutmayan
+        hücreler kırmızı ve kart ne yapılacağını yazıyor. Alış tarafındaki
+        `uygulama_farki` deseninin aynısı.
+
+      Önceki turda satış kartına bilinçli olarak aktarım düğmesi
+      koymamıştım ("ikinci bir yol rakamları ayrıştırır" diye); o karar bu
+      çıkmazı doğurdu. Düğme artık var ama ayrı bir hesap yapmıyor, aynı
+      işlevi çağırıyor.
+
+      Tarayıcıda uçtan uca denendi: tik kalkınca kart farkı kırmızı
+      gösteriyor, düğmeden sonra iki sütun eşitleniyor.
 - [x] **Ceza katı artık KAYNAĞA göre: matrah farkı 1 kat, indirim reddi
       3 kat.** Müfettişin kararı (2026-10-19): "matrah farkından
       kaynaklanan tutarlara uygulanacak vergi ziyaı cezası 1 kat, ancak

@@ -422,6 +422,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._ibraz_raporu_gonder(veri)
             elif yol == "/api/ibraz_etmeme_onizleme":
                 self._json_yanit(self._ibraz_raporu_onizleme(veri))
+            elif yol == "/api/matrah_ilavesi":
+                self._json_yanit(self._matrah_ilavesi(veri))
             elif yol == "/api/ibraz_elestirisi":
                 self._json_yanit(self._ibraz_elestirisi(veri))
             elif yol == "/api/excel":
@@ -888,6 +890,40 @@ class Istekci(BaseHTTPRequestHandler):
                          "matrah_donem": matrah_donem,
                          "satis_adet": sum(h["adet"] for h in satis.values()),
                          "donemsiz_satis": donemsiz}}
+
+    def _matrah_ilavesi(self, veri):
+        """Duzenlenen faturalara gore matrah ilavesini yeniden yazar.
+
+        Indirim tarafina DOKUNMAZ; yalnizca matrah/hesaplanan KDV ilavesi
+        guncellenir. Gerekcesi: fatura listesinde bir satirin iptal/itiraz
+        tiki degistiginde satis dokumu degisiyor ama bir kez yazilmis
+        matrah ilavesi oldugu yerde kaliyordu ve ekran dokumle tutmayan
+        bir rakam gosteriyordu (sahada boyle cikti, 2026-10-19).
+        """
+        calisma = veri.get("calisma") or {}
+        faturalar = _fatura_modulu()
+        mukellef_vkn = (calisma.get("mukellef") or {}).get("vkn_tckn")
+        liste = faturalar.normalize(calisma.get("faturalar"), mukellef_vkn)
+        satis = faturalar.satis_donem_toplamlari(liste)
+
+        yillar, degisen = [], 0
+        for ham in _yillari_coz(calisma):
+            elestiri = dict(ham.get("elestiri") or {})
+            # Diziler kopyalanmali: yerinde degistirmek istemciden gelen
+            # calismayi da degistirir ve "degisti mi" karsilastirmasi bozulur.
+            for alan in ("matrah_ilave", "hesaplanan_kdv_ilave",
+                         "hesaplanan_otomatik"):
+                if isinstance(elestiri.get(alan), list):
+                    elestiri[alan] = list(elestiri[alan])
+            if hesap.matrah_ilavesi_yaz(elestiri, ham, satis):
+                degisen += 1
+            yillar.append({"yil": ham["yil"], "elestiri": elestiri})
+        donem = sum(1 for y in yillar
+                    for v in (y["elestiri"].get("matrah_ilave") or [])
+                    if isinstance(v, (int, float)) and v > 0.005)
+        return {"yillar": yillar,
+                "ozet": {"matrah_donem": donem, "degisen_yil": degisen,
+                         "satis_adet": sum(h["adet"] for h in satis.values())}}
 
     def _ibraz_raporu_hazirla(self, veri):
         """Ibraz etmeme raporu taslaklarini uretir (yil yil) + VSR.

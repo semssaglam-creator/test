@@ -502,6 +502,58 @@ esit(ozet_bos["satis_adet"], 0, "satış yoksa özet bunu bildiriyor")
 denetle(ozet_bos["indirim_donem"] > 0,
         "satış yokken de indirimlerin reddi sürüyor")
 
+
+# ------------------------------------- 5) iptal/itiraz tikinin etkisi
+# Sahada cikti (2026-10-19): bir satirin iptal/itiraz tiki kaldirilinca
+# satis dokumu degisiyor ama BIR KEZ yazilmis matrah ilavesi oldugu yerde
+# kaliyordu. "Tik yoksa hesaba dahil edilmeli."
+print("\n5) İptal/itiraz tiki ve matrah ilavesi")
+h6 = istekci()
+
+
+def satis_iptali(c, deger):
+    for f in c["faturalar"]:
+        if f.get("duzenleyen_vkn") == c["mukellef"]["vkn_tckn"]:
+            f["iptal"] = deger
+
+
+def elestiriyi_yaz(c, yan):
+    for y in yan["yillar"]:
+        kayit = next(k for k in c["yillar"] if k["yil"] == y["yil"])
+        kayit["elestiri"] = y["elestiri"]
+
+
+c_iptal = ornek(uygula=False)
+satis_iptali(c_iptal, True)
+elestiriyi_yaz(c_iptal, h6._ibraz_elestirisi({"calisma": c_iptal}))
+esit(c_iptal["yillar"][0]["elestiri"]["matrah_ilave"][0], 0.0,
+     "iptal işaretliyken matraha dahil edilmiyor")
+
+# Tik kaldirilinca dokum degisiyor; "Matraha Aktar" bunu yaziyor.
+satis_iptali(c_iptal, False)
+liste_i = F.normalize(c_iptal["faturalar"], c_iptal["mukellef"]["vkn_tckn"])
+esit((F.satis_donem_toplamlari(liste_i).get((2021, 1)) or {}).get("matrah"),
+     6250.0, "tik kaldırılınca döküm faturayı görüyor")
+yan_m = h6._matrah_ilavesi({"calisma": c_iptal})
+esit(yan_m["ozet"]["matrah_donem"], 1, "akış bir dönemde ilave yazıyor")
+elestiriyi_yaz(c_iptal, yan_m)
+esit(c_iptal["yillar"][0]["elestiri"]["matrah_ilave"][0], 6250.0,
+     "tik yoksa matraha dahil ediliyor")
+# INDIRIM tarafina dokunulmamali: iki akis ayri kalemleri yaziyor.
+esit(c_iptal["yillar"][0]["elestiri"]["indirim_cikar"][0], 2442.75,
+     "matrah akışı indirim reddine dokunmuyor")
+esit(W._hesapla(c_iptal)[0]["donemler"][0]["fark_tespit"]["matrah"], 6250.0,
+     "hesap matrah farkını görüyor")
+
+# Tik GERI konulursa once yazilmis ilave de kalkmali; yoksa dokumle
+# tutmayan bir tutar asili kalir.
+satis_iptali(c_iptal, True)
+yan_g = h6._matrah_ilavesi({"calisma": c_iptal})
+esit(yan_g["yillar"][0]["elestiri"]["matrah_ilave"][0], 0.0,
+     "tik geri konulunca ilave kaldırılıyor")
+esit(yan_g["yillar"][0]["elestiri"]["indirim_cikar"][0], 2442.75,
+     "geri alırken de indirim reddi korunuyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

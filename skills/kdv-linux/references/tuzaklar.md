@@ -163,3 +163,21 @@ duran bir metni ariyordu; o metin ESKI surumde de bulundugundu icin
 kopyalama hic olmasa bile "GUNCELLEME TAMAM" diyordu. Olcut artik surum
 damgasinin BIREBIR esitligi. (Bkz. 10: gecen bir denetim, gecmesi
 gerektigi icin mi geciyor?)
+
+## 13. Bir kez yazilan elestiri, veri degisince guncellenmez
+
+Elestiri alanlarini dolduran akislar (ibraz etmeme kurali, indirim reddine
+aktarma, matraha aktarma) TEK SEFERLIK yazar. Kullanici sonradan fatura
+listesinde bir sey degistirirse - iptal/itiraz tikini kaldirmak, satir
+cikarmak, yonu duzeltmek - o rakam oldugu yerde kalir ve ekran dokumle
+tutmayan bir tutar gosterir. Sahada boyle cikti: tik kaldirildi, matraha
+dahil edilmedi, kullanici "tik yoksa hesaba dahil edilmeli" dedi.
+
+Kural: elestiriyi besleyen her veri icin, DOKUMUN GEREKTIRDIGI tutar ile
+ELESTIRIDE GIRILI tutar yan yana gosterilmeli ve tutmadiginda yeniden
+yazma yolu bir dugme kadar yakin olmali. Alis tarafinda `uygulama_farki`
++ "Indirim Reddine Aktar", satis tarafinda `satis_beyan_farki` +
+"Matraha Aktar" bunu yapiyor.
+
+Elestiriyi kendiliginden ezmeyin: kullanici elle tutar girmis olabilir.
+Ama "sessizce eski rakamla devam etmek" de secenek degil.

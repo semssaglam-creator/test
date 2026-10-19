@@ -104,7 +104,33 @@ def ibraz_etmeme_elestirisi(yil_kaydi, satis_toplamlari=None):
         if indirim > 0.005:
             elestiri["indirim_cikar"][ay] = _yuvarla(indirim)
             degisti = True
+    if matrah_ilavesi_yaz(elestiri, yil_kaydi, satis_toplamlari):
+        degisti = True
+    return elestiri, degisti
 
+
+def matrah_ilavesi_yaz(elestiri, yil_kaydi, satis_toplamlari):
+    """Duzenlenen faturalara gore matrah ilavesini VERILEN elestiriye yazar.
+
+    Indirim tarafina DOKUNMAZ. Iki cagiran var ve ikisi de ayni hesabi
+    gormeli: ibraz etmeme kurali (butun elestiriyi bastan kurar) ve
+    "matraha aktar" akisi (yalnizca bu kalemi gunceller). Sahada su cikti
+    (2026-10-19): fatura listesinde iptal/itiraz tiki kaldirilinca satis
+    dokumu degisiyor ama bir kez yazilmis matrah ilavesi oldugu yerde
+    kaliyordu; kullanici "tik yoksa hesaba dahil edilmeli" diyordu.
+
+    Doner: bir tutar yazildi mi.
+    """
+    beyan = yil_kaydi.get("beyan") or {}
+    yil = int(yil_kaydi.get("yil") or 0)
+    ay_sayisi = max(1, min(int(yil_kaydi.get("ay_sayisi") or 12), 12))
+    satis_toplamlari = satis_toplamlari or {}
+    for alan in ("matrah_ilave", "hesaplanan_kdv_ilave"):
+        elestiri.setdefault(alan, [0.0] * 12)
+    elestiri.setdefault("hesaplanan_otomatik", [True] * 12)
+
+    degisti = False
+    for ay in range(ay_sayisi):
         satis = satis_toplamlari.get((yil, ay + 1)) or {}
         matrah_farki = _yuvarla(float(satis.get("matrah") or 0.0)
                                 - _d(beyan, "matrah_toplami", ay))
@@ -117,7 +143,16 @@ def ibraz_etmeme_elestirisi(yil_kaydi, satis_toplamlari=None):
             elestiri["hesaplanan_otomatik"][ay] = False
             elestiri["hesaplanan_kdv_ilave"][ay] = max(kdv_farki, 0.0)
             degisti = True
-    return elestiri, degisti
+        else:
+            # Dokum artik ilave gerektirmiyorsa (iptal tiki konuldu, fatura
+            # cikarildi) ONCE YAZILMIS tutar da kalkmali; yoksa ekranda
+            # dokumle tutmayan bir ilave asili kalir.
+            if _d(elestiri, "matrah_ilave", ay) > 0.005:
+                degisti = True
+            elestiri["matrah_ilave"][ay] = 0.0
+            elestiri["hesaplanan_kdv_ilave"][ay] = 0.0
+            elestiri["hesaplanan_otomatik"][ay] = True
+    return degisti
 
 
 def _indirim_sinirlansin(elestiri, ay):
