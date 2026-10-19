@@ -786,6 +786,35 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Matrah ilavesinin dayanağı VUK'tan KDV Kanununa taşındı.**
+      Müfettişin kararı (2026-10-19): "beyan edilmeyen faturaların matraha
+      eklenmesine ilişkin paragrafa Vergi Usul Kanunu delili sunma, ona
+      ilişkin KDV Kanununda madde var — fatura düzenlendiyse veya KDV
+      hesaplandıysa beyan zorunlu".
+
+      4.2.4'teki gerekçe artık VUK 3/B değil, KDVK'nın kendi zinciri:
+
+      - **1/1** verginin konusu (teslim ve hizmetler)
+      - **2** teslim, **3** teslim sayılan haller
+      - **20** matrah = işlemin karşılığını teşkil eden bedel
+      - **10/a-b** vergiyi doğuran olay. (b) bendi belirleyici: teslimden
+        ÖNCE fatura verilmişse, **belgede gösterilen miktarla sınırlı
+        olmak üzere** faturanın düzenlenmesi anında vergiyi doğuran olay
+        meydana gelir → fatura düzenlenmişse vergi doğmuştur
+      - **8/2** vergiye tabi bir işlem olmasa DAHİ vesikada KDV
+        gösterenler o vergiyi ödemekle mükelleftir → faturada KDV
+        hesaplanmışsa beyan ve ödeme zorunludur
+      - **40** beyan esası; işlemi olmayan mükellef dahi beyanname verir
+
+      Maddelerin metinleri `mevzuat.py`ye eklendi (`kdv_1`, `kdv_2`,
+      `kdv_3`, `kdv_8_2`, `kdv_10`, `kdv_20`, `kdv_40`) ve 4.2.3'e
+      **yalnızca matrah ilavesi varsa** giriyor — ilave yokken rapora
+      ilgisiz hüküm doldurmak okuyanı yorar. İki mutasyonla denetlendi.
+
+      Not: bu madde metinleri de bilgiden yazıldı, birincil kaynaktan
+      doğrulanmadı (bkz. "İbraz etmemede bekleyen"). 1, 2, 3, 8/2, 10, 20
+      ve 40 esasa ilişkin olarak uzun süredir değişmedi, yine de taslak
+      üzerinde bir kez denetlenmeli.
 - [x] **Sürüm damgası, port uyarısı ve paketin gerçekten teslim edilmesi.**
       Müfettiş "deniyorum yine aynı uygulama geliyor" dedi (2026-10-19).
       Sebep koddaki bir değişiklik değil, **teslimdi**: `surumler/`

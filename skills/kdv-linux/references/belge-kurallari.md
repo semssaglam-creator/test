@@ -101,12 +101,21 @@ mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.
 Hesaplanan KDV farki faturalarin kendi KDV'sinden gelir, orana BOLUNMEZ:
 dokumde sifir KDV'li satirlar bulunabiliyor.
 
+**Ilavenin dayanagi VUK DEGIL, KDV Kanunudur** (mufettisin karari,
+2026-10-19). Zincir: 1/1 verginin konusu -> 2 ve 3 teslim ve teslim
+sayilan haller -> 20 matrah -> **10/b** teslimden once fatura verilmisse
+BELGEDE GOSTERILEN MIKTARLA SINIRLI olmak uzere faturanin duzenlenmesi
+aninda vergiyi doguran olay dogar -> **8/2** vergiye tabi islem olmasa
+DAHI vesikada KDV gosteren o vergiyi odemekle mukelleftir -> 40 beyan
+esasi. Kisacasi: fatura duzenlendiyse vergi dogmus, faturada KDV
+hesaplandiysa beyan zorunlu hale gelmistir. VUK 3/B'yi buraya dayanak
+yapmayin.
+
 Bu kural raporda yalnizca madde atfiyla gecistirilmez: 4.2.4 tespiti,
-olcutu (defter ibraz edilmedigi icin beyan denetlenemez; mukellefin kendi
-duzenledigi belge en guvenilir dayanak), yontemi (donem donem, yalnizca
-aleyhe; beyandan asagi inilmez cunku dokum teslimlerin tamamini
-kapsamayabilir) ve donem donem karsilastirma tablosunu yazar. Tarhiyatin
-en tartismali kalemi budur; gerekce yazilmazsa itiraz edilebilir kalir.
+yukaridaki olcutu, yontemi (donem donem, yalnizca aleyhe; beyandan asagi
+inilmez cunku dokum teslimlerin tamamini kapsamayabilir) ve donem donem
+karsilastirma tablosunu yazar. Tarhiyatin en tartismali kalemi budur;
+gerekce yazilmazsa itiraz edilebilir kalir.
 
 **Alis ve satis AYRI yerlere gider:** alinan faturalar indirime, duzenlenen
 faturalar matraha. Arayuzde liste yon kulakciklariyla ayrilir ve "indirim

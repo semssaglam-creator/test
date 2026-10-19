@@ -317,16 +317,36 @@ denetle("katma değer vergisi matrahının" in m
         and "indirim konusu yapılan katma değer vergisinin dayanağıdır" in m,
         "düzenlenen belgeler matraha, adına düzenlenenler indirime bağlanıyor")
 
-# Matrah ilavesi varsa gerekcesi yazilmali, yoksa yazilmamali.
-denetle("3 üncü maddesinin (B) fıkrası" in m,
-        "matrah ilavesi VUK 3/B ile gerekçelendiriliyor")
+# Matrah ilavesinin dayanagi VUK DEGIL, KDV Kanununun kendi hukumleri
+# (mufettisin karari, 2026-10-19): fatura duzenlenmisse vergiyi doguran
+# olay gerceklesmis, faturada KDV gosterilmisse o vergi odenmesi gereken
+# vergi haline gelmistir.
+denetle("3 üncü maddesinin (B) fıkrası" not in m,
+        "matrah ilavesi artık VUK 3/B'ye dayandırılmıyor")
+denetle("10 uncu maddesinin (a) bendinde" in m
+        and "belgelerde gösterilen miktarla sınırlı olmak üzere" in m,
+        "vergiyi doğuran olay KDVK 10/a-b ile kuruluyor")
+denetle("8 inci maddesinin ikinci fıkrası" in m
+        and "bu vergiyi ödemekle mükellef" in m,
+        "faturada KDV gösterilmişse ödeme mecburiyeti KDVK 8/2'ye bağlanıyor")
+denetle("beyan edilip ödenmesi gereken bir vergi hâline gelmiştir" in m,
+        "hesaplanan KDV'nin beyan zorunluluğu sonucu yazılıyor")
+denetle("40 ıncı maddesi" in m and "yazılı beyanları üzerine tarh" in m,
+        "beyan esası KDVK 40'a dayandırılıyor")
+denetle("1 inci maddesinin birinci fıkrası" in m
+        and "20 nci maddesine göre teslim ve hizmet işlemlerinde matrah" in m,
+        "verginin konusu ve matrah KDVK 1 ve 20 ile kuruluyor")
+denetle("teslim sayılan haller ise 3 üncü maddede" in m,
+        "teslim sayılan haller anılıyor")
+# Maddelerin METINLERI de 4.2.3'e girmeli, yalnizca atif yetmez.
+denetle("md. 10 — Vergiyi Doğuran Olayın Meydana Gelmesi" in m
+        and "md. 8/2 — Belgede Gösterilen Verginin Ödenmesi" in m,
+        "KDVK madde metinleri yasal düzenlemeler bölümüne giriyor")
 
 # Degerlendirme paragrafi: yalnizca madde atfi degil, GEREKCE ve yontem de
 # yazilmali (mufettisin istegi, 2026-10-19).
-denetle("beyan edilen matrahın doğruluğu kayıtlar üzerinden "
-        "denetlenememiştir" in m, "ölçütün neden beyan olmadığı yazılıyor")
-denetle("gerçek mahiyetin ortaya konmasında en güvenilir dayanaktır" in m,
-        "kendi düzenlediği belgenin delil değeri açıklanıyor")
+denetle("ilgili dönem katma değer vergisi beyannamesine yansıtmadığı "
+        "belgeler" in m, "beyan dışı bırakılan belgelere bağlanıyor")
 denetle("yalnızca mükellef kurumun aleyhine olan yönde ilave" in m,
         "yalnızca aleyhe yönde ilave yapıldığı yazılıyor")
 denetle("beyan esas alınarak matrah indirilmemiştir" in m,
@@ -352,8 +372,10 @@ m_satissiz = IB.rapor_uret(W._inceleme_bilgisi(ornek(satis=False)),
                            ornek(satis=False)["kunye"],
                            W._hesapla(ornek(satis=False))[0], ornek(satis=False),
                            2021).duz_metin()
-denetle("3 üncü maddesinin (B) fıkrası" not in m_satissiz,
-        "matrah ilavesi yoksa VUK 3/B paragrafı yazılmıyor")
+denetle("8 inci maddesinin ikinci fıkrası" not in m_satissiz,
+        "matrah ilavesi yoksa KDVK gerekçe paragrafı yazılmıyor")
+denetle("md. 8/2 — Belgede Gösterilen Verginin Ödenmesi" not in m_satissiz,
+        "matrah ilavesi yoksa KDVK maddeleri de listelenmiyor")
 
 # --------------------------------------------------- 4) uc noktaya baglanti
 print("\n4) Rapor indirilirken")

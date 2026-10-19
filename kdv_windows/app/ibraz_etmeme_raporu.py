@@ -359,11 +359,25 @@ def _gun(iso):
     return iso or ""
 
 
+def _matrah_ilavesi_var(donemler):
+    """Herhangi bir donemde matrah ilavesi yapilmis mi."""
+    return any(float(d["elestirili"].get("matrah") or 0.0)
+               - float(d["beyan"].get("matrah") or 0.0) > 0.005
+               for d in donemler)
+
+
 def _yasal_duzenlemeler(b, kunye, yil, donemler):
     b.baslik("4.2.3- Konuya İlişkin Yasal Düzenlemeler", duzey=2)
-    for baslik, metin in mevzuat.maddeler(["vuk_3b", "vuk_134", "vuk_227",
-                                           "vuk_229", "kdv_29", "kdv_34",
-                                           "vuk_341", "vuk_344"]):
+    maddeler = ["vuk_3b", "vuk_134", "vuk_227", "vuk_229", "kdv_29", "kdv_34"]
+    # Matrah ilavesi varsa onun dayanagi olan KDVK hukumleri de buraya
+    # girer: ilave, VUK'a degil KDV Kanununun kendi hukumlerine dayaniyor
+    # (mufettisin karari, 2026-10-19). Ilave yoksa bu maddeler yazilmaz;
+    # rapora ilgisiz hukum doldurmak okuyani yoruyor.
+    if _matrah_ilavesi_var(donemler):
+        maddeler += ["kdv_1", "kdv_2", "kdv_3", "kdv_10", "kdv_8_2",
+                     "kdv_20", "kdv_40"]
+    maddeler += ["vuk_341", "vuk_344"]
+    for baslik, metin in mevzuat.maddeler(maddeler):
         b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120,
                    aralik_sonra=40)
         b.paragraf("“%s”" % metin, girinti=1, italik=True)
@@ -492,17 +506,48 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         % (M(kunye, ek="in"),
            "%s %s" % (yil, ik.donem_adi(kunye, False, "bulunma")),
            _tl(beyan_toplam)), girinti=1)
+    # Dayanak VUK DEGIL, KDV Kanununun kendi hukumleridir (mufettisin
+    # karari, 2026-10-19): fatura duzenlenmisse vergiyi doguran olay
+    # gerceklesmis, faturada KDV gosterilmisse o vergi odenmesi gereken
+    # vergi haline gelmistir. Zincir mevzuat.kdv_1/2/3/10/8_2/20/40.
     b.paragraf(
-        "Yasal defter ve belgeler ibraz edilmediğinden beyan edilen "
-        "matrahın doğruluğu kayıtlar üzerinden denetlenememiştir. 213 sayılı "
-        "Vergi Usul Kanunu’nun 3 üncü maddesinin (B) fıkrasında "
-        "vergilendirmede vergiyi doğuran olay ve bu olaya ilişkin "
-        "muamelelerin gerçek mahiyetinin esas olduğu hükme bağlanmıştır. "
-        "%s kendi düzenlediği ve karşı taraf nezdinde de kayıtlı olan "
-        "belgeler, gerçek mahiyetin ortaya konmasında en güvenilir "
-        "dayanaktır; bu nedenle katma değer vergisi matrahı, beyan yerine "
-        "bu belgelere göre kurulmuştur." % M(kunye, buyuk=True, ek="in"),
-        girinti=1)
+        "Katma değer vergisinde matrahın ve beyanın dayanağı, 3065 sayılı "
+        "Katma Değer Vergisi Kanunu’nun kendi hükümleridir. Mezkûr "
+        "Kanun’un 1 inci maddesinin birinci fıkrası uyarınca ticarî, sınaî, "
+        "ziraî faaliyet ve serbest meslek faaliyeti çerçevesinde yapılan "
+        "teslim ve hizmetler katma değer vergisine tabi olup, teslim 2 nci "
+        "maddede tanımlanmış, teslim sayılan haller ise 3 üncü maddede "
+        "sayılmıştır. Aynı Kanun’un 20 nci maddesine göre teslim ve hizmet "
+        "işlemlerinde matrah, bu işlemlerin karşılığını teşkil eden "
+        "bedeldir.", girinti=1)
+    b.paragraf(
+        "Söz konusu Kanun’un vergiyi doğuran olayı düzenleyen 10 uncu "
+        "maddesinin (a) bendinde mal teslimi ve hizmet ifası hallerinde "
+        "malın teslimi veya hizmetin yapılması, (b) bendinde ise malın "
+        "tesliminden veya hizmetin yapılmasından önce fatura veya benzeri "
+        "belgeler verilmesi hallerinde, bu belgelerde gösterilen miktarla "
+        "sınırlı olmak üzere fatura veya benzeri belgelerin düzenlenmesi "
+        "anında vergiyi doğuran olayın meydana geleceği hükme "
+        "bağlanmıştır. Buna göre fatura düzenlenmiş olması, belgede "
+        "gösterilen tutar bakımından vergiyi doğuran olayın gerçekleştiğini "
+        "göstermektedir. Kanun’un 8 inci maddesinin ikinci fıkrası ise, "
+        "vergiye tabi bir işlem söz konusu olmasa dahi düzenledikleri "
+        "vesikalarda katma değer vergisi gösterenlerin bu vergiyi ödemekle "
+        "mükellef olduklarını hükme bağlamıştır; dolayısıyla bir faturada "
+        "katma değer vergisi hesaplanmışsa o vergi, her hâlükârda beyan "
+        "edilip ödenmesi gereken bir vergi hâline gelmiştir.", girinti=1)
+    b.paragraf(
+        "Kanun’un 40 ıncı maddesi uyarınca katma değer vergisi, aksine "
+        "hüküm bulunmadıkça mükelleflerin yazılı beyanları üzerine tarh "
+        "olunur ve vergiye tabi işlemi bulunmayan mükellefler dahi "
+        "beyanname vermek mecburiyetindedir. %s düzenlediği, ancak ilgili "
+        "dönem katma değer vergisi beyannamesine yansıtmadığı belgeler, "
+        "vergiyi doğuran olayı gerçekleşmiş ve üzerinde hesaplanan katma "
+        "değer vergisi de beyan edilmesi gereken hâle gelmiş olan "
+        "teslimlere ilişkindir. Bu nedenle söz konusu belgelerin matrahı ve "
+        "bunlar üzerinde gösterilen katma değer vergisi, ait oldukları "
+        "dönem beyanlarına ilave edilmiştir."
+        % M(kunye, buyuk=True, ek="in"), girinti=1)
     b.paragraf(
         "Karşılaştırma dönem dönem yapılmış ve yalnızca %s aleyhine olan "
         "yönde ilave yapılmıştır: düzenlenen belgelerin toplamı beyan "

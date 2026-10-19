@@ -93,6 +93,69 @@ MADDELER = {
         "Değer Vergisi, alış faturası veya benzeri vesikalar ve gümrük makbuzu "
         "üzerinden ayrıca gösterilmek ve bu vesikalar kanuni defterlere "
         "kaydedilmek şartıyla indirilebilir."),
+    # --- Beyan edilmeyen teslimlerin matraha ilavesinin dayanagi ---
+    # Mufettisin karari (2026-10-19): bu ilave VUK 3/B ile degil, KDV
+    # Kanununun KENDI hukumleriyle gerekcelendirilmeli. Zincir su:
+    # verginin konusu (1/1) -> teslim ve teslim sayilan haller (2, 3) ->
+    # vergiyi doguran olay, fatura duzenlenmisse belgedeki miktarla
+    # sinirli olarak (10/a-b) -> faturada KDV gosterilmisse odeme
+    # mukellefiyeti (8/2) -> matrah (20) -> beyan mecburiyeti (40).
+    "kdv_1": (
+        "3065 sayılı KDV Kanunu md. 1/1 — Verginin Konusunu Teşkil Eden "
+        "İşlemler",
+        "Türkiye’de yapılan aşağıdaki işlemler katma değer vergisine "
+        "tabidir: 1. Ticarî, sınaî, ziraî faaliyet ve serbest meslek "
+        "faaliyeti çerçevesinde yapılan teslim ve hizmetler."),
+    "kdv_2": (
+        "3065 sayılı KDV Kanunu md. 2/1 — Teslim",
+        "Teslim, bir mal üzerindeki tasarruf hakkının malik veya onun adına "
+        "hareket edenlerce, alıcıya veya adına hareket edenlere "
+        "devredilmesidir. Bir malın alıcı veya onun adına hareket edenlerin "
+        "gösterdiği yere veya kişilere tevdii teslim hükmündedir."),
+    "kdv_3": (
+        "3065 sayılı KDV Kanunu md. 3 — Teslim Sayılan Haller",
+        "Aşağıdaki haller teslim sayılır: a) Vergiye tabi malların her ne "
+        "suretle olursa olsun, vergiye tabi işlemler dışındaki amaçlarla "
+        "işletmeden çekilmesi, vergiye tabi malların işletme personeline "
+        "ücret, prim, ikramiye, hediye, teberru gibi namlarla verilmesi, "
+        "b) Vergiye tabi malların, üretilip teslimi vergiden istisna "
+        "edilmiş olan mallar için her ne suretle olursa olsun kullanılması "
+        "veya sarfı, c) Mülkiyeti muhafaza kaydıyla yapılan satışlarda "
+        "zilyedliğin devri."),
+    "kdv_8_2": (
+        "3065 sayılı KDV Kanunu md. 8/2 — Belgede Gösterilen Verginin "
+        "Ödenmesi",
+        "Vergiye tabi bir işlem söz konusu olmadığı veya katma değer "
+        "vergisini fatura veya benzeri vesikalarda göstermeye hakkı "
+        "bulunmadığı halde; düzenlediği bu tür vesikalarda katma değer "
+        "vergisi gösterenler, bu vergiyi ödemekle mükelleftirler. Bu husus "
+        "kanuna göre borçlu oldukları vergi tutarından daha yüksek bir "
+        "meblağı gösteren mükellefler için de geçerlidir."),
+    "kdv_10": (
+        "3065 sayılı KDV Kanunu md. 10 — Vergiyi Doğuran Olayın Meydana "
+        "Gelmesi",
+        "Vergiyi doğuran olay: a) Mal teslimi ve hizmet ifası hallerinde, "
+        "malın teslimi veya hizmetin yapılması, b) Malın tesliminden veya "
+        "hizmetin yapılmasından önce fatura veya benzeri belgeler verilmesi "
+        "hallerinde, bu belgelerde gösterilen miktarla sınırlı olmak üzere "
+        "fatura veya benzeri belgelerin düzenlenmesi, anında meydana "
+        "gelir."),
+    "kdv_20": (
+        "3065 sayılı KDV Kanunu md. 20 — Teslim ve Hizmet İşlemlerinde "
+        "Matrah",
+        "Teslim ve hizmet işlemlerinde matrah, bu işlemlerin karşılığını "
+        "teşkil eden bedeldir. Bedel deyimi, malı teslim alan veya "
+        "kendisine hizmet yapılan veyahut bunlar adına hareket edenlerden "
+        "bu işlemler karşılığında her ne suretle olursa olsun alınan veya "
+        "bunlarca borçlanılan para, mal ve diğer suretlerde sağlanan ve "
+        "para ile temsil edilebilen menfaat, hizmet ve değerler toplamını "
+        "ifade eder."),
+    "kdv_40": (
+        "3065 sayılı KDV Kanunu md. 40 — Beyan Esası",
+        "Katma değer vergisi, bu Kanunda aksine hüküm bulunmadıkça "
+        "mükelleflerin yazılı beyanları üzerine tarholunur. Herhangi bir "
+        "vergilendirme döneminde vergiye tabi işlemleri bulunmayan "
+        "mükellefler de beyanname vermek mecburiyetindedirler."),
     "kdv_teblig": (
         "KDV Genel Uygulama Tebliği (IV/E) — Sahte Belge",
         "Gerçek bir işleme dayanmayan, mal ya da hizmet teslimi olmaksızın "
