@@ -1640,7 +1640,13 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     # `liste` daraltmasi onu elemez, kendi `elle_yil`ine bakilmasi gerekir.
     satici_satirlari = F.satici_ozeti(liste, saticilar,
                                       int(yil) if yil is not None else None)
-    ceza = F.ceza_dagilimi(liste, saticilar, sonuc)
+    # Defter ve belge ibraz edilmemisse ziyanin tamami VUK 359/a-2
+    # kapsamindadir; sahte belgeye atfedilemeyen kalan tutar da uc kat
+    # tasir (mufettisin karari, 2026-10-19).
+    ceza = F.ceza_dagilimi(
+        liste, saticilar, sonuc,
+        dayanaksiz_kat=3 if ik.secim_mi(kunye, "defter_ibraz",
+                                        "İbraz edilmedi") else 1)
     oran = F.sahte_belge_orani(liste, sonuc, saticilar)
     ouc = None
     if ik.secim_mi(kunye, "ouc_uygula", "Evet"):

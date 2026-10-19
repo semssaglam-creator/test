@@ -786,6 +786,39 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Ceza katı artık tespitlerden türetiliyor (iki kaynak sorunu).**
+      Müfettiş "hâlen 1 kat geliyor" dedi (2026-10-19). Önceki düzeltme
+      ceza TABLOSUNU düzeltmişti ama tarhiyat tablosundaki "Vergi Ziyaı
+      Cezası" sütunu BAŞKA bir kaynaktan besleniyordu: Tarhiyat Özeti
+      sekmesindeki açılır kutu (`ziya_kati`), **varsayılanı 1 kat**.
+      Yani rapor metni tespitlerden "üç kat" derken tablo kutunun
+      varsayılanını yazıyordu ve kimse kutuyu değiştirmeyi hatırlamak
+      zorunda kalmamalıydı.
+
+      `_ziya_kati` artık, çalışmada açıkça 1 ya da 3 seçilmemişse katı
+      TÜRETİYOR: satıcılarda "Bilerek kullanma" varsa (359/b) ya da
+      künyede "Defter ve belge ibrazı = İbraz edilmedi" ise (359/a-2) üç
+      kat, aksi halde bir kat. Müfettişin elle seçimi her zaman üstündür.
+
+      Kutuya "Otomatik (tespitlere göre)" seçeneği eklendi ve varsayılan o
+      oldu. Yanında hangi katın uygulandığı ve gerekçesi yazıyor; elle
+      seçim tespitlerle çelişiyorsa kırmızı uyarı çıkıyor ("elle 1 kat
+      seçtiniz, tespitler 3 kat gerektiriyor... tablo ile çelişebilir").
+      `/api/hesapla` yanıtı `ziya_kati` ve `ziya_kati_turetilen` taşıyor.
+
+      **İbraz etmeme de 359 kapsamındadır** (müfettişin sözü): satıcı
+      nitelendirmesi hiç olmasa bile üç kat. `ceza_dagilimi` de bunu
+      biliyor — yeni `dayanaksiz_kat` parametresi, ibraz etmeme halinde
+      sahte belgeye atfedilemeyen kalan tutara da üç kat uyguluyor.
+
+      Üç mutasyonla denetlendi; tarayıcıda hem otomatik hem elle seçim
+      hâli doğrulandı (uyarı metni dahil).
+
+      Bilinen sınır: Excel çıktısındaki tarhiyat sayfası katı tek bir
+      formülle bütün dönemlere uyguluyor. İncelenen yıllardan sonraki
+      devir düzeltme yıllarında ceza bir kat olmalı; Word raporunda o
+      tablo ceza sütunu taşımadığı için sorun çıkmıyor, Excel'de
+      çıkabilir.
 - [x] **Ceza tablosu metinle çelişiyordu: fatura satırı olmayan dönemler
       bir kat yazılıyordu.** Müfettiş bildirdi (2026-10-19): "vergi ziyaına
       ilişkin açıklamaya 3 kat kesilmesi gerek demişsin ancak tabloda 1 kat

@@ -297,10 +297,12 @@
       <div class="dar">
         <label for="ziyaKati">Vergi ziyaı cezası</label>
         <select id="ziyaKati">
+          <option value="">Otomatik (tespitlere göre)</option>
           <option value="1">1 kat (VUK 344)</option>
           <option value="3">3 kat (VUK 359 kapsamında)</option>
         </select>
       </div>
+      <div class="genis"><div class="yardim" id="ziyaKatiBilgi"></div></div>
     </div>
     <div class="yardim" style="margin-bottom:12px;">
       <strong>(1)</strong> re'sen tarhı gereken KDV, <strong>(2)</strong> haksız iade
@@ -2235,7 +2237,11 @@ function gorunenTarhiyatKolonlari(donemler) {
 
 function tarhiyatiCiz() {
   const kutu = $("ziyaKati");
-  if (kutu) kutu.value = String(durum.calisma.ziya_kati || 1);
+  // Bos deger = "Otomatik": kat tespitlerden turetilir. Eskiden kutu
+  // 1'e sabitti ve bilerek kullanma isaretli olsa bile tarhiyat tablosu
+  // bir kat yaziyordu; rapor metni uc kat diyordu.
+  if (kutu) kutu.value = String(durum.calisma.ziya_kati || "");
+  ziyaKatiBilgisiniCiz();
   yilKulaklariniCiz("tarhiyatYilSekme", durum.tarhiyatYil, (y) => {
     durum.tarhiyatYil = y; tarhiyatiCiz();
   }, true, false);
@@ -3319,10 +3325,45 @@ $("tumIndirimReddi").addEventListener("click", async () => {
 });
 
 $("ziyaKati").addEventListener("change", async () => {
-  durum.calisma.ziya_kati = Number($("ziyaKati").value) === 3 ? 3 : 1;
+  const secim = $("ziyaKati").value;
+  durum.calisma.ziya_kati = secim === "3" ? 3 : secim === "1" ? 1 : "";
   isaretle(false);
   await hesapla();
 });
+
+/**
+ * Uygulanan ceza katını ve tespitlerin gerektirdiği katı yazar.
+ *
+ * İki şeyi görünür kılar: "Otomatik"te hangi sayının kullanıldığını ve
+ * elle seçim tespitlerle çelişiyorsa bunu. Çelişki sessiz kalırsa rapor
+ * metni ("üç kat kesilmesi gerekmektedir") ile tablo farklı sayı
+ * gösterir — sahada böyle çıktı.
+ */
+function ziyaKatiBilgisiniCiz() {
+  const el = $("ziyaKatiBilgi");
+  if (!el) return;
+  const s = durum.sonuc || {};
+  const kat = s.ziya_kati, turetilen = s.ziya_kati_turetilen;
+  if (!kat) { el.textContent = ""; return; }
+  const secili = durum.calisma.ziya_kati;
+  const gerekce = turetilen === 3
+    ? "bilerek kullanma / defter ibraz etmeme tespiti var (VUK 359)"
+    : "359 kapsamında bir tespit yok";
+  if (!secili) {
+    el.innerHTML = `Otomatik: <strong>${kat} kat</strong> uygulanıyor — ` +
+      `${gerekce}.`;
+    el.style.color = "";
+  } else if (kat !== turetilen) {
+    el.innerHTML = `<strong>Dikkat:</strong> elle ${kat} kat seçtiniz, ` +
+      `tespitler ${turetilen} kat gerektiriyor (${gerekce}). Rapor metni ` +
+      `tespitlere göre yazıldığından tablo ile çelişebilir.`;
+    el.style.color = "#a33";
+  } else {
+    el.innerHTML = `Elle seçildi: <strong>${kat} kat</strong> ` +
+      `(tespitlerle uyumlu).`;
+    el.style.color = "";
+  }
+}
 
 $("bnMod").addEventListener("change", () => { bnSecimCiz(); });
 $("bnYalnizDegisen").addEventListener("change", () => { beyannameleriTazele(); });

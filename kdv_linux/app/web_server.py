@@ -155,13 +155,43 @@ def _sayi(deger):
     return tutar_coz(deger) or 0.0
 
 
+def _ziya_kati_turet(calisma):
+    """Tespitlerin gerektirdigi ceza kati.
+
+    VUK 344: ziyaa 359'daki fiillerle sebebiyet verilmisse ceza UC KAT.
+    Uygulamada bunu doguran iki tespit var ve ikisi de zaten girilmis
+    durumda:
+
+      - satici "Bilerek kullanma" isaretli  -> 359/b
+      - defter ve belge ibraz edilmemis     -> 359/a-2
+
+    Turetmek sart: kat eskiden yalnizca bir acilir kutudan geliyordu ve
+    VARSAYILANI BIR KATTI. Mufettis bilerek kullanmayi isaretleyip raporu
+    aldiginda metin "uc kat kesilmesi gerekmektedir" derken tarhiyat
+    tablosu bir kat yaziyordu; kimse kutuyu degistirmeyi hatirlamak
+    zorunda kalmamali (sahada boyle cikti, 2026-10-19).
+    """
+    calisma = calisma or {}
+    kunye = (calisma.get("kunye") or {})
+    if str(kunye.get("defter_ibraz") or "") == "İbraz edilmedi":
+        return 3
+    if _fatura_modulu().bilerek_vknler(calisma.get("saticilar")):
+        return 3
+    return 1
+
+
 def _ziya_kati(calisma):
-    """Vergi ziyai cezasinin kati: bilerek kullanmada uc, aksi halde bir kat."""
-    try:
-        kat = int(str((calisma or {}).get("ziya_kati") or 1).strip()[0])
-    except (ValueError, IndexError):
-        kat = 1
-    return 3 if kat == 3 else 1
+    """Vergi ziyai cezasinin kati.
+
+    Calismada ACIKCA 1 ya da 3 secilmisse o kullanilir (mufettisin karari
+    her zaman ustundur); secilmemisse tespitlerden turetilir.
+    """
+    ham = str((calisma or {}).get("ziya_kati") or "").strip()
+    if ham[:1] == "3":
+        return 3
+    if ham[:1] == "1":
+        return 1
+    return _ziya_kati_turet(calisma)
 
 
 def _hesapla(calisma):
@@ -173,9 +203,15 @@ def _hesapla(calisma):
                 "kaynak_analizi": {"kaynaklar": [], "donemler": [], "etkilesim_var": False}}, []
     # Baslangic devri artik yil bazinda tutulur; _yillari_coz eski kayitlardaki
     # calisma duzeyindeki degeri ilk yila tasidi.
-    sonuc = hesap.seri_hesapla(yillar, ziya_kati=_ziya_kati(calisma))
+    kat = _ziya_kati(calisma)
+    sonuc = hesap.seri_hesapla(yillar, ziya_kati=kat)
     sonuc["kaynak_analizi"] = hesap.kaynak_analizi(yillar)
     sonuc["dikkat"] = _dikkat_dokumu(calisma, yillar)
+    # Uygulanan kat ve tespitlerin gerektirdigi kat ekranda gorunsun:
+    # "otomatik" secili oldugunda hangi sayinin kullanildigi, elle
+    # secildiginde de tespitlerle celisip celismedigi belli olsun.
+    sonuc["ziya_kati"] = kat
+    sonuc["ziya_kati_turetilen"] = _ziya_kati_turet(calisma)
     return sonuc, (hesap.indirim_asimi_bulgulari(yillar)
                    + hesap.beyan_tutarlilik_kontrol(yillar))
 

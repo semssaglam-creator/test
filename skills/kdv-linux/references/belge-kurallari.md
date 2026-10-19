@@ -238,6 +238,27 @@ Uc hal ayri cumle gerektirir ve ucu de yazilidir:
 - **ziya yok** (yalnizca devir eridi) -> tamamlanacak ceza yok
 - **ziya var** -> tutarlar yazilir
 
+## Ceza katinin kaynagi TEKTIR: tespitler
+
+Kat iki yerde belirleniyordu ve biri sessizce yaniliyordu: ceza tablosu
+satici siniflandirmasindan, tarhiyat tablosu ise Tarhiyat Ozeti
+sekmesindeki acilir kutudan (varsayilani BIR KAT). Rapor metni uc kat
+derken tablo bir kat yaziyordu.
+
+`web_server._ziya_kati` artik, calismada ACIKCA 1 ya da 3 secilmemisse
+kati TURETIR (`_ziya_kati_turet`):
+
+- satici "Bilerek kullanma" -> 359/b -> uc kat
+- kunye "Defter ve belge ibrazi = Ibraz edilmedi" -> 359/a-2 -> uc kat
+- aksi halde bir kat
+
+Mufettisin elle secimi her zaman ustundur ama celiski ekranda kirmizi
+yazilir. `/api/hesapla` yaniti `ziya_kati` ve `ziya_kati_turetilen`
+tasir; yeni bir ceza kaynagi eklerseniz ikisini de besleyin.
+
+Ibraz etmeme de 359 kapsamindadir: satici nitelendirmesi hic olmasa bile
+uc kat. `ceza_dagilimi`in `dayanaksiz_kat` parametresi bunun icindir.
+
 ## Verilmis karar: uc kat
 
 Ceza UC KAT olarak kodlanir. Farkli bir durum cikarsa mufettis raporu elle

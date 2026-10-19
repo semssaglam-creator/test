@@ -346,6 +346,61 @@ denetle("nitelendirmesi yapılmamış satıcılar" in m_belirsiz,
 denetle("nitelendirmesi yapılmamış satıcılar" not in m,
         "hepsi sınıflandırılmışsa uyarı ÇIKMIYOR")
 
+# ------------------------------------------------ 6) ceza katinin TURETILMESI
+print("\n6) Ceza katı tespitlerden türetiliyor")
+# Kat eskiden YALNIZCA bir acilir kutudan geliyordu ve varsayilani BIR
+# katti: mufettis bilerek kullanmayi isaretleyip raporu aldiginda metin
+# "uc kat" derken tarhiyat tablosu bir kat yaziyordu (2026-10-19).
+esit(W._ziya_kati_turet(ornek()), 3, "bilerek kullanma varsa üç kat")
+esit(W._ziya_kati_turet(ornek(kullanma="Bilmeden kullanma")), 1,
+     "bilmeden kullanmada bir kat")
+esit(W._ziya_kati_turet(ornek(kullanma="Belirlenmedi")), 1,
+     "nitelendirme yapılmamışsa bir kat")
+
+# Ibraz etmeme de VUK 359 (a-2) kapsamindadir: satici nitelendirmesi hic
+# olmasa bile uc kat (mufettisin karari, 2026-10-19).
+c_ibraz = ornek()
+c_ibraz["saticilar"] = {}
+c_ibraz["kunye"] = dict(c_ibraz["kunye"], defter_ibraz="İbraz edilmedi")
+esit(W._ziya_kati_turet(c_ibraz), 3,
+     "ibraz etmemede satıcı yokken de üç kat")
+c_ibraz_edildi = dict(c_ibraz)
+c_ibraz_edildi["kunye"] = dict(c_ibraz["kunye"], defter_ibraz="İbraz edildi")
+esit(W._ziya_kati_turet(c_ibraz_edildi), 1, "ibraz edilmişse bir kat")
+
+# Elle secim HER ZAMAN ustundur; ama cozulen kat ekranda gorunsun diye
+# turetilen deger de dondurulur.
+c_elle = dict(ornek(), ziya_kati=1)
+s_elle, _ = W._hesapla(c_elle)
+esit(s_elle["ziya_kati"], 1, "elle seçilen kat uygulanıyor")
+esit(s_elle["ziya_kati_turetilen"], 3,
+     "tespitlerin gerektirdiği kat da bildiriliyor (çelişki görünsün)")
+s_oto, _ = W._hesapla(ornek())
+esit(s_oto["ziya_kati"], 3, "kutu boşken tespitlerden türetiliyor")
+
+# Tarhiyat tablosundaki ceza da artik uc kat olmali.
+m_oto = rapor(ornek())
+denetle("üç kat vergi ziyaı cezası" in m_oto, "metin üç kat diyor")
+sonuc_blok = m_oto[m_oto.find("V- SONUÇ"):]
+denetle("18.000,00" in sonuc_blok,
+        "sonuç tablosundaki ceza da üç kat (6.000 x 3)")
+denetle("6.000,00\t6.000,00" not in sonuc_blok,
+        "tabloda bir katlık ceza kalmamış")
+
+# Ibraz etmemede, sahte belgeye atfedilemeyen kalan tutar da uc kat tasir.
+c_i = ornek()
+c_i["kunye"] = dict(c_i["kunye"], defter_ibraz="İbraz edilmedi")
+c_i["yillar"][0]["elestiri"]["matrah_ilave"][1] = 20000.0
+c_i["yillar"][0]["elestiri"]["hesaplanan_kdv_ilave"][1] = 4000.0
+c_i["yillar"][0]["elestiri"]["hesaplanan_otomatik"] = [True] * 12
+c_i["yillar"][0]["elestiri"]["hesaplanan_otomatik"][1] = False
+sonuc_i, _ = W._hesapla(c_i)
+liste_i = F.normalize(c_i["faturalar"], c_i["mukellef"]["vkn_tckn"])
+dag_i = F.ceza_dagilimi(liste_i, c_i["saticilar"], sonuc_i, dayanaksiz_kat=3)
+subat_i = satir(dag_i, 2)
+esit(subat_i["ceza_dayanaksiz"], 12000.0,
+     "ibraz etmemede kalan tutar da üç kat")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

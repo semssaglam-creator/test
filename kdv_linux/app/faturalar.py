@@ -816,7 +816,7 @@ def _kategori(satici_vkn, saticilar):
 CEZA_KATI = {"bilerek": 3, "bilmeden": 1, "belirsiz": 1}
 
 
-def ceza_dagilimi(faturalar, saticilar, sonuc):
+def ceza_dagilimi(faturalar, saticilar, sonuc, dayanaksiz_kat=1):
     """Donem donem tarh edilen vergiyi satici kategorilerine paylastirir.
 
     Neden paylastirma gerekiyor: bir donemde birden cok saticinin faturasi
@@ -834,6 +834,12 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
     atfedilemeyen kalan tutar da cezasiz kalmaz, "belirsiz" sayilarak bir
     kat ceza tasir. Uc kat yalnizca VUK 359'daki fiillere baglidir ve
     matrah ilavesi gibi tespitler o kapsamda degildir.
+
+    `dayanaksiz_kat`: sahte belgeye de devre de atfedilemeyen kalan tutarin
+    kati. Olagan halde BIR kattir (matrah ilavesi, beyan hatasi 359 fiili
+    degildir). DEFTER VE BELGE IBRAZ ETMEME halinde UC verilir: o fiil VUK
+    359/a-2'de kacakcilik sucudur ve dosyadaki ziyanin tamami ondan dogar
+    (mufettisin karari, 2026-10-19).
 
     `pay_*` alanlari yalnizca cezanin degil, uzlasma kapsami ayriminin da
     kaynagidir: `pay_bilerek` kapsam DISI, `pay_bilmeden` + `pay_belirsiz`
@@ -931,7 +937,7 @@ def ceza_dagilimi(faturalar, saticilar, sonuc):
         paylar = {k: round(v, 2) for k, v in paylar.items()}
         ceza = {k: round(paylar[k] * CEZA_KATI[k], 2)
                 for k in ("bilerek", "bilmeden", "belirsiz")}
-        ceza["dayanaksiz"] = paylar["dayanaksiz"]      # bir kat
+        ceza["dayanaksiz"] = round(paylar["dayanaksiz"] * dayanaksiz_kat, 2)
 
         satirlar.append({
             "yil": d["yil"], "ay": d["ay"], "ay_adi": d["ay_adi"],
