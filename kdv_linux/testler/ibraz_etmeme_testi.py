@@ -554,6 +554,74 @@ esit(yan_g["yillar"][0]["elestiri"]["matrah_ilave"][0], 0.0,
 esit(yan_g["yillar"][0]["elestiri"]["indirim_cikar"][0], 2442.75,
      "geri alırken de indirim reddi korunuyor")
 
+
+# ------------------------- 6) ILAVE EDILECEK KDV ile beyan edilmis vergi
+# Sahada cikti (2026-10-20): mukellef Ocak'ta matrahi HIC beyan etmemis
+# ama duzenledigi faturanin 1.125 TL KDV'sini "Ilave Edilecek KDV"
+# satirinda beyan etmisti. Hesaplanan KDV ilavesi yalnizca
+# "hesaplanan_kdv" ile karsilastirilinca ayni vergi bir kez daha eklenip
+# odenecek KDV iki katina cikiyordu (1.125 yerine 2.250).
+print("\n6) İlave Edilecek KDV satırında beyan edilmiş vergi")
+
+
+def ilave_ornegi(ilave_edilecek):
+    beyan = {k: [0.0] * 12 for k in VERI_KODLARI}
+    beyan["bu_donem_indirilecek"][0] = 2442.75
+    beyan["indirimler_toplami"][0] = 2442.75
+    beyan["ilave_edilecek_kdv"][0] = ilave_edilecek
+    return {
+        "mukellef": {"ad_unvan": "ÖRNEK LTD", "vkn_tckn": "4444444444",
+                     "vergi_dairesi": "SEYHAN VD", "adres": "ADANA"},
+        "ziya_kati": 3,
+        "kunye": {"mukellef_turu": "Kurum (sermaye şirketi)",
+                  "defter_ibraz": "İbraz edilmedi"},
+        "yillar": [{"yil": 2021, "ay_sayisi": 1, "beyan": beyan,
+                    "elestiri": hesap.bos_elestiri()}],
+        # Mukellefin duzenledigi tek fatura: 6.250 matrah, 1.125 KDV.
+        "faturalar": [{"duzenleyen_vkn": "4444444444",
+                       "alici_vkn": "5350030213", "tarih": "2021-01-07",
+                       "fatura_no": "GIB2021000000001", "matrah": 6250.0,
+                       "kdv": 1125.0, "toplam": 7375.0}],
+        "saticilar": {},
+    }
+
+
+h7 = istekci()
+c_ilave = ilave_ornegi(1125.00)
+c_ilave["yillar"][0]["elestiri"] = \
+    h7._ibraz_elestirisi({"calisma": c_ilave})["yillar"][0]["elestiri"]
+c_ilave["yillar"][0]["devir_baslangic"] = 0.0
+e_i = c_ilave["yillar"][0]["elestiri"]
+esit(e_i["matrah_ilave"][0], 6250.0, "matrah ilavesi yapılıyor (beyan 0)")
+esit(e_i["hesaplanan_kdv_ilave"][0], 0.0,
+     "KDV zaten beyan edilmiş; ikinci kez eklenmiyor")
+d_i = W._hesapla(c_ilave)[0]["donemler"][0]
+esit(d_i["elestirili"]["toplam_kdv"], 1125.0,
+     "toplam KDV faturanın KDV'si kadar (iki katı DEĞİL)")
+esit(d_i["elestirili"]["odenecek"], 1125.0, "ödenecek KDV 1.125 (2.250 değil)")
+esit(d_i["tarhiyat"]["resen_tarhi_gereken"], 1125.0, "re'sen tarh 1.125")
+
+# Ilave edilecek satirinda bir sey YOKSA eski davranis surmeli: faturanin
+# KDV'si hesaplanan ilavesi olarak eklenir.
+c_yok = ilave_ornegi(0.0)
+c_yok["yillar"][0]["elestiri"] = \
+    h7._ibraz_elestirisi({"calisma": c_yok})["yillar"][0]["elestiri"]
+c_yok["yillar"][0]["devir_baslangic"] = 0.0
+esit(c_yok["yillar"][0]["elestiri"]["hesaplanan_kdv_ilave"][0], 1125.0,
+     "beyan edilmemişse KDV ilave ediliyor")
+esit(W._hesapla(c_yok)[0]["donemler"][0]["elestirili"]["odenecek"], 1125.0,
+     "o halde de ödenecek 1.125")
+
+# Tablo, ilave edilecek KDV tasiyan dosyada o sutunu YAZMALI; yoksa
+# hesaplanan KDV sifir gorunurken odenecek vergi cikar ve tablo kendi
+# icinde tutmaz.
+m_i = IB.rapor_uret(W._inceleme_bilgisi(c_ilave), c_ilave["kunye"],
+                    W._hesapla(c_ilave)[0], c_ilave, 2021).duz_metin()
+denetle("İlave Edil. KDV" in m_i,
+        "ilave edilecek KDV sütunu tabloya giriyor")
+denetle("İlave Edil. KDV" not in m,
+        "taşımayan dosyada sütun yazılmıyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

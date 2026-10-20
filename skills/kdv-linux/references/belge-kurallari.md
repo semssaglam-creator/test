@@ -95,6 +95,14 @@ alanlarina yazar; boylece tutanak, Excel ve sonuc bolumu ayni rakamlari
 gorur. Yeni bir rapor eklerken ayni yolu izleyin - rapor kendi rakamini
 hesaplarsa belgeler birbirini tutmaz.
 
+**Olcut "hesaplanan KDV" DEGIL, beyan edilen TOPLAM hesaplanan vergidir:**
+`hesaplanan_kdv + ilave_edilecek_kdv`. Mukellef matrahi hic beyan etmeden
+faturanin KDV'sini "Ilave Edilecek KDV" satirinda beyan etmis olabilir;
+yalnizca hesaplanan ile karsilastirmak ayni vergiyi iki kez tarh ettirir.
+Beyan dokumu tablosu da ilave edilecek KDV tasidiginda o sutunu yazar -
+yoksa tablo kendi icinde tutmaz ve hata gorunmez kalir (sahada boyle
+cikti, 2026-10-20).
+
 **Matrah kurali:** beyan ile mukellefin DUZENLEDIGI faturalarin toplami
 uyusmadiginda VUK 3/B geregi gercek durum esas alinir, ama yalnizca
 mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.

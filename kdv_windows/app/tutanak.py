@@ -118,6 +118,12 @@ def belgeye_giren_bulgular(bulgular, donemler):
 BEYAN_DOKUM_KOLONLARI = [
     ("matrah", "KDV Matrahı"),
     ("hesaplanan", "Hspl. KDV"),
+    # "Ilave Edilecek KDV" sutunu KOSULLUDUR (asagida): tutar tasimadigi
+    # dosyalarda tabloyu bos yere genisletir. Tasidiginda ise sart, cunku
+    # yoksa tablo kendi icinde TUTMAZ - hesaplanan KDV sifir gorunurken
+    # odenecek vergi cikar ve okuyan hesap hatasi sanir. Sahada boyle
+    # cikti (2026-10-20): mukellef matrahi beyan etmeden faturanin
+    # KDV'sini bu satirda beyan etmisti.
     ("onceki_devir", "Önc. Dön. Dev. KDV"),
     ("bu_donem_indirim_toplam", "Bu Dön. İndl. KDV"),
     ("indirimler", "İndirimler Toplamı"),
@@ -136,17 +142,23 @@ def beyan_dokum_tablosu(b, donemler, blok="beyan"):
     """
     for yil in sorted({d["yil"] for d in donemler}):
         alt = [d for d in donemler if d["yil"] == yil]
+        kolonlar = list(BEYAN_DOKUM_KOLONLARI)
+        # Ilave edilecek KDV yalnizca tutar tasidiginda yazilir; tasidiginda
+        # da ATLANMAZ, yoksa tablo kendi icinde tutmaz.
+        if any(abs(float(d[blok].get("ilave_edilecek") or 0.0)) > 0.005
+               for d in alt):
+            kolonlar.insert(2, ("ilave_edilecek", "İlave Edil. KDV"))
         satirlar = []
         for d in alt:
             satirlar.append([d["ay_adi"]]
-                            + [_tl(d[blok].get(kod)) for kod, _e in BEYAN_DOKUM_KOLONLARI])
+                            + [_tl(d[blok].get(kod)) for kod, _e in kolonlar])
         satirlar.append(["Toplam:"] + [
             _tl(sum(d[blok].get(kod, 0.0) for d in alt))
-            for kod, _e in BEYAN_DOKUM_KOLONLARI])
-        b.tablo(["Dönemi\n%s" % yil] + [e for _k, e in BEYAN_DOKUM_KOLONLARI],
+            for kod, _e in kolonlar])
+        b.tablo(["Dönemi\n%s" % yil] + [e for _k, e in kolonlar],
                 satirlar,
-                hizalar=["sol"] + ["sag"] * len(BEYAN_DOKUM_KOLONLARI),
-                oranlar=[1.0] + [1.15] * len(BEYAN_DOKUM_KOLONLARI),
+                hizalar=["sol"] + ["sag"] * len(kolonlar),
+                oranlar=[1.0] + [1.15] * len(kolonlar),
                 buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 

@@ -786,6 +786,33 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Ödenecek KDV iki katına çıkıyordu: “İlave Edilecek KDV” satırı.**
+      Müfettiş raporun kendi çıktısından yakaladı (2026-10-20): Ocak'ta
+      matrah beyan edilmemiş, satış faturasının KDV'si 1.125 TL, ama
+      yeniden düzenlenen tabloda ödenecek KDV **2.250 TL** çıkıyordu.
+
+      Sebep: mükellef matrahı hiç beyan etmemiş ama faturanın 1.125 TL
+      KDV'sini beyannamenin **“İlave Edilecek KDV”** satırında beyan
+      etmişti. `matrah_ilavesi_yaz` hesaplanan KDV ilavesini yalnızca
+      `hesaplanan_kdv` ile karşılaştırdığından (0) aynı vergiyi bir kez
+      daha ekliyordu: 1.125 (beyandaki ilave edilecek) + 1.125 (eklenen
+      hesaplanan) = 2.250.
+
+      Ölçüt artık o dönemde **beyan edilen toplam hesaplanan vergi**:
+      `hesaplanan_kdv + ilave_edilecek_kdv`. Fark eksiye düşerse
+      eklenmiyor (beyan esas, yalnızca aleyhe yön).
+
+      İkinci ve bunu görünmez kılan kusur: beyan dökümü tablosunda
+      **“İlave Edilecek KDV” sütunu hiç yoktu**. Mükellefin kendi
+      beyanında Ocak şöyle görünüyordu: matrah 0, hesaplanan 0, indirimler
+      2.442,75, ödenecek 0, devir 1.317,75 — aradaki 1.125 TL tabloda
+      hiçbir yerde yok ve tablo kendi içinde tutmuyordu. Sütun artık
+      **tutar taşıyan dosyalarda** yazılıyor (taşımayanlarda tabloyu boş
+      yere genişletmemek için koşullu, tarhiyat tablosundaki iade
+      sütunlarının deseni). Hem beyan edilen hem yeniden düzenlenen tablo
+      artık kendi içinde tutuyor.
+
+      İki mutasyonla denetlendi (eski ölçüte dön, sütunu hiç yazma).
 - [x] **İptal/itiraz tiki kaldırılınca matrah ilavesi güncellenmiyordu.**
       Müfettiş bildirdi (2026-10-19): "düzenlediği belgelerin 2 adedinde
       iptal itiraz kaydı var ancak onaylanmamış olduğu için matraha dahil
