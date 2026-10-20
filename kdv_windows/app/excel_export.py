@@ -443,6 +443,29 @@ def _ozet_sayfasi(wb, inceleme, sonuc, bulgular, duzen):
     return ws
 
 
+def _ceza_formulu(H, s, c, x, b, ziya_kati):
+    """Donemin vergi ziyai cezasi formulu; kat KAYNAGA gore degisir.
+
+    Uc kat uygulanan dosyalarda tarh ikiye ayrilir (bkz.
+    `hesap._tarhiyat_satiri`): matrah farkindan - yani beyan disi birakilan
+    belgelerden - dogan tutar BIR kat, indirimlerin reddinden dogan tutar
+    uc kat tasir. Excel'de de ayni ayrim yapilmali; eskiden tek formul
+    butun donemlere ayni kati uyguluyordu ve Word raporuyla tutmuyordu
+    (mufettisin istegi, 2026-10-20).
+
+    Formul CANLI tutuluyor: tutarlar sayfa uzerinde degistiginde ceza da
+    degisir. Matrah payinin olcutu toplam KDV'deki artistir ve tarhi
+    asamaz; kalan indirim reddinden sayilir.
+    """
+    resen = H("resen_tarhi_gereken")
+    kat = int(ziya_kati or 1)
+    if kat == 1:
+        return f"={resen}*1"
+    pay = (f"MIN({resen},MAX({s}{c}{x['toplam_kdv']}"
+           f"-{s}{c}{b['toplam_kdv']},0))")
+    return f"={pay}+({resen}-{pay})*{kat}"
+
+
 def _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati=1):
     """Elde kullanilan tarhiyat ozeti tablosunun karsiligi (formullu).
 
@@ -509,7 +532,7 @@ def _tarhiyat_sayfasi(wb, inceleme, sonuc, duzen, ziya_kati=1):
             "odenecek_beyan": f"={s}{c}{b['odenmesi_gereken_kdv']}",
             "resen_tarhi_gereken":
                 f"=MAX({H('odenecek_olmasi_gereken')}-{H('odenecek_beyan')},0)",
-            "vergi_ziyai_cezasi": f"={H('resen_tarhi_gereken')}*{int(ziya_kati)}",
+            "vergi_ziyai_cezasi": _ceza_formulu(H, s, c, x, b, ziya_kati),
             "iade_olmasi_gereken": f"={s}{c}{x['iade']}",
             "iade_beyan": f"={s}{c}{b['iade_edilmesi_gereken_kdv']}",
             "aranmasi_gereken":

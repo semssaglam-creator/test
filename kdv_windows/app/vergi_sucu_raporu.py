@@ -693,11 +693,24 @@ def _madde_metni(b, fiil):
         #
         # 7394 sayili Kanunun degistirdigi sureler: (a) fikrasi on sekiz
         # aydan BES yila, (b) fikrasi uc yildan SEKIZ yila kadar hapis.
-        # Ayni Kanun 359'a pismanlik ve etkin pismanlik fikralari da
-        # ekledi; bu raporlar o fikralari alintilamiyor, gerekirse
-        # eklenir. Suclar 15.04.2022'den ONCE islenmisse lehe olan eski
-        # sureler gecerlidir (TCK 7); cok yilli dosyalarda mufettis
-        # taslak uzerinde denetler.
+        # Bu iki sure 2026-10-20'de ikincil kaynaklardan (birbirinden
+        # bagimsiz hukuk yayinlari) dogrulandi ve 7394'ten sonra
+        # degistiklerine dair bir bulguya rastlanmadi. mevzuat.gov.tr,
+        # gib.gov.tr ve resmigazete.gov.tr bu agdan cozumlenemedigi icin
+        # BIRINCIL kaynaktan dogrulama yapilamadi; mufettis taslak
+        # uzerinde bir kez denetlemeli.
+        #
+        # Ayni Kanun 359'a pismanlik ve ETKIN PISMANLIK fikralari da
+        # ekledi (vergi, gecikme faizi ve cezanin yarisi sorusturma
+        # evresinde odenirse hapis cezasi yariya, kovusturma evresinde
+        # odenirse ucte bir oraninda iner; dava acilmamasi ya da
+        # feragat sarti var). Bu raporlar o fikralari ALINTILAMIYOR:
+        # resmi metni dogrulanamadigindan uydurulmus bir hukum
+        # yazilmasindansa hic yazilmamasi yeglendi. Gerekirse eklenir.
+        #
+        # Suclar 15.04.2022'den ONCE islenmisse lehe olan eski sureler
+        # gecerlidir (TCK 7); cok yilli dosyalarda mufettis taslak
+        # uzerinde denetler.
         b.paragraf(
             "“a) Vergi kanunlarına göre tutulan veya düzenlenen ve saklanma "
             "ve ibraz mecburiyeti bulunan;", girinti=1)

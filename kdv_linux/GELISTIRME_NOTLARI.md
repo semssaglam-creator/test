@@ -811,6 +811,31 @@ oturumda buradan devam edilir.
       esas alıyordu (orana bölmüyor); artık raporda gerekçesi de yazılı:
       KDVK 8/2 uyarınca belgede gösterilen KDV, kanunen hesaplanması
       gerekenden fazla dahi olsa beyan edilip ödenmesi gereken vergidir.
+- [x] **Excel çıktısındaki ceza katı da dönem dönem.** Müfettişin isteği
+      (2026-10-20). Tarhiyat sayfası katı tek formülle (`re'sen × kat`)
+      bütün dönemlere uyguluyordu; üç kat uygulanan dosyalarda matrah
+      farkından doğan paya da üç kat yazıyor ve Word raporuyla
+      tutmuyordu.
+
+      `_ceza_formulu` artık Word'deki ayrımın aynısını kuruyor ve formülü
+      **canlı** tutuyor (tutarlar sayfada değişince ceza da değişir):
+
+          =MIN(re'sen; MAX(eleştirili Toplam KDV − beyan Toplam KDV; 0))
+           + (re'sen − o pay) × kat
+
+      Bir kat uygulanan dosyalarda formül sadeleşiyor (`re'sen × 1`);
+      ayrıştırmanın anlamı yok.
+
+      Denetim `ceza_testi.py` 7. bölümde: formülün atıf yaptığı satırların
+      gerçekten "Toplam KDV" satırları olduğu doğrulanıyor ve formülün
+      aritmetiği dönem dönem motorun `vergi_ziyai_cezasi` değeriyle
+      karşılaştırılıyor — Excel'i açan müfettiş Word raporundakinden başka
+      bir rakam görmemeli. İki mutasyonla sınandı (eski tek formüle dön,
+      yanlış satıra atıf yap).
+
+      Not: LibreOffice bu ortamda üretilen dosyayı açamadığı için formül
+      bir hesap motorunda ÇALIŞTIRILARAK değil, atıfları çözülüp
+      aritmetiği denetlenerek doğrulandı.
 - [x] **KDV'si sıfır belgeler beyan dışı olmayabilir: istisna / özel
       matrah uyarısı.** Müfettişin tespiti (2026-10-20): beyan dışı
       sandığı faturaların KDV'si sıfırdı ve bunlar **özel matrah şekline
@@ -1472,12 +1497,27 @@ oturumda buradan devam edilir.
 
 ## İbraz etmemede bekleyen
 
-- [ ] **359 hapis süreleri birincil kaynaktan doğrulanmadı.** Süreler 7394
-      sayılı Kanunla değişik hâle getirildi (aşağıya bakın) ancak bu,
-      doğrudan mevzuat metni görülerek değil bilgiden yazıldı. Müfettiş bir
-      kez mevzuat.gov.tr üzerinden denetlemeli. Ayrıca 7394, 359'a pişmanlık
-      ve etkin pişmanlık fıkraları da ekledi; raporlar bu fıkraları
-      alıntılamıyor (gerekirse eklenir).
+- [ ] **359 hapis süreleri: ikincil kaynaklardan doğrulandı, birincil
+      kaynaktan doğrulanamadı.** Müfettişin isteği üzerine araştırıldı
+      (2026-10-20). Birbirinden bağımsız birkaç hukuk yayını, 7394 sayılı
+      Kanunla (15.04.2022) **359/a için on sekiz aydan beş yıla** ve
+      **359/b için üç yıldan sekiz yıla** sürelerini tutarlı biçimde
+      veriyor; uygulamadaki metin bunlarla uyuşuyor ve 7394'ten sonra
+      değiştiklerine dair bir bulguya rastlanmadı.
+
+      **mevzuat.gov.tr, gib.gov.tr ve resmigazete.gov.tr bu ağdan
+      çözümlenemiyor** (DNS reddediliyor), bu yüzden resmî metinden
+      doğrulama yapılamadı. Müfettiş taslak üzerinde bir kez denetlemeli.
+      Kaynaklarda 359/c için verilen süreler birbirini tutmuyor; raporlar
+      o bendi zaten alıntılamıyor.
+
+      7394 ayrıca 359'a pişmanlık ve **etkin pişmanlık** fıkraları ekledi:
+      vergi, gecikme faizi ve cezanın yarısı soruşturma evresinde
+      ödenirse hapis cezası yarıya, kovuşturma evresinde ödenirse üçte
+      bir oranında iniyor (dava açılmaması ya da feragat şartıyla).
+      Raporlar bu fıkraları **alıntılamıyor**: resmî metni
+      doğrulanamadığından, uydurulmuş bir hüküm yazmaktansa hiç
+      yazmamak yeğlendi. İstenirse eklenir.
 
 ---
 

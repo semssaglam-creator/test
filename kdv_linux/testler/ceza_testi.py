@@ -24,6 +24,7 @@ uzlasma kapsami ayrimi (Ç bolumu) onlardan besleniyor - `pay_bilerek`
 kapsam disi, `pay_bilmeden` + `pay_belirsiz` kapsam ici tutardir.
 """
 import os
+import tempfile
 import sys
 
 KOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -400,6 +401,72 @@ dag_i = F.ceza_dagilimi(liste_i, c_i["saticilar"], sonuc_i, dayanaksiz_kat=3)
 subat_i = satir(dag_i, 2)
 esit(subat_i["ceza_dayanaksiz"], 12000.0,
      "ibraz etmemede kalan tutar da üç kat")
+
+
+# ------------------------------------------- 7) Excel'de de ceza DONEM DONEM
+# Excel ciktisindaki tarhiyat sayfasi kati tek formulle butun donemlere
+# uyguluyordu; uc kat uygulanan dosyalarda matrah farkindan dogan paya da
+# uc kat yaziyor ve Word raporuyla tutmuyordu (mufettisin istegi,
+# 2026-10-20).
+print("\n7) Excel çıktısındaki ceza katı")
+import re                                                        # noqa: E402
+sys.path.append(os.path.join(KOK, "lib"))
+import openpyxl                                                  # noqa: E402
+from app import excel_export                                     # noqa: E402
+
+c_ex = karma_ornek()
+sonuc_ex, _se = W._hesapla(c_ex)
+esit(sonuc_ex["ziya_kati"], 3, "örnek dosyada üç kat uygulanıyor")
+bayt = excel_export.calisma_baytlari(
+    W._inceleme_bilgisi(c_ex), W._yillari_coz(c_ex), sonuc_ex,
+    ziya_kati=W._ziya_kati(c_ex))
+yol = os.path.join(tempfile.gettempdir(), "kdv_ceza_testi.xlsx")
+with open(yol, "wb") as f:
+    f.write(bayt)
+wb = openpyxl.load_workbook(yol)
+ws = wb["Tarhiyat Özeti"]
+yil_ws = wb[str(c_ex["yillar"][0]["yil"])]
+
+# Formulun atif yaptigi satirlar GERCEKTEN toplam KDV satirlari mi?
+formuller = [h.value for satir in ws.iter_rows() for h in satir
+             if isinstance(h.value, str) and h.value.startswith("=MIN(")]
+denetle(len(formuller) == len([d for d in sonuc_ex["donemler"]
+                               if d["tarhiyat"]["resen_tarhi_gereken"] > 0
+                               or True]),
+        "her döneme ayrı ceza formülü yazılıyor")
+ilk = formuller[0] if formuller else ""
+_atif = re.findall(r"'[^']+'!([A-Z]+)(\d+)", ilk)
+denetle(len(_atif) >= 2, "formül yıl sayfasına atıf yapıyor")
+if len(_atif) >= 2:
+    x_satir, b_satir = int(_atif[0][1]), int(_atif[1][1])
+    denetle(str(yil_ws.cell(row=x_satir, column=1).value) == "Toplam KDV",
+            "ilk atıf eleştirili TOPLAM KDV satırı")
+    denetle(str(yil_ws.cell(row=b_satir, column=1).value) == "TOPLAM KDV",
+            "ikinci atıf beyan TOPLAM KDV satırı")
+
+# Formulun ARITMETIGI motorun hesabiyla birebir tutmali: Excel'i acan
+# mufettis Word raporundakinden baska bir rakam gormemeli.
+for d in sonuc_ex["donemler"]:
+    t = d["tarhiyat"]
+    resen = t["resen_tarhi_gereken"]
+    pay = min(resen, max(d["elestirili"]["toplam_kdv"]
+                         - d["beyan"]["toplam_kdv"], 0.0))
+    excel_ceza = round(pay + (resen - pay) * sonuc_ex["ziya_kati"], 2)
+    esit(excel_ceza, t["vergi_ziyai_cezasi"],
+         "%s: Excel formülü motorla aynı cezayı veriyor" % d["ay_adi"])
+
+# Tek kat uygulanan dosyada formul sadelesmeli.
+c_tek = ornek(kullanma="Bilmeden kullanma")
+sonuc_tek, _st = W._hesapla(c_tek)
+bayt_tek = excel_export.calisma_baytlari(
+    W._inceleme_bilgisi(c_tek), W._yillari_coz(c_tek), sonuc_tek,
+    ziya_kati=W._ziya_kati(c_tek))
+with open(yol, "wb") as f:
+    f.write(bayt_tek)
+ws_tek = openpyxl.load_workbook(yol)["Tarhiyat Özeti"]
+denetle(not [h.value for satir in ws_tek.iter_rows() for h in satir
+             if isinstance(h.value, str) and h.value.startswith("=MIN(")],
+        "bir kat uygulanan dosyada ayrıştırma formülü yazılmıyor")
 
 print()
 if HATA:
