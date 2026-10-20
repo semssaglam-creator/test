@@ -716,6 +716,66 @@ denetle(not [b for b in F.bulgular(liste_t, [yil_y], {})
              if b["tur"] == "kdvsiz_satis"],
         "KDV'si sıfır belge yoksa uyarı çıkmıyor")
 
+
+# Rapor da susmamali: KDV'si sifir belgeler ve beyannamedeki karsiliklari
+# 4.2.4'te bir paragraf olarak yaziliyor (mufettisin istegi: "hatta
+# rapora bir paragraf eklesin").
+def ibraz_raporu(c):
+    return IB.rapor_uret(W._inceleme_bilgisi(c), c["kunye"],
+                         W._hesapla(c)[0], c, 2021).duz_metin()
+
+
+def kdvsiz_calisma(ozel_matrah):
+    beyan = {k: [0.0] * 12 for k in VERI_KODLARI}
+    beyan["bu_donem_indirilecek"][0] = 2442.75
+    beyan["indirimler_toplami"][0] = 2442.75
+    beyan["ilave_edilecek_kdv"][0] = 1125.0
+    beyan["toplam_kdv"][0] = 1125.0
+    beyan["ozel_matrah_bedel"][0] = ozel_matrah
+    c = {"mukellef": {"ad_unvan": "ÖRNEK LTD", "vkn_tckn": "4444444444",
+                      "vergi_dairesi": "SEYHAN VD", "adres": "ADANA"},
+         "ziya_kati": 3,
+         "kunye": {"mukellef_turu": "Kurum (sermaye şirketi)",
+                   "defter_ibraz": "İbraz edilmedi"},
+         "yillar": [{"yil": 2021, "ay_sayisi": 1, "beyan": beyan,
+                     "elestiri": hesap.bos_elestiri()}],
+         "faturalar": [
+             {"duzenleyen_vkn": "4444444444", "alici_vkn": "1",
+              "tarih": "2021-01-07", "matrah": 6250.0, "kdv": 1125.0},
+             {"duzenleyen_vkn": "4444444444", "alici_vkn": "2",
+              "tarih": "2021-01-15", "matrah": 26280.0, "kdv": 0.0}],
+         "saticilar": {}}
+    h = istekci()
+    c["yillar"][0]["elestiri"] = \
+        h._ibraz_elestirisi({"calisma": c})["yillar"][0]["elestiri"]
+    c["yillar"][0]["devir_baslangic"] = 0.0
+    return c
+
+
+m_ortulu = ibraz_raporu(kdvsiz_calisma(26280.0))
+denetle("26.280,00 TL tutarındaki kısmı, üzerinde katma değer vergisi "
+        "hesaplanmamış belgelerden oluşmaktadır" in m_ortulu,
+        "rapor KDV'siz belgelerin tutarını yazıyor")
+denetle("istisna kapsamına giren işlemler ile özel matrah şekline tabi "
+        "işlemlere ilişkin bölümlerinde toplam 26.280,00 TL beyan" in m_ortulu,
+        "beyannamedeki karşılığı yazılıyor")
+denetle("hesaplanan katma değer vergisine ilave yapılmamıştır" in m_ortulu,
+        "üzerlerinden vergi hesaplanmadığı yazılıyor")
+denetle("anılan bölümlerde de beyan edilmemiştir" not in m_ortulu,
+        "tamamı beyan edilmişse açıkta kalan cümlesi yazılmıyor")
+
+m_acik = ibraz_raporu(kdvsiz_calisma(10000.0))
+denetle("16.280,00 TL’lik kısmı ise anılan bölümlerde de beyan edilmemiştir"
+        in m_acik, "açıkta kalan tutar yazılıyor")
+m_yok = ibraz_raporu(kdvsiz_calisma(0.0))
+denetle("herhangi bir beyan bulunmadığı görülmüştür" in m_yok,
+        "beyanda hiç karşılığı yoksa öyle yazılıyor")
+denetle("0,00 TL beyan bulunduğu" not in m_yok,
+        "sıfırlı garip cümle kurulmuyor")
+# KDV'si sifir belge YOKSA paragraf hic yazilmamali.
+denetle("üzerinde katma değer vergisi hesaplanmamış belgelerden" not in m,
+        "KDV'si sıfır belge yoksa paragraf yazılmıyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))

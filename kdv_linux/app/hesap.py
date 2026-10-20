@@ -311,6 +311,16 @@ def _beyan_ozeti(beyan, yil, ay):
         "iade": _yuvarla(_d(beyan, "iade_edilmesi_gereken_kdv", ay)),
         "tecil_edilecek": _yuvarla(_d(beyan, "tecil_edilecek_kdv", ay)),
         "ihracat_iade": _yuvarla(_d(beyan, "ihracat_tecil_edilemeyen", ay)),
+        # Istisna ve ozel matrah bolumleri: KDV'si sifir olan belgelerin
+        # beyan DISI mi birakildigini, yoksa bu bolumlerde mi beyan
+        # edildigini anlamak icin gerekli. "istisna_toplam_teslim" tam +
+        # kisminin TOPLAMIDIR; buyugu alinir ki ayni tutar iki kez
+        # sayilmasin (mufettisin tespiti, 2026-10-20).
+        "istisna_teslim": _yuvarla(max(
+            _d(beyan, "istisna_toplam_teslim", ay),
+            _d(beyan, "tam_istisna_teslim", ay)
+            + _d(beyan, "kismi_istisna_teslim", ay))),
+        "ozel_matrah": _yuvarla(_d(beyan, "ozel_matrah_bedel", ay)),
     }
 
 

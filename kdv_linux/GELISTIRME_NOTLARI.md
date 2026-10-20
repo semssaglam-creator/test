@@ -841,6 +841,17 @@ oturumda buradan devam edilir.
       rakamları yan yana koyup "denetleyin" diyor — müfettişin istediği
       de buydu ("en azından bir uyarı notu koysun").
 
+      **Rapor da susmuyor** (müfettişin eki: "hatta rapora bir paragraf
+      eklesin"). 4.2.4'te, matrah/KDV tablosunun hemen ardında: KDV'si
+      sıfır belgelerin tutarı, beyannamenin istisna / özel matrah
+      bölümlerindeki karşılığı ve — varsa — açıkta kalan tutar yazılıyor.
+      Paragraf, bu tutarlar üzerinden **hesaplanan KDV'ye ilave
+      yapılmadığını** da söylüyor; raporu okuyanın ilk soracağı şey bu.
+      Hiç karşılığı yoksa "herhangi bir beyan bulunmadığı görülmüştür"
+      diyor (sıfırlı garip cümle kurmuyor). KDV'si sıfır belge yoksa
+      paragraf hiç yazılmıyor. `_beyan_ozeti` bunun için `istisna_teslim`
+      ve `ozel_matrah` alanlarını da taşıyor.
+
       Denetim: `ibraz_etmeme_testi.py` 7. bölüm, iki mutasyonla
       doğrulandı. Not: ilk yazdığım denetim boş listede ÇÖKÜYORDU ve
       kendisinden sonraki denetimleri gizliyordu; mutasyon bunu da

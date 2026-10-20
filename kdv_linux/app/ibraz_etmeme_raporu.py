@@ -736,6 +736,7 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
                      "sag"],
             oranlar=[0.85, 0.6, 1.2, 1.0, 1.0, 1.2, 1.1, 1.05],
             buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+    _kdvsiz_belge_paragrafi(b, kunye, donemler, liste)
     b.paragraf(
         "Buna göre %s katma değer vergisi matrahlarına toplam %s TL ilave "
         "edilmiş ve beyanlar aşağıdaki bölümde dönemler itibarıyla yeniden "
@@ -745,6 +746,65 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         # kaciniliyor (bkz. testler/ibraz_etmeme_testi.py).
         % ("%s %s" % (yil, ik.donem_adi(kunye, False)),
            _tl(ilave_toplam)), girinti=1)
+
+
+def _kdvsiz_belge_paragrafi(b, kunye, donemler, liste):
+    """KDV'si SIFIR belgeler: beyan disi mi, istisna / ozel matrah mi.
+
+    Mufettisin tespiti (2026-10-20): beyan disi sanilan faturalarin
+    KDV'si sifirdi ve ozel matrah sekline tabi islem olarak beyan
+    edilmislerdi. Istisna kapsamindaki teslimler ile ozel matrah sekline
+    tabi islemler beyannamenin "MATRAH TOPLAMI" satirinda YER ALMAZ, ayri
+    bolumlerde beyan edilir; bu yuzden karsilastirmada "beyan edilmemis"
+    gorunurler.
+
+    Rapor bunu susarak gecemez: tutarlar ve beyannamedeki karsiliklari
+    yazilir, uzerlerinden VERGI HESAPLANMADIGI da belirtilir. Nitelendirme
+    mufettisindir; uygulama rakamlari koyar.
+    """
+    kdvsiz = 0.0
+    istisna = ozel = 0.0
+    for d in donemler:
+        beyan = float(d["beyan"].get("matrah") or 0.0)
+        olmasi = float(d["elestirili"].get("matrah") or 0.0)
+        if olmasi - beyan <= 0.005:          # o donemde ilave yok
+            continue
+        kdvsiz += _satis_kdvsiz_matrahi(liste, d["yil"], d["ay"])
+        istisna += float(d["beyan"].get("istisna_teslim") or 0.0)
+        ozel += float(d["beyan"].get("ozel_matrah") or 0.0)
+    if kdvsiz <= 0.005:
+        return
+    ortulen = istisna + ozel
+    acik = round(kdvsiz - ortulen, 2)
+
+    if ortulen > 0.005:
+        bulgu = ("toplam %s TL beyan bulunduğu görülmüştür.%s" % (
+            _tl(ortulen),
+            # Acikta kalan tutar varsa SUSULMAZ: raporu okuyanin ilk
+            # soracagi sey odur.
+            "" if acik <= 0.005 else
+            (" Bu tutarın %s TL’lik kısmı ise anılan bölümlerde de beyan "
+             "edilmemiştir." % _tl(acik))))
+    else:
+        bulgu = "herhangi bir beyan bulunmadığı görülmüştür."
+    b.paragraf(
+        "Matraha ilave edilen belgelerin %s TL tutarındaki kısmı, üzerinde "
+        "katma değer vergisi hesaplanmamış belgelerden oluşmaktadır. %s "
+        "ilgili dönem katma değer vergisi beyannamelerinin istisna "
+        "kapsamına giren işlemler ile özel matrah şekline tabi işlemlere "
+        "ilişkin bölümlerinde %s Bu belgeler üzerinde katma değer vergisi "
+        "hesaplanmadığından, anılan tutarlar bakımından hesaplanan katma "
+        "değer vergisine ilave yapılmamıştır."
+        % (_tl(kdvsiz), ik.mukellef_sozu(kunye, buyuk=True, ek="in"), bulgu),
+        girinti=1)
+
+
+def _satis_kdvsiz_matrahi(liste, yil, ay):
+    """O donemde duzenlenen ve KDV'si SIFIR olan belgelerin matrahi."""
+    return round(sum(float(f.get("matrah") or 0.0) for f in (liste or [])
+                     if f.get("yon") == F.YON_SATIS and not f.get("iptal")
+                     and f.get("kayit_yil") == yil and f.get("kayit_ay") == ay
+                     and abs(float(f.get("kdv") or 0.0)) < 0.005), 2)
 
 
 def _satis_kdvsi(liste, yil, ay):

@@ -120,7 +120,10 @@ bolumlerde beyan edilir. Bu yuzden KDV'si sifir bir belge "beyan
 edilmemis" gibi gorunur. Uygulama bunlari ayri sayip (`kdvsiz_adet`,
 `kdvsiz_matrah`) beyannamenin istisna / ozel matrah bolumleriyle
 karsilastirir ve UYARIR; otomatik cikarmaz, cunku hangi belgenin hangi
-istisnaya girdigi belge bazinda bilinmez - karar mufettisindir.
+istisnaya girdigi belge bazinda bilinmez - karar mufettisindir. RAPOR da
+susmaz: 4.2.4'te tutarlar, beyannamedeki karsiligi ve varsa acikta kalan
+kisim yazilir; ayrica bu tutarlar uzerinden hesaplanan KDV'ye ilave
+YAPILMADIGI belirtilir.
 
 **Matrah kurali:** beyan ile mukellefin DUZENLEDIGI faturalarin toplami
 uyusmadiginda VUK 3/B geregi gercek durum esas alinir, ama yalnizca
