@@ -3593,6 +3593,36 @@ function faturaSatisOzetiniCiz() {
       'satış faturalarının kayıt dönemi, beyan verisi yüklenmemiş bir yıla ' +
       'ait. O dönemlerde beyan 0 görünür; önce beyannameyi yükleyin.</div>'
       : "");
+  // KDV'si SIFIR olan belgeler: beyan dışı değil, istisna ya da özel
+  // matrah olarak beyan edilmiş olabilir. Müfettişin tespiti
+  // (2026-10-20): matraha ilave etmeden önce denetlenmeli.
+  const kdvsiz = satirlar.filter((s) => s.kdvsiz_adet > 0
+                                 && Math.max(s.fark, 0) > 0.005);
+  const kdvsizUyari = !kdvsiz.length ? "" :
+    '<div class="uyari-satir" style="margin-top:8px;"><strong>KDV\'si ' +
+    'sıfır olan belgeler var.</strong> Bunlar beyan dışı olmayabilir: ' +
+    'istisna kapsamında ya da özel matrah şekline tabi işlem olarak ' +
+    'beyan edilmiş olabilirler. Beyannamenin ilgili bölümleriyle ' +
+    'karşılaştırma:<table class="tablo" style="margin-top:6px;">' +
+    '<tr><th>Dönem</th><th>KDV’siz Belge</th><th>KDV’siz Matrah</th>' +
+    '<th>Beyanda İstisna</th><th>Beyanda Özel Matrah</th>' +
+    '<th>Açıkta Kalan</th></tr>' +
+    kdvsiz.map((s) => {
+      const ortulen = s.beyan_istisna + s.beyan_ozel_matrah;
+      const acik = Math.max(s.kdvsiz_matrah - ortulen, 0);
+      return `<tr><td>${s.yil}/${s.ay_adi}</td>` +
+        `<td class="sag">${s.kdvsiz_adet}</td>` +
+        `<td class="sag">${tl(s.kdvsiz_matrah)}</td>` +
+        `<td class="sag">${tl(s.beyan_istisna)}</td>` +
+        `<td class="sag">${tl(s.beyan_ozel_matrah)}</td>` +
+        `<td class="sag${acik > 0.005 ? " fark-var" : ""}">` +
+        `${acik > 0.005 ? tl(acik) : "—"}</td></tr>`;
+    }).join("") + "</table>" +
+    '<div style="margin-top:6px;">“Açıkta kalan” sütunu boşsa KDV’siz ' +
+    'belgelerin tamamı beyannamenin istisna / özel matrah bölümlerinde ' +
+    'görünüyor demektir; o tutarı matraha ilave etmeden önce bir kez ' +
+    'daha denetleyin.</div></div>';
+
   if (sapan.length) {
     yonerge.innerHTML = `<strong>${sapan.length} dönemde</strong> döküm ile ` +
       "tespitlerde girili matrah ilavesi tutmuyor (kırmızı hücreler). Bir " +
@@ -3600,6 +3630,7 @@ function faturaSatisOzetiniCiz() {
       "Aktar</strong> düğmesine basın; ilave dökümdeki güncel hâline göre " +
       "yeniden yazılır. İndirim tarafına dokunulmaz.";
     yonerge.style.color = "#a33";
+    yonerge.innerHTML += kdvsizUyari;
   } else {
     yonerge.style.color = "";
     yonerge.innerHTML = ilaveli.length
@@ -3607,6 +3638,7 @@ function faturaSatisOzetiniCiz() {
         "ilave tespitlere girilmiş durumda."
       : "Hiçbir dönemde düzenlenen faturalar beyan edilen matrahı aşmıyor; " +
         "matrah ilavesi gerekmiyor (beyan esas alınır).";
+    yonerge.innerHTML += kdvsizUyari;
   }
 }
 

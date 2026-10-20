@@ -113,6 +113,15 @@ Beyan dokumu tablosu da ilave edilecek KDV tasidiginda o sutunu yazar -
 yoksa tablo kendi icinde tutmaz ve hata gorunmez kalir (sahada boyle
 cikti, 2026-10-20).
 
+**KDV'si SIFIR belgeler beyan disi olmayabilir.** Matrah karsilastirmasi
+beyannamenin "MATRAH TOPLAMI" satirina bakar; istisna kapsamindaki
+teslimler ve OZEL MATRAH sekline tabi islemler o satirda YER ALMAZ, ayri
+bolumlerde beyan edilir. Bu yuzden KDV'si sifir bir belge "beyan
+edilmemis" gibi gorunur. Uygulama bunlari ayri sayip (`kdvsiz_adet`,
+`kdvsiz_matrah`) beyannamenin istisna / ozel matrah bolumleriyle
+karsilastirir ve UYARIR; otomatik cikarmaz, cunku hangi belgenin hangi
+istisnaya girdigi belge bazinda bilinmez - karar mufettisindir.
+
 **Matrah kurali:** beyan ile mukellefin DUZENLEDIGI faturalarin toplami
 uyusmadiginda VUK 3/B geregi gercek durum esas alinir, ama yalnizca
 mukellef ALEYHINE olan yonde. Faturalar beyandan azsa beyan esas alinir.

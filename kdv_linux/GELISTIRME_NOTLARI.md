@@ -811,6 +811,40 @@ oturumda buradan devam edilir.
       esas alıyordu (orana bölmüyor); artık raporda gerekçesi de yazılı:
       KDVK 8/2 uyarınca belgede gösterilen KDV, kanunen hesaplanması
       gerekenden fazla dahi olsa beyan edilip ödenmesi gereken vergidir.
+- [x] **KDV'si sıfır belgeler beyan dışı olmayabilir: istisna / özel
+      matrah uyarısı.** Müfettişin tespiti (2026-10-20): beyan dışı
+      sandığı faturaların KDV'si sıfırdı ve bunlar **özel matrah şekline
+      tabi işlem** olarak beyan edilmişti — yani beyan dışı değillerdi.
+
+      Kök sorun kavramsal: matrah karşılaştırması beyannamenin "MATRAH
+      TOPLAMI" satırına bakıyor, ama istisna kapsamındaki teslimler ve
+      özel matrah şekline tabi işlemler o satırda YER ALMAZ; ayrı
+      bölümlerde beyan edilir. Dolayısıyla KDV'si sıfır bir belge
+      "beyan edilmemiş" gibi görünür.
+
+      Uygulama artık bunları ayrı sayıyor ve beyannamenin ilgili
+      bölümleriyle karşılaştırıyor (`tam_istisna_teslim`,
+      `kismi_istisna_teslim`, `istisna_toplam_teslim`,
+      `ozel_matrah_bedel`; istisna toplamında tam+kısmi ile toplam
+      satırının büyüğü alınır ki aynı tutar iki kez sayılmasın).
+
+      - `satis_donem_toplamlari`: `kdvsiz_adet` / `kdvsiz_matrah`
+      - `satis_beyan_farki`: `beyan_istisna`, `beyan_ozel_matrah`
+      - Satış kartında uyarı tablosu: Dönem | KDV'siz Belge | KDV'siz
+        Matrah | Beyanda İstisna | Beyanda Özel Matrah | **Açıkta Kalan**
+      - "Dikkat Edilecek Noktalar"a bulgu (`kdvsiz_satis`): beyanda
+        karşılığı varsa "bu belgeler beyan dışı olmayabilir", yoksa
+        "beyannamede tutar görünmüyor" diyor.
+
+      **Otomatik çıkarma YAPILMIYOR**: hangi belgenin hangi istisnaya
+      girdiği belge bazında bilinmiyor, karar müfettişindir. Uygulama
+      rakamları yan yana koyup "denetleyin" diyor — müfettişin istediği
+      de buydu ("en azından bir uyarı notu koysun").
+
+      Denetim: `ibraz_etmeme_testi.py` 7. bölüm, iki mutasyonla
+      doğrulandı. Not: ilk yazdığım denetim boş listede ÇÖKÜYORDU ve
+      kendisinden sonraki denetimleri gizliyordu; mutasyon bunu da
+      ortaya çıkardı, denetim çökmeyecek biçimde yeniden yazıldı.
 - [x] **Ölçü “hesaplanan KDV” değil, beyannamenin TOPLAM KDV satırı.**
       Müfettişin kararı (2026-10-20): "tabloda hesaplanan KDV sütunu deme
       de toplam KDV sütunu koy". Doğrusu bu: Toplam KDV = hesaplanan +

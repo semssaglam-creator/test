@@ -21,6 +21,7 @@ ozeti ayni veriden gelir ve birbirini tutmak zorunda kalir.
 from datetime import date
 
 from .satirlar import AYLAR
+from .turkce import tl
 
 # Turkiye'de uygulanan KDV oranlari; disina cikan satir kullaniciya bildirilir
 BILINEN_ORANLAR = (0.0, 1.0, 8.0, 10.0, 18.0, 20.0)
@@ -696,6 +697,14 @@ def uygulama_farki(faturalar, yillar, saticilar=None):
     return farklar
 
 
+def _istisna(kayit, ay):
+    """Beyannamede istisna kapsaminda beyan edilen teslim tutari."""
+    if not kayit:
+        return 0.0
+    return max(kayit["istisna_toplam"][ay - 1],
+               kayit["tam_istisna"][ay - 1] + kayit["kismi_istisna"][ay - 1])
+
+
 def satis_beyan_farki(faturalar, yillar):
     """Duzenlenen faturalarin toplami ile BEYAN edilen matrahi karsilastirir.
 
@@ -724,6 +733,13 @@ def satis_beyan_farki(faturalar, yillar):
             "hesaplanan": _dizi(yil_kaydi, "hesaplanan_kdv"),
             "ilave_edilecek": _dizi(yil_kaydi, "ilave_edilecek_kdv"),
             "toplam_kdv": _dizi(yil_kaydi, "toplam_kdv"),
+            # Istisna ve ozel matrah bolumleri: KDV'si sifir olan
+            # belgelerin beyan DISI mi yoksa buralarda mi beyan edildigini
+            # anlamak icin.
+            "tam_istisna": _dizi(yil_kaydi, "tam_istisna_teslim"),
+            "kismi_istisna": _dizi(yil_kaydi, "kismi_istisna_teslim"),
+            "istisna_toplam": _dizi(yil_kaydi, "istisna_toplam_teslim"),
+            "ozel_matrah": _dizi(yil_kaydi, "ozel_matrah_bedel"),
         }
 
     sonuc = []
@@ -756,6 +772,15 @@ def satis_beyan_farki(faturalar, yillar):
             "beyan_ilave_edilecek": round(ilave_edilecek, 2),
             "beyan_kdv": round(beyan_kdv, 2),
             "kdv_fark": round(fatura_kdv - beyan_kdv, 2),
+            # KDV'si sifir olan belgeler ve beyannamenin istisna / ozel
+            # matrah bolumleri. "istisna_toplam" tam + kismi istisnanin
+            # TOPLAMIDIR; ikisi birden okunmussa buyugu alinir ki ayni
+            # tutar iki kez sayilmasin.
+            "kdvsiz_adet": hucre.get("kdvsiz_adet", 0),
+            "kdvsiz_matrah": round(hucre.get("kdvsiz_matrah", 0.0), 2),
+            "beyan_istisna": round(_istisna(kayit, ay), 2),
+            "beyan_ozel_matrah": round(
+                kayit["ozel_matrah"][ay - 1] if kayit else 0.0, 2),
             "yil_var": kayit is not None,
         })
     return sonuc
@@ -826,6 +851,33 @@ def bulgular(faturalar, yillar=None, saticilar=None):
             sonuc.append({"tur": "unvan_yok", "fatura": satici["vkn"],
                           "mesaj": "%s VKN'li satıcının unvanı girilmemiş; "
                                    "belgelerde boş kalır." % (satici["vkn"] or "(VKN yok)")})
+
+    # KDV'si SIFIR olan satis belgeleri: beyan disi degil, beyannamenin
+    # ISTISNA ya da OZEL MATRAH bolumlerinde beyan edilmis olabilir.
+    # Matraha ilave etmeden once denetlenmeli - aksi halde zaten beyan
+    # edilmis bir teslim ikinci kez matraha girer (mufettisin tespiti,
+    # 2026-10-20).
+    for satir in satis_beyan_farki(faturalar, yillar):
+        if satir["kdvsiz_adet"] <= 0 or satir["kdvsiz_matrah"] <= 0.005:
+            continue
+        ortulen = satir["beyan_istisna"] + satir["beyan_ozel_matrah"]
+        if ortulen > 0.005:
+            mesaj = ("%s/%s: KDV'si sıfır olan %d belge var (toplam %s TL). "
+                     "Beyannamenin istisna / özel matrah bölümlerinde %s TL "
+                     "beyan görünüyor; bu belgeler beyan dışı olmayabilir. "
+                     "Matraha ilave etmeden önce denetleyin."
+                     % (satir["yil"], satir["ay_adi"], satir["kdvsiz_adet"],
+                        tl(satir["kdvsiz_matrah"]), tl(ortulen)))
+        else:
+            mesaj = ("%s/%s: KDV'si sıfır olan %d belge var (toplam %s TL). "
+                     "Beyannamenin istisna ve özel matrah bölümlerinde tutar "
+                     "görünmüyor; beyanname yüklenmemişse bu belgeler "
+                     "istisna ya da özel matrah olarak beyan edilmiş "
+                     "olabilir. Matraha ilave etmeden önce denetleyin."
+                     % (satir["yil"], satir["ay_adi"], satir["kdvsiz_adet"],
+                        tl(satir["kdvsiz_matrah"])))
+        sonuc.append({"tur": "kdvsiz_satis", "fatura": "%s/%s"
+                      % (satir["yil"], satir["ay_adi"]), "mesaj": mesaj})
     return sonuc
 
 
@@ -1306,15 +1358,23 @@ def satis_donem_toplamlari(faturalar):
             continue
         hucre = toplam.setdefault((int(yil), int(ay)),
                                   {"adet": 0, "matrah": 0.0, "kdv": 0.0,
-                                   "toplam": 0.0})
+                                   "toplam": 0.0, "kdvsiz_adet": 0,
+                                   "kdvsiz_matrah": 0.0})
         hucre["adet"] += 1
         matrah = float(f.get("matrah") or 0.0)
         kdv = float(f.get("kdv") or 0.0)
         hucre["matrah"] += matrah
         hucre["kdv"] += kdv
         hucre["toplam"] += float(f.get("toplam") or 0.0) or (matrah + kdv)
+        # KDV'si SIFIR olan belgeler ayrica sayilir: bunlar beyan disi
+        # degil, beyannamenin ISTISNA ya da OZEL MATRAH bolumlerinde
+        # beyan edilmis olabilir. Matraha ilave etmeden once denetlenmeli
+        # (mufettisin tespiti, 2026-10-20).
+        if abs(kdv) < 0.005:
+            hucre["kdvsiz_adet"] += 1
+            hucre["kdvsiz_matrah"] += matrah
     for hucre in toplam.values():
-        for alan in ("matrah", "kdv", "toplam"):
+        for alan in ("matrah", "kdv", "toplam", "kdvsiz_matrah"):
             hucre[alan] = round(hucre[alan], 2)
     return toplam
 

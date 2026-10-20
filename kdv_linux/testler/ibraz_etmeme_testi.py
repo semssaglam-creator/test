@@ -655,6 +655,67 @@ denetle("İlave Edil. KDV" in m_i,
 denetle("İlave Edil. KDV" not in m,
         "taşımayan dosyada sütun yazılmıyor")
 
+
+# --------------------------- 7) KDV'si sifir belgeler: istisna / ozel matrah
+# Mufettisin tespiti (2026-10-20): beyan disi sandigi faturalarin KDV'si
+# sifirdi ve bunlar OZEL MATRAH olarak beyan edilmisti. Uygulama matraha
+# ilave etmeden once uyarmali.
+print("\n7) KDV'si sıfır belgeler istisna / özel matrah olabilir")
+
+
+def kdvsiz_ornegi(ozel_matrah=0.0, istisna=0.0):
+    beyan = {k: [0.0] * 12 for k in VERI_KODLARI}
+    beyan["ozel_matrah_bedel"][0] = ozel_matrah
+    beyan["tam_istisna_teslim"][0] = istisna
+    return ({"yil": 2021, "ay_sayisi": 1, "beyan": beyan,
+             "elestiri": hesap.bos_elestiri()},
+            F.normalize([
+                {"duzenleyen_vkn": "4444444444", "alici_vkn": "1",
+                 "tarih": "2021-01-07", "matrah": 6250.0, "kdv": 1125.0},
+                {"duzenleyen_vkn": "4444444444", "alici_vkn": "2",
+                 "tarih": "2021-01-15", "matrah": 26280.0, "kdv": 0.0},
+                {"duzenleyen_vkn": "4444444444", "alici_vkn": "3",
+                 "tarih": "2021-01-15", "matrah": 24850.0, "kdv": 0.0}],
+                "4444444444"))
+
+
+yil_kaydi, liste_k = kdvsiz_ornegi(ozel_matrah=51130.0)
+satir_k = F.satis_beyan_farki(liste_k, [yil_kaydi])[0]
+esit(satir_k["kdvsiz_adet"], 2, "KDV'si sıfır belge sayısı ayrı tutuluyor")
+esit(satir_k["kdvsiz_matrah"], 51130.0, "KDV'siz belgelerin matrahı")
+esit(satir_k["beyan_ozel_matrah"], 51130.0,
+     "beyannamedeki özel matrah okunuyor")
+bulgu = [b for b in F.bulgular(liste_k, [yil_kaydi], {})
+         if b["tur"] == "kdvsiz_satis"]
+denetle(len(bulgu) == 1, "uyarı bulgusu çıkıyor")
+# Bos listede coken bir denetim, kendisinden SONRAKI denetimleri de
+# gizler; mesaj yoksa bos metinle devam edilir.
+_mesaj = bulgu[0]["mesaj"] if bulgu else ""
+denetle("beyan dışı olmayabilir" in _mesaj,
+        "beyanda karşılığı varsa uyarı bunu söylüyor")
+denetle("51.130,00" in _mesaj, "tutarlar uyarıda yazılı")
+
+# Istisna bolumunden okunursa da ayni uyari cikmali.
+yil_i, liste_i2 = kdvsiz_ornegi(istisna=51130.0)
+esit(F.satis_beyan_farki(liste_i2, [yil_i])[0]["beyan_istisna"], 51130.0,
+     "istisna bölümü de okunuyor")
+
+# Beyanda karsiligi YOKSA uyari yine cikar ama baska soyler.
+yil_y, liste_y = kdvsiz_ornegi()
+bulgu_y = [b for b in F.bulgular(liste_y, [yil_y], {})
+           if b["tur"] == "kdvsiz_satis"]
+denetle(len(bulgu_y) == 1, "beyanda karşılığı yokken de uyarı çıkıyor")
+denetle("tutar görünmüyor" in (bulgu_y[0]["mesaj"] if bulgu_y else ""),
+        "karşılığı yoksa uyarı bunu söylüyor")
+
+# KDV'si sifir belge YOKSA uyari CIKMAMALI.
+liste_t = F.normalize([{"duzenleyen_vkn": "4444444444", "alici_vkn": "1",
+                        "tarih": "2021-01-07", "matrah": 6250.0,
+                        "kdv": 1125.0}], "4444444444")
+denetle(not [b for b in F.bulgular(liste_t, [yil_y], {})
+             if b["tur"] == "kdvsiz_satis"],
+        "KDV'si sıfır belge yoksa uyarı çıkmıyor")
+
 print()
 if HATA:
     print("BAŞARISIZ: %d denetim" % len(HATA))
