@@ -139,15 +139,21 @@ def matrah_ilavesi_yaz(elestiri, yil_kaydi, satis_toplamlari):
             # Hesaplanan KDV farki faturalarin kendi KDV'sinden; orana
             # bolunmez, cunku dokumde sifir KDV'li satirlar olabiliyor.
             #
-            # OLCUT, o donemde BEYAN EDILEN TOPLAM hesaplanan vergidir:
-            # hesaplanan KDV + ILAVE EDILECEK KDV. Sahada su cikti
+            # OLCUT, beyannamenin TOPLAM KDV satiridir. Sahada su cikti
             # (2026-10-20): mukellef matrahi hic beyan etmemis ama
             # faturanin 1.125 TL KDV'sini "Ilave Edilecek KDV" satirinda
             # beyan etmisti. Yalnizca "hesaplanan_kdv" ile karsilastirilinca
             # ayni vergi bir kez daha ekleniyor ve odenecek KDV iki katina
-            # cikiyordu (1.125 yerine 2.250).
-            beyan_kdv = (_d(beyan, "hesaplanan_kdv", ay)
-                         + _d(beyan, "ilave_edilecek_kdv", ay))
+            # cikiyordu (1.125 yerine 2.250). Toplam KDV = hesaplanan +
+            # ilave edilecek oldugundan dogru olcu odur.
+            #
+            # Ikisinin BUYUGU alinir: yeni beyanname biciminde tutari sifir
+            # olan bolum hic basilmadigindan, okunamayan bir "TOPLAM KDV"
+            # satiri sessizce sifir gorunur ve beyan edilmis vergi yeniden
+            # tarh edilirdi (bkz. tuzaklar.md, beyanname okuyucusu).
+            beyan_kdv = max(_d(beyan, "toplam_kdv", ay),
+                            _d(beyan, "hesaplanan_kdv", ay)
+                            + _d(beyan, "ilave_edilecek_kdv", ay))
             kdv_farki = _yuvarla(float(satis.get("kdv") or 0.0) - beyan_kdv)
             elestiri["hesaplanan_otomatik"][ay] = False
             elestiri["hesaplanan_kdv_ilave"][ay] = max(kdv_farki, 0.0)

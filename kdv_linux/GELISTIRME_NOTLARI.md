@@ -811,6 +811,23 @@ oturumda buradan devam edilir.
       esas alıyordu (orana bölmüyor); artık raporda gerekçesi de yazılı:
       KDVK 8/2 uyarınca belgede gösterilen KDV, kanunen hesaplanması
       gerekenden fazla dahi olsa beyan edilip ödenmesi gereken vergidir.
+- [x] **Ölçü “hesaplanan KDV” değil, beyannamenin TOPLAM KDV satırı.**
+      Müfettişin kararı (2026-10-20): "tabloda hesaplanan KDV sütunu deme
+      de toplam KDV sütunu koy". Doğrusu bu: Toplam KDV = hesaplanan +
+      ilave edilecek, yani ölçüyü anlatmak için iki kalemi toplamaya gerek
+      yok, beyannamenin kendi satırı zaten o.
+
+      Sütunlar: "Düzenlenen Belgelerin KDV’si | Beyan Edilen Toplam KDV |
+      Toplam KDV’ye İlave". Tablo adı da "...Matrah ve Katma Değer Vergisi
+      İlavesi" oldu. Arayüzdeki satış kartında da KDV grubu üç sütuna
+      indi; beyan hücresinin üzerine gelince hesaplanan / ilave edilecek
+      dağılımı ipucu olarak görünüyor.
+
+      Hesapta ölçü `max(toplam_kdv, hesaplanan + ilave_edilecek)`.
+      **Büyüğü alınıyor**, çünkü yeni beyanname biçiminde tutarı sıfır
+      olan bölüm hiç basılmıyor: okunamayan bir "TOPLAM KDV" satırı
+      sessizce sıfır görünür ve beyan edilmiş vergi yeniden tarh edilirdi
+      (bkz. tuzaklar, beyanname okuyucusu).
 - [x] **Hesaplanan KDV karşılaştırması da gösteriliyor.** Müfettişin
       isteği (2026-10-20): "uygulama faturalarda hesaplanan KDV ile
       beyannamede bulunan hesaplanan KDV kıyaslaması da yapsın".

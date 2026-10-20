@@ -102,8 +102,11 @@ alanlarina yazar; boylece tutanak, Excel ve sonuc bolumu ayni rakamlari
 gorur. Yeni bir rapor eklerken ayni yolu izleyin - rapor kendi rakamini
 hesaplarsa belgeler birbirini tutmaz.
 
-**Olcut "hesaplanan KDV" DEGIL, beyan edilen TOPLAM hesaplanan vergidir:**
-`hesaplanan_kdv + ilave_edilecek_kdv`. Mukellef matrahi hic beyan etmeden
+**Olcut "hesaplanan KDV" DEGIL, beyannamenin TOPLAM KDV satiridir**
+(= hesaplanan + ilave edilecek). Hesapta `max(toplam_kdv, hesaplanan +
+ilave_edilecek)` alinir: yeni beyanname biciminde tutari sifir olan bolum
+hic basilmadigindan okunamayan bir satir sessizce sifir gorunur.
+Mukellef matrahi hic beyan etmeden
 faturanin KDV'sini "Ilave Edilecek KDV" satirinda beyan etmis olabilir;
 yalnizca hesaplanan ile karsilastirmak ayni vergiyi iki kez tarh ettirir.
 Beyan dokumu tablosu da ilave edilecek KDV tasidiginda o sutunu yazar -

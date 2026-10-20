@@ -723,6 +723,7 @@ def satis_beyan_farki(faturalar, yillar):
             "matrah": _dizi(yil_kaydi, "matrah_toplami"),
             "hesaplanan": _dizi(yil_kaydi, "hesaplanan_kdv"),
             "ilave_edilecek": _dizi(yil_kaydi, "ilave_edilecek_kdv"),
+            "toplam_kdv": _dizi(yil_kaydi, "toplam_kdv"),
         }
 
     sonuc = []
@@ -730,14 +731,16 @@ def satis_beyan_farki(faturalar, yillar):
         hucre = donemler[(yil, ay)]
         kayit = beyanlar.get(yil)
         beyan = kayit["matrah"][ay - 1] if kayit else 0.0
-        # KDV tarafinin olcutu, o donemde beyan edilen TOPLAM hesaplanan
-        # vergidir: hesaplanan + ILAVE EDILECEK. Mukellef matrahi hic beyan
+        # KDV tarafinin olcutu beyannamenin TOPLAM KDV satiridir
+        # (= hesaplanan + ilave edilecek). Mukellef matrahi hic beyan
         # etmeden faturanin KDV'sini ilave edilecek satirinda beyan etmis
         # olabiliyor; yalnizca hesaplananla karsilastirmak ayni vergiyi iki
-        # kez tarh ettirir (sahada boyle cikti, 2026-10-20).
+        # kez tarh ettirir (sahada boyle cikti, 2026-10-20). Ikisinin
+        # BUYUGU alinir: okunamayan bir satir sessizce sifir gorunur.
         hesaplanan = kayit["hesaplanan"][ay - 1] if kayit else 0.0
         ilave_edilecek = kayit["ilave_edilecek"][ay - 1] if kayit else 0.0
-        beyan_kdv = hesaplanan + ilave_edilecek
+        toplam_kdv = kayit["toplam_kdv"][ay - 1] if kayit else 0.0
+        beyan_kdv = max(toplam_kdv, hesaplanan + ilave_edilecek)
         fatura_kdv = round(hucre["kdv"], 2)
         sonuc.append({
             "yil": yil, "ay": ay, "ay_adi": AYLAR[ay - 1],

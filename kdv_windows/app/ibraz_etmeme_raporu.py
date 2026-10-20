@@ -621,8 +621,9 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         # faturanin vergisini ilave edilecek satirinda beyan etmis olabilir
         # (sahada boyle cikti, 2026-10-20); bu halde matrah ilavesi
         # buyukken KDV ilavesi sifir cikar ve SEBEBI tabloda gorunmelidir.
-        kdv_beyan = (float(d["beyan"].get("hesaplanan") or 0.0)
-                     + float(d["beyan"].get("ilave_edilecek") or 0.0))
+        kdv_beyan = max(float(d["beyan"].get("toplam_kdv") or 0.0),
+                        float(d["beyan"].get("hesaplanan") or 0.0)
+                        + float(d["beyan"].get("ilave_edilecek") or 0.0))
         kdv_fatura = _satis_kdvsi(liste, d["yil"], d["ay"])
         kdv_ilave = round(max(kdv_fatura - kdv_beyan, 0.0), 2)
         if ilave <= 0.005:
@@ -712,25 +713,25 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         "fazla dahi olsa, beyan edilip ödenmesi gereken vergidir."
         % M(kunye, ek="in"), girinti=1)
     b.paragraf(
-        "Hesaplanan katma değer vergisi yönünden karşılaştırmada ölçü, "
-        "beyan edilen hesaplanan katma değer vergisi ile ilave edilecek "
-        "katma değer vergisinin TOPLAMIDIR. Bir dönemde matrah beyan "
-        "edilmemiş olsa dahi belgenin vergisi beyannamenin ilave edilecek "
-        "katma değer vergisi satırında beyan edilmiş olabileceğinden, "
-        "matraha ilave yapılan bir dönemde hesaplanan vergiye ilave "
-        "yapılması gerekmeyebilir; bu durumda vergi zaten beyan "
-        "edilmiştir.", girinti=1)
-    b.paragraf("Beyan Edilmeyen Belgelere İlişkin Matrah ve Hesaplanan "
-               "Katma Değer Vergisi İlavesi",
+        "Vergi yönünden karşılaştırmada ölçü, beyannamenin TOPLAM KATMA "
+        "DEĞER VERGİSİ satırıdır; bu satır hesaplanan katma değer vergisi "
+        "ile ilave edilecek katma değer vergisini birlikte içerir. Bir "
+        "dönemde matrah beyan edilmemiş olsa dahi belgenin vergisi "
+        "beyannamenin ilave edilecek katma değer vergisi satırında beyan "
+        "edilmiş olabileceğinden, matraha ilave yapılan bir dönemde "
+        "vergiye ilave yapılması gerekmeyebilir; bu durumda vergi zaten "
+        "beyan edilmiştir.", girinti=1)
+    b.paragraf("Beyan Edilmeyen Belgelere İlişkin Matrah ve Katma Değer "
+               "Vergisi İlavesi",
                kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
     satirlar.append(["TOPLAM", "", _tl(fatura_toplam), _tl(beyan_toplam),
                      _tl(ilave_toplam), _tl(kdv_fatura_toplam),
                      _tl(kdv_beyan_toplam), _tl(kdv_ilave_toplam)])
     b.tablo(["Dönemi", "Belge\nAdedi", "Düzenlenen\nBelgelerin Matrahı",
              "Beyan Edilen\nMatrah", "Matraha\nİlave",
-             "Düzenlenen Belgelerin\nHesaplanan KDV’si",
-             "Beyan Edilen\nHesaplanan KDV",
-             "Hesaplanan KDV’ye\nİlave"], satirlar,
+             "Düzenlenen\nBelgelerin KDV’si",
+             "Beyan Edilen\nToplam KDV",
+             "Toplam KDV’ye\nİlave"], satirlar,
             hizalar=["orta", "orta", "sag", "sag", "sag", "sag", "sag",
                      "sag"],
             oranlar=[0.85, 0.6, 1.2, 1.0, 1.0, 1.2, 1.1, 1.05],
