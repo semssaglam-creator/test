@@ -709,27 +709,51 @@ def satis_beyan_farki(faturalar, yillar):
     `fark` eksi cikabilir; arayuz bunu "ilave gerekmiyor" diye gosterir.
     """
     donemler = satis_donem_toplamlari(faturalar)
+    def _dizi(yil_kaydi, kod):
+        ham = list((yil_kaydi.get("beyan") or {}).get(kod) or [])
+        return [float(d or 0.0) for d in (ham + [0.0] * 12)[:12]]
+
     beyanlar = {}
     for yil_kaydi in yillar or []:
         try:
             yil = int(yil_kaydi.get("yil"))
         except (TypeError, ValueError):
             continue
-        dizi = list((yil_kaydi.get("beyan") or {}).get("matrah_toplami") or [])
-        beyanlar[yil] = [float(d or 0.0) for d in (dizi + [0.0] * 12)[:12]]
+        beyanlar[yil] = {
+            "matrah": _dizi(yil_kaydi, "matrah_toplami"),
+            "hesaplanan": _dizi(yil_kaydi, "hesaplanan_kdv"),
+            "ilave_edilecek": _dizi(yil_kaydi, "ilave_edilecek_kdv"),
+        }
 
     sonuc = []
     for (yil, ay) in sorted(donemler):
         hucre = donemler[(yil, ay)]
-        beyan_dizi = beyanlar.get(yil)
-        beyan = beyan_dizi[ay - 1] if beyan_dizi else 0.0
+        kayit = beyanlar.get(yil)
+        beyan = kayit["matrah"][ay - 1] if kayit else 0.0
+        # KDV tarafinin olcutu, o donemde beyan edilen TOPLAM hesaplanan
+        # vergidir: hesaplanan + ILAVE EDILECEK. Mukellef matrahi hic beyan
+        # etmeden faturanin KDV'sini ilave edilecek satirinda beyan etmis
+        # olabiliyor; yalnizca hesaplananla karsilastirmak ayni vergiyi iki
+        # kez tarh ettirir (sahada boyle cikti, 2026-10-20).
+        hesaplanan = kayit["hesaplanan"][ay - 1] if kayit else 0.0
+        ilave_edilecek = kayit["ilave_edilecek"][ay - 1] if kayit else 0.0
+        beyan_kdv = hesaplanan + ilave_edilecek
+        fatura_kdv = round(hucre["kdv"], 2)
         sonuc.append({
             "yil": yil, "ay": ay, "ay_adi": AYLAR[ay - 1],
             "adet": hucre["adet"],
             "fatura": round(hucre["matrah"], 2),
             "beyan": round(beyan, 2),
             "fark": round(hucre["matrah"] - beyan, 2),
-            "yil_var": beyan_dizi is not None,
+            # KDV karsilastirmasi: faturalarin KDV'si ile beyan edilen
+            # hesaplanan vergi yan yana dursun ki ilave sifir ciktiginda
+            # SEBEBI gorunsun.
+            "fatura_kdv": fatura_kdv,
+            "beyan_hesaplanan": round(hesaplanan, 2),
+            "beyan_ilave_edilecek": round(ilave_edilecek, 2),
+            "beyan_kdv": round(beyan_kdv, 2),
+            "kdv_fark": round(fatura_kdv - beyan_kdv, 2),
+            "yil_var": kayit is not None,
         })
     return sonuc
 

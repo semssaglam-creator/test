@@ -786,6 +786,31 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Hesaplanan KDV karşılaştırması da gösteriliyor.** Müfettişin
+      isteği (2026-10-20): "uygulama faturalarda hesaplanan KDV ile
+      beyannamede bulunan hesaplanan KDV kıyaslaması da yapsın".
+      Karşılaştırmayı motor zaten yapıyordu (bir önceki düzeltme), ama
+      hiçbir yerde GÖRÜNMÜYORDU — matrah ilavesi büyükken KDV ilavesinin
+      sıfır çıkması hesap hatası gibi duruyordu.
+
+      `faturalar.satis_beyan_farki` artık KDV tarafını da taşıyor:
+      `fatura_kdv`, `beyan_hesaplanan`, `beyan_ilave_edilecek`,
+      `beyan_kdv` (ikisinin toplamı, ölçüt), `kdv_fark`.
+
+      Satış kartındaki tablo iki gruplu başlığa geçti: **Matrah**
+      (Faturalar / Beyan / İlave) ve **Hesaplanan KDV** (Faturalar /
+      Beyan Hspl. / Beyan İlave Edil. / İlave). Beyan edilen hesaplanan
+      ile ilave edilecek AYRI sütunlarda; verginin nerede beyan edildiği
+      böylece görünüyor.
+
+      İbraz etmeme raporunun tablosu da genişledi ve adı değişti: "Beyan
+      Edilmeyen Belgelere İlişkin Matrah **ve Hesaplanan Katma Değer
+      Vergisi** İlavesi". Yeni sütunlar: Düzenlenen Belgelerin Hesaplanan
+      KDV'si | Beyan Edilen Hesaplanan KDV | Hesaplanan KDV'ye İlave.
+      Önüne de ölçünün hesaplanan + ilave edilecek toplamı olduğunu ve
+      matraha ilave yapılan bir dönemde vergiye ilave gerekmeyebileceğini
+      anlatan bir paragraf eklendi — rapora itiraz eden, tablodaki "—"yi
+      görüp soracaktır.
 - [x] **Ödenecek KDV iki katına çıkıyordu: “İlave Edilecek KDV” satırı.**
       Müfettiş raporun kendi çıktısından yakaladı (2026-10-20): Ocak'ta
       matrah beyan edilmemiş, satış faturasının KDV'si 1.125 TL, ama

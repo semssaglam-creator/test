@@ -574,20 +574,37 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
     """
     satirlar = []
     ilave_toplam = beyan_toplam = fatura_toplam = 0.0
+    kdv_fatura_toplam = kdv_beyan_toplam = kdv_ilave_toplam = 0.0
     for d in donemler:
         beyan = float(d["beyan"].get("matrah") or 0.0)
         olmasi = float(d["elestirili"].get("matrah") or 0.0)
         ilave = round(olmasi - beyan, 2)
         beyan_toplam += beyan
+        # KDV tarafinin olcutu, beyan edilen TOPLAM hesaplanan vergidir:
+        # hesaplanan + ILAVE EDILECEK. Mukellef matrahi beyan etmeden
+        # faturanin vergisini ilave edilecek satirinda beyan etmis olabilir
+        # (sahada boyle cikti, 2026-10-20); bu halde matrah ilavesi
+        # buyukken KDV ilavesi sifir cikar ve SEBEBI tabloda gorunmelidir.
+        kdv_beyan = (float(d["beyan"].get("hesaplanan") or 0.0)
+                     + float(d["beyan"].get("ilave_edilecek") or 0.0))
+        kdv_fatura = _satis_kdvsi(liste, d["yil"], d["ay"])
+        kdv_ilave = round(max(kdv_fatura - kdv_beyan, 0.0), 2)
         if ilave <= 0.005:
             # Belgeler beyandan az: beyan esas alinir, satir da yazilmaz.
             fatura_toplam += beyan
+            kdv_fatura_toplam += kdv_beyan
+            kdv_beyan_toplam += kdv_beyan
             continue
         fatura_toplam += olmasi
         ilave_toplam += ilave
+        kdv_fatura_toplam += kdv_fatura
+        kdv_beyan_toplam += kdv_beyan
+        kdv_ilave_toplam += kdv_ilave
         adet = _satis_adedi(liste, d["yil"], d["ay"])
         satirlar.append([_donem_adi(d), str(adet) if adet else "—",
-                         _tl(olmasi), _tl(beyan), _tl(ilave)])
+                         _tl(olmasi), _tl(beyan), _tl(ilave),
+                         _tl(kdv_fatura), _tl(kdv_beyan),
+                         _tl(kdv_ilave) if kdv_ilave > 0.005 else "—"])
     if ilave_toplam <= 0.005:
         return
 
@@ -654,14 +671,29 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         "katma değer vergisi de belgelerin kendi üzerinde gösterilen katma "
         "değer vergisi tutarlarından alınmış, matraha oran uygulanmak "
         "suretiyle bulunmamıştır." % M(kunye, ek="in"), girinti=1)
-    b.paragraf("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi",
+    b.paragraf(
+        "Hesaplanan katma değer vergisi yönünden karşılaştırmada ölçü, "
+        "beyan edilen hesaplanan katma değer vergisi ile ilave edilecek "
+        "katma değer vergisinin TOPLAMIDIR. Bir dönemde matrah beyan "
+        "edilmemiş olsa dahi belgenin vergisi beyannamenin ilave edilecek "
+        "katma değer vergisi satırında beyan edilmiş olabileceğinden, "
+        "matraha ilave yapılan bir dönemde hesaplanan vergiye ilave "
+        "yapılması gerekmeyebilir; bu durumda vergi zaten beyan "
+        "edilmiştir.", girinti=1)
+    b.paragraf("Beyan Edilmeyen Belgelere İlişkin Matrah ve Hesaplanan "
+               "Katma Değer Vergisi İlavesi",
                kalin=True, hiza="sol", aralik_once=120, aralik_sonra=40)
     satirlar.append(["TOPLAM", "", _tl(fatura_toplam), _tl(beyan_toplam),
-                     _tl(ilave_toplam)])
-    b.tablo(["Dönemi", "Belge Adedi", "Düzenlenen Belgelerin Matrahı",
-             "Beyan Edilen Matrah", "Matraha İlave"], satirlar,
-            hizalar=["orta", "orta", "sag", "sag", "sag"],
-            oranlar=[0.9, 0.7, 1.3, 1.2, 1.1],
+                     _tl(ilave_toplam), _tl(kdv_fatura_toplam),
+                     _tl(kdv_beyan_toplam), _tl(kdv_ilave_toplam)])
+    b.tablo(["Dönemi", "Belge\nAdedi", "Düzenlenen\nBelgelerin Matrahı",
+             "Beyan Edilen\nMatrah", "Matraha\nİlave",
+             "Düzenlenen Belgelerin\nHesaplanan KDV’si",
+             "Beyan Edilen\nHesaplanan KDV",
+             "Hesaplanan KDV’ye\nİlave"], satirlar,
+            hizalar=["orta", "orta", "sag", "sag", "sag", "sag", "sag",
+                     "sag"],
+            oranlar=[0.85, 0.6, 1.2, 1.0, 1.0, 1.2, 1.1, 1.05],
             buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
     b.paragraf(
         "Buna göre %s katma değer vergisi matrahlarına toplam %s TL ilave "
@@ -672,6 +704,14 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         # kaciniliyor (bkz. testler/ibraz_etmeme_testi.py).
         % ("%s %s" % (yil, ik.donem_adi(kunye, False)),
            _tl(ilave_toplam)), girinti=1)
+
+
+def _satis_kdvsi(liste, yil, ay):
+    """O donemde mukellefin duzenledigi belgelerin KDV toplami."""
+    return round(sum(float(f.get("kdv") or 0.0) for f in (liste or [])
+                     if f.get("yon") == F.YON_SATIS and not f.get("iptal")
+                     and f.get("kayit_yil") == yil
+                     and f.get("kayit_ay") == ay), 2)
 
 
 def _satis_adedi(liste, yil, ay):

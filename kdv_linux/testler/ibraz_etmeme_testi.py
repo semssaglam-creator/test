@@ -353,16 +353,26 @@ denetle("beyan esas alınarak matrah indirilmemiştir" in m,
         "belgeler beyandan azsa beyanın esas alındığı yazılıyor")
 denetle("matraha oran uygulanmak suretiyle bulunmamıştır" in m,
         "hesaplanan KDV'nin kaynağı açıklanıyor")
-denetle("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi" in m,
+denetle("Beyan Edilmeyen Belgelere İlişkin Matrah ve Hesaplanan Katma "
+        "Değer Vergisi İlavesi" in m,
         "dönem dönem karşılaştırma tablosu yazılıyor")
-denetle("Düzenlenen Belgelerin Matrahı" in m and "Matraha İlave" in m,
-        "tablonun sütunları karşılaştırmayı gösteriyor")
+denetle("Düzenlenen\nBelgelerin Matrahı" in m
+        and "Matraha\nİlave" in m,
+        "tablonun matrah sütunları karşılaştırmayı gösteriyor")
+# Mufettisin istegi (2026-10-20): faturalardaki hesaplanan KDV ile
+# beyannamedeki hesaplanan KDV de KIYASLANSIN.
+denetle("Düzenlenen Belgelerin\nHesaplanan KDV’si" in m
+        and "Beyan Edilen\nHesaplanan KDV" in m
+        and "Hesaplanan KDV’ye\nİlave" in m,
+        "tabloda hesaplanan KDV karşılaştırması da var")
+denetle("ilave edilecek katma değer vergisinin TOPLAMIDIR" in m,
+        "ölçünün hesaplanan + ilave edilecek olduğu yazılıyor")
 denetle("2021/Ocak" in m and "6.250,00" in m,
         "tabloda ilave yapılan dönem ve tutarı var")
 # Ilave yapilmayan donemler TABLOYA girmemeli: "—" dolu satir yaniltir.
 # Olcut tablonun KENDISI olmali; "2021/Mart" raporun baska tablolarinda
 # (beyan dokumu, tarhiyat) zaten geciyor.
-_bas = m.find("Beyan Edilmeyen Belgelere İlişkin Matrah İlavesi")
+_bas = m.find("Beyan Edilmeyen Belgelere İlişkin Matrah ve Hesaplanan")
 _ilave_tablosu = m[_bas:m.find("Buna göre", _bas)]
 denetle("2021/Ocak" in _ilave_tablosu,
         "ilave yapılan dönem tabloda")

@@ -3555,22 +3555,39 @@ function faturaSatisOzetiniCiz() {
   };
   const sapan = satirlar.filter(
     (s) => Math.abs(Math.max(s.fark, 0) - girili(s.yil, s.ay)) > 0.005);
+  // KDV sutunlari da yaziliyor: matrah ilavesi buyukken KDV ilavesi sifir
+  // cikabiliyor (mukellef KDV'yi "Ilave Edilecek KDV" satirinda beyan
+  // etmisse) ve sebebi gorunmezse hesap hatasi sanilir.
   kap.innerHTML =
-    '<table class="tablo"><tr><th>Dönem</th><th>Belge</th>' +
-    '<th>Düzenlenen Fatura Matrahı</th><th>Beyan Edilen Matrah</th>' +
-    '<th>Gereken Matrah İlavesi</th><th>Tespitlerde Girili</th></tr>' +
+    '<table class="tablo"><tr><th rowspan="2">Dönem</th>' +
+    '<th rowspan="2">Belge</th><th colspan="3">Matrah</th>' +
+    '<th colspan="4">Hesaplanan KDV</th></tr><tr>' +
+    '<th>Faturalar</th><th>Beyan</th><th>İlave</th>' +
+    '<th>Faturalar</th><th>Beyan (Hspl.)</th><th>Beyan (İlave Edil.)</th>' +
+    '<th>İlave</th></tr>' +
     satirlar.map((s) => {
       const g = girili(s.yil, s.ay);
       const gereken = Math.max(s.fark, 0);
       const uyum = Math.abs(gereken - g) <= 0.005;
+      const kdvIlave = Math.max(s.kdv_fark, 0);
       return `<tr><td>${s.yil}/${s.ay_adi}</td><td class="sag">${s.adet}</td>` +
       `<td class="sag">${tl(s.fatura)}</td>` +
       `<td class="sag">${tl(s.beyan)}</td>` +
       `<td class="sag${gereken > 0.005 ? " fark-var" : ""}">` +
       `${gereken > 0.005 ? tl(gereken) : "—"}</td>` +
-      `<td class="sag${uyum ? "" : " fark-var"}">${tl(g)}</td></tr>`;
+      `<td class="sag">${tl(s.fatura_kdv)}</td>` +
+      `<td class="sag">${tl(s.beyan_hesaplanan)}</td>` +
+      `<td class="sag">${tl(s.beyan_ilave_edilecek)}</td>` +
+      `<td class="sag${kdvIlave > 0.005 ? " fark-var" : ""}">` +
+      `${kdvIlave > 0.005 ? tl(kdvIlave) : "—"}</td></tr>`;
     }).join("") +
     "</table>" +
+    '<div class="yardim" style="margin-top:6px;">Hesaplanan KDV ' +
+    'karşılaştırmasında ölçüt, beyan edilen <strong>hesaplanan KDV ile ' +
+    'ilave edilecek KDV\'nin toplamıdır</strong>: mükellef matrahı beyan ' +
+    'etmeden faturanın vergisini ilave edilecek satırında beyan etmiş ' +
+    'olabilir. Bu yüzden matrah ilavesi büyükken KDV ilavesi sıfır ' +
+    'çıkabilir — vergi zaten beyan edilmiştir.</div>' +
     (eksikYil ? '<div class="uyari-satir" style="margin-top:8px;">Bazı ' +
       'satış faturalarının kayıt dönemi, beyan verisi yüklenmemiş bir yıla ' +
       'ait. O dönemlerde beyan 0 görünür; önce beyannameyi yükleyin.</div>'
