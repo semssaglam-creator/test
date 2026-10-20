@@ -786,6 +786,31 @@ oturumda buradan devam edilir.
       unsurun oluştuğu" cümlesiyle kapanıyor. `liste` (faturalar) bunun
       için `rapor_uret` → `_unsurlar` → `_ibraz_maddi_unsur` boyunca
       taşındı. Beş mutasyonla denetlendi.
+- [x] **Re'sen takdir nedeni: 30/3 ve 30/6 birlikte.** Müfettişin kararı
+      (2026-10-20): "ibraz etmeme raporunda re'sen tarh nedenine hem VUK
+      30/3 hem de 30/6 olarak girelim, ikisi de olmalı".
+
+      İki bendin dayandığı tespit AYRIDIR ve rapor bunu yazıyor:
+      - **30/3** — defter ve belgelerin ibraz edilmemesi
+      - **30/6** — düzenlenen belgelerin bir kısmının beyannamelere
+        yansıtılmamış olması, yani "verilen beyannamelerin gerçek durumu
+        yansıtmadığına dair delil"
+
+      Dayanak DELİLE bağlı olduğundan 30/6 **yalnızca matrah ilavesi
+      yapılan dosyalarda** anılıyor; delil yokken o bende dayanmak raporu
+      itiraz edilebilir kılar. Matrah ilavesi yoksa eskisi gibi tek başına
+      30/3 yazılıyor. (`_resen_dayanagi`, ölçüt `_matrah_ilavesi_var`.)
+
+      Atıf dört yerde birden güncelleniyor: 4.1 (iki madde metni + hangi
+      tespite dayandığını anlatan paragraf), 4.2.4 ve sonuç bölümündeki
+      5.1 maddesi. Yazım da bent biçimine geçti: "30/3. maddesi" yerine
+      "30 uncu maddesinin (3) ve (6) numaralı bentleri".
+- [x] **Fazla hesaplanmış KDV de beyan edilmek zorundadır.** Müfettişin
+      sözü: "asıl önemli olan faturada tahsil edilen KDV, fazla hesaplasa
+      da beyan etmek zorunda". Uygulama zaten faturanın KENDİ KDV'sini
+      esas alıyordu (orana bölmüyor); artık raporda gerekçesi de yazılı:
+      KDVK 8/2 uyarınca belgede gösterilen KDV, kanunen hesaplanması
+      gerekenden fazla dahi olsa beyan edilip ödenmesi gereken vergidir.
 - [x] **Hesaplanan KDV karşılaştırması da gösteriliyor.** Müfettişin
       isteği (2026-10-20): "uygulama faturalarda hesaplanan KDV ile
       beyannamede bulunan hesaplanan KDV kıyaslaması da yapsın".

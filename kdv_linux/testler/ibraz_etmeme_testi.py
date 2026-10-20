@@ -259,7 +259,16 @@ for baslik in ("1- GİRİŞ", "2- USUL İNCELEMELERİ", "3- HESAP İNCELEMELERİ
                "5- SONUÇ"):
     denetle(baslik in m, "bölüm var: %s" % baslik.split("-")[0].strip())
 
-denetle("30/3. maddesi uyarınca" in m, "re'sen takdir VUK 30/3'e dayanıyor")
+# Re'sen takdir nedeni: ibraz etmeme 30/3, duzenlenen belgelerin beyan
+# disi birakilmasi ise beyannamelerin gercek durumu yansitmadigina DELIL
+# oldugundan 30/6. Mufettisin karari (2026-10-20): matrah ilavesi varsa
+# ikisi birlikte yazilir.
+denetle("30 uncu maddesinin (3) ve (6) numaralı bentleri" in m,
+        "matrah ilavesi varsa 30/3 ve 30/6 birlikte anılıyor")
+denetle("md. 30/3" in m and "md. 30/6" in m,
+        "iki bendin metni de yazılıyor")
+denetle("beyannamelerin gerçek durumu yansıtmadığına dair delil "
+        "niteliğinde" in m, "30/6'nın dayandığı delil açıklanıyor")
 denetle("359/a-2 maddesine göre “defter, kayıt ve belgeleri gizlemek”" in m,
         "sonuç 359/a-2'den suç duyurusu istiyor")
 denetle("Vergi Suçları Raporu düzenlenmesi" in m,
@@ -353,6 +362,11 @@ denetle("beyan esas alınarak matrah indirilmemiştir" in m,
         "belgeler beyandan azsa beyanın esas alındığı yazılıyor")
 denetle("matraha oran uygulanmak suretiyle bulunmamıştır" in m,
         "hesaplanan KDV'nin kaynağı açıklanıyor")
+# Mufettisin sozu (2026-10-20): "asil onemli olan faturada tahsil edilen
+# KDV fazla hesaplasa da beyan etmek zorunda". Dayanak KDVK 8/2.
+denetle("kanunen hesaplanması gerekenden fazla dahi olsa, beyan edilip "
+        "ödenmesi gereken vergidir" in m,
+        "fazla hesaplanmış KDV'nin de beyan zorunluluğu yazılıyor")
 denetle("Beyan Edilmeyen Belgelere İlişkin Matrah ve Hesaplanan Katma "
         "Değer Vergisi İlavesi" in m,
         "dönem dönem karşılaştırma tablosu yazılıyor")
@@ -384,6 +398,11 @@ m_satissiz = IB.rapor_uret(W._inceleme_bilgisi(ornek(satis=False)),
                            2021).duz_metin()
 denetle("8 inci maddesinin ikinci fıkrası" not in m_satissiz,
         "matrah ilavesi yoksa KDVK gerekçe paragrafı yazılmıyor")
+denetle("30 uncu maddesinin (3) numaralı bendi" in m_satissiz
+        and "(3) ve (6) numaralı bentleri" not in m_satissiz,
+        "matrah ilavesi yoksa yalnızca 30/3'e dayanılıyor")
+denetle("md. 30/6" not in m_satissiz,
+        "delil yoksa 30/6 metni de yazılmıyor")
 denetle("md. 8/2 — Belgede Gösterilen Verginin Ödenmesi" not in m_satissiz,
         "matrah ilavesi yoksa KDVK maddeleri de listelenmiyor")
 

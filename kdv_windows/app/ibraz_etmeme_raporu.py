@@ -40,6 +40,13 @@ _tl = turkce.tl
 
 # Ibraz etmeme hem re'sen takdir nedeni hem kacakcilik sucudur.
 RESEN_MADDE = "30/3"
+# Ibraz etmemenin yaninda, duzenlenen belgelerin beyan edilmemis olmasi da
+# ayri bir re'sen takdir sebebidir: VUK 30/6 "defterlerin veya verilen
+# beyannamelerin gercek durumu yansitmadigina dair delil bulunursa".
+# Mufettisin karari (2026-10-20): ikisi de yazilsin. Dayanak DELILE bagli
+# oldugundan 30/6, yalnizca matrah ilavesi yapilan dosyalarda aniliyor -
+# delil yokken o bende dayanmak raporu itiraz edilebilir kilar.
+RESEN_MADDE_DELIL = "30/6"
 SUC_MADDESI = "359/a-2"
 
 DEFTER_TUTUCULARI = ("yıl", "defterin türü", "tasdik tarihi ve numarası",
@@ -204,25 +211,54 @@ def _tenkit(b, kunye, inceleme, yil, donemler, liste, saticilar):
     _olmasi_gereken(b, kunye, inceleme, yil, donemler, liste)
 
 
+def _resen_dayanagi(donemler):
+    """Re'sen takdir dayanaginin cumle icindeki ifadesi.
+
+    Ibraz etmeme 30/3'tur. Duzenledigi belgeleri beyan disi birakmis
+    olmasi ise beyannamelerin gercek durumu yansitmadigina DELIL
+    oldugundan ayrica 30/6'dir; bu yuzden matrah ilavesi yapilan
+    dosyalarda iki bende birlikte dayaniliyor (mufettisin karari,
+    2026-10-20).
+    """
+    if _matrah_ilavesi_var(donemler):
+        return ("30 uncu maddesinin (3) ve (6) numaralı bentleri")
+    return "30 uncu maddesinin (3) numaralı bendi"
+
+
 def _resen_takdir_nedeni(b, kunye, yil, donemler):
     M = ik.mukellef_sozu
     b.baslik("4.1- Re’sen Takdir Nedeni", duzey=2)
-    for baslik, metin in mevzuat.maddeler(["vuk_253", "vuk_256", "vuk_139",
-                                           "vuk_30_3"]):
+    maddeler = ["vuk_253", "vuk_256", "vuk_139", "vuk_30_3"]
+    delil = _matrah_ilavesi_var(donemler)
+    if delil:
+        maddeler.append("vuk_30_6")
+    for baslik, metin in mevzuat.maddeler(maddeler):
         b.paragraf(baslik, kalin=True, hiza="sol", aralik_once=120,
                    aralik_sonra=40)
         b.paragraf("“%s”" % metin, girinti=1, italik=True)
     b.paragraf(
         "%s %s ilişkin yasal defter ve belgelerinin incelemeye ibraz "
-        "edilmemesi nedeniyle, 213 sayılı Vergi Usul Kanunu’nun %s. maddesi "
-        "uyarınca ilgili dönemlerin katma değer vergisi beyanlarının re’sen "
+        "edilmemesi nedeniyle, 213 sayılı Vergi Usul Kanunu’nun %s uyarınca "
+        "ilgili dönemlerin katma değer vergisi beyanlarının re’sen "
         "tarhiyata esas olacak şekilde düzeltilmesi ve %s %s dönemleri katma "
         "değer vergisi beyannamelerinde indirim konusu yapılmış olan katma "
         "değer vergilerinin reddedilmesi gerekmektedir."
         % (M(kunye, buyuk=True, ek="in"),
            "%s %s" % (yil, ik.donem_adi(kunye, False, "yonelme")),
-           RESEN_MADDE, M(kunye, ek="in"),
+           _resen_dayanagi(donemler), M(kunye, ek="in"),
            _donem_araligi(yil, donemler)), girinti=1)
+    if delil:
+        # Iki bendin HANGI tespite dayandigi yazilmali; aksi halde okuyan
+        # "30/6'nin delili ne?" diye sorar.
+        b.paragraf(
+            "Ayrıca %s düzenlediği belgelerin bir kısmını katma değer "
+            "vergisi beyannamelerine yansıtmadığı, raporumuzun izleyen "
+            "bölümlerinde ayrıntılı olarak açıklandığı üzere GİB "
+            "kayıtlarından tespit edilmiştir. Bu tespit, verilen "
+            "beyannamelerin gerçek durumu yansıtmadığına dair delil "
+            "niteliğinde olduğundan, mezkûr Kanun’un 30 uncu maddesinin (6) "
+            "numaralı bendi de re’sen takdir nedeni olarak birlikte "
+            "uygulanmıştır." % M(kunye, ek="in"), girinti=1)
 
 
 def _ibraz_edilmemesi(b, kunye, yil, donemler):
@@ -534,8 +570,8 @@ def _olmasi_gereken(b, kunye, inceleme, yil, donemler, liste=None):
     b.paragraf(
         "Yukarıdaki tabloda hesaplanmış olan fark katma değer vergisi "
         "tutarlarının ilgili dönemlere ait fark katma değer vergisi olarak "
-        "213 sayılı Vergi Usul Kanunu’nun %s. maddesi gereğince re’sen tarh "
-        "edilmesi gerekmektedir." % RESEN_MADDE, girinti=1)
+        "213 sayılı Vergi Usul Kanunu’nun %s gereğince re’sen tarh "
+        "edilmesi gerekmektedir." % _resen_dayanagi(donemler), girinti=1)
     _ceza_bolumu(b, kunye, tarhiyatli)
     b.paragraf(
         "Raporumuzun önceki bölümlerinde açıklandığı üzere %s %s ilişkin "
@@ -670,7 +706,11 @@ def _matrah_paragrafi(b, kunye, yil, donemler, liste=None):
         "aşağı inilmemiştir. İlave edilen matrahlara ilişkin hesaplanan "
         "katma değer vergisi de belgelerin kendi üzerinde gösterilen katma "
         "değer vergisi tutarlarından alınmış, matraha oran uygulanmak "
-        "suretiyle bulunmamıştır." % M(kunye, ek="in"), girinti=1)
+        "suretiyle bulunmamıştır; zira 3065 sayılı Katma Değer Vergisi "
+        "Kanunu’nun 8 inci maddesinin ikinci fıkrası uyarınca belgede "
+        "gösterilen katma değer vergisi, kanunen hesaplanması gerekenden "
+        "fazla dahi olsa, beyan edilip ödenmesi gereken vergidir."
+        % M(kunye, ek="in"), girinti=1)
     b.paragraf(
         "Hesaplanan katma değer vergisi yönünden karşılaştırmada ölçü, "
         "beyan edilen hesaplanan katma değer vergisi ile ilave edilecek "
@@ -742,10 +782,10 @@ def _sonuc(b, inceleme, kunye, yil, donemler):
         "5.1- Raporun 4.2.4 bölümünde ayrıntılı olarak açıklandığı üzere, "
         "aşağıda dönemi ve tutarı yazılı katma değer vergilerinin ilgili "
         "dönemlere ait fark katma değer vergisi olarak %s adına 213 sayılı "
-        "Vergi Usul Kanunu’nun %s. maddesi gereğince re’sen tarh edilmesi, "
+        "Vergi Usul Kanunu’nun %s gereğince re’sen tarh edilmesi, "
         "re’sen tarh edilecek fark katma değer vergisi tutarları üzerinden "
         "%s"
-        % (M(kunye), RESEN_MADDE,
+        % (M(kunye), _resen_dayanagi(donemler),
            # Ceza kati KAYNAGA gore degisiyorsa sonuc maddesi de ikisini
            # ayri ayri istemeli; tek cumleyle "uc kat" demek tabloyla
            # celisirdi (mufettisin karari, 2026-10-19).

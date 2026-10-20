@@ -84,6 +84,13 @@ Yeni bir yil raporu eklerseniz bu maddeyi atlamayin.
 
 ## Ibraz etmeme: indirimin TAMAMI reddedilir
 
+**Re'sen takdir nedeni iki benttir ve ikisinin DELILI ayridir:** ibraz
+etmeme VUK 30/3'tur; duzenlenen belgelerin bir kismi beyannamelere
+yansitilmamissa bu, "verilen beyannamelerin gercek durumu yansitmadigina
+dair delil" oldugundan ayrica 30/6'dir. 30/6 yalnizca matrah ilavesi
+yapilan dosyalarda anilir - delil yokken o bende dayanmak raporu itiraz
+edilebilir kilar (`_resen_dayanagi`).
+
 Defter ve belgeler ibraz edilmediginde beyan edilen indirilecek KDV'nin
 KDVK 29 ve 34 geregince indirilebilirligi denetlenemez; indirimlerin tamami
 reddedilir ve fark KDV VUK 30/3 uyarinca re'sen tarh edilir. Hesap motoru
