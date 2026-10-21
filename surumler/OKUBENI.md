@@ -32,6 +32,25 @@ Kanunla değişik hâli.
 korumaz ve `calistir.sh` çalıştırılamaz halde açılırsa uygulama "hiç
 açılmıyor" görünür.
 
+## Windows — tam paket (ilk kurulum)
+
+Kurulu uygulaması olmayan bir makine için. Zip'i ayıklayın, çıkan klasörde
+`calistir.bat`.
+
+    https://github.com/semssaglam-creator/test/raw/refs/heads/claude/dosya-gorunurlugu-3p8f9d/surumler/KDV_Inceleme_Calismasi_Windows.zip
+
+**Bu pakette gömülü Python YOK.** Normalde paketin içinde taşınabilir bir
+Python bulunur ve makinede hiçbir şey kurulu olmasa bile uygulama açılır;
+ancak paketin üretildiği ortamdan python.org'a erişilemediği için bu kez
+konulamadı. `calistir.bat` sırasıyla şuna bakar: (1) klasördeki taşınabilir
+Python, (2) sistemde kurulu Python 3.9+, (3) yoksa taşınabilir Python'u bir
+kereliğine indirir (~11 MB).
+
+Yani bu paket, **makinede Python 3.9+ kurulu olan** ya da **python.org'a
+erişebilen** bir bilgisayarda açılır. Kurumsal bir makinede ikisi de yoksa
+açılmaz; o durumda gömülü Python'lu paketin python.org'a erişilebilen bir
+ortamda üretilmesi gerekir.
+
 ## Windows — güncelleme paketi
 
 Kurulu bir Windows uygulamasının **yalnızca program dosyalarını** yeniler
