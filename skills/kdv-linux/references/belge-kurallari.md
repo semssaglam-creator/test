@@ -16,10 +16,27 @@ Tebligi'ne dayanir. Bilmeden kullanmada kasit unsuru olusmaz, VUK 359
 kapsaminda islem yapilmaz. Bilerek kullanmada vergi sucu raporu duzenlenir ve
 suc duyurusunda bulunulur.
 
-**Duzeltmeyle cikarilmis / kayda alinmamis satici**
-(`duzeltme_ile_cikarildi`, `kayda_alinmadi`). Faturalarin tamami boyleyse
-reddedilecek indirim zaten beyanda degildir: tarh edilecek vergi kalmaz.
-`faturalar.duzeltme_kabul_uygun_mu` bunu denetler.
+**Duzeltmeyle cikarilmis fatura** (fatura satirinda `duzeltme_cikarildi`).
+Isaret FATURA BASINADIR, satici basina degil: mukellef ayni saticinin bir
+yildaki faturalarini duzeltme beyannamesiyle indirimlerden cikarip diger
+yildakileri cikarmis olmayabilir ve vergilendirme hesap donemi bazinda
+yapildigindan bu ayrim tarhiyati dogrudan degistirir (sahada boyle cikti,
+2026-10-23). Olcut `faturalar.fatura_duzeltildi_mi`; eski calismalarda
+isaret satici kaydinda (`duzeltme_ile_cikarildi`) duruyor olabilir ve orasi
+"butun faturalari" demektir — ekran acilista isareti faturalara tasir.
+Fatura listesi bulunmayan ELLE eklenen saticilarda isaret satici kaydinda
+kalir; tasiyacak fatura satiri yoktur.
+
+**Kayda alinmamis satici** (`kayda_alinmadi`) satici duzeyindedir; fatura
+basina karsiligi "deftere kaydedildi" tikidir.
+
+Faturalarin tamami boyleyse reddedilecek indirim zaten beyanda degildir:
+tarh edilecek vergi kalmaz. `faturalar.duzeltme_kabul_uygun_mu` bunu
+satici satirindaki `kdv` (= tarhiyata giren) uzerinden denetler.
+
+Satici ozetindeki uc takim karistirilmamali:
+`adet/matrah/kdv/toplam` tarhiyata GIRENLER (`sayilir`), `duz_*`
+duzeltmeyle cikarilanlar, `liste_*` listedeki butun faturalar.
 
 ## Duzeltme kabul raporu — belgenin TURU degisir
 
@@ -32,6 +49,28 @@ edilecek vergi iki halde de yoktur, ama duzenlenecek belge farklidir:
 | Bilerek | **Vergi Inceleme Raporu** | Tarhiyat yok; yarim kat cezanin uc kata tamamlanmasi istenir; vergi sucu raporu |
 
 Baslik ve dosya adi da tura gore degisir (`belge_turu`, `dosya_adi`).
+
+## Satici bolumu YIL YIL ayrilir
+
+Vergilendirme hesap donemi bazinda yapildigindan, ayni saticidan farkli
+yillarda alinan belgeler tek tabloda toplanmaz. Tutanakta madde TEKtir
+(tespit ayni tespittir), ama govdesi yil yil bloklanir: her yil icin giris
+paragrafi, kendi tablosu ve o yila ait tespitler — defter/beyan durumu,
+muhasebe kaydi, iptal/itiraz kaydi, duzeltme dokumu
+(`tutanak._satici_yil_bloklari`). Rapor zaten yil yil yazildigindan orada
+blok cogu zaman tektir, ama ayni uretec kullanilir
+(`satici_fatura_tablosu`, `defter_beyan_paragraflari`).
+
+Iki kural:
+
+- **Tek yilda cikti degismez.** Yil giris paragrafi yalnizca birden fazla
+  yil varsa yazilir; maddenin Ba-Bs cumlesi zaten yili ve tutari soyluyor.
+- **Sira numaralari bloklar boyunca kesintisiz ilerler** (2021 tablosu 1-3,
+  2022 tablosu 4-7). Her tabloda 1'den baslamak, "2 sira numarali belge"
+  diyen paragraflari iki tablo arasinda belirsiz birakirdi.
+
+Her tablonun TOPLAM satiri KENDI satirlarindan kurulur; satici ozetindeki
+`liste_*` takimi bir blogun toplami degildir.
 
 ## Iki ozel usulsuzluk fiili ayridir
 

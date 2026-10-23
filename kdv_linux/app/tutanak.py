@@ -792,41 +792,95 @@ def _fatura_maddesi(b, kunye, sayac, satici_satirlari, liste, yetersiz=None,
         for satir in satici_tespit_paragraflari(s, vtr_dahil=False):
             b.paragraf(satir, girinti=1)
 
-        # Sira numarasi, defter/beyan paragraflarinin hangi belgeden soz
-        # ettigini gostermek icin gerekli: "2 ve 3 sira numarali belgelerin..."
-        tablo = []
-        for sira, f in enumerate(tum, 1):
-            yev_tarih, yev_no = F.yevmiye_hucreleri(f)
-            tablo.append([str(sira),
-                          F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
-                          F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
-                          _tl(f.get("kdv")), _tl(f.get("toplam")),
-                          yev_tarih, yev_no])
-        tablo.append(["", "TOPLAM", "", "", _tl(s["liste_matrah"]),
-                      _tl(s["liste_kdv"]), _tl(s["liste_toplam"]), "", ""])
-        b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
-                 "KDV", "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
-                hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag",
-                         "orta", "orta"],
-                oranlar=[0.45, 1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
-                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
-
-        for satir in defter_beyan_paragraflari(kunye, s, tum):
-            b.paragraf(satir, girinti=1)
-
-        for satir in _muhasebe_paragraflari(kunye, tum):
-            b.paragraf(satir, girinti=1)
-        # Iptal/itiraz kaydi, dahil edilmeyen faturalar icin de yazilir
-        for satir in iptal_notlari(tum):
-            b.paragraf(satir, girinti=1)
-
-        _duzeltme_tespiti(b, kunye, s, tum, karsilastirmalar, veri_no)
+        _satici_yil_bloklari(b, kunye, s, tum, karsilastirmalar, veri_no)
 
         # --- SORU maddesi (hemen ardindan, veri maddesine atifla)
         cevap = (s.get("cevap") or "").strip() or genel_cevap
         _madde(b, sayac, _soru_metni(kunye, veri_no, s, sorular, cevap))
 
     return kapsanan, yazilan_vknler
+
+
+def _satici_yil_bloklari(b, kunye, s, tum, karsilastirmalar, veri_no):
+    """Satici maddesinin govdesi: fatura dokumu ve ona bagli tespitler.
+
+    Vergilendirme hesap donemi bazinda yapildigindan, ayni saticidan farkli
+    yillarda alinan belgeler AYRI bloklarda yazilir: her yil icin kendi giris
+    paragrafi, kendi tablosu ve o yila ait tespitler (defter kaydi, beyana
+    yansima, iptal/itiraz kaydi, duzeltme beyannamesi dokumu). Sahada boyle
+    cikti: mukellef ayni saticinin 2021 faturalarini duzeltme beyannamesiyle
+    cikarmis, 2022 faturalarini cikarmamisti; tek tabloda bu ayrim
+    gorunmuyordu.
+
+    Madde TEK kalir - tespit ayni tespittir, ayrilan sey yillardir.
+
+    Tek yila ait belgelerde ayri bir giris paragrafi yazilmaz: maddenin kendi
+    Ba-Bs cumlesi zaten o yili ve tutari soyluyor, ikinci bir cumle onu
+    tekrarlamis olurdu.
+
+    Sira numaralari bloklar boyunca KESINTISIZ ilerler (2021 tablosu 1-3,
+    2022 tablosu 4-7...). Her tabloda 1'den baslamak, "2 sira numarali belge"
+    diyen paragraflari iki tablo arasinda belirsiz birakirdi.
+    """
+    from . import faturalar as F
+
+    gruplar = F.yillara_gore(tum)
+    sira = 1
+    for yil, grup in gruplar:
+        if len(gruplar) > 1:
+            b.paragraf(_yil_giris_cumlesi(kunye, s, yil, grup), girinti=1,
+                       aralik_once=120)
+        satici_fatura_tablosu(b, grup, sira)
+        for satir in defter_beyan_paragraflari(kunye, s, grup, sira):
+            b.paragraf(satir, girinti=1)
+        for satir in _muhasebe_paragraflari(kunye, grup):
+            b.paragraf(satir, girinti=1)
+        # Iptal/itiraz kaydi, dahil edilmeyen faturalar icin de yazilir
+        for satir in iptal_notlari(grup):
+            b.paragraf(satir, girinti=1)
+        _duzeltme_tespiti(b, kunye, s, grup, karsilastirmalar, veri_no)
+        sira += len(grup)
+
+
+def _yil_giris_cumlesi(kunye, s, yil, grup):
+    """Cok yilli satici maddesinde bir yil blogunun giris cumlesi."""
+    matrah = sum(float(f.get("matrah") or 0.0) for f in grup)
+    donem = ("%d %s" % (yil, ik.donem_adi(kunye, False, "yonelme")) if yil
+             else "kayıt dönemi tespit edilemeyen belgelere")
+    return ("Söz konusu alışların %s ait olan, %d adet belge ile KDV hariç "
+            "%s TL tutarındaki kısmına ilişkin ayrıntılı bilgiler ile defter "
+            "kayıtları aşağıdaki gibidir."
+            % (donem, len(grup), _tl(matrah)))
+
+
+def satici_fatura_tablosu(b, faturalar, baslangic=1):
+    """Fatura dokumu tablosu. TOPLAM satiri tablodaki satirlardan kurulur.
+
+    Toplami satici ozetinden degil tablonun kendi satirlarindan almak zorunlu:
+    tablo yil yil ayrildiginda satici toplami bir blogun toplami olmaz, ve her
+    halde tablonun alt satiri ustundeki satirlarin toplamini gostermelidir.
+    """
+    from . import faturalar as F
+
+    tablo = []
+    for sira, f in enumerate(faturalar, baslangic):
+        yev_tarih, yev_no = F.yevmiye_hucreleri(f)
+        tablo.append([str(sira),
+                      F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
+                      F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
+                      _tl(f.get("kdv")), _tl(f.get("toplam")),
+                      yev_tarih, yev_no])
+    tablo.append(["", "TOPLAM", "", "",
+                  _tl(sum(float(f.get("matrah") or 0.0) for f in faturalar)),
+                  _tl(sum(float(f.get("kdv") or 0.0) for f in faturalar)),
+                  _tl(sum(float(f.get("toplam") or 0.0) for f in faturalar)),
+                  "", ""])
+    b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
+             "KDV", "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
+            hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag",
+                     "orta", "orta"],
+            oranlar=[0.45, 1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
 
 
 def _elle_satici_maddesi(b, kunye, sayac, s, sorular, genel_cevap):
@@ -874,7 +928,7 @@ def satici_donem_ifadesi(kunye, s):
                       ik.donem_adi(kunye, len(yillar) > 1))
 
 
-def defter_beyan_paragraflari(kunye, s, faturalar):
+def defter_beyan_paragraflari(kunye, s, faturalar, baslangic=1):
     """Faturalarin defter ve beyan karsisindaki durumunu anlatan paragraflar.
 
     Fatura duzenlenmesi, deftere kaydedilmesi ve beyana yansitilmasi uc ayri
@@ -883,13 +937,17 @@ def defter_beyan_paragraflari(kunye, s, faturalar):
     paragrafi anlatiyor. Yalnizca OLAGANDISI durumlar yazilir.
 
     Belgeler sira numarasiyla anilir; numara, hemen ustteki fatura dokumu
-    tablosunun "Sıra" sutunudur.
+    tablosunun "Sıra" sutunudur. `baslangic`, tablo yil yil ayrildiginda o
+    blogun ilk sira numarasidir.
     """
     from . import faturalar as F
 
-    duzeltmeli = str(s.get("duzeltme_ile_cikarildi") or "") == "Evet"
+    # Eski calismalarda duzeltme isareti satici kaydindaydi ve o saticinin
+    # BUTUN faturalarini kapsiyordu; yeni calismalarda fatura satirindadir.
+    eski_isaret = str((s or {}).get("duzeltme_ile_cikarildi") or "") == "Evet"
     gruplar = {}
-    for sira, f in enumerate(faturalar or [], 1):
+    for sira, f in enumerate(faturalar or [], baslangic):
+        duzeltmeli = F.fatura_duzeltildi_mi(f) or eski_isaret
         gruplar.setdefault(F.fatura_durumu(f, duzeltmeli), []).append((sira, f))
 
     def dokum(kayitlar):
@@ -952,14 +1010,23 @@ def _duzeltme_tespiti(b, kunye, s, faturalar, karsilastirmalar, veri_no):
     yazilan "duzeltme beyannamesi aciklamasi" da ayri bir paragraf olarak
     yazilmaz; beyanname gerekcesi dokumun giris cumlesinde tirnak icinde
     kendi baglaminda geciyor.
+
+    `faturalar` o blogun (cok yilli saticida bir yilin) faturalaridir; dokum
+    yalnizca icindeki DUZELTILMIS belgeler uzerinden kurulur. Boylece
+    mukellefin duzeltme verdigi yil ile vermedigi yil ayri ayri gorunur.
     """
-    if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet":
+    from . import faturalar as F
+
+    eski_isaret = str(s.get("duzeltme_ile_cikarildi") or "") == "Evet"
+    duzeltilenler = [f for f in faturalar or []
+                     if F.fatura_duzeltildi_mi(f) or eski_isaret]
+    if not duzeltilenler:
         return
     # Modul dongusune girmemek icin burada yuklenir: sahte_belge_raporu bu
     # modulu bastan ice aktariyor. Beyanname yuklenmemis olsa da cagrilir:
     # dokum yazilamasa bile duzeltme gerekcesi bir tespittir, tutanakta yazilir.
     from .sahte_belge_raporu import _duzeltme_bolumu
-    _duzeltme_bolumu(b, kunye, s, faturalar, karsilastirmalar, veri_no)
+    _duzeltme_bolumu(b, kunye, s, duzeltilenler, karsilastirmalar, veri_no)
 
 
 def _muhasebe_paragraflari(kunye, faturalar):

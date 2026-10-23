@@ -51,12 +51,15 @@ SATICI_ALANLARI = [
     {"kod": "vtr_no", "etiket": "VTR no", "tur": "metin"},
     {"kod": "vtr_tarihi", "etiket": "VTR tarihi", "tur": "tarih"},
     {"kod": "ozel_esaslar", "etiket": "Özel esaslara alınma tarihi", "tur": "tarih"},
-    {"kod": "duzeltme_ile_cikarildi",
-     "etiket": "Faturaları düzeltme beyannamesiyle çıkarılmış", "tur": "secim",
-     "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
-     "ipucu": "Mükellef bu satıcının faturalarını kendi düzeltme beyannamesiyle "
-              "kayıtlarından çıkardıysa “Evet” seçin. O faturalar tarhiyata "
-              "girmez; belgede neden dahil edilmediği açıklanır."},
+    # "Faturalari duzeltme beyannamesiyle cikarilmis" isareti BURADAN
+    # KALDIRILDI; artik fatura satirinda, her belge icin ayri tutuluyor
+    # (`duzeltme_cikarildi`). Sebep sahada cikti (2026-10-23): birden fazla
+    # yili incelenen bir mukellef, ayni saticinin bir yildaki faturalarini
+    # duzeltme beyannamesiyle cikarmis, diger yildakileri cikarmamisti.
+    # Satici duzeyindeki tek isaret o dosyada ya hepsini tarhiyat disinda
+    # birakiyor ya hepsini iceri aliyordu; ikisi de yanlisti. Eski
+    # calismalarda isaret satici kaydinda duruyor olabilir, bu yuzden
+    # `fatura_duzeltildi_mi` onu da okur.
     {"kod": "kayda_alinmadi",
      "etiket": "Faturaları hiç kayıtlara alınmamış", "tur": "secim",
      "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
@@ -79,6 +82,14 @@ SATICI_ALANLARI = [
               "bulunduğu için kapsama alınan satıcıların iş emri yoktur; "
               "“Yok” seçilenler belgede ayrı bir paragrafla gerekçelendirilir."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
+    {"kod": "duzeltme_ile_cikarildi",
+     "etiket": "Belgeleri düzeltme beyannamesiyle çıkarılmış", "tur": "secim",
+     "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
+     "yalniz_elle": True,
+     "ipucu": "Fatura listesi bulunmayan satıcılarda belge başına işaret "
+              "konulamadığından buradan girilir ve bu satıcının BÜTÜN "
+              "belgelerine uygulanır. Fatura listesi olan satıcılarda işaret "
+              "fatura satırındadır."},
     # Asagidakiler YALNIZCA elle eklenen saticilarda gorunur. Fatura listesi
     # bulunmayan bir sahteci mukellefin tutari baska yoldan bilinemez; bu
     # alanlar olmadan satici belgelere giremez, yil sirasina da yerlesemez.
@@ -144,18 +155,18 @@ DURUM_BEYANDA_YOK = "beyanda_yok"          # deftere kayitli, beyana yansimamis
 DURUM_DEFTERSIZ_BEYAN = "deftersiz_beyan"  # defterde yok ama beyanda var
 
 
-def fatura_durumu(f, satici_duzeltme=False):
+def fatura_durumu(f, duzeltme=False):
     """Faturanin defter/beyan durumu; yukaridaki DURUM_* degerlerinden biri.
 
-    `satici_duzeltme`, saticinin faturalarinin duzeltme beyannamesiyle
-    indirimlerden cikarilmis olmasidir. Yalnizca deftere KAYITLI ve beyana
-    YANSIMIS faturalar icin anlamlidir: kaydedilmemis bir faturanin
+    `duzeltme`, BU faturanin KDV'sinin duzeltme beyannamesiyle indirimlerden
+    cikarilmis olmasidir (`fatura_duzeltildi_mi`). Yalnizca deftere KAYITLI ve
+    beyana YANSIMIS faturalar icin anlamlidir: kaydedilmemis bir faturanin
     duzeltmeyle cikarilacak bir indirimi zaten yoktur.
     """
     defter = str(f.get("deftere_kaydedildi") or "Evet") != "Hayır"
     beyan = str(f.get("beyana_yansitildi") or "Evet") != "Hayır"
     if defter and beyan:
-        return DURUM_DUZELTME if satici_duzeltme else DURUM_NORMAL
+        return DURUM_DUZELTME if duzeltme else DURUM_NORMAL
     if defter and not beyan:
         return DURUM_BEYANDA_YOK
     if not defter and beyan:
@@ -174,9 +185,32 @@ def mal_cinsi_hucresi(f):
 
 
 def duzeltilmis_mi(satici_vkn, saticilar):
-    """Bu saticinin faturalari duzeltme beyannamesiyle cikarilmis mi."""
+    """Bu saticinin BUTUN faturalari duzeltme beyannamesiyle cikarilmis mi.
+
+    Yalnizca ESKI calismalar icin: isaret artik fatura satirindadir. Yeni
+    kodda `fatura_duzeltildi_mi` kullanilir; bu islev onun icinden, eski
+    kayitlari okumak icin cagrilir.
+    """
     bilgi = (saticilar or {}).get(satici_vkn or "") or {}
     return str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+
+
+def fatura_duzeltildi_mi(f, saticilar=None):
+    """Bu faturanin KDV'si duzeltme beyannamesiyle indirimlerden cikarilmis mi.
+
+    Isaret fatura satirinda tutulur (`duzeltme_cikarildi`): mukellef ayni
+    saticinin bir yildaki faturalarini duzeltirken digerlerini duzeltmemis
+    olabilir ve vergilendirme hesap donemi bazinda yapildigindan bu ayrim
+    tarhiyati dogrudan degistirir.
+
+    `saticilar` verilirse eski calismalardaki satici duzeyindeki isaret de
+    okunur; o isaret "bu saticinin butun faturalari" anlamina gelir.
+    """
+    if str((f or {}).get("duzeltme_cikarildi") or "") == "Evet":
+        return True
+    if saticilar is None:
+        return False
+    return duzeltilmis_mi((f or {}).get("satici_vkn"), saticilar)
 
 
 def kayda_alinmamis_mi(satici_vkn, saticilar):
@@ -191,23 +225,36 @@ def tarhiyat_disi_birakildi_mi(satici_vkn, saticilar):
     Iki durum da ayni sonuca varir: KDV zaten indirimlerde degildir, bu yuzden
     reddedilecek bir indirim yoktur. Ikisi birlikte "duzeltme kabul raporu"nun
     konusunu olusturur.
+
+    Satici duzeyinde bakar; fatura bazinda olcut `tarhiyat_disi_mi`dir.
     """
     return (duzeltilmis_mi(satici_vkn, saticilar)
             or kayda_alinmamis_mi(satici_vkn, saticilar))
+
+
+def tarhiyat_disi_mi(f, saticilar=None):
+    """Bu faturanin indirimi tarhiyata girmiyor mu.
+
+    Duzeltme isareti fatura basina, "hic kayitlara alinmadi" isareti satici
+    basinadir: ikincisi o saticidan alinan belgelerin tamamina iliskin bir
+    tespittir (fatura basina karsiligi "deftere kaydedildi" tikidir).
+    """
+    return (fatura_duzeltildi_mi(f, saticilar)
+            or kayda_alinmamis_mi((f or {}).get("satici_vkn"), saticilar))
 
 
 def sayilir(f, saticilar=None):
     """Fatura tarhiyata giriyor mu.
 
     Iki kosul birlikte aranir: kullanici satiri "dahil" birakmis olmali ve
-    faturayi duzenleyen satici, faturalari duzeltme beyannamesiyle
-    kayitlardan cikarilmis olarak isaretlenmemis olmali. Ikincisi onemlidir:
-    mukellef o KDV'yi kendi duzeltmesiyle zaten indirimlerinden cikardiysa
-    ayni tutari bir de rapor uzerinden tarh etmek mukerrer tarhiyat olur.
+    fatura duzeltme beyannamesiyle indirimlerden cikarilmis olmamali.
+    Ikincisi onemlidir: mukellef o KDV'yi kendi duzeltmesiyle zaten
+    indirimlerinden cikardiysa ayni tutari bir de rapor uzerinden tarh etmek
+    mukerrer tarhiyat olur.
     """
     if not f.get("dahil"):
         return False
-    return not tarhiyat_disi_birakildi_mi(f.get("satici_vkn"), saticilar)
+    return not tarhiyat_disi_mi(f, saticilar)
 
 
 def _tarihi_coz(metin):
@@ -330,6 +377,12 @@ def normalize(ham_faturalar, mukellef_vkn=None):
         for alan in ("deftere_kaydedildi", "beyana_yansitildi"):
             f[alan] = "Hayır" if str(f.get(alan) or "") == "Hayır" else "Evet"
 
+        # Duzeltme beyannamesiyle indirimlerden cikarilma, fatura BASINA
+        # tespit edilir. Varsayilan "Hayir": olagan hal budur ve isaret
+        # yalnizca duzeltme dokumunde gorulen belgelere konur.
+        f["duzeltme_cikarildi"] = ("Evet" if str(f.get("duzeltme_cikarildi")
+                                                 or "") == "Evet" else "Hayır")
+
         if "dahil" not in f:
             # Iptal edilmis ve alis olmayan belgeler bastan disarida kalir;
             # kullanici isterse geri alir.
@@ -392,7 +445,11 @@ def sahteci_vknler(faturalar, saticilar=None):
         if f.get("yon") == YON_SATIS:
             continue
         vkn = f.get("satici_vkn") or ""
-        if f.get("dahil") or sahteci_belirlenmis_mi(vkn, saticilar):
+        # Duzeltmeyle cikarilmis fatura, "dahil" isareti kaldirilmis olsa da
+        # saticiyi belgelere sokar: o belgenin akibeti raporda anlatilmak
+        # zorundadir, yoksa listede gorunup belgede hic gecmez.
+        if (f.get("dahil") or fatura_duzeltildi_mi(f)
+                or sahteci_belirlenmis_mi(vkn, saticilar)):
             secilenler.add(vkn)
     # Fatura listesinde hic gorunmeyen, kullanicinin elle actigi saticilar.
     secilenler.update(elle_vknler(saticilar))
@@ -431,9 +488,11 @@ def _elle_sayi(deger):
 def _elle_satiri(vkn, bilgi):
     """Elle eklenen satici icin `satici_ozeti` bicimine uygun satir.
 
-    Faturasi olmadigindan butun tutarlar kullanicinin girdigidir; "dahil"
-    takimi ile "liste" takimi ayni degeri tasir, cunku ayirt edecek bir
-    fatura satiri yoktur.
+    Faturasi olmadigindan butun tutarlar kullanicinin girdigidir; "tarhiyata
+    giren" takim ile "liste" takimi ayni degeri tasir, cunku ayirt edecek bir
+    fatura satiri yoktur. Istisnasi duzeltme ve kayda alinmama isaretleridir:
+    isaretliyse belgelerin tamami tarhiyat disindadir ve tutar duzeltme
+    takimina yazilir.
     """
     yil_metni = str(bilgi.get("elle_yil") or "").strip()
     try:
@@ -447,11 +506,20 @@ def _elle_satiri(vkn, bilgi):
     except ValueError:
         adet = 0
     toplam = round(matrah + kdv, 2)
+    duzeltildi = str(bilgi.get("duzeltme_ile_cikarildi") or "") == "Evet"
+    disarida = duzeltildi or str(bilgi.get("kayda_alinmadi") or "") == "Evet"
     return {
         "vkn": vkn, "elle": "Evet",
-        "adet": adet, "matrah": matrah, "kdv": kdv, "toplam": toplam,
+        "adet": 0 if disarida else adet,
+        "matrah": 0.0 if disarida else matrah,
+        "kdv": 0.0 if disarida else kdv,
+        "toplam": 0.0 if disarida else toplam,
         "liste_adet": adet, "liste_matrah": matrah, "liste_kdv": kdv,
         "liste_toplam": toplam,
+        "duz_adet": adet if duzeltildi else 0,
+        "duz_matrah": matrah if duzeltildi else 0.0,
+        "duz_kdv": kdv if duzeltildi else 0.0,
+        "duz_toplam": toplam if duzeltildi else 0.0,
         "unvan": bilgi.get("unvan") or "",
         "vergi_dairesi": bilgi.get("vergi_dairesi") or "",
         "kullanma": bilgi.get("kullanma") or "Belirlenmedi",
@@ -467,7 +535,7 @@ def _elle_satiri(vkn, bilgi):
         # sirasinda hakkinda tespit bulundugu icin kapsama alinmistir;
         # varsayilani bu yuzden "Yok"tur. Kullanici degistirebilir.
         "is_emri": bilgi.get("is_emri") or "Yok",
-        "tarhiyat_disi": 0,
+        "tarhiyat_disi": adet if disarida else 0,
         "donem_sayisi": 1 if yil else 0,
         "ilk_donem": str(yil) if yil else "",
         "son_donem": str(yil) if yil else "",
@@ -526,7 +594,9 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
         grup = gruplar.setdefault(vkn, {
             "vkn": vkn, "adet": 0, "matrah": 0.0, "kdv": 0.0, "toplam": 0.0,
             "liste_adet": 0, "liste_matrah": 0.0, "liste_kdv": 0.0,
-            "liste_toplam": 0.0, "donemler": set(),
+            "liste_toplam": 0.0,
+            "duz_adet": 0, "duz_matrah": 0.0, "duz_kdv": 0.0,
+            "duz_toplam": 0.0, "donemler": set(),
         })
         grup["liste_adet"] += 1
         grup["liste_matrah"] += float(f.get("matrah") or 0.0)
@@ -534,9 +604,21 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
         grup["liste_toplam"] += float(f.get("toplam") or 0.0)
         if f.get("kayit_yil") and f.get("kayit_ay"):
             grup["donemler"].add((f["kayit_yil"], f["kayit_ay"]))
-        # Duzeltme ile cikarilmis saticinin faturalari da bu takima girer:
+        # Duzeltmeyle cikarilan faturalar KENDI takimlarinda toplanir;
         # belgede tutari "duzeltme ile cikarildi" gerekcesiyle anilir.
-        if not f.get("dahil"):
+        # `liste_*` gibi "dahil" isaretine bakmaz, cunku anlatilan sey
+        # tarhiyat degil mukellefin kendi duzeltmesidir.
+        if fatura_duzeltildi_mi(f, saticilar):
+            grup["duz_adet"] += 1
+            grup["duz_matrah"] += float(f.get("matrah") or 0.0)
+            grup["duz_kdv"] += float(f.get("kdv") or 0.0)
+            grup["duz_toplam"] += float(f.get("toplam") or 0.0)
+        # Birinci takim TARHIYATA GIRENLERDIR: olcut `sayilir`, yani
+        # duzeltmeyle cikarilan ya da hic kayitlara alinmayan faturalar
+        # buraya girmez. Eskiden olcut yalnizca "dahil" isaretiydi ve
+        # faturalarinin bir kismi duzeltilmis bir saticida "indirimi
+        # reddedilecek tutar" duzeltilen kismi da iceriyordu.
+        if not sayilir(f, saticilar):
             continue
         grup["adet"] += 1
         grup["matrah"] += float(f.get("matrah") or 0.0)
@@ -566,6 +648,9 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
             "liste_matrah": round(grup["liste_matrah"], 2),
             "liste_kdv": round(grup["liste_kdv"], 2),
             "liste_toplam": round(grup["liste_toplam"], 2),
+            "duz_matrah": round(grup["duz_matrah"], 2),
+            "duz_kdv": round(grup["duz_kdv"], 2),
+            "duz_toplam": round(grup["duz_toplam"], 2),
             "tarhiyat_disi": grup["liste_adet"] - grup["adet"],
             "donem_sayisi": len(donemler),
             # Belgelerdeki sira bundan kurulur (bkz. asagidaki sort).
@@ -598,6 +683,27 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
     satirlar.sort(key=lambda s: (s["ilk_yil"] is None, s["ilk_yil"] or 0,
                                  -s["liste_kdv"], s["vkn"]))
     return satirlar
+
+
+def yillara_gore(faturalar):
+    """Faturalari KAYIT YILINA gore gruplar: [(yil, [fatura, ...]), ...].
+
+    Vergilendirme hesap donemi bazinda yapildigindan, ayni saticidan farkli
+    yillarda alinan belgeler tek bir tabloda toplanmamalidir: tutanakta ve
+    raporda her yil kendi paragrafi ve kendi tablosuyla anlatilir, boylece
+    yilin toplami okunabilir ve o yila ait tespitler (defter kaydi, beyana
+    yansima, duzeltme) kendi tablosunun altinda durur. Sahada boyle cikti:
+    iki yili incelenen mukellef, ayni saticinin bir yildaki faturalarini
+    duzeltme beyannamesiyle cikarmis, digerlerini cikarmamisti (2026-10-23).
+
+    Yil sirasinda doner; kayit donemi cozulememis faturalar (yil None) en
+    sona birakilir. Gruplarin ici listedeki sirasini korur.
+    """
+    gruplar = {}
+    for f in faturalar or []:
+        gruplar.setdefault(f.get("kayit_yil"), []).append(f)
+    return [(yil, gruplar[yil])
+            for yil in sorted(gruplar, key=lambda y: (y is None, y or 0))]
 
 
 def _yil_dokumu(faturalar, vkn):
@@ -1556,17 +1662,15 @@ def duzeltme_kabul_uygun_mu(satici_satirlari):
             adlar += " ve %d satıcı daha" % (len(secilen) - 4)
         return adlar
 
-    # Tarhiyata giren KDV'si olmayan satici da "kalan" sayilmaz. Satici
-    # kartindaki iki isaretin yani sira, faturalarin tamami beyana
-    # yansimamissa da ortada reddedilecek indirim yoktur: fatura basina
-    # "beyannameye yansitildi" isareti kaldirildiginda o fatura tarhiyata
-    # girmiyor (bkz. normalize). Bu sart olmasaydi, tarhiyati sifir olan bir
-    # dosyada rapor "faturalari hala tarhiyata giriyor" diye reddedilirdi -
-    # ki o cumle artik dogru olmazdi.
+    # Olcut tek: saticinin TARHIYATA GIREN KDV'si var mi. Satici satirindaki
+    # "kdv" alani `sayilir` uzerinden kuruldugu icin duzeltmeyle cikarilan
+    # (fatura basina isaretli) ve hic kayitlara alinmayan faturalar oraya
+    # girmez; faturalarin tamami beyana yansimamissa da tutar sifirdir.
+    # Eskiden burada satici kartindaki iki isaret ayrica aranirdi; fatura
+    # basina duzeltme isaretiyle birlikte bu, faturalarinin YALNIZCA bir
+    # kismi duzeltilmis saticida raporu yanlislikla serbest birakirdi.
     kalanlar = [s for s in satirlar
-                if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet"
-                and str(s.get("kayda_alinmadi") or "") != "Evet"
-                and abs(float(s.get("kdv") or 0.0)) > 0.005]
+                if abs(float(s.get("kdv") or 0.0)) > 0.005]
     if kalanlar:
         return False, (
             "Şu satıcıların faturaları hâlâ tarhiyata giriyor: %s. Düzeltme "
@@ -1637,8 +1741,7 @@ def duzeltme_kabul_orani(faturalar, sonuc, saticilar=None, vkn_suzgeci=None):
     kullanilan belgeler girer.
     """
     ilgili = [f for f in (faturalar or [])
-              if f.get("dahil")
-              and tarhiyat_disi_birakildi_mi(f.get("satici_vkn"), saticilar)]
+              if f.get("dahil") and tarhiyat_disi_mi(f, saticilar)]
     if vkn_suzgeci is not None:
         ilgili = [f for f in ilgili
                   if (f.get("satici_vkn") or "") in vkn_suzgeci]

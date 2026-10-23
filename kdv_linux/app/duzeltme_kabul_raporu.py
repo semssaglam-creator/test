@@ -208,14 +208,22 @@ def _akibet(b, kunye, s, kendi, karsilastirmalar):
             "bulunmamaktadır." % M(kunye, ek="in"), girinti=1)
         return
 
-    if str(s.get("duzeltme_ile_cikarildi") or "") != "Evet":
+    # Duzeltme isareti fatura basinadir; eski calismalarda satici kaydinda
+    # duruyor olabilir ve o, saticinin butun faturalarini kapsar.
+    eski_isaret = str(s.get("duzeltme_ile_cikarildi") or "") == "Evet"
+    duzeltilenler = [f for f in kendi or []
+                     if F.fatura_duzeltildi_mi(f) or eski_isaret]
+    duz_kdv = (round(sum(float(f.get("kdv") or 0.0) for f in duzeltilenler), 2)
+               if kendi else float(s.get("duz_kdv") or 0.0))
+    if not duzeltilenler and duz_kdv <= 0.005:
         return
 
     # Duzeltme dokumu: hangi donemde hangi satirdan cikarildigi. Rapor ile
     # tutanak ayni ureteceten beslensin diye sahte_belge_raporu'ndaki bolum
     # kullanilir; modul dongusune girmemek icin burada yuklenir.
     from .sahte_belge_raporu import _duzeltme_bolumu
-    _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, None)
+    if duzeltilenler:
+        _duzeltme_bolumu(b, kunye, s, duzeltilenler, karsilastirmalar, None)
 
     b.paragraf(
         "Yukarıda yer verilen tespitlerden görüleceği üzere, %s tarafından "
@@ -224,7 +232,9 @@ def _akibet(b, kunye, s, kendi, karsilastirmalar):
         "mükellefe ait faturalar beyanlardan çıkarılmış olduğundan, ilgili "
         "faturalara ilişkin eleştiriyi gerektirecek bir hususa "
         "rastlanılmamıştır."
-        % (M(kunye, ek="in"), _tl(s.get("liste_kdv"))), girinti=1)
+        # "tarafından" YALIN hal ister: ilgi ekiyle "mükellef kurumun
+        # tarafından" cikiyordu (belgede boyle gorundu, 2026-10-23).
+        % (M(kunye), _tl(duz_kdv)), girinti=1)
 
 
 # ------------------------------------------------------------- 3) mevzuat

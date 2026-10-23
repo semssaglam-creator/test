@@ -1479,6 +1479,69 @@ oturumda buradan devam edilir.
       geçişi gerçek tarihler üzerinde 77./78. satırlarda doğrulanıyor. Had
       tablosunun yıla daralması ayrıca kolluyor.
 
+- [x] 2026-10-23 — **Düzeltme beyannamesi işareti FATURA başına geçti.**
+      Müfettişin tespiti: birden fazla yılı incelenen bir mükellef, aynı
+      sahteci satıcıdan her iki yılda da alış yapmış; bir yılın faturalarını
+      düzeltme beyannamesiyle indirimlerden çıkarmış, diğer yılınkileri
+      çıkarmamıştı. İşaret satıcı kartındayken o dosyada ya **her iki yıl**
+      tarhiyat dışında kalıyordu ya **ikisi de** tarhiyata giriyordu;
+      ikisi de yanlıştı.
+
+      Artık işaret fatura satırında (`duzeltme_cikarildi`), fatura
+      listesinde kendi sütunuyla. Ölçüt `faturalar.fatura_duzeltildi_mi`;
+      `sayilir` onun üzerinden çalıştığı için hesap zincirinin tamamı
+      (indirim dizileri, tarhiyat, ceza, oran) kendiliğinden düzeldi.
+
+      **Eski çalışmalar:** işaret satıcı kaydında (`duzeltme_ile_cikarildi`)
+      duruyorsa hâlâ okunuyor — ve çalışma AÇILDIĞINDA faturalara taşınıp
+      satıcıdaki kopya siliniyor. Taşıma zorunluydu: aksi hâlde ekranda
+      bütün tikler boş görünürken hesap eski işarete göre çalışır,
+      kullanıcının tiki kaldırması etkisiz kalırdı. Fatura listesi
+      bulunmayan **elle eklenen** satıcılarda alan yerinde kaldı; taşıyacak
+      fatura satırı yok.
+
+      Satıcı özetinde artık üç takım var ve karıştırılmamalı:
+      `adet/matrah/kdv/toplam` **tarhiyata girenler** (ölçüt `sayilir`;
+      eskiden yalnızca "dahil" tikine bakıyordu), `duz_*` düzeltmeyle
+      çıkarılanlar, `liste_*` listedeki bütün faturalar. Rapor bu sayede
+      aynı satıcı için iki tutarı yan yana yazabiliyor: çıkarılan kısım
+      için mükerrer tarhiyat gerekçesi, kalan kısım için indirimin reddi —
+      hangisinin hangi belgeye ait olduğu sıra numarasıyla anılıyor.
+
+- [x] 2026-10-23 — **Satıcı bölümü yıl yıl ayrıldı.** Aynı müfettiş
+      tespitinin ikinci yarısı: "vergilendirme hesap dönemi bazında
+      yapıldığından, farklı yıllara ait alışa ilişkin tutanak maddesi aynı
+      olsa da yılları birbirinden paragraf ve tablo olarak ayıralım".
+
+      Tutanakta madde TEK kaldı — tespit aynı tespit, ayrılan şey yıllar.
+      Maddenin gövdesi yıl yıl bloklanıyor (`_satici_yil_bloklari`): her yıl
+      için giriş paragrafı, kendi tablosu ve o yıla ait tespitler (defter
+      kaydı, beyana yansıma, muhasebe kaydı, iptal/itiraz, düzeltme dökümü).
+      Sahte belge kullanma raporu aynı üreteci kullanıyor; o rapor zaten yıl
+      yıl yazıldığından blok çoğu dosyada tektir.
+
+      İki kural kodda da yorumla duruyor:
+      - **Tek yılda çıktı değişmiyor** — yıl giriş paragrafı yalnızca birden
+        fazla yıl varsa yazılıyor; maddenin Ba-Bs cümlesi zaten yılı ve
+        tutarı söylüyor.
+      - **Sıra numaraları bloklar boyunca kesintisiz** (2021 tablosu 1-3,
+        2022 tablosu 4-7). Her tabloda 1'den başlamak, "2 sıra numaralı
+        belge" diyen paragrafları iki tablo arasında belirsiz bırakırdı.
+
+      Her tablonun TOPLAM satırı kendi satırlarından kuruluyor; eskiden
+      satıcı özetindeki `liste_*` yazılıyordu ve yıl ayrımıyla birlikte o
+      rakam hiçbir tablonun toplamı olmayacaktı.
+
+      Gerileme denetimi: `testler/duzeltme_isareti_testi.py` (beş bölüm).
+      Beş mutasyonla denetlendi: satıcı düzeyine dönen `sayilir`, yıl
+      gruplamasının kaldırılması, satıcı özetinin "dahil" ölçütüne dönmesi,
+      sıra numarasının her tabloda 1'den başlaması, düzeltmeden sonra kalan
+      tutarın yazılmaması — beşi de kırmızı.
+
+      Yanında düzeltilen küçük bir yazım kusuru: düzeltme kabul raporunda
+      "mükellef kurum**un** tarafından" çıkıyordu ("tarafından" yalın hal
+      ister).
+
 ---
 
 ## Özel usulsüzlükte bekleyen

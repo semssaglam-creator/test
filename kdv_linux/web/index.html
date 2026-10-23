@@ -2781,6 +2781,26 @@ async function calismaAc(id) {
       faturalar: c.faturalar || [],
       saticilar: c.saticilar || {},
     };
+    // Eski kayıtlarda "düzeltme beyannamesiyle çıkarıldı" işareti SATICI
+    // kartındaydı ve o satıcının bütün faturalarını kapsıyordu. İşaret artık
+    // fatura satırında; eski kayıt açıldığında aşağı taşınır ve satıcıdaki
+    // kopya silinir. Taşımak zorunlu: aksi halde ekranda bütün fatura
+    // tikleri boş görünürken hesap satıcı kartındaki eski işarete göre
+    // çalışır ve kullanıcının tiki kaldırması etkisiz kalırdı.
+    //
+    // Elle eklenen satıcılarda işaret YERİNDE KALIR: fatura satırı olmadığı
+    // için işareti taşıyacak yer yoktur, o satıcılarda alan ekranda da
+    // görünmeye devam eder.
+    Object.entries(durum.calisma.saticilar || {}).forEach(([vkn, bilgi]) => {
+      if (!bilgi || bilgi.duzeltme_ile_cikarildi !== "Evet") return;
+      if (bilgi.elle === "Evet") return;
+      let tasinan = 0;
+      (durum.calisma.faturalar || []).forEach((f) => {
+        if ((f.satici_vkn || f.duzenleyen_vkn || "") !== vkn) return;
+        if (!f.duzeltme_cikarildi) { f.duzeltme_cikarildi = "Evet"; tasinan += 1; }
+      });
+      if (tasinan) delete bilgi.duzeltme_ile_cikarildi;
+    });
     // Eski kayitlarda baslangic devri calisma duzeyindeydi; ilk yila tasi
     if (durum.calisma.devreden_baslangic != null && durum.calisma.yillar.length) {
       const ilk = durum.calisma.yillar.reduce((a, b) => (a.yil <= b.yil ? a : b));
@@ -3702,14 +3722,38 @@ function faturaSaticiTablosunuCiz() {
         + "satıcıya ilişkin beyanı” alanını doldurun.";
     tr.appendChild(tdBeyan);
 
-    tr.appendChild(hucre("td", String(s.adet), { className: "sag" }));
+    // Adet ve tutarlar TARHİYATA GİREN faturaların toplamıdır. Listede
+    // olup tarhiyata girmeyen (düzeltmeyle çıkarılmış, iptal/itiraz kaydı
+    // bulunan, beyana yansımamış) faturalar varsa adet "2 / 4" biçiminde
+    // yazılır: yoksa 4 faturalık bir satıcının satırında "2" görünür ve
+    // eksiğin nereye gittiği ekrandan anlaşılmaz.
+    const adetMetni = (s.liste_adet && s.liste_adet !== s.adet)
+      ? `${s.adet} / ${s.liste_adet}` : String(s.adet);
+    const tdAdet = hucre("td", adetMetni, { className: "sag" });
+    if (s.liste_adet !== s.adet) {
+      tdAdet.title = `Listedeki ${s.liste_adet} faturadan ${s.adet} tanesi `
+        + `tarhiyata giriyor (listedeki toplam KDV ${tl(s.liste_kdv)} TL).`;
+    }
+    tr.appendChild(tdAdet);
     tr.appendChild(hucre("td", tl(s.matrah), { className: "sag" }));
     tr.appendChild(hucre("td", tl(s.kdv), { className: "sag" }));
     tr.appendChild(hucre("td", s.ilk_donem === s.son_donem
       ? s.ilk_donem : `${s.ilk_donem} – ${s.son_donem}`));
-    tr.appendChild(hucre("td",
-      s.duzeltme_ile_cikarildi === "Evet" ? "düzeltme ile çıkarılmış" : "tarhiyata dahil",
-      { className: s.duzeltme_ile_cikarildi === "Evet" ? "sessiz" : "" }));
+    // Düzeltme işareti fatura başına konduğundan bir satıcı KISMEN
+    // çıkarılmış olabilir: bir yıldaki faturaları düzeltilmiş, diğer
+    // yıldakiler düzeltilmemiş. Üç hâl de ayrı görünmeli.
+    const duzVar = Number(s.duz_kdv || 0) > 0.005;
+    const kalanVar = Number(s.kdv || 0) > 0.005;
+    const tarhiyatMetni = duzVar
+      ? (kalanVar ? "kısmen düzeltme ile çıkarılmış" : "düzeltme ile çıkarılmış")
+      : "tarhiyata dahil";
+    const tdTarhiyat = hucre("td", tarhiyatMetni,
+                             { className: duzVar && !kalanVar ? "sessiz" : "" });
+    if (duzVar) {
+      tdTarhiyat.title = `Düzeltmeyle çıkarılan KDV: ${tl(s.duz_kdv)} TL`
+        + (kalanVar ? ` · tarhiyata giren KDV: ${tl(s.kdv)} TL` : "");
+    }
+    tr.appendChild(tdTarhiyat);
     const tdD = document.createElement("td");
     const dugme = document.createElement("button");
     dugme.className = "btn ikincil";
@@ -3904,8 +3948,9 @@ function faturaSutunSuzgecleri(suz) {
   };
   const kutuStili = "width:100%;padding:2px 4px;font-size:11px;";
 
-  bos(6);                        // Dahil · Defterde · Beyanda ·
-                                 // Tevsik yok · İptal/itiraz · Fatura No
+  bos(7);                        // Dahil · Defterde · Beyanda ·
+                                 // Düzeltmeyle çıkarıldı · Tevsik yok ·
+                                 // İptal/itiraz · Fatura No
 
   const tdTarih = document.createElement("td");
   const girdi = document.createElement("input");
@@ -4121,7 +4166,8 @@ function faturaListesiniCiz() {
   });
   thDahil.append(hepsi, document.createTextNode(" Dahil"));
   ust.appendChild(thDahil);
-  ["Defterde", "Beyanda", "Tevsik\nyok", "İptal\nitiraz", "Fatura No", "Tarih",
+  ["Defterde", "Beyanda", "Düzeltmeyle\nçıkarıldı", "Tevsik\nyok",
+   "İptal\nitiraz", "Fatura No", "Tarih",
    "Satıcı VKN", "Yön", "Kayıt Dönemi", "Matrah", "KDV", "Toplam", "Oran",
    "Malın Cinsi", "Yevmiye\nTarihi", "Yevmiye\nNo"].forEach((b) =>
     ust.appendChild(hucre("th", b)));
@@ -4131,7 +4177,7 @@ function faturaListesiniCiz() {
   if (!gorunen.length) {
     const bos = document.createElement("tr");
     bos.appendChild(hucre("td", "Seçilen yıl ve satıcıya ait fatura yok.",
-                          { className: "sessiz" })).colSpan = 17;
+                          { className: "sessiz" })).colSpan = 18;
     tablo.appendChild(bos);
   }
 
@@ -4189,6 +4235,28 @@ function faturaListesiniCiz() {
                 "KDV'si beyannamede indirim konusu yapılmış. "
                 + "İşaretli değilse fatura tarhiyata girmez: reddedilecek "
                 + "bir indirim yoktur.");
+
+    // Düzeltme beyannamesiyle indirimlerden çıkarılma, BELGE BAŞINA tespit
+    // edilir. Birden fazla yılı incelenen bir mükellef, aynı satıcının bir
+    // yıldaki faturalarını düzeltmiş, diğer yıldakileri düzeltmemiş olabilir;
+    // vergilendirme hesap dönemi bazında yapıldığı için bu ayrım tarhiyatı
+    // doğrudan değiştirir. İşaretli fatura tarhiyata girmez (mükerrer
+    // tarhiyat olurdu), ama belgede dökümü ve gerekçesi yazılır.
+    const tdDuz = document.createElement("td");
+    const duz = document.createElement("input");
+    duz.type = "checkbox";
+    duz.checked = (f.duzeltme_cikarildi || "Hayır") === "Evet";
+    duz.style.width = "auto";
+    duz.title = "KDV'si düzeltme beyannamesiyle indirimlerden çıkarılmış. "
+              + "İşaretli fatura tarhiyata girmez; raporda düzeltme dökümü "
+              + "ve mükerrer tarhiyat gerekçesi yazılır.";
+    duz.addEventListener("change", async () => {
+      f.duzeltme_cikarildi = duz.checked ? "Evet" : "Hayır";
+      isaretle(false);
+      await faturalariTazele();
+    });
+    tdDuz.appendChild(duz);
+    tr.appendChild(tdDuz);
 
     // Ödemesi banka/finans kurumu belgesiyle tevsik edilmemiş faturalar:
     // VUK mükerrer 355 özel usulsüzlük cezasının matrahını oluşturur.
@@ -4302,7 +4370,10 @@ function faturaListesiniCiz() {
     metinKutusu("yevmiye_tarih", 90, "gg.aa.yyyy", true);
     metinKutusu("yevmiye_no", 70, "no", false);
 
-    if (!f.dahil) tr.style.opacity = "0.55";
+    // Düzeltmeyle çıkarılan fatura "dahil" işaretli kalır (belgede dökümü
+    // ve düzeltme anlatısı yazılır) ama tarhiyata girmez; satır soluk
+    // gösterilir ki tabloda tarhiyata giren satırlardan ayrılsın.
+    if (!f.dahil || duz.checked) tr.style.opacity = "0.55";
     tablo.appendChild(tr);
   });
 }
@@ -4322,6 +4393,7 @@ async function faturaListesiniAktar() {
   const basliklar = ["Dahil", "Tevsik yok", "İptal/itiraz", "Fatura No", "Tarih", "Satıcı VKN",
                      "Satıcı Unvanı", "Yön", "Kayıt Dönemi", "Matrah", "KDV",
                      "Toplam", "Oran (%)", "Defterde", "Beyanda",
+                     "Düzeltmeyle çıkarıldı",
                      "Malın Cinsi", "Yevmiye Tarihi", "Yevmiye No"];
   const satirlar = gorunen.map((f) => {
     const satici = (durum.calisma.saticilar || {})[f.satici_vkn || ""] || {};
@@ -4342,6 +4414,7 @@ async function faturaListesiniAktar() {
       f.matrah ? Number((f.kdv / f.matrah * 100).toFixed(1)) : 0,
       (f.deftere_kaydedildi || "Evet") === "Hayır" ? "Hayır" : "Evet",
       (f.beyana_yansitildi || "Evet") === "Hayır" ? "Hayır" : "Evet",
+      (f.duzeltme_cikarildi || "Hayır") === "Evet" ? "Evet" : "",
       f.mal_cinsi || "",
       (f.deftere_kaydedildi || "Evet") === "Hayır"
         ? "kayıt yok" : (tarihGoster(f.yevmiye_tarih) || ""),

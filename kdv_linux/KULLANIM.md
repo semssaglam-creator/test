@@ -451,6 +451,17 @@ Elle hazırlanan dökümler VKN taşımaz. Bu durumda yükleme kutusunun altınd
 yoksa fatura tarihinden alınır; `yyyy/aa` biçiminde elle değiştirilebilir.
 *Dahil* işareti kaldırılan satır ne toplamlara ne de tarhiyata girer.
 
+**Düzeltme beyannamesiyle çıkarılan faturalar belge başına işaretlenir.**
+Fatura listesindeki *Düzeltmeyle çıkarıldı* sütunu, o faturanın KDV'sinin
+mükellefin kendi düzeltme beyannamesiyle indirimlerden çıkarıldığını söyler.
+İşaretli fatura tarhiyata girmez (aynı tutarın bir de raporla tarh edilmesi
+mükerrer tarhiyat olurdu), ama belgede dökümü ve gerekçesi yazılır. İşaret
+belge başına olduğundan, aynı satıcının bir yıldaki faturaları düzeltilip
+diğer yıldakiler düzeltilmemişse her yıl kendi akıbetiyle yazılır: düzeltilen
+yıl için mükerrer tarhiyat gerekçesi, diğeri için indirimin reddi. Satıcı
+tablosundaki *Tarhiyat* sütununda bu durum "kısmen düzeltme ile çıkarılmış"
+olarak görünür.
+
 **Satıcı unvanını siz girersiniz.** Portal dökümündeki unvan alanı satıcının
 değil, *alıcının* unvanıdır — döküm satıcının kendi portalından alınmıştır.
 Satıcı tablosundaki *Düzenle* düğmesiyle unvan, VTR tarih/no, özel esaslara

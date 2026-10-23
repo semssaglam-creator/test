@@ -33,7 +33,8 @@ from .tutanak import (BEYAN_DOKUM_KOLONLARI, belgeye_giren_bulgular,
                       beyan_dokum_tablosu, dikkat_notu, dolu_donemler,
                       indirim_yetersiz_donemler, iptal_notlari,
                       kalan_dikkat_notu, kalan_iptal_notlari, yetersiz_donemleri,
-                      defter_beyan_paragraflari, satici_tespit_paragraflari,
+                      defter_beyan_paragraflari, satici_fatura_tablosu,
+                      satici_tespit_paragraflari,
                       satici_veri_maddeleri, tarhiyat_toplami)
 
 _tl = turkce.tl
@@ -591,7 +592,7 @@ def _tarhiyat_disi_gruplari(liste, saticilar, yetersiz):
             continue
         if f.get("iptal"):
             iptal.append(f)
-        elif F.duzeltilmis_mi(f.get("satici_vkn"), saticilar):
+        elif F.fatura_duzeltildi_mi(f, saticilar):
             duzeltme.append(f)
         elif (f.get("kayit_yil"), f.get("kayit_ay")) in (yetersiz or set()):
             asim.append(f)
@@ -801,7 +802,12 @@ def _duzeltme_gerekceleri(s, ilgili):
 
 
 def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
-    """Duzeltmeyle cikarilan satici icin duzeltme anlatisi, tablo ve kapanis.
+    """Duzeltmeyle cikarilan faturalar icin duzeltme anlatisi, tablo ve kapanis.
+
+    `kendi` DUZELTILMIS faturalardir (bkz. `F.fatura_duzeltildi_mi`); izlenen
+    tutar da onlarin KDV toplamidir. Satici ozetindeki "kdv" alani
+    kullanilamaz: o, tarhiyata GIREN faturalarin toplamidir ve duzeltilen
+    faturalar tam olarak orada bulunmayanlardir.
 
     Donemler `beyannameler.duzeltme_takibi` ile secilir: faturanin kaydedildigi
     aydan baslanip, cikarilan KDV odenecek vergiye donusene kadar devir zinciri
@@ -813,7 +819,8 @@ def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
     M = ik.mukellef_sozu
     aylar = {(f.get("kayit_yil"), f.get("kayit_ay")) for f in kendi
              if f.get("kayit_yil") and f.get("kayit_ay")}
-    takip = B.duzeltme_takibi(karsilastirmalar, aylar, s.get("kdv"),
+    izlenen = round(sum(float(f.get("kdv") or 0.0) for f in kendi or []), 2)
+    takip = B.duzeltme_takibi(karsilastirmalar, aylar, izlenen,
                               s.get("unvan"))
     ilgili = [d["karsilastirma"] for d in takip["donemler"]]
     gerekceler = _duzeltme_gerekceleri(s, ilgili)
@@ -845,10 +852,10 @@ def _duzeltme_bolumu(b, kunye, s, kendi, karsilastirmalar, veri_no):
            donem_metni, "dönemi" if len(ilgili) == 1 else "dönemleri",
            gerekce_cumlesi), girinti=1)
     _duzeltme_ayrinti_tablosu(b, ilgili)
-    _duzeltme_kapanisi(b, kunye, s, takip, veri_no)
+    _duzeltme_kapanisi(b, kunye, izlenen, takip, veri_no)
 
 
-def _duzeltme_kapanisi(b, kunye, s, takip, veri_no):
+def _duzeltme_kapanisi(b, kunye, izlenen, takip, veri_no):
     """KDV'nin hangi satirdan cikarildigini ve akibetini yazan kapanis.
 
     Cikarma tek ayda bitmeyebilir: o ayda odenecek vergi dogmuyorsa tutar
@@ -869,7 +876,7 @@ def _duzeltme_kapanisi(b, kunye, s, takip, veri_no):
                "tutanağın %s maddesinde belirtilen faturalara isabet eden "
                "%s TL tutarındaki katma değer vergisinin"
                % (M(kunye), ("%d." % veri_no) if veri_no else "[ilgili]",
-                  _tl(s["kdv"])))
+                  _tl(izlenen)))
     if alim:
         kapanis += (" %s %s için %s tarihinde verilen düzeltme beyannamesi ile "
                     "yurt içi alımlara ilişkin KDV satırından"
@@ -917,7 +924,7 @@ def _duzeltme_kapanisi(b, kunye, s, takip, veri_no):
             "yapılmadığı anlaşılmıştır. Bu tutar bakımından mükerrer tarhiyat "
             "söz konusu olmadığından [bu tutarın tarhiyata dahil edilip "
             "edilmeyeceği değerlendirilmelidir]."
-            % (_tl(s["kdv"]), _tl(takip["cikarilan_toplam"]), _tl(eksik)),
+            % (_tl(izlenen), _tl(takip["cikarilan_toplam"]), _tl(eksik)),
             girinti=1)
 
 
@@ -962,25 +969,40 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
     # Saticinin listedeki butun faturalari tabloya girer; tarhiyata
     # alinmayanlarin neden alinmadigi C bolumunde ayrica aciklanir.
     tum = [f for f in liste if (f.get("satici_vkn") or "") == s["vkn"]]
-    if tum:
+    # Vergilendirme hesap donemi bazinda yapildigindan, ayni saticidan farkli
+    # yillarda alinan belgeler AYRI bloklarda yazilir: her yil icin kendi
+    # giris paragrafi, kendi tablosu ve o yila ait tespitler. Tutanaktaki
+    # duzenin aynisi (bkz. tutanak._satici_yil_bloklari); iki belge ayni
+    # bolumlemeyle okunabilsin.
+    gruplar = F.yillara_gore(tum)
+    baslangic = 1
+    for yil, grup in gruplar:
         # Fatura tablosundan once tutanaga atif: hangi maddede tespit edildigi,
         # faturalari kimin duzenledigi ve hangi donem beyannamelerinde indirim
         # konusu yapildigi.
-        yillar = sorted({f["kayit_yil"] for f in tum if f.get("kayit_yil")})
+        #
         # Giris cumlesi "faturalari yevmiye defterine kaydederek ... indirilecek
         # KDV olarak gostermistir" der. Bu, ancak faturalarin TAMAMI deftere
         # kayitli ve beyana yansimissa dogrudur. Istisna varsa cumle notr
         # birakilir; hangi belgenin ne durumda oldugunu tablodan sonraki
         # paragraflar tek tek soyler.
         istisna_var = any(
-            F.fatura_durumu(f) not in (F.DURUM_NORMAL, F.DURUM_DUZELTME)
-            for f in tum)
+            F.fatura_durumu(f, F.fatura_duzeltildi_mi(f))
+            not in (F.DURUM_NORMAL, F.DURUM_DUZELTME) for f in grup)
         ortak = ("Rapora ekli vergi inceleme tutanağının %s maddesinde tespit "
                  "edildiği üzere, %s, düzenlenen Vergi Tekniği Raporu ile sahte "
                  "olduğu tespit edilen %s %s Vergi Kimlik Numaralı Mükellefi %s "
                  "tarafından düzenlenen "
                  % (("%d." % veri_no) if veri_no else "[ilgili]",
                     M(kunye, buyuk=True), daire, s["vkn"] or "[VKN]", unvan))
+        if len(gruplar) > 1:
+            # Hangi yildan soz edildigi cumlenin basinda durmali: blok blok
+            # okunan bir bolumde "su yila ait" ibaresi olmadan tablolar
+            # birbirine karisir.
+            ortak += "%s ait " % (("%d %s" % (yil, ik.donem_adi(kunye, False,
+                                                               "yonelme")))
+                                  if yil else "kayıt dönemi tespit "
+                                              "edilemeyen dönemlere")
         if istisna_var:
             b.paragraf(ortak + "faturalara ilişkin ayrıntılı bilgiler aşağıdaki "
                        "tabloda yer almaktadır.", girinti=1)
@@ -990,55 +1012,102 @@ def _satici_bolumu(b, kunye, s, liste, sira, donem_metni="",
                 "faturalara ait KDV’leri %s dönemi KDV beyannamelerinde "
                 "indirilecek KDV olarak göstermiştir. Faturalara ilişkin "
                 "ayrıntılı bilgiler aşağıdaki tabloda yer almaktadır."
-                % (turkce.liste([str(y) for y in yillar]) or "[yıl]"),
-                girinti=1)
-        tablo = []
-        for sira, f in enumerate(tum, 1):
-            yev_tarih, yev_no = F.yevmiye_hucreleri(f)
-            tablo.append([str(sira),
-                          F.tarih_goster(f.get("tarih")), f.get("fatura_no") or "",
-                          F.mal_cinsi_hucresi(f), _tl(f.get("matrah")),
-                          _tl(f.get("kdv")), _tl(f.get("toplam")),
-                          yev_tarih, yev_no])
-        tablo.append(["", "TOPLAM", "", "", _tl(s["liste_matrah"]),
-                      _tl(s["liste_kdv"]), _tl(s["liste_toplam"]), "", ""])
-        b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
-                 "KDV", "Toplam Tutar", "Yevmiye Tarih", "Yevmiye No"], tablo,
-                hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag",
-                         "orta", "orta"],
-                oranlar=[0.45, 1, 1.4, 1.3, 1.1, 1, 1.1, 1, 0.7],
-                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
-
-        # Tutanakla AYNI uretecten: iki belge birbirini tutsun.
-        for satir in defter_beyan_paragraflari(kunye, s, tum):
+                % (str(yil) if yil else "[yıl]"), girinti=1)
+        # Tablo ve ona bagli paragraflar tutanakla AYNI uretecten gelir:
+        # iki belge birbirini tutsun.
+        satici_fatura_tablosu(b, grup, baslangic)
+        for satir in defter_beyan_paragraflari(kunye, s, grup, baslangic):
             b.paragraf(satir, girinti=1)
+        # Iptal/itiraz kaydi, tarhiyata dahil edilmeyen faturalar icin de yazilir
+        for satir in iptal_notlari(grup):
+            b.paragraf(satir, girinti=1)
+        _satici_yil_kapanisi(b, kunye, s, grup, karsilastirmalar, veri_no,
+                             baslangic)
+        baslangic += len(grup)
 
-    # Iptal/itiraz kaydi, tarhiyata dahil edilmeyen faturalar icin de yazilir
-    for satir in iptal_notlari(tum):
-        b.paragraf(satir, girinti=1)
+    if not tum:
+        # Fatura listesi bulunmayan (elle eklenen) satici: dokulecek satir
+        # yoktur, kapanis cumlesi satici ozetindeki tutarlardan yazilir.
+        _satici_yil_kapanisi(b, kunye, s, [], karsilastirmalar, veri_no)
 
-    if s.get("duzeltme_ile_cikarildi") == "Evet":
-        # Mukerrer tarhiyati onlemek icin bu satici tarhiyata girmez; gerekcesi
+
+def _satici_yil_kapanisi(b, kunye, s, grup, karsilastirmalar, veri_no,
+                         baslangic=1):
+    """Bir yil blogunun kapanisi: duzeltme anlatisi ve/veya indirim reddi.
+
+    Ikisi BIRLIKTE de yazilabilir, cunku mukellef ayni saticinin belgelerinin
+    bir kismini duzeltme beyannamesiyle indirimlerden cikarmis, bir kismini
+    cikarmamis olabilir (sahada boyle cikti, 2026-10-23): cikarilan kisim
+    icin mukerrer tarhiyat gerekcesi, kalan kisim icin indirimin reddi
+    gerekir. Tutarlar bu yuzden satici toplamindan degil BU BLOKTAN kurulur.
+    """
+    M = ik.mukellef_sozu
+    eski_isaret = s.get("duzeltme_ile_cikarildi") == "Evet"
+    # "Hic kayitlara alinmadi" isareti satici duzeyindedir ve o saticinin
+    # butun belgelerini tarhiyat disinda birakir; burada satici satirindan
+    # okunur, cunku bu bolume `saticilar` sozlugu gelmiyor.
+    kayda_alinmadi = s.get("kayda_alinmadi") == "Evet"
+    if grup:
+        duzeltilenler = [f for f in grup
+                         if F.fatura_duzeltildi_mi(f) or eski_isaret]
+        kalanlar = [] if kayda_alinmadi else [
+            f for f in grup if f not in duzeltilenler and f.get("dahil")]
+        duz_kdv = round(sum(float(f.get("kdv") or 0.0)
+                            for f in duzeltilenler), 2)
+        kalan_kdv = round(sum(float(f.get("kdv") or 0.0) for f in kalanlar), 2)
+    else:
+        duzeltilenler = []
+        duz_kdv = float(s.get("duz_kdv") or 0.0)
+        kalan_kdv = float(s.get("kdv") or 0.0)
+
+    if duz_kdv > 0.005 or duzeltilenler:
+        # Mukerrer tarhiyati onlemek icin bu tutar tarhiyata girmez; gerekcesi
         # burada ve degerlendirme bolumunde acikca yazilir.
+        #
+        # Faturalarin yalnizca bir kismi duzeltilmisse hangileri oldugu SIRA
+        # NUMARASIYLA anilir; yoksa ayni bolumde iki tutar ("cikarilan" ve
+        # "reddedilecek") yan yana durur ve hangisinin hangi belgeye ait
+        # oldugu belgeden anlasilmaz.
+        if duzeltilenler and len(duzeltilenler) != len(grup):
+            siralar = turkce.liste([
+                str(baslangic + i) for i, f in enumerate(grup)
+                if f in duzeltilenler])
+            hangi = ("%s sıra numaralı belge%s ait %s TL tutarındaki"
+                     % (siralar,
+                        "lere" if len(duzeltilenler) > 1 else "ye",
+                        _tl(duz_kdv)))
+        else:
+            hangi = "faturalara ait %s TL tutarındaki" % _tl(duz_kdv)
         b.paragraf(
-            "Yukarıda dökümü verilen faturalara ait %s TL tutarındaki katma "
-            "değer vergisi, %s tarafından verilen düzeltme beyannameleri ile "
-            "ilgili dönem indirimlerinden çıkarılmıştır. Söz konusu tutar "
-            "hâlihazırda beyanlardan tenzil edilmiş olduğundan, mükerrer "
-            "tarhiyata yol açmamak bakımından bu raporda hesaplanan tarhiyata "
-            "dahil edilmemiştir."
-            % (_tl(s["liste_kdv"]), M(kunye)), girinti=1)
-        _duzeltme_bolumu(b, kunye, s, tum, karsilastirmalar, veri_no)
-        return
+            "Yukarıda dökümü verilen %s katma değer vergisi, %s tarafından "
+            "verilen düzeltme beyannameleri ile ilgili dönem indirimlerinden "
+            "çıkarılmıştır. Söz konusu tutar hâlihazırda beyanlardan tenzil "
+            "edilmiş olduğundan, mükerrer tarhiyata yol açmamak bakımından bu "
+            "raporda hesaplanan tarhiyata dahil edilmemiştir."
+            % (hangi, M(kunye)), girinti=1)
+        if duzeltilenler:
+            _duzeltme_bolumu(b, kunye, s, duzeltilenler, karsilastirmalar,
+                             veri_no)
 
-    b.paragraf(
-        "Yukarıdaki açıklamalar ve tespit edilen hususlar ile ilgili mevzuat "
-        "hükümlerinden hareketle; %s tarafından kullanılan söz konusu "
-        "faturalara isabet eden ve ilgili dönem katma değer vergisi "
-        "beyannamelerinde indirim konusu yapılmış olan %s TL tutarındaki "
-        "katma değer vergisinin indiriminin reddedilmesi ve buna göre ilgili "
-        "dönem beyanlarının düzeltilmesi gerekmektedir."
-        % (M(kunye), _tl(s["kdv"])), girinti=1)
+    if kalan_kdv > 0.005:
+        if grup and duzeltilenler:
+            # Duzeltilen kisim yukarida ayri anildigi icin burada da hangi
+            # belgelerin kaldigi sira numarasiyla soylenir.
+            siralar = turkce.liste([
+                str(baslangic + i) for i, f in enumerate(grup)
+                if f in kalanlar])
+            hangi = ("%s sıra numaralı belge%s" % (siralar,
+                     "lere" if len(kalanlar) > 1 else "ye"))
+        else:
+            hangi = "söz konusu faturalara"
+        b.paragraf(
+            "Yukarıdaki açıklamalar ve tespit edilen hususlar ile ilgili "
+            "mevzuat hükümlerinden hareketle; %s tarafından kullanılan %s "
+            "isabet eden ve ilgili dönem katma değer vergisi "
+            "beyannamelerinde indirim konusu yapılmış olan %s TL "
+            "tutarındaki katma değer vergisinin indiriminin reddedilmesi ve "
+            "buna göre ilgili dönem beyanlarının düzeltilmesi gerekmektedir."
+            % (M(kunye), hangi, _tl(kalan_kdv)), girinti=1)
 
 
 def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
@@ -1050,9 +1119,13 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
                    girinti=1, italik=True)
         return
 
+    # Bir satici her iki listede de bulunabilir: faturalarinin bir kismi
+    # duzeltme beyannamesiyle indirimlerden cikarilmis, kalani cikarilmamis
+    # olabilir. Olcut bu yuzden satici degil TUTARDIR.
     haric = [s for s in satici_satirlari
-             if s.get("duzeltme_ile_cikarildi") == "Evet"]
-    sayilan = [s for s in satici_satirlari if s not in haric]
+             if float(s.get("duz_kdv") or 0.0) > 0.005]
+    sayilan = [s for s in satici_satirlari
+               if float(s.get("kdv") or 0.0) > 0.005]
     toplam_kdv = sum(s["kdv"] for s in sayilan)
 
     if not sayilan:
@@ -1087,7 +1160,8 @@ def _kdv_degerlendirmesi(b, kunye, satici_satirlari, donemler, sonuc, ceza):
             "hesaplamaya ve tarhiyata dahil edilmemiştir."
             % (turkce.liste(["%s (VKN: %s)" % (ik.satici_unvani(s),
                                                s["vkn"] or "—") for s in haric]),
-               _tl(sum(s["liste_kdv"] for s in haric)), M(kunye)),
+               _tl(sum(float(s.get("duz_kdv") or 0.0) for s in haric)),
+               M(kunye)),
             girinti=1)
 
     b.paragraf("Yapılan düzeltmeler sonucunda beyanların aşağıdaki gibi olması "
