@@ -28,6 +28,10 @@ GEREKLI_DOSYALAR=(
   "app/belge_docx.py" "app/tutanak.py" "app/sahte_belge_raporu.py"
   "app/excel_export.py" "app/fatura_oku.py" "app/pdf_beyanname.py"
   "app/vergi_beyannamesi.py" "app/beyannameler.py" "app/faturalar.py"
+  "app/vergi_sucu_raporu.py" "app/ibraz_etmeme_raporu.py"
+  # EK-3 ozet formu: yeni moduller dosya listesinden kolay atlanir,
+  # atlanirsa uygulama yalnizca o ekrana gelindiginde patlar.
+  "app/docx_form.py" "app/vsr_ek3.py"
   "web/index.html" "lib/openpyxl/__init__.py" "lib/pypdf/__init__.py"
   "lib_ek/typing_extensions.py"
   "calistir.sh" "kur.sh" "kaldir.sh"

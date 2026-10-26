@@ -124,10 +124,40 @@ def _giris(b, inceleme, kunye, donemler, satici_satirlari):
         girinti=1)
 
 
+def _fatura_yili(f):
+    """Faturanin kayit yili; cozulemezse None.
+
+    Sahte belge raporundaki `_yila_indirge` ile ayni olcut; rapor yil yil
+    yazildiginda iki belge ayni faturalari gormek zorunda.
+    """
+    try:
+        return int(f.get("kayit_yil"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _yil_listesi(s):
+    """Saticinin belgelerinin ait oldugu yillar: ["2021", "2022"]."""
+    return [str(d["yil"]) for d in (s.get("yil_dokumu") or []) if d.get("yil")]
+
+
 def _yillar(s):
-    """Saticinin belgelerinin ait oldugu yil(lar)."""
-    yillar = [str(d["yil"]) for d in (s.get("yil_dokumu") or []) if d.get("yil")]
+    """Tablo hucresi icin cikplak yil(lar): "2021, 2022"."""
+    yillar = _yil_listesi(s)
     return ", ".join(yillar) if yillar else "[yıl]"
+
+
+def _yil_ifadesi(kunye, s):
+    """Cumle icin cekimli donem: "2021 hesap doneminde".
+
+    "...mukellefi X'den %s alindigi tespit edilmistir" biciminde geciyor;
+    cikplak yil orada "X'den 2021 alindigi" diye okunuyordu.
+    """
+    yillar = _yil_listesi(s)
+    if not yillar:
+        return "[yıl] %s" % ik.donem_adi(kunye, False, "bulunma")
+    return "%s %s" % (turkce.liste(yillar),
+                      ik.donem_adi(kunye, len(yillar) > 1, "bulunma"))
 
 
 # ------------------------------------------------------- 2) inceleme ve tespit
@@ -147,6 +177,38 @@ def _tespitler(b, kunye, donemler, satici_satirlari, liste, karsilastirmalar):
         _satici_tespiti(b, kunye, s, liste, karsilastirmalar, sira)
 
 
+def _yil_giris_cumlesi(kunye, yil, grup):
+    """Cok yilli satici bolumunde bir yil blogunun giris cumlesi."""
+    matrah = sum(float(f.get("matrah") or 0.0) for f in grup)
+    donem = ("%d %s" % (yil, ik.donem_adi(kunye, False, "yonelme")) if yil
+             else "kayıt dönemi tespit edilemeyen dönemlere")
+    return ("Söz konusu faturaların %s ait olan, %d adet belge ile KDV hariç "
+            "%s TL tutarındaki kısmının dökümü aşağıdaki gibidir."
+            % (donem, len(grup), _tl(matrah)))
+
+
+def _fatura_tablosu(b, faturalar, baslangic=1):
+    """Fatura dokumu tablosu; TOPLAM satiri tablonun kendi satirlarindan.
+
+    Tutanaktaki tablonun yevmiye sutunlari olmayan hali: bu raporda faturalar
+    ya hic kayitlara girmemis ya da duzeltmeyle cikarilmistir, yevmiye kaydi
+    bolumun konusu degildir.
+    """
+    tablo = [[str(sira), F.tarih_goster(f.get("tarih")),
+              f.get("fatura_no") or "", F.mal_cinsi_hucresi(f),
+              _tl(f.get("matrah")), _tl(f.get("kdv")), _tl(f.get("toplam"))]
+             for sira, f in enumerate(faturalar, baslangic)]
+    tablo.append(["", "TOPLAM", "", "",
+                  _tl(sum(float(f.get("matrah") or 0.0) for f in faturalar)),
+                  _tl(sum(float(f.get("kdv") or 0.0) for f in faturalar)),
+                  _tl(sum(float(f.get("toplam") or 0.0) for f in faturalar))])
+    b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
+             "KDV", "Toplam Tutar"], tablo,
+            hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag"],
+            oranlar=[0.45, 1, 1.3, 1.4, 1.2, 1.1, 1.2],
+            buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
+
+
 def _satici_tespiti(b, kunye, s, liste, karsilastirmalar, sira):
     """Bir saticiya iliskin tespit: fatura dokumu, VTR, duzeltme akibeti."""
     M = ik.mukellef_sozu
@@ -162,31 +224,31 @@ def _satici_tespiti(b, kunye, s, liste, karsilastirmalar, sira):
             % (len(kendi),
                ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]",
                                 "in"),
-               s["vkn"] or "[VKN]", ik.satici_unvani(s), _yillar(s),
+               s["vkn"] or "[VKN]", ik.satici_unvani(s), _yil_ifadesi(kunye, s),
                (" Söz konusu faturaların %s yasal defter kayıtlarına hiç "
                 "alınmadığı görülmüştür." % M(kunye, ek="in"))
                if kayda_alinmadi else ""), girinti=1)
-        b.tablo(["Sıra", "Fatura Tarih", "Fatura No", "Malın Cinsi", "Tutar",
-                 "KDV", "Toplam Tutar"],
-                [[str(sira), F.tarih_goster(f.get("tarih")),
-                  f.get("fatura_no") or "", F.mal_cinsi_hucresi(f),
-                  _tl(f.get("matrah")), _tl(f.get("kdv")), _tl(f.get("toplam"))]
-                 for sira, f in enumerate(kendi, 1)]
-                + [["", "TOPLAM", "", "", _tl(s["liste_matrah"]),
-                    _tl(s["liste_kdv"]), _tl(s["liste_toplam"])]],
-                hizalar=["orta", "orta", "sol", "sol", "sag", "sag", "sag"],
-                oranlar=[0.45, 1, 1.3, 1.4, 1.2, 1.1, 1.2],
-                buyukluk=TABLO_PUNTOSU, toplam_satiri=True)
-        # Tutanak ve sahte belge raporuyla ayni uretecten.
-        for satir in defter_beyan_paragraflari(kunye, s, kendi):
-            b.paragraf(satir, girinti=1)
+        # Vergilendirme hesap donemi bazinda yapildigindan, farkli yillara
+        # ait belgeler ayri paragraf ve ayri tabloyla anlatilir; tutanak ve
+        # sahte belge raporundaki duzenin aynisi. Tek yilda ek giris
+        # paragrafi yazilmaz: ustteki cumle zaten yili ve adedi soyluyor.
+        gruplar = F.yillara_gore(kendi)
+        baslangic = 1
+        for yil, grup in gruplar:
+            if len(gruplar) > 1:
+                b.paragraf(_yil_giris_cumlesi(kunye, yil, grup), girinti=1)
+            _fatura_tablosu(b, grup, baslangic)
+            # Tutanak ve sahte belge raporuyla ayni uretecten.
+            for satir in defter_beyan_paragraflari(kunye, s, grup, baslangic):
+                b.paragraf(satir, girinti=1)
+            baslangic += len(grup)
     else:
         b.paragraf(
             "%s %s vergi kimlik numaralı mükellefi %s’den %s %s TL tutarında "
             "alış bildiriminde bulunulduğu tespit edilmiştir."
             % (ik.vergi_dairesi(s["vergi_dairesi"], "[Satıcının vergi dairesi]",
                                 "in"),
-               s["vkn"] or "[VKN]", ik.satici_unvani(s), _yillar(s),
+               s["vkn"] or "[VKN]", ik.satici_unvani(s), _yil_ifadesi(kunye, s),
                _tl(s.get("liste_matrah"))), girinti=1)
 
     for satir in satici_tespit_paragraflari(s):
@@ -493,9 +555,15 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma, bulgular=None,
     saticilar = calisma.get("saticilar") or {}
     satici_satirlari = F.satici_ozeti(liste, saticilar)
     if yil:
-        satici_satirlari = [s for s in satici_satirlari
-                            if any(d.get("yil") == yil
-                                   for d in (s.get("yil_dokumu") or []))]
+        # Rapor bir YILA ait oldugundan fatura dokumu de o yilla sinirli
+        # olmali. Eskiden yalnizca donemler ve satici satirlari
+        # daraltiliyordu; fatura listesi daraltilmadigi icin 2021 raporu
+        # 2022 faturalarini da dokuyor ve "4 adet fatura" diyordu
+        # (sahte belge raporunda ayni daraltma `_yila_indirge` ile yapiliyor).
+        liste = [f for f in liste if _fatura_yili(f) == yil]
+        satici_satirlari = F.satici_ozeti(liste, saticilar, yil)
+        karsilastirmalar = [k for k in (karsilastirmalar or [])
+                            if k.get("yil") == yil]
     oran = F.duzeltme_kabul_orani(liste, sonuc, saticilar)
 
     b = Belge()

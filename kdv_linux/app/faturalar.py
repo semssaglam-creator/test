@@ -82,6 +82,22 @@ SATICI_ALANLARI = [
               "bulunduğu için kapsama alınan satıcıların iş emri yoktur; "
               "“Yok” seçilenler belgede ayrı bir paragrafla gerekçelendirilir."},
     {"kod": "not", "etiket": "Satıcı hakkındaki tespit", "tur": "uzun"},
+    # Asagidaki uc alan, vergi suclari raporunun EK-3 ozet tablosundaki
+    # "Sahte belge kullanimina dayanak olan belgeleri duzenleyen mukellef
+    # bilgileri" tablosunun sutunlaridir (bkz. vsr_ek3.py). Rapor metninde
+    # kullanilmaz; yalnizca o forma yazilir.
+    {"kod": "yetkili_ad", "etiket": "Satıcının yetkilisi (EK-3)",
+     "tur": "metin",
+     "ipucu": "Vergi suçları raporunun EK-3 özet tablosunda “Mükellef "
+              "Yetkilisi” sütununa yazılır. Boş bırakılırsa formda köşeli "
+              "parantezli yer tutucu kalır."},
+    {"kod": "yetkili_tckn", "etiket": "Yetkilinin T.C. kimlik no (EK-3)",
+     "tur": "metin"},
+    {"kod": "yetkili_yabanci",
+     "etiket": "Yetkili yabancı uyruklu ise kimlik ve adres bilgileri (EK-3)",
+     "tur": "uzun",
+     "ipucu": "EK-3 formunun son satırına yazılır; yabancı uyruklu temsilci "
+              "yoksa boş bırakın."},
     {"kod": "duzeltme_ile_cikarildi",
      "etiket": "Belgeleri düzeltme beyannamesiyle çıkarılmış", "tur": "secim",
      "secenekler": ["Hayır", "Evet"], "varsayilan": "Hayır",
@@ -531,6 +547,10 @@ def _elle_satiri(vkn, bilgi):
         "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
         "kayda_alinmadi": bilgi.get("kayda_alinmadi") or "Hayır",
         "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
+        # EK-3 formunun satici sutunlari (bkz. vsr_ek3.py)
+        "yetkili_ad": bilgi.get("yetkili_ad") or "",
+        "yetkili_tckn": bilgi.get("yetkili_tckn") or "",
+        "yetkili_yabanci": bilgi.get("yetkili_yabanci") or "",
         # Elle eklenen satici, is emrinde adi gecmedigi halde inceleme
         # sirasinda hakkinda tespit bulundugu icin kapsama alinmistir;
         # varsayilani bu yuzden "Yok"tur. Kullanici degistirebilir.
@@ -641,6 +661,10 @@ Yalnizca `sahteci_vknler` ile secilen saticilar yer alir; onlarin ise
             "duzeltme_ile_cikarildi": bilgi.get("duzeltme_ile_cikarildi") or "Hayır",
             "kayda_alinmadi": bilgi.get("kayda_alinmadi") or "Hayır",
             "duzeltme_aciklama": bilgi.get("duzeltme_aciklama") or "",
+            # EK-3 formunun satici sutunlari (bkz. vsr_ek3.py)
+            "yetkili_ad": bilgi.get("yetkili_ad") or "",
+            "yetkili_tckn": bilgi.get("yetkili_tckn") or "",
+            "yetkili_yabanci": bilgi.get("yetkili_yabanci") or "",
             "is_emri": bilgi.get("is_emri") or "Var",
             "matrah": round(grup["matrah"], 2),
             "kdv": round(grup["kdv"], 2),

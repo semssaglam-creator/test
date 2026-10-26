@@ -782,7 +782,21 @@ def _fail(b, kunye, inceleme, fiil, virler, on=None):
 
 
 # ------------------------------------------------------------------ 5) sonuc
-def _sonuc(b, inceleme, kunye, donemler, fiil):
+def _ek3_maddesi():
+    """EK-3 ozet tablolarina atif yapan sonuc maddesi.
+
+    YALNIZCA form calismaya yuklenmisse yazilir: rapor ekinde olmayan bir
+    tabloya atif yapmak, imzalanan bir belgede gercege aykiri bir cumle
+    birakmak olurdu. Form yuklendiginde uygulama doldurulmus halini rapor
+    paketine koyuyor (bkz. vsr_ek3.py).
+    """
+    return ("Sahte belge kullanma fiiline ilişkin özet bilgilere, raporumuz "
+            "ekinde yer alan EK-3 sayılı “Sahte Belge Kullanma Fiili "
+            "Nedeniyle Düzenlenen Raporlara İlişkin Özet Tablolar”da yer "
+            "verildiği,")
+
+
+def _sonuc(b, inceleme, kunye, donemler, fiil, ek3_var=False):
     b.baslik("V- SONUÇ", duzey=1)
     b.paragraf(
         "%s %s mükellefi %s’nin %s defter ve belgelerinin %s yönünden sınırlı "
@@ -813,6 +827,9 @@ def _sonuc(b, inceleme, kunye, donemler, fiil):
         % (ik.suc_duyurusu_hedefi(kunye), _FIIL_BENDI[fiil],
            _savcilik(kunye, "yonelme")),
     ]
+    if ek3_var and fiil == FIIL_SAHTE_BELGE:
+        # Suc tespitinden hemen sonra: ozet tablolar o tespitin dokumudur.
+        maddeler.insert(1, _ek3_maddesi())
     b.madde_listesi(maddeler, numarali=True)
     b.paragraf("kanaat ve sonucuna varılmıştır.", girinti=1)
 
@@ -976,7 +993,10 @@ def rapor_uret(inceleme, kunye, yillar, sonuc, calisma,
     _tespitler(b, kunye, donemler, satici_satirlari, fiil, kabul)
     _unsurlar(b, kunye, donemler, oran, fiil, virler, None, liste)
     _fail(b, kunye, inceleme, fiil, virler)
-    _sonuc(b, inceleme, kunye, donemler, fiil)
+    # EK-3 ozet tablolari ancak kullanici formu yukledigiyse rapor ekine
+    # girer; sonuc bolumundeki atif da o zaman yazilir.
+    ek3_var = bool((calisma.get("ek3_formu") or {}).get("veri"))
+    _sonuc(b, inceleme, kunye, donemler, fiil, ek3_var)
     _tarhiyat_tablosu(b, inceleme, kunye, donemler, virler, liste, saticilar,
                       kabul)
     return b

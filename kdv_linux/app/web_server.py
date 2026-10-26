@@ -23,6 +23,7 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import db, hesap
+from .docx_form import FormHata
 from .excel_export import (calisma_baytlari, calisma_olustur,
                            fatura_listesi_olustur)
 from .paste_parser import (beyan_ayristir, ozet_ayristir, ozet_tablosu_mu,
@@ -406,6 +407,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._json_yanit(self._fatura_oku(veri))
             elif yol == "/api/fatura_ozet":
                 self._json_yanit(self._fatura_ozet(veri))
+            elif yol == "/api/ek3_denetle":
+                self._json_yanit(self._ek3_denetle(veri))
             elif yol == "/api/tutanak":
                 self._tutanak_gonder(veri)
             elif yol == "/api/tutanak_onizleme":
@@ -692,6 +695,58 @@ class Istekci(BaseHTTPRequestHandler):
                                                 saticilar),
         }
 
+    # ------------------------------------------------- VSR EK-3 ozet formu
+    def _ek3_ham(self, calisma):
+        """Calismaya yuklenmis EK-3 formunun baytlari; yoksa None."""
+        form = (calisma or {}).get("ek3_formu") or {}
+        veri = form.get("veri")
+        if not veri:
+            return None
+        try:
+            return base64.b64decode(veri, validate=True)
+        except (binascii.Error, ValueError):
+            raise ApiHata("EK-3 formunun içeriği çözülemedi; dosyayı "
+                          "yeniden yükleyin.")
+
+    def _ek3_denetle(self, veri):
+        """Yuklenen formu acar, doldurur ve NE YAZILACAGINI bildirir.
+
+        Dosya yuklenirken cagrilir: bozuk ya da bambaska bir Word dosyasi
+        rapor indirme aninda degil, yukleme aninda anlasilsin. Ciktisi
+        atilir; burada uretilen dosya saklanmaz, calisma sunucuda durmaz.
+        """
+        from . import vsr_ek3
+        calisma = veri.get("calisma") or {}
+        ham = self._ek3_ham(calisma)
+        if not ham:
+            raise ApiHata("Denetlenecek form gelmedi.")
+        try:
+            _govde, rapor = vsr_ek3.form_doldur(ham, calisma.get("kunye"),
+                                                calisma)
+        except FormHata as exc:
+            raise ApiHata(str(exc))
+        return {"rapor": [{"tablo": ad, "yapilan": ne} for ad, ne in rapor],
+                "gerekli": vsr_ek3.gerekli_mi(calisma)}
+
+    def _ek3_dosyasi(self, calisma, inceleme):
+        """Doldurulmus EK-3 formu: (dosya adi, baytlar); form yoksa None.
+
+        VSR'nin EKIDIR: yalnizca vergi suclari raporuyla birlikte uretilir.
+        Form bozuksa rapor paketi sessizce eksik inmemeli, bu yuzden hata
+        yutulmaz; kullanici iletiyi gorur ve formu duzeltip yeniden
+        yukleyebilir.
+        """
+        from . import vsr_ek3
+        ham = self._ek3_ham(calisma)
+        if not ham:
+            return None
+        try:
+            govde, _rapor = vsr_ek3.form_doldur(ham, calisma.get("kunye"),
+                                                calisma)
+        except FormHata as exc:
+            raise ApiHata("EK-3 formu doldurulamadı: %s" % exc)
+        return (vsr_ek3.dosya_adi(inceleme), govde)
+
     # ------------------------------------------------------- belge taslaklari
     def _tutanak_hazirla(self, veri):
         """Tutanak taslagini uretir; hem indirme hem onizleme bunu kullanir."""
@@ -827,6 +882,11 @@ class Istekci(BaseHTTPRequestHandler):
         dosyalar = [(ad, belge.bayt()) for _yil, belge, ad in belgeler]
         if vsr is not None:
             dosyalar.append((vergi_sucu_raporu.dosya_adi(inceleme), vsr.bayt()))
+            # EK-3 ozet tablolari VSR'nin ekidir; VSR yoksa (bilerek kullanma
+            # tespit edilmemisse) form da uretilmez.
+            ek3 = self._ek3_dosyasi(veri.get("calisma") or {}, inceleme)
+            if ek3:
+                dosyalar.append(ek3)
         self._ciktilara_yaz(dosyalar)
         if len(dosyalar) == 1:
             ad, govde = dosyalar[0]
@@ -1085,6 +1145,9 @@ class Istekci(BaseHTTPRequestHandler):
                     for yil, belge in belgeler]
         if vsr is not None:
             dosyalar.append((vergi_sucu_raporu.dosya_adi(inceleme), vsr.bayt()))
+            ek3 = self._ek3_dosyasi(veri.get("calisma") or {}, inceleme)
+            if ek3:
+                dosyalar.append(ek3)
         self._ciktilara_yaz(dosyalar)
         if len(dosyalar) == 1:
             ad, govde = dosyalar[0]

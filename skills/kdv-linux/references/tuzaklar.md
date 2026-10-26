@@ -181,3 +181,25 @@ yazma yolu bir dugme kadar yakin olmali. Alis tarafinda `uygulama_farki`
 
 Elestiriyi kendiliginden ezmeyin: kullanici elle tutar girmis olabilir.
 Ama "sessizce eski rakamla devam etmek" de secenek degil.
+
+## 14. Hazir bir .docx'i yeniden yazarken kok etiketi KORUYUN
+
+`docx_form`, kullanicinin verdigi formu acip hucrelerini doldurur. Belgeyi
+ElementTree ile yeniden yazarken iki sessiz tuzak var; ikisi de dosyayi
+Word'de ACILAMAZ hale getirir ve uygulama hicbir hata vermez:
+
+**Ad alani bildirimleri.** ElementTree kok etikete yalnizca KENDI kullandigi
+ad alanlarini bildirir. Word belgesinin kokunde ise kullanilmayan bir yigin
+bildirim daha vardir ve `mc:Ignorable="w14 w15 w16se wp14"` bunlarin ONEK
+adlarini metin olarak sayar. Bildirim dusunce onek bosa duser, Word dosyayi
+"okunamayan icerik" diye reddeder. Bu yuzden `_govde()` orijinal acilis
+etiketini oldugu gibi geri yazar.
+
+**Onek adlari.** `register_namespace` cagrilmazsa onekler "ns0" olur; ayni
+`mc:Ignorable` yine bosa duser. Belgedeki butun xmlns bildirimleri acilista
+kaydediliyor.
+
+Ikisi de `testler/ek3_testi.py` 1. bolumunde kolleniyor; capa mufettisin
+GERCEK formudur (`testler/ornek_ek3_formu.docx`). LibreOffice bu ortamda
+docx acamiyor, yani "dosya Word'de acilir mi" sorusunun tek cevabi bu
+yapisal denetimler.

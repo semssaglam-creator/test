@@ -619,6 +619,33 @@
   </div>
 
   <div class="kart">
+    <h2>Vergi Suçları Raporu — EK-3 Özet Tabloları</h2>
+    <div class="yardim" style="margin-bottom:10px;">
+      Dairenin <strong>EK-3</strong> formunu (“Sahte Belge Kullanma Fiili
+      Nedeniyle Düzenlenen Raporlara İlişkin Özet Tablolar”) buraya yükleyin;
+      uygulama <strong>aynı dosyayı</strong> doldurup geri verir. Formun kendi
+      düzeni — başlıklar, sütun genişlikleri, yazı tipi — olduğu gibi kalır,
+      yalnızca hücrelerin içi yazılır. Form değişirse yeni dosyayı yükleyin.
+      <br>Doldurulan tablolar: sahte belge kullanım bilgileri (fatura dökümü
+      ve toplamı), belgeleri düzenleyen mükellef bilgileri, vergi türü,
+      beyannamenin verilmesi gereken son tarih, künyede varsa noter tasdik ve
+      e-defter bilgileri. Kapsam <strong>vergi suçları raporuyla aynıdır</strong>:
+      yalnızca <em>bilerek kullanma</em> işaretli satıcıların belgeleri yazılır.
+      <br>Doldurulmuş form, <strong>vergi suçları raporu üretilen</strong>
+      rapor paketine kendiliğinden eklenir ve raporun sonuç bölümüne EK-3'e
+      atıf yapan bir madde girer. Dosya çalışmayla birlikte kaydedilir.
+      <input type="file" id="ek3Secici"
+             accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+             hidden>
+    </div>
+    <div class="satir">
+      <div class="otomatik"><button class="btn" id="ek3Sec">EK-3 Formunu Seç (Word)</button></div>
+      <div class="otomatik"><button class="btn ikincil" id="ek3Kaldir" style="display:none;">Formu Kaldır</button></div>
+    </div>
+    <div id="ek3Durum"></div>
+  </div>
+
+  <div class="kart">
     <h2>Gelir / Kurumlar Vergisi Beyannamesinden Okut</h2>
     <div class="yardim" style="margin-bottom:10px;">
       Tutanaktaki <strong>beyanname özeti</strong> tablosunu elle girmek yerine
@@ -2753,6 +2780,7 @@ $("hYeni").addEventListener("click", () => {
   $("cAd").value = ""; $("kunyeKarti").style.display = "none";
   $("fatDurum").innerHTML = "";
   faturaEkraniniCiz();
+  ek3DurumunuCiz();
   ekraniCiz();
   mesaj("Yeni boş çalışma açıldı.");
 });
@@ -2781,6 +2809,8 @@ async function calismaAc(id) {
       faturalar: c.faturalar || [],
       saticilar: c.saticilar || {},
     };
+    // EK-3 formu çalışmayla birlikte kaydedilir; yoksa anahtar hiç açılmaz.
+    if (c.ek3_formu && c.ek3_formu.veri) durum.calisma.ek3_formu = c.ek3_formu;
     // Eski kayıtlarda "düzeltme beyannamesiyle çıkarıldı" işareti SATICI
     // kartındaydı ve o satıcının bütün faturalarını kapsıyordu. İşaret artık
     // fatura satırında; eski kayıt açıldığında aşağı taşınır ve satıcıdaki
@@ -2816,6 +2846,7 @@ async function calismaAc(id) {
     durum.aktifYil = durum.calisma.yillar.length ? yillar()[0].yil : null;
     durum.sonucYil = "tumu"; durum.tarhiyatYil = "tumu";
     $("cAd").value = durum.calisma.ad;
+    ek3DurumunuCiz();
     await hesapla();
     mesaj(`"${durum.calisma.ad || "Çalışma"}" açıldı.`);
   } catch (hata) { mesaj(hata.message, "hata"); }
@@ -4560,6 +4591,77 @@ $("fatTemizle").addEventListener("click", async () => {
   mesaj("Fatura listesi temizlendi.");
 });
 
+// --------------------------------------- vergi suçları raporu EK-3 formu
+//
+// Form çalışmanın içinde base64 olarak taşınır (`calisma.ek3_formu`), çünkü
+// sunucu durum tutmuyor: rapor indirilirken dosyanın yeniden gönderilmesi
+// gerekir. Boyutu birkaç on KB olduğundan çalışmayla birlikte kaydedilmesi
+// de sorun değil — müfettiş formu her oturumda yeniden yüklemek zorunda
+// kalmasın.
+
+function ek3DurumunuCiz(rapor) {
+  const kap = $("ek3Durum");
+  const form = durum.calisma.ek3_formu;
+  $("ek3Kaldir").style.display = form ? "" : "none";
+  if (!form) {
+    kap.innerHTML = '<div class="yardim">Form yüklenmedi; rapor paketine '
+      + "EK-3 eklenmez.</div>";
+    return;
+  }
+  const satirlar = (rapor || form.rapor || []);
+  kap.innerHTML =
+    `<div class="yardim" style="margin-bottom:8px;"><strong>${form.ad}</strong>`
+    + " yüklü. Rapor indirildiğinde doldurulmuş hâli pakete eklenir.</div>"
+    + (satirlar.length
+      ? '<table class="tablo"><tr><th>Tablo</th><th>Yazılan</th></tr>'
+        + satirlar.map((s) => {
+            const sorun = /bulunamadı|boş bırakıldı/.test(s.yapilan);
+            return `<tr><td>${s.tablo}</td>`
+              + `<td class="${sorun ? "fark-var" : ""}">${s.yapilan}</td></tr>`;
+          }).join("")
+        + "</table>"
+      : "");
+}
+
+$("ek3Sec").addEventListener("click", () => $("ek3Secici").click());
+$("ek3Secici").addEventListener("change", async () => {
+  const dosya = $("ek3Secici").files[0];
+  $("ek3Secici").value = "";
+  if (!dosya) return;
+  $("ek3Durum").innerHTML = '<div class="yardim">Okunuyor...</div>';
+  try {
+    const form = { ad: dosya.name, veri: await dosyayiOku(dosya) };
+    // Denetim, dosyayı GEÇİCİ olarak çalışmaya koyup çağrılır: bozuk ya da
+    // bambaşka bir Word dosyası, rapor indirme ânında değil şimdi anlaşılsın.
+    const onceki = durum.calisma.ek3_formu;
+    durum.calisma.ek3_formu = form;
+    try {
+      const y = await api("/api/ek3_denetle", { calisma: durum.calisma });
+      form.rapor = y.rapor;
+      isaretle(false);
+      ek3DurumunuCiz(y.rapor);
+      if (!y.gerekli) {
+        $("ek3Durum").innerHTML +=
+          '<div class="uyari-satir">Hiçbir satıcıda “Bilerek kullanma” '
+          + "seçili değil. Vergi suçları raporu bu hâlde üretilmediğinden "
+          + "EK-3 de rapor paketine eklenmez.</div>";
+      }
+    } catch (hata) {
+      durum.calisma.ek3_formu = onceki;
+      throw hata;
+    }
+  } catch (hata) {
+    $("ek3Durum").innerHTML = `<div class="uyari-satir">${hata.message}</div>`;
+    ek3DurumunuCiz();
+  }
+});
+
+$("ek3Kaldir").addEventListener("click", () => {
+  delete durum.calisma.ek3_formu;
+  isaretle(false);
+  ek3DurumunuCiz();
+});
+
 // ------------------------- gelir / kurumlar vergisi beyannamesinden okuma
 let vbOkunan = null;
 
@@ -4942,6 +5044,7 @@ function surumRozetiniCiz() {
     // Onceden bu cagri yalnizca fatura yuklendiginde yapiliyordu, dolayisiyla
     // kart HTML'deki display:none ile gizli kaliyor ve dugmeye ulasilamiyordu.
     faturaEkraniniCiz();
+    ek3DurumunuCiz();
     ekraniCiz();
     $("beyanMetin").focus();
   } catch (hata) {

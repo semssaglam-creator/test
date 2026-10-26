@@ -33,6 +33,10 @@ GEREKLI_DOSYALAR=(
   "guncelle.bat" "OKUBENI - ONCE BUNU OKUYUN.txt"
   "yeni/main.py" "yeni/app/web_server.py" "yeni/app/pdf_beyanname.py"
   "yeni/app/beyannameler.py" "yeni/app/tani.py" "yeni/web/index.html"
+  # EK-3 ozet formu modulleri: guncelleme paketi PROGRAM dosyalarini
+  # tasidigi icin yeni bir modul atlanirsa kurulu uygulama yarim guncellenir
+  # ve yalnizca o ekrana gelindiginde patlar.
+  "yeni/app/docx_form.py" "yeni/app/vsr_ek3.py"
   "yeni/surum.txt"
 )
 
@@ -165,7 +169,8 @@ tirnaksiz="$(grep -nE '(^|[^"%])%HEDEF%' "$PAKET/guncelle.bat" 2>/dev/null \
                            echo "$tirnaksiz" | sed 's/^/    /'; }
 
 # Paket, kaynak agacla ayni olmali: yanlislikla eski bir kopya girmesin.
-for dosya in main.py app/pdf_beyanname.py app/beyannameler.py web/index.html; do
+for dosya in main.py app/pdf_beyanname.py app/beyannameler.py \
+             app/docx_form.py app/vsr_ek3.py web/index.html; do
   cmp -s "$KOK/$dosya" "$PAKET/yeni/$dosya" \
     || denetim_basarisiz "paketteki $dosya kaynaktan farkli"
 done

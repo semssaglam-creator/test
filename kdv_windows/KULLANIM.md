@@ -484,6 +484,46 @@ yıla aktarım yapılmaz.
 oranlardan (%0, %1, %8, %10, %18, %20) biri değilse, aynı fatura numarası
 birden çok kez geçiyorsa ya da kayıt dönemi çözülemiyorsa bildirilir.
 
+### Vergi suçları raporu EK-3 özet tabloları
+
+Dairenin **EK-3** formunu (“Sahte Belge Kullanma Fiili Nedeniyle Düzenlenen
+Raporlara İlişkin Özet Tablolar”) *İnceleme Bilgileri* sekmesindeki karttan
+yükleyin; uygulama **aynı dosyayı** doldurup geri verir. Form yeniden
+çizilmez: başlıklar, sütun genişlikleri, yazı tipi ve kenarlıklar olduğu gibi
+kalır, yalnızca hücrelerin içi yazılır. Daire formu değiştirirse yeni dosyayı
+yükleyin — uygulamada bir şey değişmesi gerekmez.
+
+Doldurulan tablolar:
+
+| Tablo | Nereden |
+|---|---|
+| Sahte belge kullanım bilgileri | Fatura listesi; TOPLAM satırı da yazılır |
+| Belgeleri düzenleyen mükellef bilgileri | Satıcı kartları (unvan, VKN, yetkili ve yetkilinin T.C. kimlik no) |
+| Vergi türü | “Katma Değer Vergisi” |
+| Beyannamenin verilmesi gereken son tarih | Son sahte belgenin kayıt döneminin izleyen ayı |
+| Noterlerin bildirdiği defter bilgileri | Künyedeki defter tablosu |
+| E-deftere tabi mükellef bilgisi | Künyede e-Defter “Kapsamda” ise incelenen yıllar |
+
+**Kapsam vergi suçları raporuyla aynıdır:** yalnızca *bilerek kullanma*
+işaretli satıcıların belgeleri yazılır — bilmeden kullanmada 306 Sıra No'lu
+Tebliğ gereği suç yoktur ve o belgeler suç duyurusuna dayanak tabloya
+girmemelidir. Ölçüt *Dahil* işaretidir; düzeltme beyannamesiyle indirimlerden
+çıkarılmış belgeler de yazılır, çünkü fiil işlenmiştir.
+
+Doldurulmuş form, **vergi suçları raporu üretilen** rapor paketine
+kendiliğinden eklenir ve raporun sonuç bölümüne EK-3'e atıf yapan bir madde
+girer. Hiçbir satıcıda bilerek kullanma yoksa ne vergi suçları raporu ne de
+EK-3 üretilir.
+
+> **Gün köşeli parantezli kalır.** “Beyannamenin verilmesi gereken son tarih”
+> hücresinde ay ve yıl yazılır, gün `[gün]` olarak bırakılır: KDV
+> beyannamesinin verilme günü yıllar içinde değişti (ayın 24'ü, 26'sı, 28'i)
+> ve uygulama bu günü uydurmaz.
+
+Yüklenen form çalışmayla birlikte kaydedilir; her oturumda yeniden yüklemeniz
+gerekmez. Yükleme sırasında hangi tabloya ne yazılacağı kartta listelenir —
+bulunamayan tablo orada kırmızı görünür.
+
 ### 7. İnceleme Bilgileri sekmesi — taslak belgeler
 
 Uygulamadaki beyan ve tespit verisi, tutanak ve rapor için gereken künye

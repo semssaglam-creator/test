@@ -253,6 +253,31 @@ ceza ise duzeltme uzerine kesilen yarim katin uc kata tamamlanmis hali.
 KASITLIDIR: bendin dogrulanmis metni elde yok, uydurulmadi. Birincil
 kaynaktan dogrulanmadan yazmayin.
 
+## EK-3 ozet tablolari: formu YENIDEN CIZMEYIN
+
+VSR'nin eki olan "EK-3: Sahte Belge Kullanma Fiili Nedeniyle Duzenlenen
+Raporlara Iliskin Ozet Tablolar", dairenin kendi Word formudur. Uygulama onu
+`belge_docx` ile yeniden cizmez; kullanicinin yukledigi dosyayi acip
+hucrelerini doldurur (`docx_form` + `vsr_ek3`). Boylece daire formu
+degistirdiginde kod degismez, kullanici yeni dosyayi yukler.
+
+**Kapsam VSR ile AYNIDIR.** EK-3 suc duyurusuna dayanak yapilan tablodur:
+yalnizca "Bilerek kullanma" saticilarinin belgeleri girer. Bilmeden
+kullanilan bir belgeyi oraya yazmak, kasit kurulmamis bir belgeyi suc
+tablosuna koymak olurdu (306 Sira No'lu Teblig).
+
+**Olcut `dahil`, `sayilir` DEGIL.** Duzeltme beyannamesiyle indirimlerden
+cikarilmis belge de EK-3'e girer: tutar beyandan cikmis olabilir ama belge
+KULLANILMISTIR. Ayni olcut `faturalar.bilerek_yillari` icinde de boyle.
+
+**Bilinmeyen gun uydurulmaz.** "Beyannamenin verilmesi gereken son tarih"
+hucresine ay ve yil yazilir, gun `[gün]` birakilir: KDV beyannamesinin
+verilme gunu yillar icinde degisti (24 / 26 / 28).
+
+**Sonuc bolumundeki atif forma BAGLI.** VSR'nin sonuc maddesine "EK-3'te yer
+verildigi" cumlesi yalnizca form calismaya yuklenmisse yazilir; ek olmayan
+bir tabloya atif yapmak imzalanan belgede gercege aykiri bir cumle olurdu.
+
 ## Vergi ziyai cezasi tarhin TAMAMI uzerinden
 
 Ceza, re'sen tarh edilecek tutarin tamami uzerinden hesaplanir. Daha once

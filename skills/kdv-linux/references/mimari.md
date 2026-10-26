@@ -43,6 +43,8 @@ ust aciklamasini okuyun, hepsinde niye oyle yazildigi anlatilir.
 | `ibraz_etmeme_raporu.py` | Defter-belge ibraz etmeme raporu (VUK 30/3). Indirimlerin TAMAMI reddedilir; matrah, mukellefin duzenledigi faturalara gore yukseltilir (yalnizca aleyhine). Ceza uc kat, VSR de birlikte uretilir. |
 | `devir_duzeltme_raporu.py` | Incelenen yillardan SONRAKI yillar icin. Devir kuculmesi o yilda odenecek vergi dogurmussa duzenlenir; tarhiyat ONERIR (1 kat ceza) ve sonraki yilin Ocak devrinin duzeltilmesini ister. |
 | `belge_docx.py` | Word uretimi; `Belge` sinifi, kirmizi yer tutucu. |
+| `docx_form.py` | Tersi: HAZIR bir .docx'i acar, tablolarini bulur, hucrelerini doldurur. Formun kendi bicimi korunur. |
+| `vsr_ek3.py` | VSR'nin EK-3 ozet tablolarini doldurur (kapsam: yalnizca bilerek kullanma saticilari). |
 | `excel_export.py` | Excel calisma kitabi cikti. |
 | `mevzuat.py` | Belgelerde gecen kanun metinleri. |
 | `turkce.py` | Turkce yazim: buyuk/kucuk, unvan, ilgi eki, adres. |

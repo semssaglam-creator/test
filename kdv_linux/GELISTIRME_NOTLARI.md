@@ -1508,6 +1508,71 @@ oturumda buradan devam edilir.
       için mükerrer tarhiyat gerekçesi, kalan kısım için indirimin reddi —
       hangisinin hangi belgeye ait olduğu sıra numarasıyla anılıyor.
 
+- [x] 2026-10-26 — **Vergi suçları raporu EK-3 özet tabloları dolduruluyor.**
+      Müfettişin isteği: dairenin EK-3 formunu uygulamaya yükleyince
+      “sahte faturaları düzenleyen mükelleflere ait bilgileri uygulama
+      doldursun ve aynı Word dosyasını bilgileri doldurulmuş olarak versin”.
+
+      **Form yeniden ÇİZİLMİYOR.** `belge_docx` sıfırdan belge yazar; bunun
+      tersi için `app/docx_form.py` eklendi: hazır bir .docx açılıyor,
+      tabloları bulunuyor, satırları çoğaltılıp hücreleri yazılıyor ve arşiv
+      birebir geri yazılıyor — yalnızca `word/document.xml` değişiyor.
+      Formun kendi düzeni (başlıklar, sütun genişlikleri, yazı tipi,
+      kenarlıklar) korunuyor. Daire formu değiştirirse kullanıcı yeni
+      dosyayı yükler, kod değişmez.
+
+      Tablolar sıra numarasıyla değil **başlıklarıyla** bulunuyor: formun
+      satır düzeni değişebilir, sütun adları kolay kolay değişmez.
+      Bulunamayan tablo sessizce atlanmıyor, yükleme kartında “tablo
+      bulunamadı” diye görünüyor.
+
+      Doldurulan tablolar: sahte belge kullanım bilgileri (fatura dökümü +
+      TOPLAM satırı), belgeleri düzenleyen mükellef bilgileri, vergi türü,
+      beyannamenin verilmesi gereken son tarih, noter tasdik ve e-defter
+      bilgileri. Satıcı kartına formun istediği üç alan eklendi:
+      `yetkili_ad`, `yetkili_tckn`, `yetkili_yabanci`.
+
+      **Kapsam VSR ile aynı:** yalnızca “Bilerek kullanma” satıcılarının
+      belgeleri. EK-3 suç duyurusuna dayanak yapılan tablodur; bilmeden
+      kullanılan bir belgeyi oraya yazmak kasıt kurulmamış bir belgeyi suç
+      tablosuna koymak olurdu. Ölçüt `dahil` işareti, `sayilir` değil:
+      düzeltmeyle çıkarılmış belge de girer, çünkü fiil işlenmiştir.
+
+      Doldurulmuş form, VSR üretilen rapor paketine kendiliğinden giriyor ve
+      **raporun sonuç bölümüne EK-3'e atıf yapan bir madde** ekleniyor
+      (müfettişin ayrıca istediği). Madde yalnızca form yüklüyse yazılıyor:
+      ekte olmayan bir tabloya atıf yapmak, imzalanan belgede gerçeğe aykırı
+      bir cümle bırakmak olurdu.
+
+      Bilinmeyen gün **uydurulmadı**: “beyannamenin verilmesi gereken son
+      tarih” hücresine ay ve yıl yazılıyor, gün `[gün]` kalıyor — KDV
+      beyannamesinin verilme günü yıllar içinde değişti (24 / 26 / 28).
+      Künyedeki “tasdik tarihi ve numarası” tek hücre, formda iki sütun;
+      ayrım ancak metin gg.aa.yyyy ile başlıyorsa yapılıyor, yapılamıyorsa
+      iki hücre de boş kalıyor — yanlış sütuna yazılan bir tasdik numarası
+      formu sessizce bozardı.
+
+      **En sinsi tuzak dosyanın kendisinde:** ElementTree kök etikete
+      yalnızca kendi kullandığı ad alanlarını bildiriyor, oysa
+      `mc:Ignorable="w14 w15 w16se wp14"` bildirimi düşen öneklerin ADINI
+      taşıyor; bildirim kaybolunca Word dosyayı “okunamayan içerik” diye
+      reddediyor ve uygulama hiçbir hata vermiyor. Çözüm: orijinal açılış
+      etiketi olduğu gibi geri yazılıyor. LibreOffice bu ortamda docx
+      açamadığından doğrulama yapısal denetimlerle yapıldı.
+
+      Gerileme denetimi: `testler/ek3_testi.py`; çapası müfettişin **gerçek
+      formu** (`testler/ornek_ek3_formu.docx`). Yedi mutasyonla denetlendi.
+      Paketleyicilere `docx_form.py` ve `vsr_ek3.py` için “eksik dosya”
+      denetimi eklendi (ikisi de bozup doğrulandı).
+
+- [x] 2026-10-26 — **Düzeltme kabul raporu da yıl yıl.** Yıl ayrımı o rapora
+      da taşındı. Taşırken bir hata çıktı: rapor yıl yıl üretilirken
+      `donemler` ve satıcı satırları daraltılıyor, **fatura listesi
+      daraltılmıyordu** — 2021 raporu 2022 faturalarını da döküyor ve
+      “4 adet fatura” diyordu. Artık sahte belge raporundaki `_yila_indirge`
+      ile aynı ölçütle daraltılıyor. Ayrıca satıcı cümlesindeki çıplak yıl
+      (“…X'den 2021 alındığı”) çekimli yazılıyor (“2021 hesap döneminde”).
+
 - [x] 2026-10-23 — **Satıcı bölümü yıl yıl ayrıldı.** Aynı müfettiş
       tespitinin ikinci yarısı: "vergilendirme hesap dönemi bazında
       yapıldığından, farklı yıllara ait alışa ilişkin tutanak maddesi aynı

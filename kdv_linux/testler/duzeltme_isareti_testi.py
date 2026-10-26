@@ -257,5 +257,49 @@ denetle("düzeltme beyannameleri ile ilgili dönem indirimlerinden "
         "2022 raporunda düzeltme anlatısı yazılmıyor")
 
 
+# ------------------------------------------ 6) duzeltme kabul raporu: yil
+print("\n6) Düzeltme kabul raporu da yıl yıl")
+# Kabul raporu faturalarin TAMAMI cikarilmis dosyalar icindir.
+hepsi_duzeltilmis = [fatura("2021-03-10", "A-1", 30000.0, duzeltildi=True),
+                     fatura("2021-07-15", "A-2", 20000.0, duzeltildi=True),
+                     fatura("2022-04-11", "B-1", 25000.0, duzeltildi=True),
+                     fatura("2022-09-20", "B-2", 35000.0, duzeltildi=True)]
+kabul = ornek(hepsi_duzeltilmis, [
+    {"yil": 2021, "beyan": beyan(), "ay_sayisi": 12, "elestiri": elestiri()},
+    {"yil": 2022, "beyan": beyan(), "ay_sayisi": 12, "elestiri": elestiri()}])
+metin = W.Istekci._kabul_raporu_onizleme(istekci(), {"calisma": kabul})["metin"]
+y2021 = metin.split("2022 YILI RAPORU")[0]
+# Rapor yil yil yazildigindan fatura dokumu de o yilla sinirli olmali;
+# daraltma yapilmazken 2021 raporu 2022 faturalarini da dokuyordu.
+denetle("Aşağıda dökümü yapılan 2 adet faturanın" in y2021,
+        "2021 raporu yalnızca 2021 faturalarını sayıyor")
+denetle("B-1" not in y2021 and "B-2" not in y2021,
+        "2021 raporunda 2022 faturaları görünmüyor")
+denetle("10.000,00 TL tutarındaki katma değer vergisi düzeltme beyannamesi"
+        in y2021,
+        "2021 raporundaki çıkarılan tutar o yılın tutarı")
+denetle("Sahteci LTD’den 2021 hesap döneminde alındığı" in y2021,
+        "yıl cümle içinde çekimli yazılıyor")
+
+# Kabul raporu da yil yil uretildiginden yukaridaki daraltma her bloga tek
+# yil birakir. Yil VERILMEDEN uretilen belge (rapor_yillari bos donerse
+# kullanilan yol) ise cok yilli olur; bolum orada da yil yil ayrilmali.
+from app import duzeltme_kabul_raporu as DK                          # noqa: E402
+
+h = istekci()
+sonuc, bulgular = W._hesapla(kabul)
+belge = DK.rapor_uret(W._inceleme_bilgisi(kabul), kabul["kunye"],
+                      W._yillari_coz(kabul), sonuc, kabul, bulgular,
+                      None, None, None)
+tek_belge = belge.duz_metin()
+esit(tek_belge.count("Sıra\tFatura Tarih\tFatura No"), 2,
+     "yıl verilmeden üretilen belgede her yıl için ayrı tablo")
+denetle("2021 hesap dönemine ait olan, 2 adet belge" in tek_belge
+        and "2022 hesap dönemine ait olan, 2 adet belge" in tek_belge,
+        "her yıl bloğunun kendi giriş cümlesi var")
+denetle("\n3\t11.04.2022\tB-1" in tek_belge,
+        "sıra numaraları bloklar boyunca kesintisiz")
+
+
 print("\n" + ("BAZI DENETİMLER BAŞARISIZ" if HATA else "Tüm denetimler geçti."))
 sys.exit(1 if HATA else 0)
