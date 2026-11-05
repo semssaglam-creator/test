@@ -890,9 +890,10 @@ function gecmisTabloCiz() {
       .map(([d, ad]) => `<option value="${d}"${d === t.sonuc ? " selected" : ""}>${ad}</option>`).join("");
     tr.innerHTML = `<td>${kacis(isoToTr(t.toplanti_tarih_saat))}</td><td>${kacis(t.tutanak_no)}</td>` +
       `<td>${kacis(t.ad_unvan)}</td><td>${kacis(t.vkn_tckn)}</td><td>${SONUC_AD[t.sonuc] || kacis(t.sonuc)}</td><td>${baglanti}</td>` +
-      `<td><div style="display:flex; gap:6px; align-items:center">` +
+      `<td><div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">` +
       `<select class="sonuc-sec" style="width:130px">${secenekler}</select>` +
       `<button class="btn ikincil" onclick="tutanakSonucDegistir(${t.id}, this)">Uygula</button>` +
+      `<button class="btn" onclick="window.location.href='/bolum_notu?tutanak_id=${t.id}'" title="Bölüm notu (Word) indir">Bölüm Notu</button>` +
       `<button class="btn tehlike" onclick="tutanakSil(${t.id}, '${kacis(t.tutanak_no)}')">Sil</button>` +
       `</div></td>`;
     tb.appendChild(tr);

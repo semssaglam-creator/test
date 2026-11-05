@@ -746,6 +746,43 @@ def tutanak_kalemlerini_getir(tutanak_id):
         conn.close()
 
 
+def tutanak_bolum_notu_verisi(tutanak_id):
+    """Bolum notu (ic yazisma) icin bir tutanagin ozet verisi.
+
+    Donus: {tutanak_no, toplanti_tarih_saat, davet_tarih_saat, sonuc,
+            ad_unvan, vkn_tckn, ihbarnameler: [fis_no, ...]}
+    """
+    conn = get_connection()
+    try:
+        t = conn.execute(
+            """
+            SELECT t.tutanak_no, t.toplanti_tarih_saat, t.davet_tarih_saat, t.sonuc,
+                   m.ad_unvan, m.vkn_tckn
+            FROM uzlasma_tutanaklari t
+            JOIN mukellefler m ON m.id = t.mukellef_id
+            WHERE t.id = ?
+            """,
+            (tutanak_id,),
+        ).fetchone()
+        if t is None:
+            raise ValueError("Tutanak bulunamadi.")
+        ihbarnameler = [r[0] for r in conn.execute(
+            """
+            SELECT DISTINCT ih.fis_no FROM tutanak_kalemleri tk
+            JOIN ceza_satirlari cs ON cs.id = tk.ceza_satiri_id
+            JOIN ihbarnameler ih ON ih.id = cs.ihbarname_id
+            WHERE tk.tutanak_id = ?
+            ORDER BY ih.fis_no
+            """,
+            (tutanak_id,),
+        ).fetchall()]
+        veri = dict(t)
+        veri["ihbarnameler"] = ihbarnameler
+        return veri
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Istatistikler
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from . import db
 from .excel_export import puantaj_cetveli_olustur, tutanak_olustur_excel
 from .paste_parser import dilekce_ayristir
-from .tarih_util import simdi_tr, tr_to_iso, tr_tarih_to_iso_gun
+from .tarih_util import simdi_tr, tr_to_iso, tr_tarih_to_iso_gun, iso_to_tr
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -339,6 +339,8 @@ class Istekci(BaseHTTPRequestHandler):
                 self._tutanak_indir(params.get("dosya", [""])[0])
             elif yol == "/puantaj":
                 self._puantaj_indir(params)
+            elif yol == "/bolum_notu":
+                self._bolum_notu_indir(params)
             elif yol == "/dokum":
                 self._dokum_indir()
             else:
@@ -493,6 +495,39 @@ class Istekci(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type",
                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.send_header("Content-Disposition",
+                         f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
+        self.send_header("Content-Length", str(len(govde)))
+        self.end_headers()
+        self.wfile.write(govde)
+
+    def _bolum_notu_indir(self, params):
+        from .word_export import bolum_notu_olustur
+        try:
+            tutanak_id = int(params.get("tutanak_id", [""])[0])
+        except (ValueError, IndexError):
+            self._hata("Gecersiz tutanak.")
+            return
+        try:
+            veri = db.tutanak_bolum_notu_verisi(tutanak_id)
+        except ValueError as exc:
+            self._hata(str(exc), 404)
+            return
+        toplanti_tr = iso_to_tr(veri["toplanti_tarih_saat"] or "")
+        tarih_sade = toplanti_tr.split(" ")[0] if toplanti_tr else ""
+        icerik = {
+            "vkn_tckn": veri["vkn_tckn"] or "",
+            "ad_unvan": veri["ad_unvan"] or "",
+            "tutanak_bilgi": (tarih_sade + " - " + (veri["tutanak_no"] or "")).strip(" -"),
+            "ihbarnameler": veri["ihbarnameler"],
+            "davet_tarih": iso_to_tr(veri["davet_tarih_saat"] or ""),
+        }
+        govde = bolum_notu_olustur(db.get_kurum_bilgileri(), icerik)
+        guvenli_no = (veri["tutanak_no"] or "bolum_notu").replace("/", "_")
+        dosya_adi = f"bolum_notu_{guvenli_no}.docx"
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
         self.send_header("Content-Disposition",
                          f'attachment; filename="{urllib.parse.quote(dosya_adi)}"')
         self.send_header("Content-Length", str(len(govde)))
