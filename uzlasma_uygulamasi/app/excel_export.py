@@ -39,8 +39,8 @@ DOLGU_GRI = PatternFill("solid", fgColor="DDDDDD")
 # Uzlasma Yonetmeligi Madde 13: uzlasmanin vaki olmamasi/temin edilememesi
 # halinde dava acma ve surenin 15 gune uzamasi notu.
 DAVA_SURESI_NOTU = (
-    "NOT: Uzlaşma Yönetmeliğinin 13. maddesi uyarınca; mükellef, tarh edilen vergi "
-    "ve kesilen cezaya karşı, tutanağın tebliğ tarihinden itibaren genel hükümler "
+    "NOT: Uzlaşma Yönetmeliğinin 13. maddesi uyarınca; mükellef, kesilen cezaya "
+    "karşı, tutanağın tebliğ tarihinden itibaren genel hükümler "
     "dairesinde ve yetkili vergi mahkemesi nezdinde dava açabilir. Dava açma süresi "
     "bitmiş veya 15 günden az kalmış ise bu süre, tutanağın tebliğ tarihinden "
     "itibaren 15 gün olarak uzar."
@@ -428,7 +428,6 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
     row += 1
 
     toplanti_tarih, toplanti_saat = _tarih_saat_ayir(toplanti_tarih_saat)
-    davet_tarih, davet_saat = _tarih_saat_ayir(davet_tarih_saat)
     vergi_dairesi = kurum.get("vergi_dairesi", "")
     aciklama = (
         f"Uzlaşma Komisyonumuz 22/10/2005 tarih ve 25974 sayılı Uzlaşma Yönetmeliğinde "
@@ -436,7 +435,7 @@ def gelmeme_tutanagi_olustur(dosya_yolu, kurum, tutanak_no, toplanti_tarih_saat,
         f"unvanları yazılı Başkan ve üyelerinden teşekkül eden Uzlaşma Komisyonumuz "
         f"{toplanti_tarih} tarihinde saat {toplanti_saat}'da toplandı.\n\n"
         f"Ancak uzlaşma isteminde bulunan ve yukarıda açık kimliği belirtilen mükellefe "
-        f"uzlaşma görüşmesinin {davet_tarih} tarihinde saat {davet_saat}'da {vergi_dairesi}'nde "
+        f"uzlaşma görüşmesinin {toplanti_tarih} tarihinde saat {toplanti_saat}'da {vergi_dairesi}'nde "
         f"yapılacağına ilişkin uzlaşma davetiyesi usulüne uygun tebliğ edildiği halde, uzlaşma "
         f"davetiyesinde tayin edilen gün ve saatte bizzat veya vekili vasıtasıyla Uzlaşma "
         f"Komisyonuna gelmediğinden uzlaşma temin edilememiştir. Durumu tespit eden bu tutanak "
